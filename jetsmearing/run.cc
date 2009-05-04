@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: run.cc,v 1.2 2009/05/04 14:35:04 mschrode Exp $
 
 #include <iostream>
 #include <string>
@@ -31,15 +31,25 @@ int main()
 
   // Fit
   std::vector<double> par;
+  // Parameters for FermiTail
 //   par.push_back(0.9);
 //   par.push_back(0.1);
 //   par.push_back(0.05);
 
-  par.push_back(0.21);
-  par.push_back(0.04);
-  par.push_back(1.5);
-  par.push_back(0.4);
-  js::Fitter fitter(data,min,max,"TwoGauss",par);
+// Parameters for TwoGauss
+//   par.push_back(0.21);
+//   par.push_back(0.04);
+//   par.push_back(1.5);
+//   par.push_back(0.4);
+
+// Parameters for ExpTail
+  par.push_back(0.9);
+  par.push_back(0.2);
+  par.push_back(0.05);
+  par.push_back(2.);
+//   par.push_back(2.);
+
+  js::Fitter fitter(data,min,max,"ExpTail",par);
   fitter.Fit();
 
   // Make control plots
