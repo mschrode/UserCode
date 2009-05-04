@@ -1,3 +1,5 @@
+// $Id: $
+
 #ifndef JS_JET_H
 #define JS_JET_H
 
@@ -10,6 +12,7 @@ namespace js
   //!  \brief A jet
   //!  \author Matthias Schroeder
   //!  \date Tue Apr 28 13:22:36 CEST 2009
+  //!  $Id: $
   // --------------------------------------------------
   class Jet
   {

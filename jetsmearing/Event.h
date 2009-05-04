@@ -1,3 +1,5 @@
+// $Id: $
+
 #ifndef JS_EVENT_H
 #define JS_EVENT_H
 
@@ -9,6 +11,7 @@ namespace js
   //!  \brief An abstract event class
   //!  \author Matthias Schroeder
   //!  \date Wed Apr 29 11:13:55 CEST 2009
+  //!  $Id: $
   // --------------------------------------------------
   class Event
   {

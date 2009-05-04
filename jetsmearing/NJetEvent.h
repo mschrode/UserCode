@@ -1,3 +1,5 @@
+// $Id: $
+
 #ifndef JS_NJET_EVENT_H
 #define JS_NJET_EVENT_H
 
@@ -12,6 +14,7 @@ namespace js
   //!  \brief An event with n jets
   //!  \author Matthias Schroeder
   //!  \date Tue Apr 28 13:31:38 CEST 2009
+  //!  $Id: $
   // --------------------------------------------------
   class NJetEvent : public Event
   {
@@ -52,6 +55,7 @@ namespace js
   //!  \brief An event with 2 jets
   //!  \author Matthias Schroeder
   //!  \date Wed Apr 29 14:43:45 CEST 2009
+  //!  $Id: $
   // --------------------------------------------------
   class DiJetEvent : public NJetEvent
   {

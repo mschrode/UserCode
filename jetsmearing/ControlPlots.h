@@ -1,3 +1,5 @@
+// $Id: $
+
 #ifndef JS_CONTROLPLOTS_H
 #define JS_CONTROLPLOTS_H
 
@@ -15,6 +17,7 @@ namespace js
   //!  \brief Generates validation plots
   //!  \author Matthias Schroeder
   //!  \date Tue Apr 28 19:02:46 CEST 2009
+  //!  $Id: $
   // --------------------------------------------------
   class ControlPlots
   {

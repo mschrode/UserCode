@@ -1,3 +1,5 @@
+// $Id: $
+
 #ifndef JS_EVENTGENERATOR_H
 #define JS_EVENTGENERATOR_H
 
@@ -42,6 +44,7 @@ namespace js
   //!     
   //!  \author Matthias Schroeder
   //!  \date Tue Apr 28 15:22:42 CEST 2009
+  //!  $Id: $
   // --------------------------------------------------
   class EventGenerator
   {

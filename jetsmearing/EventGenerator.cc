@@ -1,3 +1,5 @@
+// $Id: $
+
 #include "EventGenerator.h"
 
 #include <cmath>

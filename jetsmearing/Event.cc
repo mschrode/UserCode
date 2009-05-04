@@ -1,3 +1,5 @@
+// $Id: $
+
 #include "Event.h"
 
 namespace js
