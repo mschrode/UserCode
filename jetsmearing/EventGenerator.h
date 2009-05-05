@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: EventGenerator.h,v 1.2 2009/05/04 14:35:04 mschrode Exp $
 
 #ifndef JS_EVENTGENERATOR_H
 #define JS_EVENTGENERATOR_H
@@ -6,11 +6,12 @@
 #include <string>
 #include <vector>
 
+#include "TLorentzVector.h"
+
 #include "TH1F.h"
 #include "TRandom3.h"
 
-#include "Jet.h"
-#include "NJetEvent.h"
+#include "Event.h"
 
 namespace js
 {
@@ -44,7 +45,7 @@ namespace js
   //!     
   //!  \author Matthias Schroeder
   //!  \date Tue Apr 28 15:22:42 CEST 2009
-  //!  $Id: $
+  //!  $Id: EventGenerator.h,v 1.2 2009/05/04 14:35:04 mschrode Exp $
   // --------------------------------------------------
   class EventGenerator
   {
@@ -61,6 +62,7 @@ namespace js
     double GetParTruth(int i) const { assert( i >= 0 && i < GetNParTruth() ); return mParTruth.at(i); }
     void SetRespHist(TH1F * h) { mHistResp = h; }
     Data GenerateDijetEvents(int n) const;
+    Data GeneratePhotonJetEvents(int n) const;
     void SetModelTruth();
 
 

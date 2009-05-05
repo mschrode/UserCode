@@ -1,4 +1,4 @@
-// $Id: Fitter.h,v 1.2 2009/05/04 14:35:04 mschrode Exp $
+// $Id: Fitter.h,v 1.3 2009/05/04 17:04:51 mschrode Exp $
 
 #ifndef JS_FITTER_H
 #define JS_FITTER_H
@@ -10,6 +10,7 @@
 
 #include "Event.h"
 #include "NJetEvent.h"
+#include "PhotonJetEvent.h"
 #include "external.h"
 
 namespace js
@@ -45,8 +46,11 @@ namespace js
     std::string mModel;
     std::vector<double> mPar;
 
-    double NLogL(std::vector<double>& grad);
-    double ProbDiJet(const DiJetEvent * dijet);
+    double NLogLSum(std::vector<double>& grad);
+    double NLogL(const Event * evt) const;
+    double NLogLDiJet(const DiJetEvent * dijet) const;
+    double NLogLPhotonJet(const PhotonJetEvent * photonjet) const;
+
     double Prob(double x) const;
     double ProbFermiTail(double x, const std::vector<double>& par) const;
     double ProbTwoGauss(double x, const std::vector<double>& par) const;

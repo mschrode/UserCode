@@ -1,9 +1,13 @@
-// $Id: $
+// $Id: EventGenerator.cc,v 1.2 2009/05/04 14:35:04 mschrode Exp $
 
 #include "EventGenerator.h"
 
 #include <cmath>
 #include <iostream>
+
+#include "Jet.h"
+#include "NJetEvent.h"
+#include "PhotonJetEvent.h"
 
 namespace js
 {
@@ -70,7 +74,7 @@ namespace js
 	js::Jet jet1(pTrue,pMeas);
 
 	// Get truth of second jet
-	pTrue.SetPtEtaPhiM(-1.*(pTrue.Pt()),0,M_PI+(pTrue.Phi()),0);
+	pTrue.SetPtEtaPhiM(pTrue.Pt(),0,M_PI+(pTrue.Phi()),0);
 	  
 	// Smear truth to get measurement
 	// of second jet
@@ -87,6 +91,47 @@ namespace js
 	evt->AddJet(jet1);
 	evt->AddJet(jet2);
 	//	evt->Print();
+
+	// Add event to data
+	data.push_back(evt);
+      }
+
+    std::cout << "ok" << std::endl;
+
+    return data;
+  }
+
+
+
+  // --------------------------------------------------
+  Data EventGenerator::GeneratePhotonJetEvents(int n) const
+  {
+    std::cout << "Generating " << n << " photon-jet events... " << std::flush;
+
+    Data data;
+
+    // Generate n photon-jet events      
+    for(int i = 0; i < n; i++)
+      {
+	//if( i%1000 == 0 ) std::cout << i << std::endl;
+
+	// Generate truth of jet
+	// between min and max
+	TLorentzVector pTrue = GenerateTruth();
+
+	// Smear truth to get measurement
+	// of jet
+	TLorentzVector pMeas = SmearTruth(pTrue);
+
+	// Set up jet
+	js::Jet jet(pTrue,pMeas);
+
+	// Get antiparallel momentum of truth
+	// to get photon momentum
+	pTrue.SetPtEtaPhiM(pTrue.Pt(),0,M_PI+(pTrue.Phi()),0);
+	  
+	// Construct Photon-Jet event
+	PhotonJetEvent * evt = new PhotonJetEvent(pTrue,jet);
 
 	// Add event to data
 	data.push_back(evt);

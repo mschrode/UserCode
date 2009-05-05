@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: ControlPlots.cc,v 1.2 2009/05/04 14:35:04 mschrode Exp $
 
 #include "ControlPlots.h"
 
@@ -11,6 +11,7 @@
 
 #include "Event.h"
 #include "NJetEvent.h"
+#include "PhotonJetEvent.h"
 #include "HistOps.h"
 
 namespace js
@@ -18,8 +19,10 @@ namespace js
   // --------------------------------------------------
   ControlPlots::ControlPlots(const Data& data)
     : mDijetNBins(100), mDijetMin(50), mDijetMax(1000),
-      mRespNBins(100), mRespMin(0.), mRespMax(3.),
-      mRootFileName("jsPlots.root")
+      mPhotonJetNBins(100), mPhotonJetMin(50), mPhotonJetMax(1000),
+      mRespNBins(30), mRespMin(0.), mRespMax(6.),
+      mRootFileName("Plots.root"),
+      mFileNameSuffix("")
   {
     // Copy pointers to events over to local
     // Data object
@@ -121,7 +124,7 @@ namespace js
     hists.push_back(hDijetDeltaPhiTrue);
     hists.push_back(hDijetRelPhi);
 
-    TPostScript * const ps = new TPostScript("jsDijets.ps",111);
+    TPostScript * const ps = new TPostScript(("js_"+mFileNameSuffix+"_Dijets.ps").c_str(),111);
     TCanvas *c1 = new TCanvas("c1","Dijets",0,0,600,600);
     c1->cd();
 
@@ -135,7 +138,90 @@ namespace js
     ps->Close();
 
     // Write histos to root file
-    util::HistOps::WriteToRootFile(hists,mRootFileName);
+    util::HistOps::WriteToRootFile(hists,"js_"+mFileNameSuffix+"_"+mRootFileName);
+
+    // Clean up
+    for( ; it != hists.end(); it++)
+      {
+	delete *it;
+      }
+    hists.clear();
+    delete ps;
+    delete c1;
+
+
+    std::cout << "ok" << std::endl;
+  }
+
+
+
+  // --------------------------------------------------
+  void ControlPlots::PlotPhotonJets() const
+  {
+    std::cout << "Creating photon-jet control plots... " << std::flush;
+
+    // Create histograms
+    TH1F * hPhotonJetPtTrue       = new TH1F("hPhotonJetPtTrue",";p^{#gamma}_{T} (GeV)",mPhotonJetNBins,mPhotonJetMin,mPhotonJetMax);
+    TH1F * hPhotonJetPtMeas       = new TH1F("hPhotonJetPtMeas",";p^{jet}_{T} (GeV)",mPhotonJetNBins,mPhotonJetMin,mPhotonJetMax);
+    TH1F * hPhotonJetRelPt        = new TH1F("hPhotonJetRelPt",";p^{jet}_{T} / p^{#gamma}_{T}",mPhotonJetNBins,0,2);
+
+    TH1F * hPhotonJetPhiTrue      = new TH1F("hPhotonJetPhiTrue",";#phi^{true}",50,-M_PI,M_PI);
+    TH1F * hPhotonJetPhiMeas      = new TH1F("hPhotonJetPhiMeas",";#phi^{jet}",50,-M_PI,M_PI);
+    TH1F * hPhotonJetRelPhi       = new TH1F("hPhotonJetRelPhi",";#phi^{jet} / #phi^{true}",50,0.5,1.5);
+    
+
+    // Fill histograms
+    for(DataIt datait = mData.begin(); datait != mData.end(); datait++) // Loop over Data
+      {
+	// Select DiJet events
+	if( (*datait)->Type() == "PhotonJetEvent" )
+	  {
+	    const PhotonJetEvent * evt = static_cast<const PhotonJetEvent*>(*datait);
+
+	    double t = evt->PtPhoton();
+	    double m = evt->PtMeas();
+
+	    hPhotonJetPtTrue->Fill(t);
+	    hPhotonJetPtMeas->Fill(m);
+	    hPhotonJetRelPt->Fill(m/t);		    
+
+	    m = evt->PhiMeas();
+	    t = evt->PhiTrue();
+		    
+	    hPhotonJetPhiTrue->Fill(t);
+	    hPhotonJetPhiMeas->Fill(m);
+	    hPhotonJetRelPhi->Fill(fabs(m/t));
+	  }
+      } // End loop over Data
+
+
+    // Write histos to ps file
+    hPhotonJetPhiTrue->GetYaxis()->SetRangeUser(0,1.2*hPhotonJetPhiTrue->GetMaximum());
+    hPhotonJetPhiMeas->GetYaxis()->SetRangeUser(0,1.2*hPhotonJetPhiMeas->GetMaximum());
+
+    std::vector<TH1F*> hists;
+    hists.push_back(hPhotonJetPtTrue);
+    hists.push_back(hPhotonJetPtMeas);
+    hists.push_back(hPhotonJetRelPt);
+    hists.push_back(hPhotonJetPhiTrue);
+    hists.push_back(hPhotonJetPhiMeas);
+    hists.push_back(hPhotonJetRelPhi);
+
+    TPostScript * const ps = new TPostScript(("js_"+mFileNameSuffix+"_PhotonJets.ps").c_str(),111);
+    TCanvas *c1 = new TCanvas("c1","PhotonJets",0,0,600,600);
+    c1->cd();
+
+    std::vector<TH1F*>::iterator it = hists.begin();
+    for( ; it != hists.end(); it++)
+      {
+	(*it)->Draw();
+	c1->Draw();
+	ps->NewPage();
+      }
+    ps->Close();
+
+    // Write histos to root file
+    util::HistOps::WriteToRootFile(hists,"js_"+mFileNameSuffix+"_"+mRootFileName);
 
     // Clean up
     for( ; it != hists.end(); it++)
@@ -158,8 +244,11 @@ namespace js
     std::cout << "Creating response control plots... " << std::flush;
 
     // Create histograms
-    TH1F* hResTrue = new TH1F("hResTrue",";p^{jet}_{T} / p^{true}_{T}",mRespNBins,mRespMin,mRespMax);
-    hResTrue->Sumw2();
+    TH1F* hResponse = new TH1F("hResponse",";p^{jet}_{T} / p^{true}_{T}",mRespNBins,mRespMin,mRespMax);
+    hResponse->Sumw2();
+
+    //    TH1F* hRelDiff = new TH1F("hRelDiff",";( p^{jet}_{T} - p^{true}_{T} ) / p^{true}_{T}",mDiffNBins,mDiffMin,mDiffMax);
+    //hResponse->Sumw2();
 
 
     // Fill histograms
@@ -176,31 +265,43 @@ namespace js
 	      {
 		double m = (*jetit)->PtMeas();
 		double t = (*jetit)->PtTrue();
-		hResTrue->Fill(m/t);
+		hResponse->Fill(m/t);
 	      }
+	  }
+
+	// PhotonJet events
+	if( (*datait)->Type() == "PhotonJetEvent" )
+	  {
+	    const PhotonJetEvent *evt = static_cast<const PhotonJetEvent*>(*datait);
+
+	    double m = evt->PtMeas();
+	    double t = evt->PtTrue();
+	    hResponse->Fill(m/t);
 	  }
       }
 
     // Normalize histogram
-    double norm = hResTrue->Integral("width");
-    hResTrue->Scale(1./norm);
+    double norm = hResponse->Integral("width");
+    hResponse->Scale(1./norm);
 
-    // Write histos to eps file
+    // Write histos to ps file
+    //TPostScript * const ps = new TPostScript("jsResponse.ps",111);
     TCanvas *c1 = new TCanvas("c1","Jet Response",0,0,600,600);
     c1->cd();
-    hResTrue->Draw();
+    hResponse->Draw();
     pdf->Draw("same");
-    c1->SetGrid();
-    c1->SaveAs("jsJetResponse.eps");
+    //    c1->SetGrid();
+    c1->SetLogy();
+    c1->SaveAs(("js_"+mFileNameSuffix+"_JetResponse.eps").c_str());
     delete c1;
 
     // Write histos to root file
     std::vector<TH1F*> hists;
-    hists.push_back(hResTrue);
-    util::HistOps::WriteToRootFile(hists,mRootFileName);
+    hists.push_back(hResponse);
+    util::HistOps::WriteToRootFile(hists,"js_"+mFileNameSuffix+"_"+mRootFileName);
 
     // Clean up
-    delete hResTrue;
+    delete hResponse;
     delete pdf;
 
     std::cout << "ok" << std::endl;

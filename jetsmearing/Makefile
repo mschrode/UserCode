@@ -1,4 +1,4 @@
-# $Id: $
+# $Id: Makefile,v 1.2 2009/05/04 14:35:04 mschrode Exp $
 
 UTILDIR    = ./../util/
 
@@ -13,6 +13,7 @@ OBJ        = lbfgs.o \
              Jet.o \
              Event.o \
              NJetEvent.o \
+             PhotonJetEvent.o \
              EventGenerator.o \
              ControlPlots.o \
              Fitter.o \
@@ -35,6 +36,9 @@ Event.o: Event.h Event.cc
 
 NJetEvent.o: NJetEvent.h NJetEvent.cc
 	g++ $(CFLAG) -c NJetEvent.cc
+
+PhotonJetEvent.o: PhotonJetEvent.h PhotonJetEvent.cc
+	g++ $(CFLAG) -c PhotonJetEvent.cc
 
 EventGenerator.o: EventGenerator.h EventGenerator.cc
 	g++ $(CFLAG) -c EventGenerator.cc
