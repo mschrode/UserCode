@@ -1,4 +1,4 @@
-// $Id: ControlPlots.cc,v 1.2 2009/05/04 14:35:04 mschrode Exp $
+// $Id: ControlPlots.cc,v 1.3 2009/05/05 14:00:36 mschrode Exp $
 
 #include "ControlPlots.h"
 
@@ -21,7 +21,7 @@ namespace js
     : mDijetNBins(100), mDijetMin(50), mDijetMax(1000),
       mPhotonJetNBins(100), mPhotonJetMin(50), mPhotonJetMax(1000),
       mRespNBins(30), mRespMin(0.), mRespMax(6.),
-      mRootFileName("Plots.root"),
+      mDir("./controlplots"), mRootFileName("Plots.root"),
       mFileNameSuffix("")
   {
     // Copy pointers to events over to local
@@ -124,7 +124,7 @@ namespace js
     hists.push_back(hDijetDeltaPhiTrue);
     hists.push_back(hDijetRelPhi);
 
-    TPostScript * const ps = new TPostScript(("js_"+mFileNameSuffix+"_Dijets.ps").c_str(),111);
+    TPostScript * const ps = new TPostScript((mDir+"/js_"+mFileNameSuffix+"_Dijets.ps").c_str(),111);
     TCanvas *c1 = new TCanvas("c1","Dijets",0,0,600,600);
     c1->cd();
 
@@ -138,7 +138,7 @@ namespace js
     ps->Close();
 
     // Write histos to root file
-    util::HistOps::WriteToRootFile(hists,"js_"+mFileNameSuffix+"_"+mRootFileName);
+    util::HistOps::WriteToRootFile(hists,mDir+"/js_"+mFileNameSuffix+"_"+mRootFileName);
 
     // Clean up
     for( ; it != hists.end(); it++)
@@ -207,7 +207,7 @@ namespace js
     hists.push_back(hPhotonJetPhiMeas);
     hists.push_back(hPhotonJetRelPhi);
 
-    TPostScript * const ps = new TPostScript(("js_"+mFileNameSuffix+"_PhotonJets.ps").c_str(),111);
+    TPostScript * const ps = new TPostScript((mDir+"/js_"+mFileNameSuffix+"_PhotonJets.ps").c_str(),111);
     TCanvas *c1 = new TCanvas("c1","PhotonJets",0,0,600,600);
     c1->cd();
 
@@ -221,7 +221,7 @@ namespace js
     ps->Close();
 
     // Write histos to root file
-    util::HistOps::WriteToRootFile(hists,"js_"+mFileNameSuffix+"_"+mRootFileName);
+    util::HistOps::WriteToRootFile(hists,mDir+"/js_"+mFileNameSuffix+"_"+mRootFileName);
 
     // Clean up
     for( ; it != hists.end(); it++)
@@ -284,21 +284,29 @@ namespace js
     double norm = hResponse->Integral("width");
     hResponse->Scale(1./norm);
 
-    // Write histos to ps file
-    //TPostScript * const ps = new TPostScript("jsResponse.ps",111);
+    // Find populated x-axis range
+    int maxBin = 1;
+    for(int bin = 1; bin <= hResponse->GetNbinsX(); bin++)
+      {
+	if( hResponse->GetBinContent(bin) > 0 ) maxBin = bin;
+      }
+    if( maxBin < hResponse->GetNbinsX() ) maxBin++;
+    hResponse->GetXaxis()->SetRange(1,maxBin);
+
+    // Write histos to eps file
     TCanvas *c1 = new TCanvas("c1","Jet Response",0,0,600,600);
     c1->cd();
     hResponse->Draw();
     pdf->Draw("same");
     //    c1->SetGrid();
     c1->SetLogy();
-    c1->SaveAs(("js_"+mFileNameSuffix+"_JetResponse.eps").c_str());
+    c1->SaveAs((mDir+"/js_"+mFileNameSuffix+"_JetResponse.eps").c_str());
     delete c1;
 
     // Write histos to root file
     std::vector<TH1F*> hists;
     hists.push_back(hResponse);
-    util::HistOps::WriteToRootFile(hists,"js_"+mFileNameSuffix+"_"+mRootFileName);
+    util::HistOps::WriteToRootFile(hists,mDir+"/js_"+mFileNameSuffix+"_"+mRootFileName);
 
     // Clean up
     delete hResponse;
