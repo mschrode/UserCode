@@ -1,4 +1,4 @@
-// $Id: Fitter.cc,v 1.3 2009/05/04 17:04:51 mschrode Exp $
+// $Id: Fitter.cc,v 1.4 2009/05/05 13:58:37 mschrode Exp $
 
 #include "Fitter.h"
 
@@ -7,6 +7,7 @@
 
 namespace js
 {
+  //----------------------------------------------------------
   void Fitter::Fit()
   {
     ////// LVMINI //////
@@ -36,13 +37,15 @@ namespace js
     int ITER = 0;
     do {
       ++ITER;
-      //FSUM = EvalFDiJetData(mPar,AUX);
       FSUM = NLogLSum(AUX);
       lvmfun_(&mPar.front(), FSUM, IRET, &AUX.front());
       lvmprt_(2, &AUX.front(), 2); //print out
+
     } while (IRET < 0 && ITER < NITER);
     int error_index = 2;
     error_index = lvmind_(error_index);
+
+    std::cout << "\n" << mNBadEvts << " events flagged as bad." << std::endl;
   }
 
 
@@ -51,10 +54,18 @@ namespace js
   double Fitter::NLogLSum(std::vector<double>& grad)
   {
     double L = 0.;
+    int nFlaggedBad = 0;
 
     for(DataIt datait = mData.begin(); datait != mData.end(); datait++)
       {
-	const Event * evt = *datait;
+	Event * evt = *datait;
+
+	// Check status of event
+	if( evt->Status() != 0 )
+	  {
+	    nFlaggedBad++;
+	    continue;
+	  }
 
 	// Calculate probability
 	double prob = NLogL(evt);
@@ -65,16 +76,18 @@ namespace js
 	for(int i = 0; i < GetNPar(); i++)
 	  {
 	    double oldPar = mPar.at(i);
-	    mPar.at(i) = oldPar + eps;
-	    double prob1 = NLogL(evt);
-	    mPar.at(i) = oldPar - eps;
-	    double prob2 = NLogL(evt);
-	    mPar.at(i) = oldPar;
+	    mPar.at(i)    = oldPar + eps;
+	    double prob1  = NLogL(evt);
+	    mPar.at(i)    = oldPar - eps;
+	    double prob2  = NLogL(evt);
+	    mPar.at(i)    = oldPar;
 
-	    grad.at(i)        += (prob1 - prob2) / 2. / eps;
+	    grad.at(i)             += (prob1 - prob2) / 2. / eps;
 	    grad.at(i + GetNPar()) += (prob1 + prob2 - 2*prob) / 4. / eps / eps;
 	  }
       }
+
+    mNBadEvts += (nFlaggedBad - mNBadEvts);
 
     return L;
   }
@@ -82,18 +95,18 @@ namespace js
 
 
   //----------------------------------------------------------
-  double Fitter::NLogL(const Event * evt) const
+  double Fitter::NLogL(Event * evt) const
   {
     double L = 0.;
 
     if( evt->Type() == "DiJetEvent" )
       {
-	const DiJetEvent * dijet = static_cast<const DiJetEvent*>(evt);
+	DiJetEvent * dijet = static_cast<DiJetEvent*>(evt);
 	L = NLogLDiJet(dijet);
       }
     else if( evt->Type() == "PhotonJetEvent" )
       {
-	const PhotonJetEvent * photonjet = static_cast<const PhotonJetEvent*>(evt);
+	PhotonJetEvent * photonjet = static_cast<PhotonJetEvent*>(evt);
 	L = NLogLPhotonJet(photonjet);
       }
 
@@ -103,14 +116,13 @@ namespace js
 
 
   //----------------------------------------------------------
-  double Fitter::NLogLDiJet(const DiJetEvent * dijet) const
+  double Fitter::NLogLDiJet(DiJetEvent * dijet) const
   {
     int    maxNIter  = 5;       // Max number of iterations in interval splitting
     double eps = 1.e-5;
 
     // Normalize integral
     double norm = ( pow(mMax,3) - pow(mMin,3) ) / 3.;
-    //std::cout << "norm " << logNorm << std::endl;
 
     double         pint      = 0.;      // Current value of integral over response pdfs
     double         pint_old  = 1.;      // Value of integral over response pdfs from previous iteration
@@ -123,8 +135,6 @@ namespace js
     // Iterate until precision or max. number iterations reached
     while(fabs((pint - pint_old) / pint_old) > eps && nIter < maxNIter)
       {
-	//std::cout << "Iteration: " << nIter << std::endl;
-		
 	pint_old = pint;
 	pint     = 0;
 	pp_old   = pp;
@@ -140,11 +150,10 @@ namespace js
 	    if(nIter == 0 || i % 3 != 0)
 	      {
 		double r = dijet->PtMeas(0) / t;
-		double p0 = Prob(r);
+		double p0 = PDF(r);
 		r =  dijet->PtMeas(1) / t;
-		double p1 = Prob(r);
+		double p1 = PDF(r);
 		pp.push_back(p0 * p1); // Store product of pdfs
-		//std::cout << "    pp.back(): " << pp.back() << std::endl;
 	      }
 	    else
 	      {
@@ -174,17 +183,22 @@ namespace js
       }
     pint /= norm;
 
-    return  -1.*log(pint);
+    if( pint < 0. || pint > 1. ) dijet->SetStatus(1);
+
+    return -1.*log(pint);
   }
 
 
 
   //----------------------------------------------------------
-  double Fitter::NLogLPhotonJet(const PhotonJetEvent * photonjet) const
+  double Fitter::NLogLPhotonJet(PhotonJetEvent * photonjet) const
   {
     double t = photonjet->PtPhoton();
     double m = photonjet->PtMeas();
-    double p = Prob(m/t);
+    double p = PDF(m/t);
+    p /= t;
+
+    if( p < 0. || p > 1. ) photonjet->SetStatus(1);
 
     return -1.*log(p);
   }
@@ -192,17 +206,17 @@ namespace js
 
 
   //----------------------------------------------------------
-  double Fitter::Prob(double x) const
+  double Fitter::PDF(double x) const
   {
     double p = 0.;
     if( mModel == "FermiTail" )
-      p = ProbFermiTail(x,mPar);
+      p = PDFFermiTail(x,mPar);
     else if( mModel == "TwoGauss" )
-      p = ProbTwoGauss(x,mPar);
+      p = PDFTwoGauss(x,mPar);
     else if( mModel == "ThreeGauss" )
-      p = ProbThreeGauss(x,mPar);
+      p = PDFThreeGauss(x,mPar);
     else if( mModel == "ExpTail" )
-      p = ProbExpTail(x,mPar);
+      p = PDFExpTail(x,mPar);
     
     return p;
   }
@@ -210,7 +224,7 @@ namespace js
 
 
   //----------------------------------------------------------
-  double Fitter::ProbFermiTail(double x, const std::vector<double>& par) const
+  double Fitter::PDFFermiTail(double x, const std::vector<double>& par) const
   {
     double c = par.at(0);
     if (c < 0) {
@@ -258,7 +272,7 @@ namespace js
 
 
   //----------------------------------------------------------
-  double Fitter::ProbThreeGauss(double x, const std::vector<double>& par) const
+  double Fitter::PDFThreeGauss(double x, const std::vector<double>& par) const
   {
     double u0 = 1.;
     double s0 = par.at(0);  // Sigma of main Gaussian
@@ -270,18 +284,17 @@ namespace js
     double s2 = par.at(6);  // Sigma of 2. Gaussian tail
 
     //Take care of proper normalization
-    if(c1 < 0.) c1 = 0.;
+    if(c1 < 0.)  c1 = 0.;
     if(c1 > 0.2) c1 = 0.2;
-    if(u1 < 1.) u1 = 1.;
-    if(c2 < 0.) c2 = 0.;
+    if(c2 < 0.)  c2 = 0.;
     if(c2 > 0.2) c2 = 0.2;
-    if(u2 > 1.) u2 = 1.;
-
 
     double p  = (1 - (c1+c2)) / sqrt(2* M_PI) / s0 * exp(-pow((x - u0) / s0, 2) / 2);
     p        +=            c1 / sqrt(2* M_PI) / s1 * exp(-pow((x - u1) / s1, 2) / 2);
     p        +=            c2 / sqrt(2* M_PI) / s2 * exp(-pow((x - u2) / s2, 2) / 2);
 
+    if( p < 0 ) p = 1.E-10;
+  
     return p;
   }
 
@@ -302,7 +315,6 @@ namespace js
     // Take care of proper normalization
     if(c1 < 0.) c1 = 0.;
     if(c1 > 0.2) c1 = 0.2;
-    if(u1 < 1.) u1 = 1.;
     if(c2 < 0.) c2 = 0.;
     if(c2 > 0.2) c2 = 0.2;
 
@@ -310,13 +322,15 @@ namespace js
     p        +=            c1 / sqrt(2* M_PI) / s1 * exp(-pow((x[0] - u1) / s1, 2) / 2);
     p        +=            c2 / sqrt(2* M_PI) / s2 * exp(-pow((x[0] - u2) / s2, 2) / 2);
 
+    if( p < 0 ) p = 1.E-10;
+
     return p;
   }
 
 
 
   //----------------------------------------------------------
-  double Fitter::ProbTwoGauss(double x, const std::vector<double>& par) const
+  double Fitter::PDFTwoGauss(double x, const std::vector<double>& par) const
   {
     double u0 = 1.;
     double s0 = par.at(0);  // Sigma of main Gaussian
@@ -329,7 +343,7 @@ namespace js
     if(c1 > 1.) c1 = 1.;
 
 
-    double p  = (1 - c1) / sqrt(2* M_PI) / s0 * exp(-pow((x - u0) / s0, 2) / 2);
+    double p  = (1. - c1) / sqrt(2* M_PI) / s0 * exp(-pow((x - u0) / s0, 2) / 2);
     p        +=       c1 / sqrt(2* M_PI) / s1 * exp(-pow((x - u1) / s1, 2) / 2);
 
     return p;
@@ -350,7 +364,7 @@ namespace js
     if(c1 < 0.) c1 = 0.;
     if(c1 > 1.) c1 = 1.;
 
-    double p  = (1 - c1) / sqrt(2* M_PI) / s0 * exp(-pow((x[0] - u0) / s0, 2) / 2);
+    double p  = (1. - c1) / sqrt(2* M_PI) / s0 * exp(-pow((x[0] - u0) / s0, 2) / 2);
     p        +=       c1 / sqrt(2* M_PI) / s1 * exp(-pow((x[0] - u1) / s1, 2) / 2);
 
     return p;
@@ -359,7 +373,7 @@ namespace js
 
 
   //----------------------------------------------------------
-  double Fitter::ProbExpTail(double x, const std::vector<double>& par) const
+  double Fitter::PDFExpTail(double x, const std::vector<double>& par) const
   {
     double c = par.at(0);   // Normalization
     double u = 1.;          // Mean of central Gaussian
