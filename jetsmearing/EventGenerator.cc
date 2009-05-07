@@ -1,4 +1,4 @@
-// $Id: EventGenerator.cc,v 1.2 2009/05/04 14:35:04 mschrode Exp $
+// $Id: EventGenerator.cc,v 1.3 2009/05/05 13:58:37 mschrode Exp $
 
 #include "EventGenerator.h"
 
@@ -203,6 +203,7 @@ namespace js
   {
     // Pt from response histogram
     double pt = mHistResp->GetRandom();
+    assert( pt >= 0. );
     pt *= p.Pt();
       
     // Exponential smearing of phi

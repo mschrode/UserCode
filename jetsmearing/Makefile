@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.2 2009/05/04 14:35:04 mschrode Exp $
+# $Id: Makefile,v 1.3 2009/05/05 14:01:13 mschrode Exp $
 
 UTILDIR    = ./../util/
 
@@ -55,9 +55,9 @@ run.o: run.cc
 
 
 clean:
+	@rm *.o 
 	@rm run
 	@rm *~
-	@rm *.o 
 	@rm *#
 	@rm *.ps
 	@rm *.eps

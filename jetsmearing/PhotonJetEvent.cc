@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: PhotonJetEvent.cc,v 1.1 2009/05/05 13:58:37 mschrode Exp $
 
 #include "PhotonJetEvent.h"
 
@@ -12,7 +12,8 @@ namespace js
   //!  are initialized.
   // --------------------------------------------------
   PhotonJetEvent::PhotonJetEvent()
-    : mJet(new Jet()),
+    : Event(),
+      mJet(new Jet()),
       mPPhoton(new TLorentzVector()) {}
 
 

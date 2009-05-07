@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: NJetEvent.h,v 1.2 2009/05/04 14:35:04 mschrode Exp $
 
 #ifndef JS_NJET_EVENT_H
 #define JS_NJET_EVENT_H
@@ -14,12 +14,12 @@ namespace js
   //!  \brief An event with n jets
   //!  \author Matthias Schroeder
   //!  \date Tue Apr 28 13:31:38 CEST 2009
-  //!  $Id: $
+  //!  $Id: NJetEvent.h,v 1.2 2009/05/04 14:35:04 mschrode Exp $
   // --------------------------------------------------
   class NJetEvent : public Event
   {
   public:
-    NJetEvent() {};
+    NJetEvent() : Event() {};
     ~NJetEvent();
 
     virtual std::string Type() const { return "NJetEvent"; }
@@ -55,12 +55,12 @@ namespace js
   //!  \brief An event with 2 jets
   //!  \author Matthias Schroeder
   //!  \date Wed Apr 29 14:43:45 CEST 2009
-  //!  $Id: $
+  //!  $Id: NJetEvent.h,v 1.2 2009/05/04 14:35:04 mschrode Exp $
   // --------------------------------------------------
   class DiJetEvent : public NJetEvent
   {
   public:
-    DiJetEvent() {};
+    DiJetEvent() : NJetEvent() {};
     ~DiJetEvent() {};
 
     void AddJet(const Jet& jet) { assert( mJets.size() < 2 ); mJets.push_back(new Jet(jet)); }
