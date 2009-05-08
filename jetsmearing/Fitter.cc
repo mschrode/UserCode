@@ -1,4 +1,4 @@
-// $Id: Fitter.cc,v 1.5 2009/05/07 15:22:23 mschrode Exp $
+// $Id: Fitter.cc,v 1.6 2009/05/08 12:13:28 mschrode Exp $
 
 #include "Fitter.h"
 
@@ -19,6 +19,20 @@ namespace js
       mPDFHistMax(2.),
       mNBadEvts(0)
   {
+    // Adjust parameters to fit model
+    int n = GetNPar(model);
+    if( GetNPar() > n )
+      {
+	mPar.erase(mPar.begin()+n,mPar.end());
+      }
+    else if( GetNPar() < n )
+      {
+	while( GetNPar() < n )
+	  {
+	    mPar.push_back(1.);
+	  }
+      }
+
     assert( GetNPar() == GetNPar(model) );
 
     if( mModel == "Hist" )
