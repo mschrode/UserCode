@@ -1,4 +1,4 @@
-// $Id: EventGenerator.cc,v 1.3 2009/05/05 13:58:37 mschrode Exp $
+// $Id: EventGenerator.cc,v 1.4 2009/05/07 15:23:37 mschrode Exp $
 
 #include "EventGenerator.h"
 
@@ -38,7 +38,11 @@ namespace js
       mParResp(parResp),
       mHistResp(0),
       mMin(min),
-      mMax(max) {}
+      mMax(max)
+  {
+    assert( mModelResp == "Histogram" || mModelResp == "Gauss+Uniform" );
+    if( mModelResp == "Gauss+Uniform" ) assert( mParResp.size() == 3 );
+  }
 
 
 
