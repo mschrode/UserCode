@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.4 2009/05/05 13:58:37 mschrode Exp $
+// $Id: run.cc,v 1.5 2009/05/07 15:21:01 mschrode Exp $
 
 #include <fstream>
 #include <iostream>
@@ -33,7 +33,7 @@ void WriteParameters(const std::vector<double>& par, const std::string& head)
 
 int main()
 {
-  std::string model = "ThreeGauss";
+  std::string model = "Hist";
 
   // Parameter vector
   std::vector<double> par;
@@ -69,20 +69,43 @@ int main()
       par.push_back(1.2);
       par.push_back(1.5);
     }
+  else if( model == "Hist" )
+    {
+      par.push_back(0.001);
+      par.push_back(0.001);
+      par.push_back(0.01);
+      par.push_back(0.01);
+      par.push_back(0.01);
+      par.push_back(0.01);
+      par.push_back(0.1);
+      par.push_back(0.1);
+      par.push_back(0.5);
+      par.push_back(0.5);
+      par.push_back(5.);
+      par.push_back(1.);
+      par.push_back(0.03);
+      par.push_back(0.03);
+      par.push_back(0.01);
+      par.push_back(0.01);
+      par.push_back(0.01);
+      par.push_back(0.01);
+      par.push_back(0.001);
+      par.push_back(0.001);
+    }
 
 
   std::vector<std::string> ptbins;
   //ptbins.push_back("15_20");
   //ptbins.push_back("20_30");
-  ptbins.push_back("30_50");
-   ptbins.push_back("50_80");
-   ptbins.push_back("80_120");
-  ptbins.push_back("120_170");
-  ptbins.push_back("170_230");
-  ptbins.push_back("230_300");
-  ptbins.push_back("300_380");
-  ptbins.push_back("380_470");
-  ptbins.push_back("470_600");
+//   ptbins.push_back("30_50");
+//    ptbins.push_back("50_80");
+//    ptbins.push_back("80_120");
+//   ptbins.push_back("120_170");
+//   ptbins.push_back("170_230");
+//   ptbins.push_back("230_300");
+//   ptbins.push_back("300_380");
+//   ptbins.push_back("380_470");
+//   ptbins.push_back("470_600");
   ptbins.push_back("600_800");
 
   for(unsigned int i = 0; i < ptbins.size(); i++)
@@ -94,6 +117,8 @@ int main()
       double max = 1000;
       std::vector<double> parTruth;
       std::vector<double> parResp;
+      parResp.push_back(1.2);
+      parResp.push_back(0.1);
       parResp.push_back(0.05);
 
       TH1F * h = 0;
@@ -115,10 +140,10 @@ int main()
 
       js::Data data;
 
-      js::Data dataDiJet = gen.GenerateDijetEvents(1000);
-      data.insert(data.end(),dataDiJet.begin(),dataDiJet.end());
+//       js::Data dataDiJet = gen.GenerateDijetEvents(1000);
+//       data.insert(data.end(),dataDiJet.begin(),dataDiJet.end());
 
-      js::Data dataPhotonJet = gen.GeneratePhotonJetEvents(1000);
+      js::Data dataPhotonJet = gen.GeneratePhotonJetEvents(5000);
       data.insert(data.end(),dataPhotonJet.begin(),dataPhotonJet.end());
 
       // Fit
@@ -143,10 +168,14 @@ int main()
 	{
 	  js::ControlPlots plots(data);
 	  plots.SetFileNameSuffix(model+"_"+ptbins.at(i));
+	  //plots.SetFileNameSuffix(model);
 	  plots.SetRespBinning(40,0,6);
 	  //	  plots.PlotDijets();
-	  //	  plots.PlotPhotonJets();
-	  plots.PlotResponse(fitter.GetTF1());
+	  plots.PlotPhotonJets();
+	  if( model == "Hist" )
+	    plots.PlotResponse(fitter.GetTH1Fpdf());
+	  else
+    	    plots.PlotResponse(fitter.GetTF1pdf());
 	}
 
       // Clean up

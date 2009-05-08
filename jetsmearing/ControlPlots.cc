@@ -1,10 +1,11 @@
-// $Id: ControlPlots.cc,v 1.3 2009/05/05 14:00:36 mschrode Exp $
+// $Id: ControlPlots.cc,v 1.4 2009/05/06 12:17:32 mschrode Exp $
 
 #include "ControlPlots.h"
 
 #include <iostream>
 
 #include "TCanvas.h"
+#include "TH1D.h"
 #include "TH1F.h"
 #include "TPostScript.h"
 #include "TStyle.h"
@@ -13,6 +14,8 @@
 #include "NJetEvent.h"
 #include "PhotonJetEvent.h"
 #include "HistOps.h"
+
+
 
 namespace js
 {
@@ -239,16 +242,16 @@ namespace js
 
 
   // --------------------------------------------------
-  void ControlPlots::PlotResponse(TF1 * pdf) const
+  void ControlPlots::PlotResponse(TObject * pdf) const
   {
     std::cout << "Creating response control plots... " << std::flush;
 
     // Create histograms
-    TH1F* hResponse = new TH1F("hResponse",";p^{jet}_{T} / p^{true}_{T}",mRespNBins,mRespMin,mRespMax);
-    hResponse->Sumw2();
+    TH1F* hRespMeas = new TH1F("hRespMeas",";p^{jet}_{T} / p^{true}_{T}",mRespNBins,mRespMin,mRespMax);
+    hRespMeas->Sumw2();
 
     //    TH1F* hRelDiff = new TH1F("hRelDiff",";( p^{jet}_{T} - p^{true}_{T} ) / p^{true}_{T}",mDiffNBins,mDiffMin,mDiffMax);
-    //hResponse->Sumw2();
+    //hRespMeas->Sumw2();
 
 
     // Fill histograms
@@ -265,7 +268,7 @@ namespace js
 	      {
 		double m = (*jetit)->PtMeas();
 		double t = (*jetit)->PtTrue();
-		hResponse->Fill(m/t);
+		hRespMeas->Fill(m/t);
 	      }
 	  }
 
@@ -276,28 +279,44 @@ namespace js
 
 	    double m = evt->PtMeas();
 	    double t = evt->PtTrue();
-	    hResponse->Fill(m/t);
+	    hRespMeas->Fill(m/t);
 	  }
       }
 
     // Normalize histogram
-    double norm = hResponse->Integral("width");
-    hResponse->Scale(1./norm);
+    double norm = hRespMeas->Integral("width");
+    hRespMeas->Scale(1./norm);
 
     // Find populated x-axis range
     int maxBin = 1;
-    for(int bin = 1; bin <= hResponse->GetNbinsX(); bin++)
+    for(int bin = 1; bin <= hRespMeas->GetNbinsX(); bin++)
       {
-	if( hResponse->GetBinContent(bin) > 0 ) maxBin = bin;
+	if( hRespMeas->GetBinContent(bin) > 0 ) maxBin = bin;
       }
-    if( maxBin < hResponse->GetNbinsX() ) maxBin++;
-    hResponse->GetXaxis()->SetRange(1,maxBin);
+    if( maxBin < hRespMeas->GetNbinsX() ) maxBin++;
+    hRespMeas->GetXaxis()->SetRange(1,maxBin);
+
+    // In case of histogramed pdf, fill a histogram
+    TH1F * hRespFit = new TH1F("hRespFit","",10*mRespNBins,mRespMin,mRespMax);
+    std::string type = pdf->ClassName();
+    if( type == "TH1D" )
+      {
+	TH1D * hHistPDF = dynamic_cast<TH1D*>(pdf);
+	for(int bin = 1; bin <= hRespFit->GetNbinsX(); bin++)
+	  {
+	    double r = hRespFit->GetBinCenter(bin);
+	    hRespFit->SetBinContent(bin,hHistPDF->Interpolate(r));
+	  }
+	norm = hRespFit->Integral("width");
+	hRespFit->Scale(1./norm);
+      }
 
     // Write histos to eps file
     TCanvas *c1 = new TCanvas("c1","Jet Response",0,0,600,600);
     c1->cd();
-    hResponse->Draw();
-    pdf->Draw("same");
+    hRespMeas->Draw();
+    if( type == "TH1D" ) hRespFit->Draw("Lsame");
+    else pdf->Draw("same");
     //    c1->SetGrid();
     c1->SetLogy();
     c1->SaveAs((mDir+"/js_"+mFileNameSuffix+"_JetResponse.eps").c_str());
@@ -305,11 +324,12 @@ namespace js
 
     // Write histos to root file
     std::vector<TH1F*> hists;
-    hists.push_back(hResponse);
+    hists.push_back(hRespMeas);
     util::HistOps::WriteToRootFile(hists,mDir+"/js_"+mFileNameSuffix+"_"+mRootFileName);
 
     // Clean up
-    delete hResponse;
+    delete hRespMeas;
+    delete hRespFit;
     delete pdf;
 
     std::cout << "ok" << std::endl;

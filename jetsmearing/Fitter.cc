@@ -1,4 +1,4 @@
-// $Id: Fitter.cc,v 1.4 2009/05/05 13:58:37 mschrode Exp $
+// $Id: Fitter.cc,v 1.5 2009/05/07 15:22:23 mschrode Exp $
 
 #include "Fitter.h"
 
@@ -8,11 +8,47 @@
 namespace js
 {
   //----------------------------------------------------------
+  Fitter::Fitter(Data& data, double min, double max,
+	 const std::string& model, const std::vector<double>& par)
+    : mData(data),
+      mMin(min),
+      mMax(max),
+      mModel(model),
+      mPar(par),
+      mPDFHistMin(0.),
+      mPDFHistMax(2.),
+      mNBadEvts(0)
+  {
+    assert( GetNPar() == GetNPar(model) );
+
+    if( mModel == "Hist" )
+      {
+	mPDFHist = new TH1D("mPDFHist","",GetNPar(),mPDFHistMin,mPDFHistMax);
+      }
+    else
+      {
+	mPDFHist = 0;
+      }
+  }
+
+
+
+  //----------------------------------------------------------
+  Fitter::~Fitter()
+  {
+    if( mPDFHist ) delete mPDFHist;
+  }
+  
+
+  //!  \brief Do the fit
+  //!
+  //!  This function has to be called to do the fit.
+  //----------------------------------------------------------
   void Fitter::Fit()
   {
     ////// LVMINI //////
     int NPAR =  GetNPar();
-    int NITER = 100;
+    int NITER = 1000;
     int MVEC;
     NPAR < 29 ? MVEC = NPAR : MVEC = 29;
     int NAUX = 10000;
@@ -77,8 +113,10 @@ namespace js
 	  {
 	    double oldPar = mPar.at(i);
 	    mPar.at(i)    = oldPar + eps;
+
 	    double prob1  = NLogL(evt);
 	    mPar.at(i)    = oldPar - eps;
+
 	    double prob2  = NLogL(evt);
 	    mPar.at(i)    = oldPar;
 
@@ -217,6 +255,8 @@ namespace js
       p = PDFThreeGauss(x,mPar);
     else if( mModel == "ExpTail" )
       p = PDFExpTail(x,mPar);
+    else if( mModel == "Hist" )
+      p = PDFHist(x,mPar);
     
     return p;
   }
@@ -413,8 +453,36 @@ namespace js
 
 
   // --------------------------------------------------
-  TF1 * Fitter::GetTF1() const
+  double Fitter::PDFHist(double x, const std::vector<double>& par) const
   {
+    // Set histogram bin content according
+    // to parameters
+    for(int i = 0; i < GetNPar(); i++)
+      {
+	double p = par.at(i);
+	if( p < 0. ) p = 0.;
+	mPDFHist->SetBinContent(1+i,p);
+      }
+
+    // Normalize histogrammed pdf
+    mPDFHist->Scale( 1. / ( mPDFHist->Integral("width") ) );
+
+    // Return probability density for given x
+    double p = mPDFHist->Interpolate(x);
+    // Interpolation into underflow/overflow bins
+    // keeps value of last bin in range
+    if( x < mPDFHistMin || x > mPDFHistMax ) p = 0.;
+
+    return p;
+  }
+
+
+
+  // --------------------------------------------------
+  TF1 * Fitter::GetTF1pdf() const
+  {
+    assert( mModel != "Hist" );
+
     TF1 * f = 0;
     if( mModel == "FermiTail" )
       {
@@ -452,8 +520,32 @@ namespace js
 	    std::cout << "PAR " << i << "  " << mPar.at(i) << std::endl;
 	  }
       }
-
     return f;
+  }
+
+
+
+  // --------------------------------------------------
+  TH1F * Fitter::GetTH1Fpdf() const
+  {
+    assert( mModel == "Hist" );
+
+    TH1F * h = 0;
+
+    if( mModel == "Hist" )
+      {
+	h = static_cast<TH1F*>(mPDFHist->Clone("fPDFHist"));
+	h->Reset();
+	for(int i = 0; i < GetNPar(); i++)
+	  {
+	    double p = mPar.at(i);
+	    if( p < 0. ) p = 0.;
+	    h->SetBinContent(1+i,p);
+	  }
+	h->Scale( 1. / ( h->Integral("width") ) );
+      }
+
+    return h;
   }
 
 
@@ -462,10 +554,11 @@ namespace js
   int Fitter::GetNPar(const std::string& model) const
   {
     int n = 0;
-    if( model == "FermiTail" ) n = 3;
-    else if( model == "TwoGauss" ) n = 4;
-    else if( model == "ThreeGauss" ) n = 7;
-    else if( model == "ExpTail" ) n = 4;
+    if( model == "FermiTail" )        n = 3;
+    else if( model == "TwoGauss" )    n = 4;
+    else if( model == "ThreeGauss" )  n = 7;
+    else if( model == "ExpTail" )     n = 4;
+    else if( model == "Hist" )        n = 20;
     
     return n;
   }
