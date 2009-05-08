@@ -1,4 +1,4 @@
-// $Id: Fitter.h,v 1.5 2009/05/07 15:22:23 mschrode Exp $
+// $Id: Fitter.h,v 1.6 2009/05/08 12:13:28 mschrode Exp $
 
 #ifndef JS_FITTER_H
 #define JS_FITTER_H
@@ -28,6 +28,56 @@
 // --------------------------------------------------
 namespace js
 {
+  //!  \brief Fit a certain response model to the data
+  //!
+  //!
+  //!  The Fitte finds the most probable probability density
+  //!  function (pdf) \f$ p \f$ of the response \f$ x \f$
+  //!  compatible with the data.
+  //!  The data is assumed to be correctly calibrated i.e.
+  //!  the mean response is assumed to be 1.
+  //!  Possible response pdf models are:
+  //!
+  //!   - "FermiTail":
+  //!     Gaussian \f$ G \f$ plus constant contribution
+  //!     from a Fermi function \f$ F \f$ which drops to
+  //!     0 for \f$ x > 1 \f$:
+  //!     \f[
+  //!      p(x) = c \cdot G(1,\sigma) + (1-c) \cdot F(1,T)
+  //!     \f]
+  //!     This model has 3 parameters:
+  //!      - 0: Normalization \f$ c \f$
+  //!      - 1: Width \f$ \sigma \f$ of Gaussian
+  //!      - 2: Temperature \f$ T \f$ of Fermi-function    
+  //!
+  //!   - "TwoGauss": See NGauss
+  //!
+  //!   - "ThreeGauss": See NGauss
+  //!
+  //!   - NGauss (The name of the actual models is "TwoGauss" and
+  //!     "ThreeGauss"):
+  //!     One central and \f$ N \f$ side Gaussians \f$ G \f$:
+  //!     \f[
+  //!      p(x) = (1-(c_{1}+c_{2})) \cdot G(1,\sigma_{0})
+  //!             + \sum^{N}_{i=1} c_{i} \cdot G(\mu_{i},\sigma_{i})
+  //!     \f]
+  //!     This model has \f$ 1+3N \f$ parameters:
+  //!      - 0: Width \f$ \sigma_{0} \f$ of central Gaussian
+  //!      - 1: Normalization \f$ c_{1} \f$ of first side Gaussian
+  //!      - 2: Mean \f$ \mu_{1} \f$ of first side Gaussian
+  //!      - 3: Width \f$ \sigma_{1} \f$ of first side Gaussian
+  //!      - ...
+  //!
+  //!   - "Hist":
+  //!     The response pdf is given by a histogram.
+  //!     This model has a specified number of parameters
+  //!     corresponding to the number of bins in a specified
+  //!     response range. Outside this range, the pdf is 0.
+  //!  
+  //!  The Fitter uses the
+  //!  <A HREF="http://www.desy.de/~blobel/largesc.html">
+  //!  LVMINI</A> program by V. Blobel.
+  // --------------------------------------------------
   class Fitter
   {
   public:

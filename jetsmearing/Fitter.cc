@@ -1,4 +1,4 @@
-// $Id: Fitter.cc,v 1.6 2009/05/08 12:13:28 mschrode Exp $
+// $Id: Fitter.cc,v 1.7 2009/05/08 12:28:52 mschrode Exp $
 
 #include "Fitter.h"
 
@@ -7,6 +7,26 @@
 
 namespace js
 {
+  //!  \brief Constructor
+  //!
+  //!  Takes the assumed model for the response pdf (see
+  //!  class description). If the number of specified 
+  //!  start parameters is not equal to the number of
+  //!  parameters of that model, the start parameters
+  //!  are adjusted in the following way:
+  //!   - If par.size() > GetNPar(model):
+  //!     The first GetNPar(model) parameters are taken
+  //!     and the rest is ignored
+  //!   - If par.size() < GetNPar(model):
+  //!     The par.size() parameters are taken and the
+  //!     rest of necessary parameters is initialized
+  //!     to 1.     
+  //!
+  //!  \param data   Input Data for the fit
+  //!  \param min    Minimum of considered \f$ E^{true}_{T}\f$ spectrum
+  //!  \param max    Maximum of considered \f$ E^{true}_{T}\f$ spectrum
+  //!  \param model  The assumed response model
+  //!  \param par    Start values of parameters
   //----------------------------------------------------------
   Fitter::Fitter(Data& data, double min, double max,
 	 const std::string& model, const std::vector<double>& par)
@@ -38,6 +58,15 @@ namespace js
     if( mModel == "Hist" )
       {
 	mPDFHist = new TH1D("mPDFHist","",GetNPar(),mPDFHistMin,mPDFHistMax);
+	int minbin = mPDFHist->FindBin(0.9);
+	int maxbin = mPDFHist->FindBin(1.1);
+	for(int i = 0; i < GetNPar(); i++)
+	  {
+	    int bin = 1+i;
+	    if( bin >= minbin && bin <= maxbin ) mPar.at(i) = 1.;
+	    else                                 mPar.at(i) = 0.01;
+	  }
+	
       }
     else
       {
@@ -57,6 +86,7 @@ namespace js
   //!  \brief Do the fit
   //!
   //!  This function has to be called to do the fit.
+  //!  It calls the LVMINI program.
   //----------------------------------------------------------
   void Fitter::Fit()
   {
@@ -160,6 +190,12 @@ namespace js
       {
 	PhotonJetEvent * photonjet = static_cast<PhotonJetEvent*>(evt);
 	L = NLogLPhotonJet(photonjet);
+      }
+
+    // Check parameter ranges
+    for(int i = 0; i < GetNPar(); i++)
+      {
+	if( mPar.at(i) < 0. ) L += -1.*mPar.at(i);
       }
 
     return L;
@@ -572,7 +608,7 @@ namespace js
     else if( model == "TwoGauss" )    n = 4;
     else if( model == "ThreeGauss" )  n = 7;
     else if( model == "ExpTail" )     n = 4;
-    else if( model == "Hist" )        n = 20;
+    else if( model == "Hist" )        n = 15;
     
     return n;
   }

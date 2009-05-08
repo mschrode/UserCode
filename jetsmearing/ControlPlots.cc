@@ -1,4 +1,4 @@
-// $Id: ControlPlots.cc,v 1.4 2009/05/06 12:17:32 mschrode Exp $
+// $Id: ControlPlots.cc,v 1.5 2009/05/08 12:13:28 mschrode Exp $
 
 #include "ControlPlots.h"
 
@@ -305,7 +305,8 @@ namespace js
 	for(int bin = 1; bin <= hRespFit->GetNbinsX(); bin++)
 	  {
 	    double r = hRespFit->GetBinCenter(bin);
-	    hRespFit->SetBinContent(bin,hHistPDF->Interpolate(r));
+	    //hRespFit->SetBinContent(bin,hHistPDF->Interpolate(r));
+	    hRespFit->SetBinContent(bin,hHistPDF->GetBinContent(hHistPDF->FindBin(r)));
 	  }
 	norm = hRespFit->Integral("width");
 	hRespFit->Scale(1./norm);
@@ -315,7 +316,7 @@ namespace js
     TCanvas *c1 = new TCanvas("c1","Jet Response",0,0,600,600);
     c1->cd();
     hRespMeas->Draw();
-    if( type == "TH1D" ) hRespFit->Draw("Lsame");
+    if( type == "TH1D" ) hRespFit->Draw("same");
     else pdf->Draw("same");
     //    c1->SetGrid();
     c1->SetLogy();
