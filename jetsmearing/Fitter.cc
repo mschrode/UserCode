@@ -1,4 +1,4 @@
-// $Id: Fitter.cc,v 1.8 2009/05/08 15:41:42 mschrode Exp $
+// $Id: Fitter.cc,v 1.9 2009/05/12 11:54:04 mschrode Exp $
 
 #include "Fitter.h"
 
@@ -581,8 +581,8 @@ namespace js
 
     // Return probability density for given x
     double p = c / sqrt(2* M_PI ) / s * exp(-pow((x - u) / s, 2) / 2)
-      //  + (1. - c) * (mPDFHist->Interpolate(x));
-    + (1. - c) * (mPDFHist->GetBinContent(mPDFHist->FindBin(x)));
+      + (1. - c) * (mPDFHist->Interpolate(x));
+    //+ (1. - c) * (mPDFHist->GetBinContent(mPDFHist->FindBin(x)));
 
     return p;
   }

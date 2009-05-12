@@ -1,4 +1,4 @@
-// $Id: Fitter.h,v 1.7 2009/05/08 15:41:42 mschrode Exp $
+// $Id: Fitter.h,v 1.8 2009/05/12 11:54:04 mschrode Exp $
 
 #ifndef JS_FITTER_H
 #define JS_FITTER_H
@@ -83,7 +83,7 @@ namespace js
   //!     This model has 12 parameters:
   //!      - 0: Normalization \f$ c \f$
   //!      - 1: Width \f$ \sigma \f$ of central Gaussian
-  //!      - 2 - 11: Bins of the histogram between 0 and 2
+  //!      - 2 - 11: Bin content of the histogram between 0 and 2
   //!
   //!  The Fitter uses the
   //!  <A HREF="http://www.desy.de/~blobel/largesc.html">

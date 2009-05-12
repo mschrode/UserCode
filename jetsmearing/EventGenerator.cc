@@ -1,9 +1,12 @@
-// $Id: EventGenerator.cc,v 1.4 2009/05/07 15:23:37 mschrode Exp $
+// $Id: EventGenerator.cc,v 1.5 2009/05/08 12:14:17 mschrode Exp $
 
 #include "EventGenerator.h"
 
 #include <cmath>
 #include <iostream>
+
+#include "TF1.h"
+#include "TCanvas.h"
 
 #include "Jet.h"
 #include "NJetEvent.h"
@@ -16,10 +19,10 @@ namespace js
     : mRandom(new TRandom3(0)),
       mModelTruth("Uniform"),
       mModelResp("Gauss+Uniform"),
-      mHistResp(0),
-      mMin(100.),
-      mMax(1000.)
+      mHistResp(0)
   {
+    mParTruth.push_back(100.);
+    mParTruth.push_back(1000.);
     mParResp.push_back(1.2);
     mParResp.push_back(0.1);
     mParResp.push_back(0.05);
@@ -28,20 +31,57 @@ namespace js
 
 
   // --------------------------------------------------
-  EventGenerator::EventGenerator(double min, double max,
-				 const std::string& modelTruth, const std::vector<double>& parTruth,
+  EventGenerator::EventGenerator(const std::string& modelTruth, const std::vector<double>& parTruth,
 				 const std::string& modelResp, const std::vector<double>& parResp)
     : mRandom(new TRandom3(0)),
       mModelTruth(modelTruth),
       mParTruth(parTruth),
       mModelResp(modelResp),
       mParResp(parResp),
-      mHistResp(0),
-      mMin(min),
-      mMax(max)
+      mHistResp(0)
   {
-    assert( mModelResp == "Histogram" || mModelResp == "Gauss+Uniform" );
+    assert( mParTruth.size() == 2 );
+
+    assert( mModelResp == "Histogram"
+	    || mModelResp == "Gauss+Uniform"
+	    || mModelResp == "TwoGauss" );
+
     if( mModelResp == "Gauss+Uniform" ) assert( mParResp.size() == 3 );
+    if( mModelResp == "TwoGauss" )
+      {
+	assert( mParResp.size() == 5 );
+
+	// Set up sum of two Gaussians as pdf
+	double c  = mParResp.at(0);  // Normalization
+	double u0 = 1.;              // Mean of central Gaussian (scale)
+	double s0 = mParResp.at(1);  // Width of central Gaussian
+	double u1 = mParResp.at(2);  // Mean of second Gaussian
+	double s1 = mParResp.at(3);  // Width of central Gaussian
+	// mParResp.at(4) is temeperature for phi variation
+
+	double minResp = 0.;
+	double maxResp = 2.;
+	TF1 * f = new TF1("f","gaus(0)+gaus(3)",minResp,maxResp);
+	f->SetParameter(0,c);
+	f->SetParameter(1,u0);
+	f->SetParameter(2,s0);
+	f->SetParameter(3,1.-c);
+	f->SetParameter(4,u1);
+	f->SetParameter(5,s1);
+
+	// Fill response histogram according to f
+	//	mHistResp = new TH1F("hHistResp","",200,minResp,maxResp);
+	mHistResp = new TH1F("hHistResp","",25,minResp,maxResp);
+	for(int bin = 1; bin <= mHistResp->GetNbinsX(); bin++)
+	  {
+	    double r = f->Eval(mHistResp->GetBinCenter(bin));
+	    mHistResp->SetBinContent(bin,r);
+	  }
+	double norm = mHistResp->Integral("width");
+	mHistResp->Scale(1./norm);
+	delete f;
+      }
+
   }
 
 
@@ -151,7 +191,7 @@ namespace js
   // --------------------------------------------------
   TLorentzVector EventGenerator::GenerateTruth() const
   {
-    double pt  = mRandom->Uniform(mMin,mMax);
+    double pt  = mRandom->Uniform(mParTruth.at(0),mParTruth.at(1));
     double phi = mRandom->Uniform(0.,2*M_PI);
     
     TLorentzVector pTrue;
@@ -171,6 +211,8 @@ namespace js
 	SmearTruthGaussUniform(pMeas);
       else if( mModelResp == "Histogram")
 	SmearTruthHistogram(pMeas);
+      else if( mModelResp == "TwoGauss")
+	SmearTruthTwoGauss(pMeas);
 
       return pMeas;
     }
@@ -219,4 +261,37 @@ namespace js
     p.SetPtEtaPhiM(pt,0,phi,0);
   }
 
+
+
+  // --------------------------------------------------
+  void EventGenerator::SmearTruthTwoGauss(TLorentzVector& p) const
+  {
+    // Pt from response histogram
+    double pt = mHistResp->GetRandom();
+    assert( pt >= 0. );
+    pt *= p.Pt();
+      
+    // Exponential smearing of phi
+    double dPhi = mRandom->Exp(mParResp.at(4));
+    double phi  = p.Phi();
+    if( mRandom->Uniform() < 0.5 ) phi += dPhi;
+    else                           phi -= dPhi;
+    
+    p.SetPtEtaPhiM(pt,0,phi,0);
+  }
+
+
+
+  //!  \brief Write internal response histogram to file
+  // --------------------------------------------------
+  void EventGenerator::WriteResponseHist(const std::string& name) const
+  {
+    std::cout << "Writing response histogram to file " << name << "... " << std::flush;
+    TCanvas * c = new TCanvas("c","",500,500);
+    c->cd();
+    if( mHistResp ) mHistResp->Draw();
+    c->SaveAs(name.c_str());
+    delete c;
+    std::cout << "ok" << std::endl;
+  }
 }

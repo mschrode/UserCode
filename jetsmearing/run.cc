@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.6 2009/05/08 12:13:28 mschrode Exp $
+// $Id: run.cc,v 1.7 2009/05/12 11:54:04 mschrode Exp $
 
 #include <fstream>
 #include <iostream>
@@ -33,7 +33,7 @@ void WriteParameters(const std::vector<double>& par, const std::string& head)
 
 int main()
 {
-  std::string model = "FermiTail";
+  std::string model = "HistGauss";
   // Parameter vector
   std::vector<double> par;
 
@@ -124,39 +124,52 @@ int main()
       double min = 100.;
       double max = 1000;
       std::vector<double> parTruth;
-      std::string respModel = "Gauss+Uniform";
+      parTruth.push_back(min);
+      parTruth.push_back(max);
+      std::string respModel = "TwoGauss";
       std::vector<double> parResp;
       if( respModel == "Gauss+Uniform" )
 	{
-	  parResp.push_back(0.1);//1.2);
-	  parResp.push_back(0.1);
+	  parResp.push_back(1.2);   // Width of Gaussian
+	  parResp.push_back(0.1);   // Temeperature of Fermi function
 	}
-      parResp.push_back(0.05);
-
-      TH1F * h = 0;
-      TFile * f = new TFile("input/RespDiJetHisto.root","READ");
-      std::string name = "hRespCorr_"+ptbins.at(i);
-      f->GetObject(name.c_str(),h);
-      if( h == 0 )
+      else if( respModel == "TwoGauss" )
 	{
+	  parResp.push_back(0.96);   // Normalization
+	  parResp.push_back(0.06);   // Width of central Gaussian
+	  parResp.push_back(0.9);    // Mean of second Gaussian
+	  parResp.push_back(0.25);   // Width of central Gaussian
+	}
+      parResp.push_back(0.05);       // Temeperature of phi smearing
+
+      js::EventGenerator gen("Uniform",parTruth,respModel,parResp);
+      if( respModel == "Histogram" )
+	{
+	  TH1F * h = 0;
+	  TFile * f = new TFile("input/RespDiJetHisto.root","READ");
+	  std::string name = "hRespCorr_"+ptbins.at(i);
+	  f->GetObject(name.c_str(),h);
+	  if( h == 0 )
+	    {
+	      f->Close();
+	      delete f;
+	      continue;
+	    }
+	  h->SetDirectory(0);
 	  f->Close();
 	  delete f;
-	  continue;
-	}
-      h->SetDirectory(0);
-      f->Close();
-      delete f;
 
-      js::EventGenerator gen(min,max,"Uniform",parTruth,respModel,parResp);
-      gen.SetRespHist(h);
+	  gen.SetRespHist(h);
+	}
+      //gen.WriteResponseHist("respHist.eps");
 
       js::Data data;
 
-      js::Data dataDiJet = gen.GenerateDijetEvents(2000);
-      data.insert(data.end(),dataDiJet.begin(),dataDiJet.end());
+//       js::Data dataDiJet = gen.GenerateDijetEvents(1000);
+//       data.insert(data.end(),dataDiJet.begin(),dataDiJet.end());
 
-//       js::Data dataPhotonJet = gen.GeneratePhotonJetEvents(5000);
-//       data.insert(data.end(),dataPhotonJet.begin(),dataPhotonJet.end());
+      js::Data dataPhotonJet = gen.GeneratePhotonJetEvents(2000);
+      data.insert(data.end(),dataPhotonJet.begin(),dataPhotonJet.end());
 
       // Fit
       js::Fitter fitter(data,min,max,model,par);
@@ -183,7 +196,7 @@ int main()
 	  plots.SetFileNameSuffix(model);
 	  plots.SetGrid(false);
 	  plots.SetLog(true);
-	  plots.SetRespBinning(400,0,6);
+	  plots.SetRespBinning(80,0,6);
 	  //	  plots.PlotDijets();
 	  plots.PlotPhotonJets();
 	  if( model == "Hist" || model == "HistGauss" )
