@@ -1,4 +1,4 @@
-// $Id: ControlPlots.h,v 1.4 2009/05/06 12:17:32 mschrode Exp $
+// $Id: ControlPlots.h,v 1.5 2009/05/08 12:13:28 mschrode Exp $
 
 #ifndef JS_CONTROLPLOTS_H
 #define JS_CONTROLPLOTS_H
@@ -16,7 +16,7 @@ namespace js
   //!  \brief Generates validation plots
   //!  \author Matthias Schroeder
   //!  \date Tue Apr 28 19:02:46 CEST 2009
-  //!  $Id: ControlPlots.h,v 1.4 2009/05/06 12:17:32 mschrode Exp $
+  //!  $Id: ControlPlots.h,v 1.5 2009/05/08 12:13:28 mschrode Exp $
   // --------------------------------------------------
   class ControlPlots
   {
@@ -29,6 +29,8 @@ namespace js
     void PlotResponse(TObject * pdf) const;
     void SetFileNameSuffix(std::string suffix) { mFileNameSuffix = suffix; }
     void SetRespBinning(int nbins, double min, double max) { mRespNBins = nbins; mRespMin = min; mRespMax = max;}
+    void SetLog(bool setlog) { mSetLog = setlog; }
+    void SetGrid(bool setgrid) { mSetGrid = setgrid; }
 
 
   private:
@@ -45,6 +47,8 @@ namespace js
     std::string  mRootFileName;
     std::string  mFileNameSuffix;
     std::string  mDir;
+    bool         mSetLog;
+    bool         mSetGrid;
 
     void SetGStyle() const;
   };

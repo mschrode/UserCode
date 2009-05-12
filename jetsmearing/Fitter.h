@@ -1,4 +1,4 @@
-// $Id: Fitter.h,v 1.6 2009/05/08 12:13:28 mschrode Exp $
+// $Id: Fitter.h,v 1.7 2009/05/08 15:41:42 mschrode Exp $
 
 #ifndef JS_FITTER_H
 #define JS_FITTER_H
@@ -74,6 +74,17 @@ namespace js
   //!     corresponding to the number of bins in a specified
   //!     response range. Outside this range, the pdf is 0.
   //!  
+  //!   - "HistGauss":
+  //!     The response pdf is given by the sum of a central
+  //!     Gaussian and a histogram describing the tails:
+  //!     \f[
+  //!      p(x) = c \cdot G(1,\sigma) + (1-c) \cdot H(b_{i})
+  //!     \f]
+  //!     This model has 12 parameters:
+  //!      - 0: Normalization \f$ c \f$
+  //!      - 1: Width \f$ \sigma \f$ of central Gaussian
+  //!      - 2 - 11: Bins of the histogram between 0 and 2
+  //!
   //!  The Fitter uses the
   //!  <A HREF="http://www.desy.de/~blobel/largesc.html">
   //!  LVMINI</A> program by V. Blobel.
@@ -116,6 +127,7 @@ namespace js
     double PDFThreeGauss(double x, const std::vector<double>& par) const;
     double PDFExpTail(double x, const std::vector<double>& par) const;
     double PDFHist(double x, const std::vector<double>& par) const;
+    double PDFHistGauss(double x, const std::vector<double>& par) const;
 
     static double FermiTail(double * x, double * par);
     static double TwoGauss(double * x, double * par);

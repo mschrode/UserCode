@@ -1,4 +1,4 @@
-// $Id: Fitter.cc,v 1.7 2009/05/08 12:28:52 mschrode Exp $
+// $Id: Fitter.cc,v 1.8 2009/05/08 15:41:42 mschrode Exp $
 
 #include "Fitter.h"
 
@@ -39,7 +39,7 @@ namespace js
       mPDFHistMax(2.),
       mNBadEvts(0)
   {
-    // Adjust parameters to fit model
+    // Adjust number of parameters to fit model
     int n = GetNPar(model);
     if( GetNPar() > n )
       {
@@ -55,6 +55,8 @@ namespace js
 
     assert( GetNPar() == GetNPar(model) );
 
+    // Set up histogram for models with 
+    // histogramed pdfs
     if( mModel == "Hist" )
       {
 	mPDFHist = new TH1D("mPDFHist","",GetNPar(),mPDFHistMin,mPDFHistMax);
@@ -65,12 +67,21 @@ namespace js
 	    int bin = 1+i;
 	    if( bin >= minbin && bin <= maxbin ) mPar.at(i) = 1.;
 	    else                                 mPar.at(i) = 0.01;
-	  }
-	
+	  }	
+      }
+    else if( mModel == "HistGauss" )
+      {
+	mPDFHist = new TH1D("mPDFHistGauss","",GetNPar()-2,mPDFHistMin,mPDFHistMax);
       }
     else
       {
 	mPDFHist = 0;
+      }
+
+    std::cout << "Initializing Fitter with the following start parameters:" << std::endl;
+    for(int i = 0; i < GetNPar(); i++)
+      {
+	std::cout << " " << i << "   " << mPar.at(i) << std::endl;
       }
   }
 
@@ -129,7 +140,7 @@ namespace js
   }
 
 
-
+  //!  \brief Return the negative Log-Likelihood
   //----------------------------------------------------------
   double Fitter::NLogLSum(std::vector<double>& grad)
   {
@@ -176,6 +187,19 @@ namespace js
 
 
 
+  //!  \brief Returns the negative logarithm of the probability
+  //!         for an event
+  //!
+  //!  Depending on the event type, NLogLDiJet() or 
+  //!  NLogLPhotonJet() are called.
+  //!
+  //!  Parameter limits are enforced by introducing a
+  //!  penalty term if the parameter values exceed the
+  //!  limits.
+  //!
+  //!  \param evt Pointer to the event
+  //!  \return The negative logarithm of the probability
+  //!          associated with this event
   //----------------------------------------------------------
   double Fitter::NLogL(Event * evt) const
   {
@@ -192,11 +216,14 @@ namespace js
 	L = NLogLPhotonJet(photonjet);
       }
 
-    // Check parameter ranges
+    // Check parameter ranges and set penalty term
+    double min = 0.;
+    double max = 1.;
     for(int i = 0; i < GetNPar(); i++)
       {
-	if( mPar.at(i) < 0. ) L += -1.*mPar.at(i);
+	if( mPar.at(i) < 0. ) L += (min - mPar.at(i));
       }
+    if( mPar.at(0) > 1. ) L+= ( mPar.at(0) - max );
 
     return L;
   }
@@ -307,6 +334,8 @@ namespace js
       p = PDFExpTail(x,mPar);
     else if( mModel == "Hist" )
       p = PDFHist(x,mPar);
+    else if( mModel == "HistGauss" )
+      p = PDFHistGauss(x,mPar);
     
     return p;
   }
@@ -354,7 +383,7 @@ namespace js
       T = 0;
     }
 
-    double p = c / TMath::Sqrt(2* M_PI ) / sigma * exp(-pow((x[0] - mu) / sigma, 2) / 2) + (1 - c)
+    double p = c / sqrt(2* M_PI ) / sigma * exp(-pow((x[0] - mu) / sigma, 2) / 2) + (1 - c)
       / (T * log(1 + exp(mu / T))) / (exp((x[0] - mu) / T) + 1);
     return p;
   }
@@ -529,6 +558,38 @@ namespace js
 
 
   // --------------------------------------------------
+  double Fitter::PDFHistGauss(double x, const std::vector<double>& par) const
+  {
+    double c = par.at(0);
+    double u = 1.;
+    double s = par.at(1);
+
+    if( c < 0. ) c = 0.;
+    if( c > 1. ) c = 1.;
+
+    // Set histogram bin content according
+    // to parameters
+    for(int i = 2; i < GetNPar(); i++)
+      {
+	double p = par.at(i);
+	if( p < 0. ) p = 0.;
+	mPDFHist->SetBinContent(i-1,p);
+      }
+
+    // Normalize histogrammed pdf
+    mPDFHist->Scale( 1. / ( mPDFHist->Integral("width") ) );
+
+    // Return probability density for given x
+    double p = c / sqrt(2* M_PI ) / s * exp(-pow((x - u) / s, 2) / 2)
+      //  + (1. - c) * (mPDFHist->Interpolate(x));
+    + (1. - c) * (mPDFHist->GetBinContent(mPDFHist->FindBin(x)));
+
+    return p;
+  }
+
+
+
+  // --------------------------------------------------
   TF1 * Fitter::GetTF1pdf() const
   {
     assert( mModel != "Hist" );
@@ -578,21 +639,31 @@ namespace js
   // --------------------------------------------------
   TH1F * Fitter::GetTH1Fpdf() const
   {
-    assert( mModel == "Hist" );
+    assert( mModel == "Hist" || mModel == "HistGauss" );
 
     TH1F * h = 0;
 
     if( mModel == "Hist" )
       {
-	h = static_cast<TH1F*>(mPDFHist->Clone("fPDFHist"));
-	h->Reset();
-	for(int i = 0; i < GetNPar(); i++)
+	h = new TH1F("fPDFHist","",GetNPar(),mPDFHistMin,mPDFHistMax);
+	for(int bin = 1; bin <= h->GetNbinsX(); bin++)
 	  {
-	    double p = mPar.at(i);
-	    if( p < 0. ) p = 0.;
-	    h->SetBinContent(1+i,p);
+	    double r = h->GetBinCenter(bin);
+	    h->SetBinContent(bin,PDFHist(r,mPar));
 	  }
-	h->Scale( 1. / ( h->Integral("width") ) );
+	double norm = h->Integral("width");
+	h->Scale(1./norm);
+      }
+    else if( mModel == "HistGauss" )
+      {
+	h = new TH1F("fPDFHistGauss","",10*(GetNPar()-2),mPDFHistMin,mPDFHistMax);
+	for(int bin = 1; bin <= h->GetNbinsX(); bin++)
+	  {
+	    double r = h->GetBinCenter(bin);
+	    h->SetBinContent(bin,PDFHistGauss(r,mPar));
+	  }
+	double norm = h->Integral("width");
+	h->Scale(1./norm);
       }
 
     return h;
@@ -609,6 +680,7 @@ namespace js
     else if( model == "ThreeGauss" )  n = 7;
     else if( model == "ExpTail" )     n = 4;
     else if( model == "Hist" )        n = 15;
+    else if( model == "HistGauss" )   n = 12;
     
     return n;
   }

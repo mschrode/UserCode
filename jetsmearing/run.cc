@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.5 2009/05/07 15:21:01 mschrode Exp $
+// $Id: run.cc,v 1.6 2009/05/08 12:13:28 mschrode Exp $
 
 #include <fstream>
 #include <iostream>
@@ -33,8 +33,7 @@ void WriteParameters(const std::vector<double>& par, const std::string& head)
 
 int main()
 {
-  std::string model = "Hist";
-
+  std::string model = "FermiTail";
   // Parameter vector
   std::vector<double> par;
 
@@ -42,7 +41,7 @@ int main()
   if( model == "FermiTail" )
     {
       par.push_back(0.9);
-      par.push_back(0.1);
+      par.push_back(0.05);
       par.push_back(0.05);
     }
   else if( model == "TwoGauss" )
@@ -92,6 +91,15 @@ int main()
       par.push_back(0.001);
       par.push_back(0.001);
     }
+  else if( model == "HistGauss" )
+    {
+      par.push_back(0.9);
+      par.push_back(0.1);
+      for(int i = 0; i < 10; i++)
+	{
+	  par.push_back(0.001);
+	}
+    }
 
 
   std::vector<std::string> ptbins;
@@ -106,7 +114,7 @@ int main()
 //   ptbins.push_back("300_380");
 //   ptbins.push_back("380_470");
 //   ptbins.push_back("470_600");
-  ptbins.push_back("600_800");
+   ptbins.push_back("600_800");
 
   for(unsigned int i = 0; i < ptbins.size(); i++)
     {
@@ -116,9 +124,13 @@ int main()
       double min = 100.;
       double max = 1000;
       std::vector<double> parTruth;
+      std::string respModel = "Gauss+Uniform";
       std::vector<double> parResp;
-      parResp.push_back(1.2);
-      parResp.push_back(0.1);
+      if( respModel == "Gauss+Uniform" )
+	{
+	  parResp.push_back(0.1);//1.2);
+	  parResp.push_back(0.1);
+	}
       parResp.push_back(0.05);
 
       TH1F * h = 0;
@@ -135,20 +147,20 @@ int main()
       f->Close();
       delete f;
 
-      js::EventGenerator gen(min,max,"Uniform",parTruth,"Histogram",parResp);
+      js::EventGenerator gen(min,max,"Uniform",parTruth,respModel,parResp);
       gen.SetRespHist(h);
 
       js::Data data;
 
-//       js::Data dataDiJet = gen.GenerateDijetEvents(1000);
-//       data.insert(data.end(),dataDiJet.begin(),dataDiJet.end());
+      js::Data dataDiJet = gen.GenerateDijetEvents(2000);
+      data.insert(data.end(),dataDiJet.begin(),dataDiJet.end());
 
-      js::Data dataPhotonJet = gen.GeneratePhotonJetEvents(5000);
-      data.insert(data.end(),dataPhotonJet.begin(),dataPhotonJet.end());
+//       js::Data dataPhotonJet = gen.GeneratePhotonJetEvents(5000);
+//       data.insert(data.end(),dataPhotonJet.begin(),dataPhotonJet.end());
 
       // Fit
       js::Fitter fitter(data,min,max,model,par);
-      for(int iter = 0; iter < 2; iter++)
+      for(int iter = 0; iter < 1; iter++)
 	{
 	  std::cout << ">>>>>>>> Iteration " << iter << std::endl;
 	  fitter.Fit();
@@ -161,18 +173,20 @@ int main()
 	}
 
       // Write parameters to file
-      WriteParameters(par,"PT BIN "+ptbins.at(i));
+      //WriteParameters(par,"PT BIN "+ptbins.at(i));
 
       // Make control plots
       if( true )
 	{
 	  js::ControlPlots plots(data);
-	  plots.SetFileNameSuffix(model+"_"+ptbins.at(i));
-	  //plots.SetFileNameSuffix(model);
-	  plots.SetRespBinning(40,0,6);
+	  //plots.SetFileNameSuffix(model+"_"+ptbins.at(i));
+	  plots.SetFileNameSuffix(model);
+	  plots.SetGrid(false);
+	  plots.SetLog(true);
+	  plots.SetRespBinning(400,0,6);
 	  //	  plots.PlotDijets();
 	  plots.PlotPhotonJets();
-	  if( model == "Hist" )
+	  if( model == "Hist" || model == "HistGauss" )
 	    plots.PlotResponse(fitter.GetTH1Fpdf());
 	  else
     	    plots.PlotResponse(fitter.GetTF1pdf());

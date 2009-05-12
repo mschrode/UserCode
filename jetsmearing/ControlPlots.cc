@@ -1,4 +1,4 @@
-// $Id: ControlPlots.cc,v 1.5 2009/05/08 12:13:28 mschrode Exp $
+// $Id: ControlPlots.cc,v 1.6 2009/05/08 15:41:42 mschrode Exp $
 
 #include "ControlPlots.h"
 
@@ -25,7 +25,8 @@ namespace js
       mPhotonJetNBins(100), mPhotonJetMin(50), mPhotonJetMax(1000),
       mRespNBins(30), mRespMin(0.), mRespMax(6.),
       mDir("./controlplots"), mRootFileName("Plots.root"),
-      mFileNameSuffix("")
+      mFileNameSuffix(""),
+      mSetLog(true), mSetGrid(false)
   {
     // Copy pointers to events over to local
     // Data object
@@ -296,30 +297,13 @@ namespace js
     if( maxBin < hRespMeas->GetNbinsX() ) maxBin++;
     hRespMeas->GetXaxis()->SetRange(1,maxBin);
 
-    // In case of histogramed pdf, fill a histogram
-    TH1F * hRespFit = new TH1F("hRespFit","",10*mRespNBins,mRespMin,mRespMax);
-    std::string type = pdf->ClassName();
-    if( type == "TH1D" )
-      {
-	TH1D * hHistPDF = dynamic_cast<TH1D*>(pdf);
-	for(int bin = 1; bin <= hRespFit->GetNbinsX(); bin++)
-	  {
-	    double r = hRespFit->GetBinCenter(bin);
-	    //hRespFit->SetBinContent(bin,hHistPDF->Interpolate(r));
-	    hRespFit->SetBinContent(bin,hHistPDF->GetBinContent(hHistPDF->FindBin(r)));
-	  }
-	norm = hRespFit->Integral("width");
-	hRespFit->Scale(1./norm);
-      }
-
     // Write histos to eps file
     TCanvas *c1 = new TCanvas("c1","Jet Response",0,0,600,600);
     c1->cd();
     hRespMeas->Draw();
-    if( type == "TH1D" ) hRespFit->Draw("same");
-    else pdf->Draw("same");
-    //    c1->SetGrid();
-    c1->SetLogy();
+    pdf->Draw("same");
+    if( mSetGrid ) c1->SetGrid();
+    if( mSetLog )  c1->SetLogy();
     c1->SaveAs((mDir+"/js_"+mFileNameSuffix+"_JetResponse.eps").c_str());
     delete c1;
 
@@ -330,7 +314,6 @@ namespace js
 
     // Clean up
     delete hRespMeas;
-    delete hRespFit;
     delete pdf;
 
     std::cout << "ok" << std::endl;
