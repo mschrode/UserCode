@@ -1,4 +1,4 @@
-// $Id: EventGenerator.cc,v 1.5 2009/05/08 12:14:17 mschrode Exp $
+// $Id: EventGenerator.cc,v 1.6 2009/05/12 16:27:51 mschrode Exp $
 
 #include "EventGenerator.h"
 
@@ -7,6 +7,7 @@
 
 #include "TF1.h"
 #include "TCanvas.h"
+#include "TStyle.h"
 
 #include "Jet.h"
 #include "NJetEvent.h"
@@ -71,7 +72,8 @@ namespace js
 
 	// Fill response histogram according to f
 	//	mHistResp = new TH1F("hHistResp","",200,minResp,maxResp);
-	mHistResp = new TH1F("hHistResp","",25,minResp,maxResp);
+	mHistResp = new TH1F("hHistResp",";p^{jet}_{T} / p^{true}_{T};1/(Nw) dN / d(p^{jet}_{T} / p^{true}_{T})",
+			     200,minResp,maxResp);
 	for(int bin = 1; bin <= mHistResp->GetNbinsX(); bin++)
 	  {
 	    double r = f->Eval(mHistResp->GetBinCenter(bin));
@@ -287,9 +289,104 @@ namespace js
   void EventGenerator::WriteResponseHist(const std::string& name) const
   {
     std::cout << "Writing response histogram to file " << name << "... " << std::flush;
+
+    // For the canvas:
+    gStyle->SetCanvasBorderMode(0);
+    gStyle->SetCanvasColor(kWhite);
+    gStyle->SetCanvasDefH(800); //Height of canvas
+    gStyle->SetCanvasDefW(800); //Width of canvas
+    gStyle->SetCanvasDefX(0);   //Position on screen
+    gStyle->SetCanvasDefY(0);
+
+    // For the frame
+    gStyle->SetFrameBorderMode(0);
+    gStyle->SetFrameBorderSize(1);
+    gStyle->SetFrameFillColor(kBlack);
+    gStyle->SetFrameFillStyle(0);
+    gStyle->SetFrameLineColor(kBlack);
+    gStyle->SetFrameLineStyle(0);
+    gStyle->SetFrameLineWidth(1);
+
+    // For the Pad:
+    gStyle->SetPadBorderMode(0);
+    gStyle->SetPadColor(kWhite);
+    gStyle->SetPadGridX(false);
+    gStyle->SetPadGridY(false);
+    gStyle->SetGridColor(0);
+    gStyle->SetGridStyle(3);
+    gStyle->SetGridWidth(1);
+
+    // For the histo:
+    gStyle->SetHistLineColor(kBlack);
+    gStyle->SetHistLineStyle(0);
+    gStyle->SetHistLineWidth(1);
+
+    // For the statistics box:
+    gStyle->SetOptStat(0);
+    //  gStyle->SetOptStat("neMR");
+    gStyle->SetStatColor(kWhite);
+    gStyle->SetStatFont(42);
+    gStyle->SetStatFontSize(0.03);
+    gStyle->SetStatTextColor(1);
+    gStyle->SetStatFormat("6.4g");
+    gStyle->SetStatBorderSize(1);
+    gStyle->SetStatX(0.92);              
+    gStyle->SetStatY(0.86);              
+    gStyle->SetStatH(0.16);
+    gStyle->SetStatW(0.22);
+
+    // For the legend
+    gStyle->SetLegendBorderSize(1);
+
+    // Margins:
+    gStyle->SetPadTopMargin(0.10);
+    gStyle->SetPadBottomMargin(0.14);
+    gStyle->SetPadLeftMargin(0.2);
+    gStyle->SetPadRightMargin(0.04);
+
+    // For the Global title:
+    gStyle->SetOptTitle(1);
+    gStyle->SetTitleFont(42,"");
+    gStyle->SetTitleColor(1);
+    gStyle->SetTitleTextColor(1);
+    gStyle->SetTitleFillColor(0);
+    gStyle->SetTitleFontSize(0.1);
+    gStyle->SetTitleAlign(23);
+    gStyle->SetTitleX(0.58);
+    gStyle->SetTitleH(0.05);
+    gStyle->SetTitleXOffset(0);
+    gStyle->SetTitleYOffset(0);
+    gStyle->SetTitleBorderSize(0);
+
+    // For the axis titles:
+    gStyle->SetTitleColor(1,"XYZ");
+    gStyle->SetTitleFont(42,"XYZ");
+    gStyle->SetTitleSize(0.04,"XYZ");
+    gStyle->SetTitleXOffset(1.5);
+    gStyle->SetTitleYOffset(2.0);
+
+    // For the axis labels:
+    gStyle->SetLabelColor(1,"XYZ");
+    gStyle->SetLabelFont(42,"XYZ");
+    gStyle->SetLabelOffset(0.007,"XYZ");
+    gStyle->SetLabelSize(0.04,"XYZ");
+
+    // For the axis:
+    gStyle->SetAxisColor(1,"XYZ");
+    gStyle->SetStripDecimals(kTRUE);
+    gStyle->SetTickLength(0.03,"XYZ");
+    gStyle->SetNdivisions(510,"XYZ");
+    gStyle->SetPadTickX(1);  // To get tick marks on the opposite side of the frame
+    gStyle->SetPadTickY(1);
+
     TCanvas * c = new TCanvas("c","",500,500);
     c->cd();
-    if( mHistResp ) mHistResp->Draw();
+    if( mHistResp )
+      {
+	mHistResp->UseCurrentStyle();
+	mHistResp->Draw();
+	c->SetLogy();
+      }
     c->SaveAs(name.c_str());
     delete c;
     std::cout << "ok" << std::endl;

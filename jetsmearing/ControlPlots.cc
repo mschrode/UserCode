@@ -1,4 +1,4 @@
-// $Id: ControlPlots.cc,v 1.6 2009/05/08 15:41:42 mschrode Exp $
+// $Id: ControlPlots.cc,v 1.7 2009/05/12 11:54:04 mschrode Exp $
 
 #include "ControlPlots.h"
 
@@ -248,7 +248,8 @@ namespace js
     std::cout << "Creating response control plots... " << std::flush;
 
     // Create histograms
-    TH1F* hRespMeas = new TH1F("hRespMeas",";p^{jet}_{T} / p^{true}_{T}",mRespNBins,mRespMin,mRespMax);
+    TH1F* hRespMeas = new TH1F("hRespMeas",";p^{jet}_{T} / p^{true}_{T};1/(Nw)  dN / d(p^{jet}_{T} / p^{true}_{T})",
+			       mRespNBins,mRespMin,mRespMax);
     hRespMeas->Sumw2();
 
     //    TH1F* hRelDiff = new TH1F("hRelDiff",";( p^{jet}_{T} - p^{true}_{T} ) / p^{true}_{T}",mDiffNBins,mDiffMin,mDiffMax);
