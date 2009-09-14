@@ -1,6 +1,3 @@
-//!  \brief Example to test the pt true prior for events cut
-//!  in measured dijet pt.
-
 #include <cmath>
 #include <iostream>
 #include <vector>
@@ -14,6 +11,10 @@ using namespace std;
 #include "TString.h"
 #include "TStyle.h"
 
+
+//!  \brief Example to test the pt true prior for events cut
+//!  in measured dijet pt.
+//------------------------------------------------------------------
 namespace testPrior {
   
   //  TYPE DEFINITIONS
