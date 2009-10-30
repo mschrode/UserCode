@@ -1,4 +1,4 @@
-//  $Id: caliber.cc,v 1.95 2009/10/30 08:14:24 mschrode Exp $
+//  $Id: caliber.cc,v 1.2 2009/10/30 13:14:20 mschrode Exp $
 
 #include "caliber.h"
 
@@ -142,10 +142,12 @@ void TCaliber::run()
     EventWeightProcessor ewp(configFile_,par_);
     ewp.process(data_);
 
-    if (fitMethod_==1) {
+    if(fitMethod_==1) {
       run_Lvmini();
       time_t end = time(0);
       cout << "Done, fitted " << par_->GetNumberOfParameters() << " parameters in " << difftime(end,start) << " sec." << endl;
+    } else {
+      if( par_->needsUpdate() ) par_->update();
     }
   } 
   //Dummy Configuration: Nothing to be done, start-values are written to file
