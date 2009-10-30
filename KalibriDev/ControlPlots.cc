@@ -2816,8 +2816,6 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
   c1->Draw();
   ps1->NewPage();
 
-  c1->Draw();
-  ps1->NewPage();
   hPtDijetSpectrum->Draw("E");
   c1->SetLogy(1);
   c1->Draw();
