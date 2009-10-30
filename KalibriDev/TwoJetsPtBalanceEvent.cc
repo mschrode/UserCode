@@ -1,4 +1,4 @@
-// $Id: TwoJetsPtBalanceEvent.cc,v 1.3 2009/10/30 08:13:15 mschrode Exp $
+// $Id: TwoJetsPtBalanceEvent.cc,v 1.4 2009/10/30 12:35:17 mschrode Exp $
 
 #include "TwoJetsPtBalanceEvent.h"
 
@@ -127,10 +127,10 @@ double TwoJetsPtBalanceEvent::chi2_fast_simple_dRes2(double pt1, double pt2) con
   double dPt1 = pt1 / jet1_->Et();
   double dPt2 = pt2 / jet2_->Et();
 
-  double dRes = dPt1 * error1_;
-  dRes       += dPt2 * error2_;
+  double dRes2 = dPt1 * dPt1 * error1_ * error1_;
+  dRes2       += dPt2 * dPt2 * error2_ * error2_;
   
-  return dRes * dRes;
+  return dRes2;
 }
 
 
@@ -260,11 +260,10 @@ double TwoJetsPtBalanceEvent::chi2_fast_balance_dRes2(double pt1, double pt2) co
   double dPt1 = pt1 / jet1_->Et();
   double dPt2 = pt2 / jet2_->Et();
 
-  double dRes = dPt1 * error1_;
-  dRes += dPt2 * error2_;
-  dRes *= (1. + ptBal) / ptDijet;
+  double dRes1 = (1. - ptBal) * dPt1 * error1_;
+  double dRes2 = (1. + ptBal) * dPt2 * error2_;
   
-  return dRes * dRes;
+  return ( dRes1*dRes1 + dRes2*dRes2 ) / ptDijet / ptDijet;
 }
 
 

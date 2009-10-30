@@ -12,7 +12,7 @@
 //!
 //!  \author Matthias Schroeder
 //!  \date Mon Oct 26 21:03:43 CET 2009 
-//!  $Id: TwoJetsPtBalanceEvent.h,v 1.3 2009/10/30 08:13:15 mschrode Exp $
+//!  $Id: TwoJetsPtBalanceEvent.h,v 1.4 2009/10/30 12:35:17 mschrode Exp $
 // --------------------------------------------------
 class TwoJetsPtBalanceEvent : public TData {
  public:
@@ -60,7 +60,7 @@ class TwoJetsPtBalanceEvent : public TData {
   virtual double chi2() const { return chi2_fast(0, 0, 0); }
   virtual double chi2_plots() const { return chi2Plots_; }
   virtual double chi2_fast(double * temp_derivative1, double * temp_derivative2, double const epsilon) const { 
-    chi2Plots_ = chi2_fast_simple(temp_derivative1,temp_derivative2,epsilon);
+    chi2Plots_ = chi2_fast_balance(temp_derivative1,temp_derivative2,epsilon);
     return chi2Plots_;
   }
   virtual void updateError() {
