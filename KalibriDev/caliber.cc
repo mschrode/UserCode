@@ -204,6 +204,8 @@ void TCaliber::run_Lvmini()
       (*it)->updateError();
     }
 
+    if( par_->needsUpdate() ) par_->update();
+
     // Setting function to scale residuals in chi2 calculation
     cout << loop+1 << flush;
     if(  loop+1 == 1  ) cout << "st" << flush;
