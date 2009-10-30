@@ -1,4 +1,4 @@
-// $Id: ControlPlotsJetSmearing.cc,v 1.2 2009/10/30 13:14:37 mschrode Exp $
+// $Id: ControlPlotsJetSmearing.cc,v 1.3 2009/10/30 15:47:14 mschrode Exp $
 
 #include "ControlPlotsJetSmearing.h"
 
@@ -156,9 +156,9 @@ void ControlPlotsJetSmearing::plotResponse() const
   double ptDijetMax = config_->read<double>("Et max cut on dijet",-1.);
   int nPtDijetBins = nPlotBins - 2;
   double deltaPtDijet = (ptDijetMax - ptDijetMin) / nPtDijetBins;
-  std::vector<double> ptGenBinEdges(nPtDijetBins+1);
-  for(size_t i = 0; i < ptGenBinEdges.size(); i++) {
-    ptGenBinEdges.at(i) = ptDijetMin + i*deltaPtDijet;
+  std::vector<double> ptDijetBinEdges(nPtDijetBins+1);
+  for(size_t i = 0; i < ptDijetBinEdges.size(); i++) {
+    ptDijetBinEdges.at(i) = ptDijetMin + i*deltaPtDijet;
   }
 
 
@@ -182,7 +182,7 @@ void ControlPlotsJetSmearing::plotResponse() const
 	hRespMeas.at(1)->Fill( jet->pt / jet->genPt, dijet->GetWeight() );
 
 	for(int i = 0; i < nPtDijetBins; i++) {
-	  if( ptGenBinEdges.at(i) <= dijet->dijetPt() && dijet->dijetPt() < ptGenBinEdges.at(i+1) ) {
+	  if( ptDijetBinEdges.at(i) <= dijet->dijetPt() && dijet->dijetPt() < ptDijetBinEdges.at(i+1) ) {
 	    hRespMeasAbs.at(i)->Fill( jet->pt / jet->genPt, dijet->GetWeight() );
 	    hRespMeas.at(i)->Fill( jet->pt / jet->genPt, dijet->GetWeight() );
 	    continue;
@@ -220,7 +220,7 @@ void ControlPlotsJetSmearing::plotResponse() const
   ptGenBinCenters.at(1) = hPtGen->GetMean();
   for(int i = 2; i < nPlotBins; i++) {
     int j = i - 2;
-    ptGenBinCenters.at(i) = 0.5 * ( ptGenBinEdges.at(j) + ptGenBinEdges.at(j+1) );
+    ptGenBinCenters.at(i) = 0.5 * ( ptDijetBinEdges.at(j) + ptDijetBinEdges.at(j+1) );
   }
 
 
@@ -351,27 +351,54 @@ void ControlPlotsJetSmearing::plotResponse() const
     double max = 0.;
     findYRange(hRespMeas.at(plotBin),min,max);
     min *= 0.5;
-    max *= 5.;
+    max *= 80.;
     if( min < yMin ) yMin = min;
     if( max > yMax ) yMax = max;
     if( yMin < 8E-5 ) yMin = 8E-5;
   }
   for(int plotBin = 0; plotBin < nPlotBins; plotBin++) {
     hRespMeas.at(plotBin)->GetYaxis()->SetRangeUser(yMin,yMax);
-    setYRange(hRespMeasAbs.at(plotBin),0.5,5.);
+    setYRange(hRespMeasAbs.at(plotBin),0.5,50.);
   }
-  setYRange(hPtDijet, 0.5, 50.);
-  setYRange(hPtGen, 0.5, 50.);
-  setYRange(hPtHat, 0.5, 50.);
+  setYRange(hPtDijet, 0.5, 100.);
+  setYRange(hPtGen, 0.5, 100.);
+  setYRange(hPtHat, 0.5, 100.);
 
 
   // --- Plot histograms -----------------------------------
+  // Label bins
+  std::vector<TLegend*> legPtRange(nPlotBins);
+  std::vector<TLegend*> legPtRangeAndCenters(nPlotBins);
+  for(int plotBin = 0; plotBin < nPlotBins; plotBin++) {
+    legPtRange.at(plotBin) = new TLegend(0.23,0.72,0.78,0.8);
+    legPtRange.at(plotBin)->SetBorderSize(0);
+    legPtRange.at(plotBin)->SetFillColor(0);
+    legPtRange.at(plotBin)->SetTextFont(42);
+
+    legPtRangeAndCenters.at(plotBin) = new TLegend(0.23,0.65,0.8,0.8);
+    legPtRangeAndCenters.at(plotBin)->SetBorderSize(0);
+    legPtRangeAndCenters.at(plotBin)->SetFillColor(0);
+    legPtRangeAndCenters.at(plotBin)->SetTextFont(42);
+
+    std::string label = toString(ptDijetMin) + " < p^{dijet}_{T} < " + toString(ptDijetMax) + " GeV";
+    if( plotBin < 2 ) {
+      legPtRange.at(plotBin)->AddEntry(hRespMeas.at(plotBin),label.c_str(),"L");
+      legPtRangeAndCenters.at(plotBin)->AddEntry(hRespMeas.at(plotBin),label.c_str(),"L");
+    } else {
+      int i = plotBin - 2;
+      label = toString(ptDijetBinEdges.at(i)) + " < p^{dijet}_{T} < " + toString(ptDijetBinEdges.at(1+i)) + " GeV";
+      legPtRange.at(plotBin)->AddEntry(hRespMeas.at(plotBin),label.c_str(),"L");
+      legPtRangeAndCenters.at(plotBin)->AddEntry(hRespMeas.at(plotBin),label.c_str(),"L");
+    }
+    label = "p_{T} = " + toString(ptGenBinCenters.at(plotBin)) + " GeV";
+    legPtRangeAndCenters.at(plotBin)->AddEntry(hRespFit.at(plotBin),label.c_str(),"L");
+  }
 
   // Write histos to ps file
   TPostScript * const ps = new TPostScript((dir_+"/jsResponse.ps").c_str(),111);
   TCanvas *c1 = new TCanvas("c1","Jet Response",0,0,600,600);
 
-  TLegend *legFitStart = new TLegend(0.23,0.65,0.5,0.8);
+  TLegend *legFitStart = new TLegend(0.23,0.5,0.5,0.65);
   legFitStart->SetBorderSize(0);
   legFitStart->SetFillColor(0);
   legFitStart->SetTextFont(42);
@@ -380,13 +407,25 @@ void ControlPlotsJetSmearing::plotResponse() const
 
   for(int plotBin = 0; plotBin < nPlotBins; plotBin++) {
     // Measured and fitted response
-    drawPSPage(ps,c1,hRespMeasAbs.at(plotBin),"",true);
-    drawPSPage(ps,c1,hRespMeas.at(plotBin),"",true);
+    ps->NewPage();
+    c1->cd();
+    hRespMeasAbs.at(plotBin)->Draw();
+    legPtRange.at(plotBin)->Draw("same");
+    c1->SetLogy();
+    c1->Draw();
+
+    ps->NewPage();
+    c1->cd();
+    hRespMeas.at(plotBin)->Draw();
+    legPtRange.at(plotBin)->Draw("same");
+    c1->SetLogy();
+    c1->Draw();
 
     ps->NewPage();
     c1->cd();
     hRespMeas.at(plotBin)->Draw();
     hRespFit.at(plotBin)->Draw("Lsame");
+    legPtRangeAndCenters.at(plotBin)->Draw("same");
     c1->SetLogy();
     c1->Draw();
 
@@ -396,6 +435,7 @@ void ControlPlotsJetSmearing::plotResponse() const
     hRespFit.at(plotBin)->Draw("Lsame");
     hRespFitStart.at(plotBin)->Draw("Lsame");
     c1->SetLogy();
+    legPtRangeAndCenters.at(plotBin)->Draw("same");
     legFitStart->Draw("same");
     c1->Draw();
 
@@ -408,6 +448,7 @@ void ControlPlotsJetSmearing::plotResponse() const
       //hRespFitSum.at(plotBin)->Draw("same");
     }
     hRespFit.at(plotBin)->Draw("Lsame");
+    legPtRangeAndCenters.at(plotBin)->Draw("same");
     c1->SetLogy();
     c1->Draw();
   }
@@ -422,45 +463,25 @@ void ControlPlotsJetSmearing::plotResponse() const
   sprintf(entry,"#propto 1 / (p^{gen}_{T})^{%.1f}",n);
   legPtGen->AddEntry(hTruthPDF,entry,"L");
 
-  std::vector<TObject*> objs;
-//   objs.push_back(hPtGen);
-//   objs.push_back(hTruthPDF);
-//   //  objs.push_back(legPtGen);
-//   drawPSPage(ps,c1,objs,"",true);
-
   ps->NewPage();
   c1->cd();
   hPtGen->Draw();
   hTruthPDF->Draw("Lsame");
+  legPtRange.at(0)->Draw("same");
   c1->SetLogy();
   c1->Draw();
 
-  TLegend *legPtHat = new TLegend(0.4,0.67,0.8,0.8);
-  legPtHat->SetBorderSize(0);
-  legPtHat->SetFillColor(0);
-  legPtHat->SetTextFont(42);
-  sprintf(entry,"#propto 1 / (#hat{p}_{T})^{%.1f}",n);
-  legPtHat->AddEntry(hTruthPDF,entry,"L");
-
+  std::vector<TObject*> objs;
   objs.clear();
   objs.push_back(hPtHat);
   objs.push_back(hTruthPDF);
-  //  objs.push_back(legPtHat);
+  objs.push_back(legPtRange.at(0));
   drawPSPage(ps,c1,objs,"",true);
-
-  TLegend *legPtDijet = new TLegend(0.23,0.67,0.8,0.8);
-  legPtDijet->SetBorderSize(0);
-  legPtDijet->SetFillColor(0);
-  legPtDijet->SetTextFont(42);
-  sprintf(entry,"#propto 1 / (p^{dijet}_{T})^{%.1f}",n);
-  legPtDijet->AddEntry(hTruthPDF,entry,"L");
-  //legPtDijet->AddEntry(hPtGen,"No cuts on p^{dijet}_{T}","L");
-  //legPtDijet->AddEntry(hPtGen,"1.0 < p^{dijet}_{T} < 1.4 TeV","L");
 
   objs.clear();
   objs.push_back(hPtDijet);
   objs.push_back(hTruthPDF);
-  //  objs.push_back(legPtDijet);
+  objs.push_back(legPtRange.at(0));
   drawPSPage(ps,c1,objs,"",true);
 
 
@@ -492,7 +513,9 @@ void ControlPlotsJetSmearing::plotResponse() const
     delete hRespFitStep.at(plotBin);
     delete hRespFitGaus.at(plotBin);
     delete hRespFitSum.at(plotBin);
+    delete legPtRangeAndCenters.at(plotBin);
   }
+  delete legFitStart;
   delete hPtGen;
   delete hPtHat;
   delete hPtDijet;
