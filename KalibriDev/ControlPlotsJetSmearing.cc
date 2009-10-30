@@ -52,136 +52,104 @@ void ControlPlotsJetSmearing::plotResponse() const
 {
   std::cout << "Creating response control plots\n";
 
+  double tMin = config_->read<double>("DiJet integration min",0.);
+  double tMax = config_->read<double>("DiJet integration max",1.);
+
   // --- Create histograms of response ---------------------
-  // Pt binning
-  vector<double> ptBinEdges = bag_of<double>(config_->read<string>("DiJet integration pt bin edges","1. 10000."));
-  int nPtBins = static_cast<int>(ptBinEdges.size()) - 1;
-  vector<std::string> ptBinLabels(nPtBins,"");
-  if( nPtBins > 1 ) {
-    for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-      std::string label = toString(ptBinEdges.at(ptBin));
-      label.append(" < p^{gen}_{T} < ");
-      label.append(toString(ptBinEdges.at(ptBin+1)));
-      label.append(" GeV");
-      ptBinLabels.at(ptBin) = label;
-    }
-  }
+  TH1F * hRespMeasAbs = 0;   // The measured response ptJet / ptGen absolute entries
+  TH1F * hRespMeas = 0;      // The measured response ptJet / ptGen
+  TH1F * hRespMeasPhotonJet = 0;
+  TH1F * hRespFit = 0;       // The fitted response pdf
+  TH1F * hRespFitStart = 0;  // The response pdf with start values
+  TH1F * hRespFitStep = 0;   // Step function part of the response pdf
+  TH1F * hRespFitGaus = 0;   // Gauss part of the response pdf
+  TH1F * hRespFitSum = 0;    // Sum of step and Gauss part
+  TH1F * hPtGen = 0;         // Dijet ptGen spectrum
+  TH1F * hPtHat = 0;         // Dijet ptHat spectrum
+  TH1F * hPtDijet = 0;
+  TH1F * hTruthPDF = 0;      // Truth pdf
 
-  // Histograms for the different pt bins
-  vector<TH1F*> hRespMeasAbs(nPtBins);   // The measured response ptJet / ptGen absolute entries
-  vector<TH1F*> hRespMeas(nPtBins);      // The measured response ptJet / ptGen
-  vector<TH1F*> hRespFit(nPtBins);       // The fitted response pdf
-  vector<TH1F*> hRespFitStart(nPtBins);  // The response pdf with start values
-  vector<TH1F*> hRespFitStep(nPtBins);   // Step function part of the response pdf
-  vector<TH1F*> hRespFitGaus(nPtBins);   // Gauss part of the response pdf
-  vector<TH1F*> hRespFitSum(nPtBins);    // Sum of step and Gauss part
-  vector<TH1F*> hDijetPtGen(nPtBins);    // Dijet ptGen spectrum
-  vector<TH1F*> hDijetPtHat(nPtBins);    // Dijet ptHat spectrum
-  vector<TH1F*> hDijetTruthPDF(nPtBins); // Truth pdf
+  hRespMeasAbs = new TH1F("hRespMeasAbs",
+			  ";R = p^{jet}_{T} / p^{gen}_{T};dN / dR",
+			  respNBins_,respMin_,respMax_);
+  hRespMeasAbs->SetLineWidth(2);
 
-  // Loop over pt bins
-  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-    std::string name;
-    std::string title;
+  hRespMeas = new TH1F("hRespMeas",
+		       ";R = p^{jet}_{T} / p^{gen}_{T};1/(Nw)  dN / dR",
+		       respNBins_,respMin_,respMax_);
+  hRespMeas->Sumw2();
+  hRespMeas->SetLineWidth(2);
 
-    name  = "hRespMeasAbs_ptBin"+toString(ptBin);
-    title = ptBinLabels.at(ptBin)+";R = p^{jet}_{T} / p^{gen}_{T};dN / dR";
-    hRespMeasAbs.at(ptBin) = new TH1F(name.c_str(),title.c_str(),respNBins_,respMin_,respMax_);
-    hRespMeasAbs.at(ptBin)->SetLineWidth(2);
+  hRespMeasPhotonJet = new TH1F("hRespMeasPhotonJet",
+				";R = p^{jet}_{T} / p^{gen}_{T};dN / dR",
+				respNBins_,respMin_,respMax_);
+  hRespMeasPhotonJet->SetLineWidth(2);
+  hRespMeasPhotonJet->SetLineColor(4);
+  
+  hRespFit = new TH1F("hRespFit",
+		      ";R = p^{jet}_{T} / p^{true}_{T};1/(Nw)  dN / dR",
+		      5*respNBins_,respMin_,respMax_);
+  hRespFit->SetLineColor(2);
+  hRespFit->SetLineWidth(2);
+  hRespFit->Sumw2();
 
-    name  = "hRespMeas_ptBin"+toString(ptBin);
-    title = ptBinLabels.at(ptBin)+";R = p^{jet}_{T} / p^{gen}_{T};1/(Nw)  dN / dR";
-    hRespMeas.at(ptBin) = new TH1F(name.c_str(),title.c_str(),respNBins_,respMin_,respMax_);
-    hRespMeas.at(ptBin)->Sumw2();
-    hRespMeas.at(ptBin)->SetLineWidth(2);
+  hRespFitStart = new TH1F("hRespFitStart",
+			   ";R = p^{jet}_{T} / p^{true}_{T};1/(Nw)  dN / dR",
+			   5*respNBins_,respMin_,respMax_);
+  hRespFitStart->SetLineColor(2);
+  hRespFitStart->SetLineWidth(2);
+  hRespFitStart->SetLineStyle(2);
+  hRespFitStart->Sumw2();
 
-    name  = "hRespFit"+toString(ptBin);
-    title = ptBinLabels.at(ptBin)+";R = p^{jet}_{T} / p^{true}_{T};1/(Nw)  dN / dR";
-    hRespFit.at(ptBin) = new TH1F(name.c_str(),title.c_str(),5*respNBins_,respMin_,respMax_);
-    hRespFit.at(ptBin)->SetLineColor(2);
-    hRespFit.at(ptBin)->SetLineWidth(2);
-    hRespFit.at(ptBin)->Sumw2();
+  hRespFitStep = new TH1F("hRespFitStep",
+			  ";R = p^{jet}_{T} / p^{true}_{T};1/(Nw)  dN / dR",
+			  config_->read<int>("Response pdf nsteps",10),
+			  config_->read<double>("Response pdf min",0.),
+			  config_->read<double>("Response pdf max",1.8));
+  hRespFitStep->Sumw2();
+  hRespFitStep->SetLineColor(9);
+  hRespFitStep->SetLineWidth(2);
 
-    name  = "hRespFitStart"+toString(ptBin);
-    title = ptBinLabels.at(ptBin)+";R = p^{jet}_{T} / p^{true}_{T};1/(Nw)  dN / dR";
-    hRespFitStart.at(ptBin) = new TH1F(name.c_str(),title.c_str(),5*respNBins_,respMin_,respMax_);
-    hRespFitStart.at(ptBin)->SetLineColor(2);
-    hRespFitStart.at(ptBin)->SetLineWidth(2);
-    hRespFitStart.at(ptBin)->SetLineStyle(2);
-    hRespFitStart.at(ptBin)->Sumw2();
+  hRespFitGaus = new TH1F("hRespFitGaus",
+			  ";R = p^{jet}_{T} / p^{true}_{T};1/(Nw)  dN / dR",
+			  5*respNBins_,respMin_,respMax_);
+  hRespFitGaus->Sumw2();
+  hRespFitGaus->SetLineColor(8);
+  hRespFitGaus->SetLineWidth(2);
 
-    name  = "hRespFitStep"+toString(ptBin);
-    hRespFitStep.at(ptBin) = new TH1F(name.c_str(),title.c_str(),
-				      config_->read<int>("Response pdf nsteps",10),
-				      config_->read<double>("Response pdf min",0.),
-				      config_->read<double>("Response pdf max",1.8));
-    hRespFitStep.at(ptBin)->Sumw2();
-    hRespFitStep.at(ptBin)->SetLineColor(9);
-    hRespFitStep.at(ptBin)->SetLineWidth(2);
+  hRespFitSum = new TH1F("hRespFitSum",
+			 ";R = p^{jet}_{T} / p^{true}_{T};1/(Nw)  dN / dR",
+			 5*respNBins_,respMin_,respMax_);
+  hRespFitSum->Sumw2();
+  hRespFitSum->SetLineColor(1);
+  hRespFitSum->SetLineWidth(2);
 
-    name  = "hRespFitGaus"+toString(ptBin);
-    hRespFitGaus.at(ptBin) = new TH1F(name.c_str(),title.c_str(),5*respNBins_,respMin_,respMax_);
-    hRespFitGaus.at(ptBin)->Sumw2();
-    hRespFitGaus.at(ptBin)->SetLineColor(8);
-    hRespFitGaus.at(ptBin)->SetLineWidth(2);
+  hPtGen = new TH1F("hPtGen",
+		    ";p^{gen}_{T} (GeV);1/(Nw)  dN / dp^{gen}_{T}  1 / (GeV)"
+		    ,25,0.8*tMin,1.1*tMax);
+  hPtGen->GetXaxis()->SetNdivisions(505);
+  hPtGen->Sumw2();
+  hPtGen->SetLineWidth(2);
 
-    name  = "hRespFitSum"+toString(ptBin);
-    hRespFitSum.at(ptBin) = new TH1F(name.c_str(),title.c_str(),5*respNBins_,respMin_,respMax_);
-    hRespFitSum.at(ptBin)->Sumw2();
-    hRespFitSum.at(ptBin)->SetLineColor(1);
-    hRespFitSum.at(ptBin)->SetLineWidth(2);
+  hPtHat = new TH1F("hPtHat",
+		    ";#hat{p}_{T} (GeV);1/(Nw)  dN / d#hat{p}_{T}  1 / (GeV)",
+		    25,0.8*tMin,1.1*tMax);
+  hPtHat->GetXaxis()->SetNdivisions(505);
+  hPtHat->Sumw2();
+  hPtHat->SetLineWidth(2);
 
-    name = "hDijetPttrue_ptBin"+toString(ptBin);
-    title = ptBinLabels.at(ptBin)+";p^{gen}_{T} (GeV);1/(Nw)  dN / dp^{gen}_{T}  1 / (GeV)";
-    hDijetPtGen.at(ptBin) = new TH1F(name.c_str(),title.c_str(),25,
-				     0.8*ptBinEdges.front(),1.1*ptBinEdges.back());
-    hDijetPtGen.at(ptBin)->GetXaxis()->SetNdivisions(505);
-    hDijetPtGen.at(ptBin)->Sumw2();
-    hDijetPtGen.at(ptBin)->SetLineWidth(2);
+  hPtDijet = new TH1F("hPtDijet",
+		      ";p^{dijet}_{T} (GeV);1/(Nw)  dN / dp^{dijet}_{T}  1 / (GeV)",
+		      25,0.8*tMin,1.1*tMax);
+  hPtDijet->GetXaxis()->SetNdivisions(505);
+  hPtDijet->Sumw2();
+  hPtDijet->SetLineWidth(2);
 
-    name = "hDijetPtHat_ptBin"+toString(ptBin);
-    title = ptBinLabels.at(ptBin)+";#hat{p}_{T} (GeV);1/(Nw)  dN / d#hat{p}_{T}  1 / (GeV)";
-    hDijetPtHat.at(ptBin) = new TH1F(name.c_str(),title.c_str(),25,
-				     0.8*ptBinEdges.front(),1.1*ptBinEdges.back());
-    hDijetPtHat.at(ptBin)->GetXaxis()->SetNdivisions(505);
-    hDijetPtHat.at(ptBin)->Sumw2();
-    hDijetPtHat.at(ptBin)->SetLineWidth(2);
-
-    name  = "hDijetTruthPDF"+toString(ptBin);
-    hDijetTruthPDF.at(ptBin) = new TH1F(name.c_str(),
-					";p^{true}_{T} (GeV);1 / (Nw)  dN / dp^{true}_{T}  1 /  (GeV)",
-				       5*respNBins_,0.8*ptBinEdges.front(),1.1*ptBinEdges.back());
-    hDijetTruthPDF.at(ptBin)->SetLineColor(2);
-    hDijetTruthPDF.at(ptBin)->SetLineWidth(2);
-  } // End of loop over pt bins
-
-  // Integrated (pt) distributions
-  TH1F * hDijetPtInt = new TH1F("hDijetPtInt",
-				";p^{dijet}_{T} (GeV);1/(Nw)  dN / dp^{dijet}_{T}  1 / (GeV)",
-				25,0.8*ptBinEdges.front(),1.1*ptBinEdges.back());
-  hDijetPtInt->GetXaxis()->SetNdivisions(505);
-  hDijetPtInt->Sumw2();
-  hDijetPtInt->SetLineWidth(2);
-
-  TH1F * hPtGenInt = new TH1F("hPtGenInt",
-			      ";p^{gen}_{T} (GeV);1/(Nw)  dN / dp^{gen}_{T}  1 / (GeV)",
-			      25,0.8*ptBinEdges.front(),1.1*ptBinEdges.back());
-  hPtGenInt->GetXaxis()->SetNdivisions(505);
-  hPtGenInt->Sumw2();
-  hPtGenInt->SetLineWidth(2);
-
-  TH1F *hPtHatInt = new TH1F("hPtHatInt",
-			     ";#hat{p}_{T} (GeV);1/(Nw)  dN / d#hat{p}_{T}  1 / (GeV)",
-			     25,0.8*ptBinEdges.front(),1.1*ptBinEdges.back());
-  hPtHatInt->GetXaxis()->SetNdivisions(505);
-  hPtHatInt->Sumw2();
-  hPtHatInt->SetLineWidth(2);
-
-  TH1F * hTruthPDFInt = new TH1F("hTruthPDFInt",
-				 ";p^{true}_{T} (GeV);1 / (Nw)  dN / dp^{true}_{T}  1 /  (GeV)",
-				 5*respNBins_,0.8*ptBinEdges.front(),1.1*ptBinEdges.back());
-  hTruthPDFInt->SetLineColor(2);
-  hTruthPDFInt->SetLineWidth(2);
+  hTruthPDF = new TH1F("hTruthPDF",
+		       ";p^{true}_{T} (GeV);1 / (Nw)  dN / dp^{true}_{T}  1 /  (GeV)",
+		       5*respNBins_,0.8*tMin,1.1*tMax);
+  hTruthPDF->SetLineColor(2);
+  hTruthPDF->SetLineWidth(2);
 
 
 
@@ -195,46 +163,20 @@ void ControlPlotsJetSmearing::plotResponse() const
 	TJet * jet = static_cast<TJet*>(dijet->GetMess());
 	if( i == 1 ) jet = static_cast<TJet*>(dijet->GetSecondMess());
 
-	// Find pt bin; use genjet pt as ptTrue
-	int ptBin = 0;
-	if( jet->genPt > ptBinEdges.back() ) {
-	  ptBin = nPtBins-1;
-	}
-	else {
-	  for(int b = 0; b < nPtBins; b++) {
-	    if( jet->genPt > ptBinEdges.at(b) )
-	      ptBin = b;
-	    else
-	      break;
-	  }
-	}
+	hPtGen->Fill( jet->genPt, dijet->GetWeight() );
+	hPtHat->Fill( jet->ptHat, dijet->GetWeight() );
 
-	hDijetPtGen.at(ptBin)->Fill( jet->genPt, dijet->GetWeight() );
-	hPtGenInt->Fill( jet->genPt, dijet->GetWeight() );
-	hDijetPtHat.at(ptBin)->Fill( jet->ptHat, dijet->GetWeight() );
-	hPtHatInt->Fill( jet->ptHat, dijet->GetWeight() );
-
-	hRespMeasAbs.at(ptBin)->Fill( jet->pt / jet->genPt, dijet->GetWeight() );
-	hRespMeas.at(ptBin)->Fill( jet->pt / jet->genPt, dijet->GetWeight() );
+	hRespMeasAbs->Fill( jet->pt / jet->genPt, dijet->GetWeight() );
+	hRespMeas->Fill( jet->pt / jet->genPt, dijet->GetWeight() );
+	hRespMeasPhotonJet->Fill( jet->pt / jet->genPt, 0.002 * dijet->GetWeight() );
       }
-      hDijetPtInt->Fill( dijet->dijetPt(), dijet->GetWeight() );
+      hPtDijet->Fill( dijet->dijetPt(), dijet->GetWeight() );
     }
   } // End of loop over data
-  normHist(hPtGenInt,"width");
-  normHist(hPtHatInt,"width");
-  normHist(hDijetPtInt,"width");
-  double normPtGen = 0.;
-  double normPtHat = 0.;
-  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-    normHist(hRespMeas.at(ptBin),"width");
-    normPtGen += hDijetPtGen.at(ptBin)->Integral("width");
-    normPtHat += hDijetPtHat.at(ptBin)->Integral("width");
-  }
-  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-    if( normPtGen ) hDijetPtGen.at(ptBin)->Scale(1./normPtGen);
-    if( normPtHat ) hDijetPtHat.at(ptBin)->Scale(1./normPtHat);
-  }
-
+  normHist(hRespMeas,"width");
+  normHist(hPtGen,"width");
+  normHist(hPtHat,"width");
+  normHist(hPtDijet,"width");
 
   // --- Fill histograms of fitted response ----------------
   std::string param = config_->read<std::string>("Parametrization Class","");
@@ -249,283 +191,191 @@ void ControlPlotsJetSmearing::plotResponse() const
   std::vector<double> startParGlobal = bag_of<double>(config_->read<string>("global jet start values",""));
   std::vector<double> meanRespPar = bag_of<double>(config_->read<string>("mean response parameters","1 0"));
 
-  // Duplicate jet parameter start values and
-  // scales for pt binned response function
-  int nRBins = config_->read<int>("Response pdf nsteps",10);
-
-  if( param == "SmearParametrizationStepGaussInterPtBinned" || 
-      param == "SmearParametrizationTwoGauss"  ) {
-    size_t nParNotBinned = 0;
-    if( param == "SmearParametrizationStepGaussInterPtBinned" ) nParNotBinned = 2;
-    else if( param == "SmearParametrizationTwoGauss" ) nParNotBinned = 3;
-    size_t jetScaleSize = scale.size();
-    for(int ptBin = 1; ptBin < nPtBins; ptBin++) {
-      for(size_t i = nParNotBinned; i < jetScaleSize; i++) {
-	scale.push_back(scale.at(i));
-	startParJet.push_back( startParJet.at(i) );
-      }
-    }
-  }
-
+  double ptBinCenter = 0.5 * ( tMin + tMax );
 
   SmearData * smeardata = dynamic_cast<SmearData*>(data_->front());
   if( smeardata ) {
+    // Interpolated response function
+    for(int bin = 1; bin <= hRespFit->GetNbinsX(); bin++) {
+      double r = hRespFit->GetBinCenter(bin);
+      hRespFit->SetBinContent(bin,smeardata->respPDF(r,ptBinCenter));
+    }
 
-    for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-      double ptBinCenter = 0.5 * ( ptBinEdges.at(ptBin) + ptBinEdges.at(ptBin+1) );
+    // Interpolated fit function with start values
+    // Copy start values into parameter array
+    for(int i = 0; i < param_->GetNumberOfParameters(); i++) {
+      if( i < param_->GetNumberOfJetParameters() )
+	param_->GetPars()[i] = startParJet.at(i);
+      else
+	param_->GetPars()[i] = startParGlobal.at(i-param_->GetNumberOfJetParameters());
+    }
+    // Plot response function
+    for(int bin = 1; bin <= hRespFitStart->GetNbinsX(); bin++) {
+      double r = hRespFitStart->GetBinCenter(bin);
+      hRespFitStart->SetBinContent(bin,smeardata->respPDF(r,ptBinCenter));
+    }
+    // Copy back fitted values into parameter array
+    for(int i = 0; i < param_->GetNumberOfParameters(); i++) {
+      param_->GetPars()[i] = fittedPar.at(i);
+    }
 
-      // Interpolated response function
-      for(int bin = 1; bin <= hRespFit.at(ptBin)->GetNbinsX(); bin++) {
-	double r = hRespFit.at(ptBin)->GetBinCenter(bin);
-	hRespFit.at(ptBin)->SetBinContent(bin,smeardata->respPDF(r,ptBinCenter));
+    // In case of step + gauss parametrization
+    if( param == "SmearParametrizationStepGauss" ) {
+      
+      // Step part of fit function
+      for(int bin = 1; bin <= hRespFitStep->GetNbinsX(); bin++) {
+	double val  = scale.at(3+bin)*(smeardata->GetRespPar()[3+bin]);
+	hRespFitStep->SetBinContent(bin,val);
       }
-
-      // Interpolated fit function with start values
-      // Copy start values into parameter array
-      for(int i = 0; i < param_->GetNumberOfParameters(); i++) {
-	if( i < param_->GetNumberOfJetParameters() )
-	  param_->GetPars()[i] = startParJet.at(i);
-	else
-	  param_->GetPars()[i] = startParGlobal.at(i-param_->GetNumberOfJetParameters());
-      }
-      // Plot response function
-      for(int bin = 1; bin <= hRespFitStart.at(ptBin)->GetNbinsX(); bin++) {
-	double r = hRespFitStart.at(ptBin)->GetBinCenter(bin);
-	hRespFitStart.at(ptBin)->SetBinContent(bin,smeardata->respPDF(r,ptBinCenter));
-      }
-      // Copy back fitted values into parameter array
-      for(int i = 0; i < param_->GetNumberOfParameters(); i++) {
-	param_->GetPars()[i] = fittedPar.at(i);
-      }
-
-      // In case of step + gauss parametrizations with pt binning
-      if( param == "SmearParametrizationStepGaussInterPtBinned" ) {
-	// Start index of step parameters of this pt bin
-	// There are 2 Gauss parameters and per pt bin
-	//  - 1 normalization constant,
-	//  - nRBins step parameters
-	int idx = 2 + ptBin * (1+nRBins);
-
-	// Step part of fit function
-	for(int bin = 1; bin <= hRespFitStep.at(ptBin)->GetNbinsX(); bin++) {
-	  double val  = scale.at(idx+bin)*(smeardata->GetRespPar()[idx+bin]);
-	  hRespFitStep.at(ptBin)->SetBinContent(bin,val);
-	}
-	normHist(hRespFitStep.at(ptBin),"width");
-	hRespFitStep.at(ptBin)->Scale(1. - scale.at(idx)*(smeardata->GetRespPar()[idx]));
+      normHist(hRespFitStep,"width");
+      hRespFitStep->Scale(1. - scale.at(0)*(smeardata->GetRespPar()[0]));
 	
-	// Gauss part of fit function
-	double a1 = 1.008;
-	double a2 = -8E-06;
+      // Gauss part of fit function
+      for(int bin = 1; bin <= hRespFitGaus->GetNbinsX(); bin++) {
+	double c     = scale.at(0)*(smeardata->GetRespPar()[0]);
+	double mu    = scale.at(1)*(smeardata->GetRespPar()[1]);
+	double sigma = scale.at(2)*(smeardata->GetRespPar()[2]);
+	double r     = hRespFitGaus->GetBinCenter(bin);
+	double val   = c * exp( -pow((mu-r)/sigma,2) / 2. ) / sqrt(2.*M_PI) / sigma;
+	hRespFitGaus->SetBinContent(bin,val);
+      }
+
+      // Sum
+      for(int binGaus = 1; binGaus <= hRespFitGaus->GetNbinsX(); binGaus++) {
+	int    binStep = hRespFitStep->FindBin(hRespFitGaus->GetBinCenter(binGaus));
+	double val     = hRespFitStep->GetBinContent(binStep) + hRespFitGaus->GetBinContent(binGaus);
+	hRespFitSum->SetBinContent(binGaus,val);
+      }
+    }
+
+    // In case of interpolated step + gauss parametrization
+    else if( param == "SmearParametrizationStepGaussInter" ) {
+      // Step part of fit function
+      for(int bin = 1; bin <= hRespFitStep->GetNbinsX(); bin++) {
+	double val  = scale.at(3+bin)*(smeardata->GetRespPar()[3+bin]);
+	hRespFitStep->SetBinContent(bin,val);
+      }
+      normHist(hRespFitStep,"width");
+      hRespFitStep->Scale(1. - scale.at(0)*(smeardata->GetRespPar()[0]));
+	
+      // Gauss part of fit function
+      for(int bin = 1; bin <= hRespFitGaus->GetNbinsX(); bin++) {
+	// Mean
+	double a1 = meanRespPar.at(0);
+	double a2 = meanRespPar.at(1);
 	double mu = a1 + a2*ptBinCenter;
-
-	a1 = 0.;
-	a2 = scale.at(0)*smeardata->GetRespPar()[0];
-	double a3 = scale.at(1)*smeardata->GetRespPar()[1];
+	// Width
+	a1 = scale.at(1)*smeardata->GetRespPar()[1];
+	a2 = scale.at(2)*smeardata->GetRespPar()[2];
+	double a3 = scale.at(3)*smeardata->GetRespPar()[3];
 	double sigma = sqrt( a1*a1/ptBinCenter/ptBinCenter + a2*a2/ptBinCenter + a3*a3 );
-
-	for(int bin = 1; bin <= hRespFitGaus.at(ptBin)->GetNbinsX(); bin++) {
-	  double r     = hRespFitGaus.at(ptBin)->GetBinCenter(bin);
-	  double c     = scale.at(idx)*(smeardata->GetRespPar()[idx]);
-	  double val   = c * exp( -pow((mu-r)/sigma,2) / 2. ) / sqrt(2.*M_PI) / sigma;
-	  hRespFitGaus.at(ptBin)->SetBinContent(bin,val);
-	}
-
-	// Sum
-	for(int binGaus = 1; binGaus <= hRespFitGaus.at(ptBin)->GetNbinsX(); binGaus++) {
-	  int    binStep = hRespFitStep.at(ptBin)->FindBin(hRespFitGaus.at(ptBin)->GetBinCenter(binGaus));
-	  double val     = hRespFitStep.at(ptBin)->GetBinContent(binStep) + hRespFitGaus.at(ptBin)->GetBinContent(binGaus);
-	  hRespFitSum.at(ptBin)->SetBinContent(binGaus,val);
-	}
+	// pdf
+	double c     = scale.at(0)*(smeardata->GetRespPar()[0]);
+	double r     = hRespFitGaus->GetBinCenter(bin);
+	double val   = c * exp( -pow((mu-r)/sigma,2) / 2. ) / sqrt(2.*M_PI) / sigma;
+	hRespFitGaus->SetBinContent(bin,val);
       }
-
-      // In case of step + gauss parametrization
-      else if( param == "SmearParametrizationStepGauss" ) {
-
-	// Step part of fit function
-	for(int bin = 1; bin <= hRespFitStep.at(ptBin)->GetNbinsX(); bin++) {
-	  double val  = scale.at(3+bin)*(smeardata->GetRespPar()[3+bin]);
-	  hRespFitStep.at(ptBin)->SetBinContent(bin,val);
-	}
-	normHist(hRespFitStep.at(ptBin),"width");
-	hRespFitStep.at(ptBin)->Scale(1. - scale.at(0)*(smeardata->GetRespPar()[0]));
-	
-	// Gauss part of fit function
-	for(int bin = 1; bin <= hRespFitGaus.at(ptBin)->GetNbinsX(); bin++) {
-	  double c     = scale.at(0)*(smeardata->GetRespPar()[0]);
-	  double mu    = scale.at(1)*(smeardata->GetRespPar()[1]);
-	  double sigma = scale.at(2)*(smeardata->GetRespPar()[2]);
-	  double r     = hRespFitGaus.at(ptBin)->GetBinCenter(bin);
-	  double val   = c * exp( -pow((mu-r)/sigma,2) / 2. ) / sqrt(2.*M_PI) / sigma;
-	  hRespFitGaus.at(ptBin)->SetBinContent(bin,val);
-	}
-
-	// Sum
-	for(int binGaus = 1; binGaus <= hRespFitGaus.at(ptBin)->GetNbinsX(); binGaus++) {
-	  int    binStep = hRespFitStep.at(ptBin)->FindBin(hRespFitGaus.at(ptBin)->GetBinCenter(binGaus));
-	  double val     = hRespFitStep.at(ptBin)->GetBinContent(binStep) + hRespFitGaus.at(ptBin)->GetBinContent(binGaus);
-	  hRespFitSum.at(ptBin)->SetBinContent(binGaus,val);
-	}
-      }
-
-      // In case of interpolated step + gauss parametrization
-      else if( param == "SmearParametrizationStepGaussInter" ) {
-	// Step part of fit function
-	for(int bin = 1; bin <= hRespFitStep.at(ptBin)->GetNbinsX(); bin++) {
-	  double val  = scale.at(3+bin)*(smeardata->GetRespPar()[3+bin]);
-	  hRespFitStep.at(ptBin)->SetBinContent(bin,val);
-	}
-	normHist(hRespFitStep.at(ptBin),"width");
-	hRespFitStep.at(ptBin)->Scale(1. - scale.at(0)*(smeardata->GetRespPar()[0]));
-	
-	// Gauss part of fit function
-	for(int bin = 1; bin <= hRespFitGaus.at(ptBin)->GetNbinsX(); bin++) {
-	  // Mean
-	  double a1 = meanRespPar.at(0);
-	  double a2 = meanRespPar.at(1);
-	  double mu = a1 + a2*ptBinCenter;
-	  // Width
-	  a1 = scale.at(1)*smeardata->GetRespPar()[1];
-	  a2 = scale.at(2)*smeardata->GetRespPar()[2];
-	  double a3 = scale.at(3)*smeardata->GetRespPar()[3];
-	  double sigma = sqrt( a1*a1/ptBinCenter/ptBinCenter + a2*a2/ptBinCenter + a3*a3 );
-	  // pdf
-	  double c     = scale.at(0)*(smeardata->GetRespPar()[0]);
-	  double r     = hRespFitGaus.at(ptBin)->GetBinCenter(bin);
-	  double val   = c * exp( -pow((mu-r)/sigma,2) / 2. ) / sqrt(2.*M_PI) / sigma;
-	  hRespFitGaus.at(ptBin)->SetBinContent(bin,val);
-	}
-
-	// Sum
-	for(int binGaus = 1; binGaus <= hRespFitGaus.at(ptBin)->GetNbinsX(); binGaus++) {
-	  int    binStep = hRespFitStep.at(ptBin)->FindBin(hRespFitGaus.at(ptBin)->GetBinCenter(binGaus));
-	  double val     = hRespFitStep.at(ptBin)->GetBinContent(binStep) + hRespFitGaus.at(ptBin)->GetBinContent(binGaus);
-	  hRespFitSum.at(ptBin)->SetBinContent(binGaus,val);
-	}
-      }
-
-      // In case of two gauss parametrizations
-      else if( param == "SmearParametrizationTwoGauss" ) {
-	// Offset to ptBin
-	int idx = 3*ptBin;
-
-	// Normalization
-	double c = scale.at(3+idx)*(smeardata->GetRespPar()[3+idx]);
       
-	// Central Gauss of fit function
-	for(int bin = 1; bin <= hRespFitGaus.at(ptBin)->GetNbinsX(); bin++) {
-	  // Mean
-	  double a1 = meanRespPar.at(0);
-	  double a2 = meanRespPar.at(1);
-	  double mu = a1 + a2*ptBinCenter;
-	  // Width
-	  a1 = scale.at(0)*smeardata->GetRespPar()[0];
-	  a2 = scale.at(1)*smeardata->GetRespPar()[1];
-	  double a3 = scale.at(2)*smeardata->GetRespPar()[2];
-	  double sigma = sqrt( a1*a1/ptBinCenter/ptBinCenter + a2*a2/ptBinCenter + a3*a3 );
-	  // pdf
-	  double r     = hRespFitGaus.at(ptBin)->GetBinCenter(bin);
-	  double val   = c * exp( -pow((mu-r)/sigma,2) / 2. ) / sqrt(2.*M_PI) / sigma;
-	  hRespFitGaus.at(ptBin)->SetBinContent(bin,val);
-	}
+      // Sum
+      for(int binGaus = 1; binGaus <= hRespFitGaus->GetNbinsX(); binGaus++) {
+	int    binStep = hRespFitStep->FindBin(hRespFitGaus->GetBinCenter(binGaus));
+	double val     = hRespFitStep->GetBinContent(binStep) + hRespFitGaus->GetBinContent(binGaus);
+	hRespFitSum->SetBinContent(binGaus,val);
+      }
+    }
+
+    // In case of two gauss parametrizations
+    else if( param == "SmearParametrizationTwoGauss" ) {
+      // Normalization
+      double c = scale.at(3)*(smeardata->GetRespPar()[3]);
       
-	// Tail Gauss of fit function
-	for(int bin = 1; bin <= hRespFitSum.at(ptBin)->GetNbinsX(); bin++) {
-	  double mu    = scale.at(4+idx)*(smeardata->GetRespPar()[4+idx]);
-	  double sigma = scale.at(5+idx)*(smeardata->GetRespPar()[5+idx]);
-	  double r     = hRespFitGaus.at(ptBin)->GetBinCenter(bin);
-	  double val   = (1.-c) * exp( -pow((mu-r)/sigma,2) / 2. ) / sqrt(2.*M_PI) / sigma;
-	  hRespFitSum.at(ptBin)->SetBinContent(bin,val);
-	}
+      // Central Gauss of fit function
+      for(int bin = 1; bin <= hRespFitGaus->GetNbinsX(); bin++) {
+	// Mean
+	double a1 = meanRespPar.at(0);
+	double a2 = meanRespPar.at(1);
+	double mu = a1 + a2*ptBinCenter;
+	// Width
+	a1 = scale.at(0)*smeardata->GetRespPar()[0];
+	a2 = scale.at(1)*smeardata->GetRespPar()[1];
+	double a3 = scale.at(2)*smeardata->GetRespPar()[2];
+	double sigma = sqrt( a1*a1/ptBinCenter/ptBinCenter + a2*a2/ptBinCenter + a3*a3 );
+	// pdf
+	double r     = hRespFitGaus->GetBinCenter(bin);
+	double val   = c * exp( -pow((mu-r)/sigma,2) / 2. ) / sqrt(2.*M_PI) / sigma;
+	hRespFitGaus->SetBinContent(bin,val);
+      }
+      
+      // Tail Gauss of fit function
+      for(int bin = 1; bin <= hRespFitSum->GetNbinsX(); bin++) {
+	double mu    = scale.at(4)*(smeardata->GetRespPar()[4]);
+	double sigma = scale.at(5)*(smeardata->GetRespPar()[5]);
+	double r     = hRespFitGaus->GetBinCenter(bin);
+	double val   = (1.-c) * exp( -pow((mu-r)/sigma,2) / 2. ) / sqrt(2.*M_PI) / sigma;
+	hRespFitSum->SetBinContent(bin,val);
       }
     }
   }
 
 
+  
   // --- Fill histograms of fitted truth spectrum -----------
 
   // Fill histogram of assumed truth pdf
   // and fit with 1/x^n function
-  double n      = 0.;
+  std::cout << "Filling truth pdf\n";
   DataIt datait = data_->begin();
   while( (*datait)->GetType() != TypeSmearDiJet  &&  datait != data_->end() ) datait++;
   if( datait != data_->end() ) {
     SmearDiJet * dijet = static_cast<SmearDiJet*>(*datait);  
 
-    // Fill truth pdf per pt bin
-    for(int bin = 1; bin <= hTruthPDFInt->GetNbinsX(); bin++) {
-      double t = hTruthPDFInt->GetBinCenter(bin);
-      if( t > ptBinEdges.front() && t < ptBinEdges.back() ) {
-	hTruthPDFInt->SetBinContent(bin,dijet->truthPDF(t));
-      }
+    for(int bin = 1; bin <= hTruthPDF->GetNbinsX(); bin++) {
+      double t = hTruthPDF->GetBinCenter(bin);
+      hTruthPDF->SetBinContent(bin,dijet->truthPDF(t));
     }
-    if( hTruthPDFInt->Integral("width") ) hTruthPDFInt->Scale(1./hTruthPDFInt->Integral("width"));
-
-    for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-      for(int bin = 1; bin <= hDijetTruthPDF.at(ptBin)->GetNbinsX(); bin++) {
-	double t = hDijetTruthPDF.at(ptBin)->GetBinCenter(bin);
-	if( t > ptBinEdges.at(ptBin) && t < ptBinEdges.at(ptBin+1) ) {
-	  hDijetTruthPDF.at(ptBin)->SetBinContent(bin,dijet->truthPDF(t));
-	}
-      }
-      if( hDijetTruthPDF.at(ptBin)->Integral("width") ) hDijetTruthPDF.at(ptBin)->Scale(1./hDijetTruthPDF.at(ptBin)->Integral("width"));
-    }
+    normHist(hTruthPDF,"width");
   }
 
 
   // --- Find populated x-axis ranges -----------------------
   int maxBin = 0;
   int minBin = 1;
-  for(int bin = 1; bin <= hRespMeas.at(0)->GetNbinsX(); bin++) {
-    for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-      if( hRespMeas.at(ptBin)->GetBinContent(bin) ) maxBin = bin;
-    }
+  for(int bin = 1; bin <= hRespMeas->GetNbinsX(); bin++) {
+    if( hRespMeas->GetBinContent(bin) > 0 ) maxBin = bin;
     if( minBin > maxBin ) minBin = bin;
   }
-  if( maxBin < hRespMeas.at(0)->GetNbinsX() ) maxBin++;
-  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-    hRespMeas.at(ptBin)->GetXaxis()->SetRange(minBin,maxBin);
-    hRespMeasAbs.at(ptBin)->GetXaxis()->SetRange(minBin,maxBin);
-  }
-
+  if( maxBin < hRespMeas->GetNbinsX() ) maxBin++;
+  hRespMeas->GetXaxis()->SetRange(minBin,maxBin);
+  hRespMeasAbs->GetXaxis()->SetRange(minBin,maxBin);
+  
   maxBin = 0;
   minBin = 1;
-  for(int bin = 1; bin <= hDijetPtGen.at(0)->GetNbinsX(); bin++) {
-    for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-      if( hDijetPtGen.at(ptBin)->GetBinContent(bin) > 0 ) maxBin = bin;
-    }
+  for(int bin = 1; bin <= hPtGen->GetNbinsX(); bin++) {
+    if( hPtGen->GetBinContent(bin) > 0 ) maxBin = bin;
     if( minBin > maxBin ) minBin = bin;
   }
-  if( maxBin < hDijetPtGen.at(0)->GetNbinsX() ) maxBin++;
-  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-    hDijetPtGen.at(ptBin)->GetXaxis()->SetRange(minBin,maxBin);
-    hDijetPtHat.at(ptBin)->GetXaxis()->SetRange(minBin,maxBin);
-  }
-
+  if( maxBin < hPtGen->GetNbinsX() ) maxBin++;
+  hPtGen->GetXaxis()->SetRange(minBin,maxBin);
+  hPtHat->GetXaxis()->SetRange(minBin,maxBin);
+  
 
   // --- Set y-axis ranges ----------------------------------
   double yMin = 10000.;
   double yMax = 0.;
-  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-    double min = 0.;
-    double max = 0.;
-    findYRange(hRespMeas.at(ptBin),min,max);
-    min *= 0.5;
-    max *= 5.;
-    if( min < yMin ) yMin = min;
-    if( max > yMax ) yMax = max;
-  }
+  double min = 0.;
+  double max = 0.;
+  findYRange(hRespMeas,min,max);
+  min *= 0.5;
+  max *= 5.;
+  if( min < yMin ) yMin = min;
+  if( max > yMax ) yMax = max;
   if( yMin < 8E-5 ) yMin = 8E-5;
-  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-    hRespMeas.at(ptBin)->GetYaxis()->SetRangeUser(yMin,yMax);
-  }
+  hRespMeas->GetYaxis()->SetRangeUser(yMin,yMax);
 
-  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-    setYRange(hRespMeasAbs.at(ptBin),0.5,5.);
-  }
-  setYRange(hDijetPtInt, 0.5, 50.);
-  setYRange(hPtGenInt, 0.5, 50.);
-  setYRange(hPtHatInt, 0.5, 50.);
+  setYRange(hRespMeasAbs,0.5,5.);
+  setYRange(hPtDijet, 0.5, 50.);
+  setYRange(hPtGen, 0.5, 50.);
+  setYRange(hPtHat, 0.5, 50.);
 
 
   // --- Plot histograms -----------------------------------
@@ -534,179 +384,142 @@ void ControlPlotsJetSmearing::plotResponse() const
   TPostScript * const ps = new TPostScript((dir_+"/jsResponse.ps").c_str(),111);
   TCanvas *c1 = new TCanvas("c1","Jet Response",0,0,600,600);
 
-  // Measured and fitted response in different ptbins
-  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-    drawPSPage(ps,c1,hRespMeasAbs.at(ptBin),"",true);
-  }
+  // Measured and fitted response
+  drawPSPage(ps,c1,hRespMeasAbs,"",true);
 
-  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-    drawPSPage(ps,c1,hRespMeas.at(ptBin),"",true);
-  }
+  ps->NewPage();
+  c1->cd();
+  hRespMeasPhotonJet->GetXaxis()->SetRangeUser(0.,1.4);
+  hRespMeasPhotonJet->GetYaxis()->SetRangeUser(1E-3,1E4);
+  hRespMeasPhotonJet->Draw("E");
+  hRespMeasAbs->Draw("Esame");
+  c1->SetLogy();
+  c1->Draw();
 
-  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-    ps->NewPage();
-    c1->cd();
-    hRespMeas.at(ptBin)->Draw();
-    hRespFit.at(ptBin)->Draw("Lsame");
-    c1->SetLogy();
-    c1->Draw();
-  }
+  drawPSPage(ps,c1,hRespMeas,"",true);
+
+  ps->NewPage();
+  c1->cd();
+  hRespMeas->Draw();
+  hRespFit->Draw("Lsame");
+  c1->SetLogy();
+  c1->Draw();
 
   TLegend *legFitStart = new TLegend(0.23,0.65,0.5,0.8);
   legFitStart->SetBorderSize(0);
   legFitStart->SetFillColor(0);
   legFitStart->SetTextFont(42);
-  legFitStart->AddEntry(hRespFitStart.at(0),"At start","L");
-  legFitStart->AddEntry(hRespFit.at(0),"After fit","L");
-  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-    ps->NewPage();
-    c1->cd();
-    hRespMeas.at(ptBin)->Draw();
-    hRespFit.at(ptBin)->Draw("Lsame");
-    hRespFitStart.at(ptBin)->Draw("Lsame");
-    c1->SetLogy();
-    legFitStart->Draw("same");
-    c1->Draw();
-  }
+  legFitStart->AddEntry(hRespFitStart,"At start","L");
+  legFitStart->AddEntry(hRespFit,"After fit","L");
+  ps->NewPage();
+  c1->cd();
+  hRespMeas->Draw();
+  hRespFit->Draw("Lsame");
+  hRespFitStart->Draw("Lsame");
+  c1->SetLogy();
+  legFitStart->Draw("same");
+  c1->Draw();
 
-  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-    ps->NewPage();
-    c1->cd();
-    hRespMeas.at(ptBin)->Draw();
-    std::string param = config_->read<std::string>("Parametrization Class","");
-    if( param == "SmearParametrizationStepGauss" ||
-	param == "SmearParametrizationStepGaussInter" ||
-	param == "SmearParametrizationStepGaussInterPtBinned" ) {
-      hRespFitStep.at(ptBin)->Draw("same");
-      hRespFitGaus.at(ptBin)->Draw("same");
-      hRespFitSum.at(ptBin)->Draw("same");
-    } else if( param == "SmearParametrizationTwoGauss" ) {
-      hRespFitGaus.at(ptBin)->Draw("same");
-      hRespFitSum.at(ptBin)->Draw("same");
-    }
-    hRespFit.at(ptBin)->Draw("Lsame");
-    c1->SetLogy();
-    c1->Draw();
+  ps->NewPage();
+  c1->cd();
+  hRespMeas->Draw();
+  if( param == "SmearParametrizationStepGauss" ||
+      param == "SmearParametrizationStepGaussInter" ||
+      param == "SmearParametrizationStepGaussInterPtBinned" ) {
+    hRespFitStep->Draw("same");
+    hRespFitGaus->Draw("same");
+    hRespFitSum->Draw("same");
+  } else if( param == "SmearParametrizationTwoGauss" ) {
+    hRespFitGaus->Draw("same");
+    hRespFitSum->Draw("same");
   }
+  hRespFit->Draw("Lsame");
+  c1->SetLogy();
+  c1->Draw();
 
   // Truth spectrum
+  double n = param_->GetGlobalJetParRef()[0];
   TLegend *legPtGen = new TLegend(0.4,0.67,0.8,0.8);
   legPtGen->SetBorderSize(0);
   legPtGen->SetFillColor(0);
   legPtGen->SetTextFont(42);
   char entry[50];
   sprintf(entry,"#propto 1 / (p^{gen}_{T})^{%.1f}",n);
-  legPtGen->AddEntry(hTruthPDFInt,entry,"L");
+  legPtGen->AddEntry(hTruthPDF,entry,"L");
 
   std::vector<TObject*> objs;
-  objs.push_back(hPtGenInt);
-  objs.push_back(hTruthPDFInt);
-  objs.push_back(legPtGen);
-  drawPSPage(ps,c1,objs,"",true);
+//   objs.push_back(hPtGen);
+//   objs.push_back(hTruthPDF);
+//   //  objs.push_back(legPtGen);
+//   drawPSPage(ps,c1,objs,"",true);
+
+  ps->NewPage();
+  c1->cd();
+  hPtGen->Draw();
+  hTruthPDF->Draw("Lsame");
+  c1->SetLogy();
+  c1->Draw();
 
   TLegend *legPtHat = new TLegend(0.4,0.67,0.8,0.8);
   legPtHat->SetBorderSize(0);
   legPtHat->SetFillColor(0);
   legPtHat->SetTextFont(42);
   sprintf(entry,"#propto 1 / (#hat{p}_{T})^{%.1f}",n);
-  legPtHat->AddEntry(hTruthPDFInt,entry,"L");
+  legPtHat->AddEntry(hTruthPDF,entry,"L");
 
   objs.clear();
-  objs.push_back(hPtHatInt);
-  objs.push_back(hTruthPDFInt);
-  objs.push_back(legPtHat);
+  objs.push_back(hPtHat);
+  objs.push_back(hTruthPDF);
+  //  objs.push_back(legPtHat);
   drawPSPage(ps,c1,objs,"",true);
 
-  TLegend *legPtDijet = new TLegend(0.4,0.67,0.8,0.8);
+  TLegend *legPtDijet = new TLegend(0.23,0.67,0.8,0.8);
   legPtDijet->SetBorderSize(0);
   legPtDijet->SetFillColor(0);
   legPtDijet->SetTextFont(42);
   sprintf(entry,"#propto 1 / (p^{dijet}_{T})^{%.1f}",n);
-  legPtDijet->AddEntry(hTruthPDFInt,entry,"L");
+  legPtDijet->AddEntry(hTruthPDF,entry,"L");
+  //legPtDijet->AddEntry(hPtGen,"No cuts on p^{dijet}_{T}","L");
+  //legPtDijet->AddEntry(hPtGen,"1.0 < p^{dijet}_{T} < 1.4 TeV","L");
 
   objs.clear();
-  objs.push_back(hDijetPtInt);
-  objs.push_back(hTruthPDFInt);
-  objs.push_back(legPtDijet);
+  objs.push_back(hPtDijet);
+  objs.push_back(hTruthPDF);
+  //  objs.push_back(legPtDijet);
   drawPSPage(ps,c1,objs,"",true);
-
-  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-    ps->NewPage();
-    c1->cd();
-    hDijetPtGen.at(ptBin)->Draw();
-    c1->SetLogy();
-    c1->Draw();
-  }
-
-  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-    ps->NewPage();
-    c1->cd();
-    hDijetPtHat.at(ptBin)->Draw();
-    c1->SetLogy();
-    c1->Draw();
-  }
-
-  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-    ps->NewPage();
-    c1->cd();
-    hDijetPtGen.at(ptBin)->Draw();
-    hDijetTruthPDF.at(ptBin)->Draw("SAME");
-    c1->SetLogy();
-    c1->Draw();
-  }
-
-  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-    ps->NewPage();
-    c1->cd();
-    hDijetPtHat.at(ptBin)->Draw();
-    hDijetTruthPDF.at(ptBin)->Draw("SAME");
-    c1->SetLogy();
-    c1->Draw();
-  }
 
 
   // Write histos to root file
   TFile rootfile((dir_+"/jsResponse.root").c_str(),"RECREATE");
-  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-    rootfile.WriteTObject(hRespMeasAbs.at(ptBin));
-    rootfile.WriteTObject(hRespMeas.at(ptBin));
-    rootfile.WriteTObject(hDijetPtGen.at(ptBin));
-    rootfile.WriteTObject(hDijetPtHat.at(ptBin));
-    rootfile.WriteTObject(hRespFit.at(ptBin));
-    rootfile.WriteTObject(hRespFitStart.at(ptBin));
-    rootfile.WriteTObject(hRespFitStep.at(ptBin));
-    rootfile.WriteTObject(hRespFitGaus.at(ptBin));
-    rootfile.WriteTObject(hRespFitSum.at(ptBin));
-    rootfile.WriteTObject(hDijetTruthPDF.at(ptBin));
-  }
-  rootfile.WriteTObject(hDijetPtInt);
-  rootfile.WriteTObject(hPtGenInt);
-  rootfile.WriteTObject(hPtHatInt);
+  rootfile.WriteTObject(hRespMeasAbs);
+  rootfile.WriteTObject(hRespMeas);
+  rootfile.WriteTObject(hRespMeasPhotonJet);
+  rootfile.WriteTObject(hPtGen);
+  rootfile.WriteTObject(hPtHat);
+  rootfile.WriteTObject(hPtDijet);
+  rootfile.WriteTObject(hRespFit);
+  rootfile.WriteTObject(hRespFitStart);
+  rootfile.WriteTObject(hRespFitStep);
+  rootfile.WriteTObject(hRespFitGaus);
+  rootfile.WriteTObject(hRespFitSum);
+  rootfile.WriteTObject(hTruthPDF);
 
   rootfile.Close();
 
 
   // --- Clean up ------------------------------------------
-  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-    delete hRespMeasAbs.at(ptBin);
-    delete hRespMeas.at(ptBin);
-    delete hDijetPtGen.at(ptBin);
-    delete hDijetPtHat.at(ptBin);
-    delete hRespFit.at(ptBin);
-    delete hRespFitStart.at(ptBin);
-    delete hRespFitStep.at(ptBin);
-    delete hRespFitGaus.at(ptBin);
-    delete hRespFitSum.at(ptBin);
-    delete hDijetTruthPDF.at(ptBin);
-  }
-  delete hDijetPtInt;
-  delete hPtGenInt;
-  delete hPtHatInt;
-  delete hTruthPDFInt;
-  delete legFitStart;
-  delete legPtDijet;
-  delete legPtGen;
-  delete legPtHat;
+  delete hRespMeasAbs;
+  delete hRespMeas;
+  delete hRespMeasPhotonJet;
+  delete hPtGen;
+  delete hPtHat;
+  delete hPtDijet;
+  delete hRespFit;
+  delete hRespFitStart;
+  delete hRespFitStep;
+  delete hRespFitGaus;
+  delete hRespFitSum;
+  delete hTruthPDF;
   delete c1;
   delete ps;
 }
@@ -1575,7 +1388,7 @@ void ControlPlotsJetSmearing::setGStyle() const
 //!  <tt> c1 * min</tt> to <tt> c2 * max</tt>,
 //!  where \p min and \p max are the minimal and
 //!  the maximal bin non-zero content, respectively.
-//!  It <tt>min < minLimit</tt>, \p minLimit is used
+//!  If <tt>min < minLimit</tt>, \p minLimit is used
 //!  instead as minimum.
 // --------------------------------------------------
 void ControlPlotsJetSmearing::setYRange(TH1F * h, double c1, double c2, double minLimit) const {
@@ -1603,5 +1416,3 @@ void ControlPlotsJetSmearing::setYRange(TH1F * h, double c1, double c2, double m
    ss << t;
    return ss.str();
  }
-
-

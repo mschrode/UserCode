@@ -161,6 +161,9 @@ public:
   // -----------------------------------------------------------------
   virtual bool hasInvertedCorrection() const { return false;}
 
+  virtual bool needsUpdate() const { return false; }
+  virtual void update(const double * par) {;}
+
 private: 
   Parametrization();
   unsigned int ntowerpars_;      //!< Number of parameters of the tower parametrization
@@ -846,7 +849,7 @@ class TrackParametrization : public Parametrization {
 // -----------------------------------------------------------------
 class L2L3JetParametrization : public Parametrization { 
 public:
-  L2L3JetParametrization() : Parametrization(0,5,0,4) {}
+  L2L3JetParametrization() : Parametrization(0,3,0,4) {}
   const char* name() const { return "L2L3JetParametrization";}
   
   double correctedTowerEt(const TMeasurement *x,const double *par) const {
@@ -863,8 +866,8 @@ public:
     double  pt = (x->pt < 4.0) ? 4.0 : (x->pt > 2000.0) ? 2000.0 : x->pt;
     double logpt = log10(pt);
     //    double c1 = par[0]+logpt*(0.1 * par[1]+logpt *(0.01* par[2]+logpt*(par[3]+logpt*(par[4]+logpt*par[5]))));
-    double c1 = par[0]+logpt*(0.1 * par[1]+logpt *(0.01* par[2]+logpt*(0.01*par[3]+logpt*(0.01*par[4]))));
-    //    double c1 = par[0]+logpt*(0.1 * par[1]+logpt * 0.01* par[2]);
+    //double c1 = par[0]+logpt*(0.1 * par[1]+logpt *(0.01* par[2]+logpt*(0.01*par[3]+logpt*(0.01*par[4]))));
+    double c1 = par[0]+logpt*(0.1 * par[1]+logpt * 0.01* par[2]);
     return c1 * x->pt;
   }
 
@@ -1047,7 +1050,7 @@ public:
 // -----------------------------------------------------------------
 class ToySimpleInverseParametrization : public Parametrization { 
 public:
-  ToySimpleInverseParametrization() : Parametrization(0,0,0,2) {}
+  ToySimpleInverseParametrization() : Parametrization(0,1,0,2) {}
   const char* name() const { return "ToySimpleInverseParametrization";}
   
   double correctedTowerEt(const TMeasurement *x,const double *par) const {
@@ -1055,7 +1058,7 @@ public:
   }
 
   double correctedJetEt(const TMeasurement *x,const double *par) const {
-    return x->pt;
+    return par[0]*x->pt;
   }
 
   double correctedGlobalJetEt(const TMeasurement *x,const double *par) const {
@@ -1452,17 +1455,39 @@ class SmearStepGaussInter : public Parametrization
       print();
 
       // Integral over dijet resolution for truth pdf
-      norm_ = new TH1D("norm","",100,tMin_,tMax_);
-      for(int bin = 1; bin < norm_->GetNbinsX(); bin++) {
-	double pt = norm_->GetBinCenter(bin);
-	double val = dijetCutFactor(pt) * norm_->GetXaxis()->GetBinWidth(bin);
-	norm_->SetBinContent(bin,val);
-      }
+      ptDijetCutInt_ = new TH1D("norm","",500,tMin_,tMax_);
     }
 
-  ~SmearStepGaussInter() { binCenters_.clear(); delete norm_; }
+  ~SmearStepGaussInter() { binCenters_.clear(); delete ptDijetCutInt_; }
 
   const char* name() const { return "SmearStepGaussInter";}
+
+  virtual bool needsUpdate() const { return true; }
+
+  virtual void update(const double * par) {
+    std::cout << "'" << name() << "': Updating ptDijet cut integral... ";
+    ptDijetCutInt_->Reset();
+
+    for(int bin = 1; bin < ptDijetCutInt_->GetNbinsX(); bin++) {
+      TMeasurement x;
+      x.pt = ptDijetCutInt_->GetBinCenter(bin);
+      double integral = 0.;
+      int nSteps = 500;
+      double dPtDijet = (ptDijetMax_ - ptDijetMin_) / nSteps;
+      for(int i = 0; i < nSteps; i++) {
+	double ptDijet = ptDijetMin_ + i*dPtDijet;
+	x.E = ptDijet / x.pt;
+	double prob = correctedJetEt(&x,par);
+	prob *= x.pt;
+	integral += prob;
+      }
+      integral /= sqrt(2.);
+      integral *= dPtDijet;
+      ptDijetCutInt_->SetBinContent(bin,integral);
+    }
+    std::cout << "ok\n";
+  }
+
   
   double correctedTowerEt(const TMeasurement *x,const double *par) const { return 0.; }
 
@@ -1510,17 +1535,47 @@ class SmearStepGaussInter : public Parametrization
   //!  \return Probability density of truth times normalization of dijet probability
   // ------------------------------------------------------------------------
   double correctedGlobalJetEt(const TMeasurement *x,const double *par) const {
+/*     // Norm of probability of dijet event configuration */
+/*     double norm = 0.; */
+/*     for(int bin = 1; bin < ptDijetCutInt_->GetNbinsX(); bin++) { */
+/*       double pt = ptDijetCutInt_->GetBinCenter(bin); */
+/*       norm += pow(pt,2-par[0]) * ptDijetCutInt_->GetBinContent(bin); */
+/*     } */
+
+/*     double p = 0.; */
+/*     if( norm ) { */
+/*       if( tMin_ < x->pt && x->pt < tMax_ ) { */
+/* 	p = 1. / pow( x->pt, par[0] ); */
+/* 	p *= dijetCutFactor(x->pt); */
+/* 	p /= norm; */
+/*       } */
+/*     } */
+
     // Norm of probability of dijet event configuration
     double norm = 0.;
-    for(int bin = 1; bin < norm_->GetNbinsX(); bin++) {
-      double pt = norm_->GetBinCenter(bin);
-      norm += pow(pt,2-par[0]) * norm_->GetBinContent(bin);
+    for(int bin = 1; bin < ptDijetCutInt_->GetNbinsX(); bin++) {
+      double pt = ptDijetCutInt_->GetBinCenter(bin);
+      norm += pow(pt,2-par[0]) * ptDijetCutInt_->GetBinContent(bin) * ptDijetCutInt_->GetXaxis()->GetBinWidth(1);
     }
 
     double p = 0.;
-    if( norm ) p = truthPDF(x->pt,par[0]) / norm;
-
+    if( norm ) {
+      p = truthPDF(x->pt,par[0]);
+      p /= norm;
+    }
+    
     return p;
+
+/*     double p = 0.; */
+/*     if( tMin_ < x->pt && x->pt < tMax_ ) { */
+/*       double n    = par[0];        // The exponent */
+/*       double k    = n - 3.; */
+/*       double norm = k / ( pow(tMin_,-k) - pow(tMax_,-k) ); */
+      
+/*       p = norm / pow( x->pt, n ); */
+/*     } */
+
+/*     return p; */
   }
 
 
@@ -1537,7 +1592,8 @@ class SmearStepGaussInter : public Parametrization
   const std::vector<double> respParScales_;     //!< Parameter scales
   const std::vector<double> meanRespPar_;    //!< Parameters of mean response
   std::vector<double> binCenters_;      //!< Centers of response bins
-  TH1D * norm_;			        //!< Integral over dijet resolution for truth pdf for different t
+  TH1D * ptDijetCutInt_;			        //!< Integral over dijet resolution for truth pdf for different t
+
 
 
 
@@ -1604,9 +1660,15 @@ class SmearStepGaussInter : public Parametrization
   // ------------------------------------------------------------------------
   double truthPDF(double pt, double n) const {
     double prob = 0.;
+/*     if( tMin_ < pt && pt < tMax_ ) { */
+/*       prob = 1. / pow( pt, n ); */
+/*       prob *= dijetCutFactor(pt); */
+/*     } */
+
     if( tMin_ < pt && pt < tMax_ ) {
       prob = 1. / pow( pt, n );
-      prob *= dijetCutFactor(pt);
+      int bin = ptDijetCutInt_->FindBin(pt);
+      prob *= ptDijetCutInt_->GetBinContent(bin);
     }
 
     return prob;
@@ -1623,9 +1685,9 @@ class SmearStepGaussInter : public Parametrization
   double dijetCutFactor(double pt) const {
     double p = 0.;
     if( tMin_ < pt && pt < tMax_ ) {
-      double a1 = 4.19;
-      double a2 = 1.25; //respParScales_.at(0)*par[0];
-      double a3 = 0.03; //respParScales_.at(1)*par[1];
+      double a1 = 9.32;//4.19;
+      double a2 = 1.13;//1.25;
+      double a3 = 0.03;
       double sigma  = sqrt( a1*a1 + a2*a2*pt + a3*a3*pt*pt ) / sqrt(2);
       double normTmin = ( ptDijetMin_ - pt ) / sqrt(2) / sigma;
       double normTmax = ( ptDijetMax_ - pt ) / sqrt(2) / sigma;

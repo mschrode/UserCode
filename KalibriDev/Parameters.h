@@ -86,6 +86,10 @@ public :
   int GetTrackEffBin(double pt, double eta);
 
   void print() const;
+
+  const char * name() const { return p->name(); }
+  bool needsUpdate() const { return p->needsUpdate(); }
+  void update() { p->update(GetPars()); }
   
   static double tower_parametrization(const TMeasurement* x, const double* par) {
     return instance->p->correctedTowerEt(x,par);
