@@ -1,4 +1,4 @@
-// $Id: ControlPlotsJetSmearing.cc,v 1.3 2009/10/30 15:47:14 mschrode Exp $
+// $Id: ControlPlotsJetSmearing.cc,v 1.4 2009/10/30 18:09:40 mschrode Exp $
 
 #include "ControlPlotsJetSmearing.h"
 
@@ -57,8 +57,7 @@ void ControlPlotsJetSmearing::plotResponse() const
   double tMax = config_->read<double>("DiJet integration max",1.);
 
   // The vectors contain the distribution for
-  // 0 - Resp function evaluated at mean of intervall (tMin,tMax)
-  // 1 - Resp function evaluated at mean of ptGen distribution
+  // 0 - Resp function evaluated at mean of ptGen distribution
   // Larger entries: Measured reponse in a certain ptGen bin; resp
   //                 function evaluated at mean of ptGen spectrum 
   //                 of that bin
@@ -151,14 +150,11 @@ void ControlPlotsJetSmearing::plotResponse() const
 
 
   // --- Define ptDijet bins -------------
-  //! \todo Should be bins of ptGen
-  double ptDijetMin = config_->read<double>("Et min cut on dijet",-1.);
-  double ptDijetMax = config_->read<double>("Et max cut on dijet",-1.);
-  int nPtDijetBins = nPlotBins - 2;
-  double deltaPtDijet = (ptDijetMax - ptDijetMin) / nPtDijetBins;
-  std::vector<double> ptDijetBinEdges(nPtDijetBins+1);
-  for(size_t i = 0; i < ptDijetBinEdges.size(); i++) {
-    ptDijetBinEdges.at(i) = ptDijetMin + i*deltaPtDijet;
+  int nPtGenBins = nPlotBins - 1;
+  double deltaPtGen = (tMax - tMin) / nPtGenBins;
+  std::vector<double> ptGenBinEdges(nPtGenBins+1);
+  for(size_t i = 0; i < ptGenBinEdges.size(); i++) {
+    ptGenBinEdges.at(i) = tMin + i*deltaPtGen;
   }
 
 
@@ -176,15 +172,12 @@ void ControlPlotsJetSmearing::plotResponse() const
 	hPtHat->Fill( jet->ptHat, dijet->GetWeight() );
 
 	hRespMeasAbs.at(0)->Fill( jet->pt / jet->genPt, dijet->GetWeight() );
-	hRespMeasAbs.at(1)->Fill( jet->pt / jet->genPt, dijet->GetWeight() );
-
 	hRespMeas.at(0)->Fill( jet->pt / jet->genPt, dijet->GetWeight() );
-	hRespMeas.at(1)->Fill( jet->pt / jet->genPt, dijet->GetWeight() );
 
-	for(int i = 0; i < nPtDijetBins; i++) {
-	  if( ptDijetBinEdges.at(i) <= dijet->dijetPt() && dijet->dijetPt() < ptDijetBinEdges.at(i+1) ) {
-	    hRespMeasAbs.at(i)->Fill( jet->pt / jet->genPt, dijet->GetWeight() );
-	    hRespMeas.at(i)->Fill( jet->pt / jet->genPt, dijet->GetWeight() );
+	for(int i = 0; i < nPtGenBins; i++) {
+	  if( ptGenBinEdges.at(i) <= jet->genPt && jet->genPt < ptGenBinEdges.at(i+1) ) {
+	    hRespMeasAbs.at(i+1)->Fill( jet->pt / jet->genPt, dijet->GetWeight() );
+	    hRespMeas.at(i+1)->Fill( jet->pt / jet->genPt, dijet->GetWeight() );
 	    continue;
 	  }
 	}
@@ -212,15 +205,14 @@ void ControlPlotsJetSmearing::plotResponse() const
   std::vector<double> scale = bag_of<double>(config_->read<string>("jet parameter scales",""));
   std::vector<double> startParJet = bag_of<double>(config_->read<string>("jet start values",""));
   std::vector<double> startParGlobal = bag_of<double>(config_->read<string>("global jet start values",""));
-  std::vector<double> meanRespPar = bag_of<double>(config_->read<string>("mean response parameters","1 0"));
+  std::vector<double> gaussPar = bag_of<double>(config_->read<string>("gauss parameters","1 1 0 0"));
 
   // Find bin centers for response function evaluation
   std::vector<double> ptGenBinCenters(nPlotBins);
-  ptGenBinCenters.at(0) = 0.5 * ( tMin + tMax );
-  ptGenBinCenters.at(1) = hPtGen->GetMean();
-  for(int i = 2; i < nPlotBins; i++) {
-    int j = i - 2;
-    ptGenBinCenters.at(i) = 0.5 * ( ptDijetBinEdges.at(j) + ptDijetBinEdges.at(j+1) );
+  ptGenBinCenters.at(0) = hPtGen->GetMean();
+  for(int i = 1; i < nPlotBins; i++) {
+    int j = i - 1;
+    ptGenBinCenters.at(i) = 0.5 * ( ptGenBinEdges.at(j) + ptGenBinEdges.at(j+1) );
   }
 
 
@@ -256,7 +248,7 @@ void ControlPlotsJetSmearing::plotResponse() const
       if( param == "SmearParametrizationStepGaussInter" ) {
 	// Step part of fit function
 	for(int bin = 1; bin <= hRespFitStep.at(plotBin)->GetNbinsX(); bin++) {
-	  double val  = scale.at(3+bin)*(smearData->GetRespPar()[3+bin]);
+	  double val  = scale.at(bin)*(smearData->GetRespPar()[bin]);
 	  hRespFitStep.at(plotBin)->SetBinContent(bin,val);
 	}
 	normHist(hRespFitStep.at(plotBin),"width");
@@ -265,13 +257,11 @@ void ControlPlotsJetSmearing::plotResponse() const
 	// Gauss part of fit function
 	for(int bin = 1; bin <= hRespFitGaus.at(plotBin)->GetNbinsX(); bin++) {
 	  // Mean
-	  double a1 = meanRespPar.at(0);
-	  double a2 = meanRespPar.at(1);
-	  double mu = a1 + a2*ptGenBinCenters.at(plotBin);
+	  double mu = gaussPar.at(0);
 	  // Width
-	  a1 = scale.at(1)*smearData->GetRespPar()[1];
-	  a2 = scale.at(2)*smearData->GetRespPar()[2];
-	  double a3 = scale.at(3)*smearData->GetRespPar()[3];
+	  double a1 = gaussPar.at(1);
+	  double a2 = gaussPar.at(2);
+	  double a3 = gaussPar.at(3);
 	  double sigma = sqrt( a1*a1/ptGenBinCenters.at(plotBin)/ptGenBinCenters.at(plotBin)
 			       + a2*a2/ptGenBinCenters.at(plotBin) + a3*a3 );
 	  // pdf
@@ -299,7 +289,6 @@ void ControlPlotsJetSmearing::plotResponse() const
 
   // Fill histogram of assumed truth pdf
   // and fit with 1/x^n function
-  std::cout << "Filling truth pdf\n";
   DataIt datait = data_->begin();
   while( (*datait)->GetType() != TypeSmearDiJet  &&  datait != data_->end() ) datait++;
   if( datait != data_->end() ) {
@@ -316,31 +305,18 @@ void ControlPlotsJetSmearing::plotResponse() const
   // --- Find populated x-axis ranges -----------------------
   int maxBin = 0;
   int minBin = 1;
-  for(int plotBin = 0; plotBin < nPlotBins; plotBin++) {
-    int maxBinTmp = 0;
-    int minBinTmp = 1;
-    for(int bin = 1; bin <= hRespMeas.at(plotBin)->GetNbinsX(); bin++) {
-      if( hRespMeas.at(plotBin)->GetBinContent(bin) > 0 ) maxBinTmp = bin;
-      if( minBinTmp > maxBinTmp ) minBinTmp = bin;
-    }
-    if( maxBinTmp < hRespMeas.at(plotBin)->GetNbinsX() ) maxBinTmp++;
-    if( minBinTmp < minBin ) minBin = minBinTmp;
-    if( maxBinTmp > maxBin ) maxBin = maxBinTmp;
+  for(int bin = 1; bin <= hRespMeas.at(0)->GetNbinsX(); bin++) {
+    if( hRespMeas.at(0)->GetBinContent(bin) > 0 ) maxBin = bin;
+    if( minBin > maxBin ) minBin = bin;
   }
+  if( maxBin < hRespMeas.at(0)->GetNbinsX() ) maxBin++;
   for(int plotBin = 0; plotBin < nPlotBins; plotBin++) {
     hRespMeas.at(plotBin)->GetXaxis()->SetRange(minBin,maxBin);
     hRespMeasAbs.at(plotBin)->GetXaxis()->SetRange(minBin,maxBin);
   }
-  
-  maxBin = 0;
-  minBin = 1;
-  for(int bin = 1; bin <= hPtGen->GetNbinsX(); bin++) {
-    if( hPtGen->GetBinContent(bin) > 0 ) maxBin = bin;
-    if( minBin > maxBin ) minBin = bin;
-  }
-  if( maxBin < hPtGen->GetNbinsX() ) maxBin++;
-  hPtGen->GetXaxis()->SetRange(minBin,maxBin);
-  hPtHat->GetXaxis()->SetRange(minBin,maxBin);
+
+  hPtGen->GetXaxis()->SetRangeUser(tMin,tMax);
+  hPtHat->GetXaxis()->SetRangeUser(tMin,tMax);
   
 
   // --- Set y-axis ranges ----------------------------------
@@ -367,6 +343,9 @@ void ControlPlotsJetSmearing::plotResponse() const
 
   // --- Plot histograms -----------------------------------
   // Label bins
+  double ptDijetMin = config_->read<double>("Et min cut on dijet",-1.);
+  double ptDijetMax = config_->read<double>("Et max cut on dijet",-1.);
+
   std::vector<TLegend*> legPtRange(nPlotBins);
   std::vector<TLegend*> legPtRangeAndCenters(nPlotBins);
   for(int plotBin = 0; plotBin < nPlotBins; plotBin++) {
@@ -380,13 +359,14 @@ void ControlPlotsJetSmearing::plotResponse() const
     legPtRangeAndCenters.at(plotBin)->SetFillColor(0);
     legPtRangeAndCenters.at(plotBin)->SetTextFont(42);
 
-    std::string label = toString(ptDijetMin) + " < p^{dijet}_{T} < " + toString(ptDijetMax) + " GeV";
-    if( plotBin < 2 ) {
+    std::string label;
+    if( plotBin == 0 ) {
+      label = toString(ptDijetMin) + " < p^{dijet}_{T} < " + toString(ptDijetMax) + " GeV";
       legPtRange.at(plotBin)->AddEntry(hRespMeas.at(plotBin),label.c_str(),"L");
       legPtRangeAndCenters.at(plotBin)->AddEntry(hRespMeas.at(plotBin),label.c_str(),"L");
     } else {
-      int i = plotBin - 2;
-      label = toString(ptDijetBinEdges.at(i)) + " < p^{dijet}_{T} < " + toString(ptDijetBinEdges.at(1+i)) + " GeV";
+      int i = plotBin - 1;
+      label = toString(ptGenBinEdges.at(i)) + " < p^{gen}_{T} < " + toString(ptGenBinEdges.at(1+i)) + " GeV";
       legPtRange.at(plotBin)->AddEntry(hRespMeas.at(plotBin),label.c_str(),"L");
       legPtRangeAndCenters.at(plotBin)->AddEntry(hRespMeas.at(plotBin),label.c_str(),"L");
     }
