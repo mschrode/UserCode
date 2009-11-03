@@ -1,4 +1,4 @@
-//  $Id: Parametrization.h,v 1.2 2009/10/30 13:14:55 mschrode Exp $
+//  $Id: Parametrization.h,v 1.3 2009/11/01 17:10:54 mschrode Exp $
 
 #ifndef CALIBCORE_PARAMETRIZATION_H
 #define CALIBCORE_PARAMETRIZATION_H
@@ -25,7 +25,7 @@
 //!  to correct a tower or jet measurement.
 //!  \author Hartmut Stadie
 //!  \date Thu Apr 03 17:09:50 CEST 2008
-//!  $Id: Parametrization.h,v 1.2 2009/10/30 13:14:55 mschrode Exp $
+//!  $Id: Parametrization.h,v 1.3 2009/11/01 17:10:54 mschrode Exp $
 // -----------------------------------------------------------------
 class Parametrization 
 {
@@ -1428,10 +1428,10 @@ class SmearStepGaussInter : public Parametrization
   //!  \param ptDijetMax    Maximum of dijet pt
   //!  \param rNBins        Number of bins of binned part of response pdf \f$ H_{inter} \f$
   //!  \param rParScales    Jet parameter scales
-  //!  \param meanRespPar   Parameters for mean of Gaussian
+  //!  \param gaussPar   Parameters for mean of Gaussian
   // ------------------------------------------------------------------------
   SmearStepGaussInter(double tMin, double tMax, double rMin, double rMax, int rNBins, double ptDijetMin, double ptDijetMax, const std::vector<double>& rParScales, const std::vector<double>& gaussPar)
-    : Parametrization(0,rNBins+1,0,1),
+    : Parametrization(0,rNBins+4,0,1),
     tMin_(tMin),
     tMax_(tMax),
     rMin_(rMin),
@@ -1450,7 +1450,7 @@ class SmearStepGaussInter : public Parametrization
       assert( 0.0 <= rMin_ && rMin_ < rMax_ );
       assert( 0.0 <= ptDijetMin_ && ptDijetMin_ < ptDijetMax_ );
       assert( respParScales_.size() >= nJetPars() );
-      assert( gaussPar_.size() >= 4 );
+      assert( gaussPar_.size() >= 1 );
 
       print();
 
@@ -1464,6 +1464,23 @@ class SmearStepGaussInter : public Parametrization
 
   virtual bool needsUpdate() const { return true; }
 
+
+  //!  \brief Update integral over dijet resolution \p ptDijetCutInt_
+  //!
+  //!  The truth pdf contains an integral over the dijet response
+  //!  describing the cuts on ptdijet:
+  //!  \f[
+  //!   \int^{x_{1}}_{x_{0}}dx\,\frac{r(x/t)\cdot t}{\sqrt{2}}
+  //!  \f]
+  //!  The values of this integral for different truth \p t are
+  //!  stored in the histogram \p ptDijetCutInt_.
+  //!
+  //!  Calling this function recalculates the integrals using the current
+  //!  parameter values for the response function \p r. The integrals
+  //!  are calculated numerically by summing over 400 bins between
+  //!  \p ptDijetMin_ and \p ptDijetMax_.
+  //!  \sa correctedGlobalJetEt()
+  // ------------------------------------------------------------------------
   virtual void update(const double * par) {
     std::cout << "'" << name() << "': Updating ptDijet cut integral... ";
     ptDijetCutInt_->Reset();
@@ -1493,7 +1510,7 @@ class SmearStepGaussInter : public Parametrization
 
 
   //!  \brief Returns probability density of response
-  //!  \param x   TMeasurement::E is the response,
+  //!  \param x   TMeasurement::E is the response, TMeasurement::pt the true pt
   //!  \param par Pointer to parameters (parameters are multiplied by the corresponding scale)
   //!  \return Probability density of response
   // ------------------------------------------------------------------------
@@ -1501,9 +1518,9 @@ class SmearStepGaussInter : public Parametrization
     // Probability density from Gaussian part
     double c = respParScales_.at(0)*par[0];
     double u = gaussPar_.at(0);
-    double a1 = gaussPar_.at(1);
-    double a2 = gaussPar_.at(2);
-    double a3 = gaussPar_.at(3);
+    double a1 = respParScales_.at(1)*par[1];
+    double a2 = respParScales_.at(2)*par[2];
+    double a3 = respParScales_.at(3)*par[3];
     double s = sqrt( a1*a1/x->pt/x->pt + a2*a2/x->pt + a3*a3 );
 
     double p = c / sqrt(2* M_PI ) / s * exp(-pow((x->E - u) / s, 2) / 2);
@@ -1513,7 +1530,7 @@ class SmearStepGaussInter : public Parametrization
     std::vector<double> stepPar(nStepPar_,1.);
     double norm = 0.;
     for(int i = 0; i < nStepPar_; i++) {
-      stepPar.at(i) = respParScales_.at(1+i)*par[1+i];
+      stepPar.at(i) = respParScales_.at(4+i)*par[4+i];
       if( stepPar.at(i) < 0. ) stepPar.at(i) = 0.;
       norm += stepPar.at(i);
     }
@@ -1563,7 +1580,7 @@ class SmearStepGaussInter : public Parametrization
   const std::vector<double> respParScales_;     //!< Parameter scales
   const std::vector<double> gaussPar_;  //!< Parameters of Gaussian part of response pdf
   std::vector<double> binCenters_;      //!< Centers of response bins
-  TH1D * ptDijetCutInt_;	        //!< Integral over dijet resolution for truth pdf for different t
+  TH1D * ptDijetCutInt_;	        //!< Integral over dijet response for truth pdf for different t
 
 
 

@@ -1,4 +1,4 @@
-// $Id: ControlPlotsJetSmearing.cc,v 1.4 2009/10/30 18:09:40 mschrode Exp $
+// $Id: ControlPlotsJetSmearing.cc,v 1.5 2009/11/01 17:10:54 mschrode Exp $
 
 #include "ControlPlotsJetSmearing.h"
 
@@ -248,7 +248,7 @@ void ControlPlotsJetSmearing::plotResponse() const
       if( param == "SmearParametrizationStepGaussInter" ) {
 	// Step part of fit function
 	for(int bin = 1; bin <= hRespFitStep.at(plotBin)->GetNbinsX(); bin++) {
-	  double val  = scale.at(bin)*(smearData->GetRespPar()[bin]);
+	  double val  = scale.at(bin+3)*(smearData->GetRespPar()[bin+3]);
 	  hRespFitStep.at(plotBin)->SetBinContent(bin,val);
 	}
 	normHist(hRespFitStep.at(plotBin),"width");
@@ -259,9 +259,9 @@ void ControlPlotsJetSmearing::plotResponse() const
 	  // Mean
 	  double mu = gaussPar.at(0);
 	  // Width
-	  double a1 = gaussPar.at(1);
-	  double a2 = gaussPar.at(2);
-	  double a3 = gaussPar.at(3);
+	  double a1 = scale.at(1)*(smearData->GetRespPar()[1]);
+	  double a2 = scale.at(2)*(smearData->GetRespPar()[2]);
+	  double a3 = scale.at(3)*(smearData->GetRespPar()[3]);
 	  double sigma = sqrt( a1*a1/ptGenBinCenters.at(plotBin)/ptGenBinCenters.at(plotBin)
 			       + a2*a2/ptGenBinCenters.at(plotBin) + a3*a3 );
 	  // pdf
