@@ -1,6 +1,6 @@
 //
 //    first version: Hartmut Stadie 2008/12/12
-//    $Id: DiJetReader.cc,v 1.26 2009/10/26 20:56:29 mschrode Exp $
+//    $Id: DiJetReader.cc,v 1.1 2009/10/30 08:59:46 mschrode Exp $
 //   
 #include "DiJetReader.h"
 
@@ -93,18 +93,21 @@ DiJetReader::DiJetReader(const std::string& configfile, TParameters* p)
     mc->generateDiJetTree(tchain_dijet,nDijetEvents_);
     delete mc;
   } else if(input_dijet[0] == "input/dijetlist") { // Open all files listed in "input/dijetlist"
+    cout << "\nDiJetReader:\nOpening files in list '" << input_dijet[0] << "'\n";
     TChain* chain = new TChain(treename_dijet.c_str()); 
     std::ifstream filelist;
     filelist.open("input/dijetlist");
+    int nOpenedFiles = 0;
     std::string name = "";
     while( !filelist.eof() ) {
       filelist >> name;
       if( filelist.eof() ) break;
-      cout << "...opening root-file " << name << " for Di-Jet analysis." << endl;
       chain->Add( name.c_str() );
+      nOpenedFiles++;
     }
     filelist.close();
     tchain_dijet = chain;
+    cout << "Opened " << nOpenedFiles << " files\n";
   }
   else { // Open all files listed in configfile
     TChain* chain = new TChain(treename_dijet.c_str()); 
@@ -155,7 +158,7 @@ int DiJetReader::readEvents(std::vector<TData*>& data)
 
   // Some informative output for the interested calibrator
   // Check of correct data class
-  cout << "\nDiJetReader: Reading events of type ";
+  cout << "Reading events of type ";
   if(dataClass_ == 0) {
     std::cout << "'PtBalanceEvent'";
   } else if(dataClass_ == 1) {
