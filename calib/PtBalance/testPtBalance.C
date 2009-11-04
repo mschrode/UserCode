@@ -9,17 +9,11 @@
 #include "TStyle.h"
 
 #include "TROOT.h"
-// #include "TVirtualFitter.h"
-// #include "TMinuit.h"
 #include "Minuit2/FCNBase.h"
-// #include "Minuit2/FunctionMinimum.h"
-// #include "Minuit2/MnMigrad.h"
-// #include "Minuit2/MnHesse.h"
-// #include "Minuit2/MnUserParameters.h"
-// #include "Minuit2/MnPrint.h"
-// #include "Minuit2/MnContours.h"
-// #include "Minuit2/MnPlot.h"
-// #include "Minuit2/MnParameterScan.h"
+#include "Minuit2/FunctionMinimum.h"
+#include "Minuit2/MnMigrad.h"
+#include "Minuit2/MnUserParameters.h"
+#include "Minuit2/MnPrint.h"
 
 
 
@@ -160,8 +154,8 @@ std::vector<double> fitDijets(const Data& data) {
   std::cout << min << std::endl;  
 
   std::vector<double> parCorr(2);
-  corrPar.at(0) = 1.;
-  corrPar.at(1) = 1.;
+  parCorr.at(0) = 1.;
+  parCorr.at(1) = 1.;
   if( min.IsValid() ) {
     MnUserParameters uparMin = min.UserParameters();
     for(size_t i = 0; i < parCorr.size(); i++){
@@ -203,7 +197,7 @@ void plotDijets(const Data& data, const std::vector<double>& par) {
   TProfile * pRespVsEta = hRespVsEta->ProfileX("pRespVsEta",1,-1);
   pRespVsEta->GetYaxis()->SetRangeUser(0,2);
   TProfile * pCorrRespVsEta = hCorrRespVsEta->ProfileX("pCorrRespVsEta",1,-1);
-  pCorrRespVsEta->GetYaxis()->SetRangeUser(0,2);
+  pCorrRespVsEta->SetLineColor(2);
 
   TCanvas * c1 = new TCanvas("c1","pt1 vs pt2",600,600);
   c1->cd();
@@ -220,6 +214,7 @@ void plotDijets(const Data& data, const std::vector<double>& par) {
   
   c2->cd(3);
   pRespVsEta->Draw();
+  pCorrRespVsEta->Draw("same");
 
   c2->cd(4);
   pCorrRespVsEta->Draw();
