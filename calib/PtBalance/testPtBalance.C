@@ -1,3 +1,4 @@
+#include <cmath>
 #include <iostream>
 #include <vector>
 
@@ -39,14 +40,15 @@ typedef std::vector<Event>::const_iterator DataIt;
 Data generateDijets(int nEvents, const std::vector<double>& par);
 std::vector<double> fitDijets(const Data& data);
 void plotDijets(const Data& data, const std::vector<double>& par);
+double getEnergy(double pt, double eta);
 
 
 
 // === Main function ===
 void run(int nEvents) {
   std::vector<double> parResp(2);
-  parResp.at(0) = 0.7;
-  parResp.at(1) = 1.3;
+  parResp.at(0) = 0.4;
+  parResp.at(1) = 1.1;
   Data data = generateDijets(nEvents,parResp);
 
   std::vector<double> parCorr = fitDijets(data);
@@ -103,7 +105,7 @@ private:
 double Event::ptCorr(const std::vector<double>& par, int n) const {
   double pt = ( n == 1 ) ? pt1() : pt2();
   double eta = ( n == 1 ) ? eta1() : eta2();
-  double c = ( eta < 0 ) ? par.at(0) : par.at(1);
+  double c = ( eta > 0 ) ? par.at(0) : par.at(1);
   return c*pt;
 }
 
@@ -126,14 +128,24 @@ double PtBalanceFCN::operator()(const std::vector<double>& par) const {
   for(DataIt evt = data_.begin(); evt != data_.end(); evt++) {
     double cPt1 = evt->pt1Corr(par);
     double cPt2 = evt->pt2Corr(par);
+    double cPtDijet = 0.5*(cPt1+cPt2);
+    double cPtBal = (cPt1-cPt2)/(cPt1+cPt2);
     double dPt1 = cPt1 / evt->pt1();
     double dPt2 = cPt2 / evt->pt2();
-    double error = stochTerm_*sqrt(0.5*(evt->pt1()+evt->pt2()));
+    double meanPt = 0.5*(evt->pt1()+evt->pt2());//evt->ptGen();
+    double error1 = stochTerm_*sqrt(getEnergy(meanPt,evt->eta1()));
+    double error2 = stochTerm_*sqrt(getEnergy(meanPt,evt->eta2()));
 
     double res = cPt1 - cPt2;    
-    double dRes2 = dPt1 * dPt1 * error * error;
-    dRes2 += dPt2 * dPt2 * error * error;
+    double dRes2 = dPt1 * dPt1 * error1 * error1;
+    dRes2 += dPt2 * dPt2 * error2 * error2;
 
+//     double res = 2*cPtBal;
+//     double dRes2 = (1 - cPtBal)*(1 - cPtBal) * dPt1*dPt1;
+//     dRes2 += (1 + cPtBal)*(1 + cPtBal) * dPt2*dPt2;
+//     dRes2 *= (error*error);
+//     dRes2 /= (cPtDijet*cPtDijet);
+    
     chi2 += res * res / dRes2;
   }
   return chi2;
@@ -154,10 +166,12 @@ Data generateDijets(int nEvents, const std::vector<double>& par) {
     double ptGen = ptGenMin_ + (ptGenMax_ - ptGenMin_)*rand[0];
     double eta1 = etaMin_ + (etaMax_ - etaMin_)*rand[1];
     double eta2 = etaMin_ + (etaMax_ - etaMin_)*rand[2];
-    double resp1 = eta1 < 0 ? par.at(0) : par.at(1);
-    double resp2 = eta2 < 0 ? par.at(0) : par.at(1);
-    double sigma1 = stochTerm_ * sqrt(ptGen) * resp1;
-    double sigma2 = stochTerm_ * sqrt(ptGen) * resp2;
+    double eGen1 = getEnergy(ptGen,eta1);
+    double eGen2 = getEnergy(ptGen,eta2);
+    double resp1 = eta1 > 0 ? par.at(0) : par.at(1);
+    double resp2 = eta2 > 0 ? par.at(0) : par.at(1);
+    double sigma1 = stochTerm_ * sqrt(eGen1) * resp1;
+    double sigma2 = stochTerm_ * sqrt(eGen2) * resp2;
     double pt1 = randGen.Gaus(ptGen*resp1,sigma1);
     double pt2 = randGen.Gaus(ptGen*resp2,sigma2);
 
@@ -177,8 +191,8 @@ std::vector<double> fitDijets(const Data& data) {
   std::cout << "Fitting parameters...\n";
   PtBalanceFCN fcn(data);
   MnUserParameters upar;
-  upar.Add("par0", 1.0, 0.1);
-  upar.Add("par1", 1.0, 0.1);
+  upar.Add("par0", 1.0, 0.01);
+  upar.Add("par1", 1.0, 0.01);
 
   MnMigrad migrad(fcn, upar);
   FunctionMinimum min = migrad();
@@ -308,3 +322,8 @@ void plotDijets(const Data& data, const std::vector<double>& par) {
 }
 
 
+
+// ---------------------------------------------------------------
+double getEnergy(double pt, double eta) {
+  return pt / std::abs(sin(2*atan(exp(-eta))));
+}
