@@ -17,7 +17,7 @@
 
 
 
-// --- Global parameters ---
+// === Global parameters ===
 double ptGenMin_ = 50.;
 double ptGenMax_ = 100.;
 double etaMin_ = -3.;
@@ -26,7 +26,37 @@ double stochTerm_ = 1.25;
 
 
 
-// --- Classes and typedefs ---
+// === Declaration of classes and typedefs ===
+class Event;
+class PtBalanceFCN;
+
+typedef std::vector<Event> Data;
+typedef std::vector<Event>::const_iterator DataIt;
+
+
+
+// === Declaration of global functions ===
+Data generateDijets(int nEvents, const std::vector<double>& par);
+std::vector<double> fitDijets(const Data& data);
+void plotDijets(const Data& data, const std::vector<double>& par);
+
+
+
+// === Main function ===
+void run(int nEvents) {
+  std::vector<double> parResp(2);
+  parResp.at(0) = 0.7;
+  parResp.at(1) = 1.3;
+  Data data = generateDijets(nEvents,parResp);
+
+  std::vector<double> parCorr = fitDijets(data);
+  plotDijets(data,parCorr);
+}
+
+
+
+// === Implementation of classes ===
+// ---------------------------------------------------------------
 class Event {
 public:
   Event()
@@ -77,10 +107,8 @@ double Event::ptCorr(const std::vector<double>& par, int n) const {
   return c*pt;
 }
 
-typedef std::vector<Event> Data;
-typedef std::vector<Event>::const_iterator DataIt;
 
-
+// ---------------------------------------------------------------
 class PtBalanceFCN : public ROOT::Minuit2::FCNBase {
 public:
   PtBalanceFCN(const Data& data) : data_(data) {};
@@ -111,7 +139,9 @@ double PtBalanceFCN::operator()(const std::vector<double>& par) const {
 }
 
 
-// --- Global functions ---
+
+// === Implementation of global functions ===
+// ---------------------------------------------------------------
 Data generateDijets(int nEvents, const std::vector<double>& par) {
   std::cout << "Generating " << nEvents << " dijet events... " << std::flush;
   Data data(nEvents);
@@ -139,7 +169,7 @@ Data generateDijets(int nEvents, const std::vector<double>& par) {
 }
 
 
-
+// ---------------------------------------------------------------
 std::vector<double> fitDijets(const Data& data) {
   using namespace ROOT::Minuit2;
 
@@ -167,7 +197,7 @@ std::vector<double> fitDijets(const Data& data) {
 }
 
 
-
+// ---------------------------------------------------------------
 void plotDijets(const Data& data, const std::vector<double>& par) {
   std::cout << "Plotting histograms... " << std::flush;
   gStyle->SetOptStat(0);
@@ -223,14 +253,3 @@ void plotDijets(const Data& data, const std::vector<double>& par) {
 }
 
 
-void run(int nEvents) {
-  // Generate data
-  std::vector<double> parResp(2);
-  parResp.at(0) = 0.7;
-  parResp.at(1) = 1.3;
-  Data data = generateDijets(nEvents,parResp);
-
-  // Plot data
-  std::vector<double> parCorr = fitDijets(data);
-  plotDijets(data,parCorr);
-}
