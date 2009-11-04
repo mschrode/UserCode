@@ -1,16 +1,25 @@
 #include <iostream>
 #include <vector>
 
-#include "Minuit2/FCNBase.h"
-#include "Minuit2/FunctionMinimum.h"
-#include "Minuit2/MnMigrad.h"       
-#include "Minuit2/MnHesse.h"        
-#include "Minuit2/MnUserParameters.h"
-
 #include "TCanvas.h"
 #include "TH1D.h"
 #include "TH2D.h"
+#include "TProfile.h"
 #include "TRandom3.h"
+#include "TStyle.h"
+
+#include "TROOT.h"
+// #include "TVirtualFitter.h"
+// #include "TMinuit.h"
+#include "Minuit2/FCNBase.h"
+// #include "Minuit2/FunctionMinimum.h"
+// #include "Minuit2/MnMigrad.h"
+// #include "Minuit2/MnHesse.h"
+// #include "Minuit2/MnUserParameters.h"
+// #include "Minuit2/MnPrint.h"
+// #include "Minuit2/MnContours.h"
+// #include "Minuit2/MnPlot.h"
+// #include "Minuit2/MnParameterScan.h"
 
 
 
@@ -26,6 +35,14 @@ double stochTerm_ = 1.25;
 // --- Classes and typedefs ---
 class Event {
 public:
+  Event()
+    : ptGen_(0.),
+      pt1_(0.),
+      pt2_(0.),
+      eta1_(0.),
+      eta2_(0.),
+      error1_(0.),
+      error2_(0.) {};
   Event(double ptGen, double pt1, double pt2, double eta1, double eta2, double error1, double error2)
     : ptGen_(ptGen),
       pt1_(pt1),
@@ -70,22 +87,21 @@ typedef std::vector<Event> Data;
 typedef std::vector<Event>::const_iterator DataIt;
 
 
-class PtBalanceFitterFCN : public ROOT::Minuit2::FCNBase {
+class PtBalanceFCN : public ROOT::Minuit2::FCNBase {
 public:
-  PtBalanceFitterFCN(const Data& data)
-    : data_(data) {};
-  ~PtBalanceFitterFCN();
+  PtBalanceFCN(const Data& data) : data_(data) {};
+  ~PtBalanceFCN() {};
 
   virtual double operator()(const std::vector<double>& par) const;
-  virtual double Up() const { return 1.; }
-
+  virtual double Up() const {return 1.;}
+  
 private:
   Data data_;
 };
 
-double PtBalanceFitterFCN::operator()(const std::vector<double>& par) const {
+double PtBalanceFCN::operator()(const std::vector<double>& par) const {
   double chi2 = 0.;
-  for(DataIt evt = data_.begin(); evt != data.end(); evt++) {
+  for(DataIt evt = data_.begin(); evt != data_.end(); evt++) {
     double cPt1 = evt->pt1Corr(par);
     double cPt2 = evt->pt2Corr(par);
     double dPt1 = cPt1 / evt->pt1();
@@ -101,14 +117,11 @@ double PtBalanceFitterFCN::operator()(const std::vector<double>& par) const {
 }
 
 
-
 // --- Global functions ---
-Data generateDijets(int nEvents) {
+Data generateDijets(int nEvents, const std::vector<double>& par) {
+  std::cout << "Generating " << nEvents << " dijet events... " << std::flush;
   Data data(nEvents);
 
-  std::vector<double> par(2);
-  par.at(0) = 0.7;
-  par.at(1) = 1.3;
   TRandom3 randGen(0);
   double rand[3];
   for(int n = 0; n < nEvents; n++) {
@@ -126,54 +139,77 @@ Data generateDijets(int nEvents) {
     Event evt(ptGen,pt1,pt2,eta1,eta2,sigma1,sigma2);
     data.at(n) = evt;
   }
+  std::cout << "ok\n";
 
   return data;
 }
 
 
 
-void plotDijets(const Data& data) {
+void plotDijets(const Data& data, const std::vector<double>& par) {
+  std::cout << "Plotting histograms... " << std::flush;
+  gStyle->SetOptStat(0);
+
   double ptMin = 0.;
   double ptMax = 200.;
-  TH2D * hPt1vsPt2 = new TH2D("hPt1vsPt2",
-			      ";p^{1}_{T};p^{2}_{T}",
+  TH2D * hPt1vsPt2 = new TH2D("hPt1vsPt2",";p^{1}_{T};p^{2}_{T}",
 			      50,ptMin,ptMax,50,ptMin,ptMax);
-  TH1D * hPt1 = new TH1D("hPt1",";p^{1}_{T}",
-			 50,ptMin,ptMax);
-  TH1D * hPt2 = new TH1D("hPt2",";p^{2}_{T}",
-			 50,ptMin,ptMax);
+  TH2D * hRespVsEta = new TH2D("hRespVsEta",";#eta;p_{T} / p^{gen}_{T}",
+			       25,etaMin_,etaMax_,51,0,2);
+  TH2D * hCorrRespVsEta = static_cast<TH2D*>(hRespVsEta->Clone("hCorrRespVsEta"));
 
   for(DataIt evt = data.begin(); evt != data.end(); evt++) {
-    hPt1vsPt2->Fill(evt->pt1,evt->pt2);
-    hPt1->Fill(evt->pt1);
-    hPt2->Fill(evt->pt2);
+    double ptGen = evt->ptGen();
+    double pt1 = evt->pt1();
+    double pt2 = evt->pt2();
+    double pt1Corr = evt->pt1Corr(par);
+    double pt2Corr = evt->pt2Corr(par);
+
+    hPt1vsPt2->Fill(pt1,pt2);
+    hRespVsEta->Fill(evt->eta1(),pt1/ptGen);
+    hRespVsEta->Fill(evt->eta2(),pt2/ptGen);
+    hCorrRespVsEta->Fill(evt->eta1(),pt1Corr/ptGen);
+    hCorrRespVsEta->Fill(evt->eta2(),pt2Corr/ptGen);
   }
 
-  hPt1->Fit("gaus","0I");
-  hPt2->Fit("gaus","0I");
-  TF1 * fitPt1 = static_cast<TF1*>(hPt1->GetFunction("gaus"));
-  TF1 * fitPt2 = static_cast<TF1*>(hPt2->GetFunction("gaus"));
+  TProfile * pRespVsEta = hRespVsEta->ProfileX("pRespVsEta",1,-1);
+  pRespVsEta->GetYaxis()->SetRangeUser(0,2);
+  TProfile * pCorrRespVsEta = hCorrRespVsEta->ProfileX("pCorrRespVsEta",1,-1);
+  pCorrRespVsEta->GetYaxis()->SetRangeUser(0,2);
 
   TCanvas * c1 = new TCanvas("c1","pt1 vs pt2",600,600);
   c1->cd();
   hPt1vsPt2->Draw("BOX");
   
-  TCanvas * c2 = new TCanvas("c2","pt1 and pt2",1200,600);
-  c2->Divide(2,1);
+  TCanvas * c2 = new TCanvas("c2","Response",800,800);
+  c2->Divide(2,2);
 
   c2->cd(1);
-  hPt1->Draw();
-  fitPt1->Draw("same");
+  hRespVsEta->Draw("BOX");
 
   c2->cd(2);
-  hPt2->Draw();
-  fitPt2->Draw("same");
+  hCorrRespVsEta->Draw("BOX");
   
-  std::cout << "Covariance:  " << hPt1vsPt2->GetCovariance() << std::endl;
-  std::cout << "Correlation: " << hPt1vsPt2->GetCorrelationFactor() << std::endl;
+  c2->cd(3);
+  pRespVsEta->Draw();
+
+  c2->cd(4);
+  pCorrRespVsEta->Draw();
+
+  std::cout << "ok\n";
 }
 
 
 void run(int nEvents) {
-  plotDijets(generateDijets(nEvents));
+  // Generate data
+  std::vector<double> parResp(2);
+  parResp.at(0) = 0.7;
+  parResp.at(1) = 1.3;
+  Data data = generateDijets(nEvents,parResp);
+
+  // Plot data
+  std::vector<double> parCorr(2);
+  parCorr.at(0) = 1. / 0.7;
+  parCorr.at(1) = 1. / 1.3;
+  plotDijets(data,parCorr);
 }
