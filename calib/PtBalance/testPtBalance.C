@@ -146,6 +146,34 @@ Data generateDijets(int nEvents, const std::vector<double>& par) {
 
 
 
+std::vector<double> fitDijets(const Data& data) {
+  using namespace ROOT::Minuit2;
+
+  std::cout << "Fitting parameters...\n";
+  PtBalanceFCN fcn(data);
+  MnUserParameters upar;
+  upar.Add("par0", 1.0, 0.1);
+  upar.Add("par1", 1.0, 0.1);
+
+  MnMigrad migrad(fcn, upar);
+  FunctionMinimum min = migrad();
+  std::cout << min << std::endl;  
+
+  std::vector<double> parCorr(2);
+  corrPar.at(0) = 1.;
+  corrPar.at(1) = 1.;
+  if( min.IsValid() ) {
+    MnUserParameters uparMin = min.UserParameters();
+    for(size_t i = 0; i < parCorr.size(); i++){
+      parCorr.at(i) = uparMin.Value(i);
+    }
+  }
+ 
+  return parCorr;
+}
+
+
+
 void plotDijets(const Data& data, const std::vector<double>& par) {
   std::cout << "Plotting histograms... " << std::flush;
   gStyle->SetOptStat(0);
@@ -208,8 +236,6 @@ void run(int nEvents) {
   Data data = generateDijets(nEvents,parResp);
 
   // Plot data
-  std::vector<double> parCorr(2);
-  parCorr.at(0) = 1. / 0.7;
-  parCorr.at(1) = 1. / 1.3;
+  std::vector<double> parCorr = fitDijets(data);
   plotDijets(data,parCorr);
 }
