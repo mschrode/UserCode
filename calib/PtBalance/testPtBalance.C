@@ -19,10 +19,10 @@
 
 
 // === Global parameters ===
-double ptGenMin_ = 50.;
+double ptGenMin_ = 100.;
 double ptGenMax_ = 500.;
-double etaMin_ = -3.;
-double etaMax_ = 3.;
+double etaMin_ = -4;
+double etaMax_ = 4;
 double stochTerm_ = 1.25;
 
 
@@ -173,8 +173,13 @@ Data generateDijets(int nEvents, const std::vector<double>& par) {
     double sigma1 = stochTerm_ * sqrt(eGen1) * resp1;
     double sigma2 = stochTerm_ * sqrt(eGen2) * resp2;
     double pt1 = randGen.Gaus(ptGen*resp1,sigma1);
+    while( pt1 < 0. || pt1 > 2*ptGen*resp1 ) {
+      pt1 = randGen.Gaus(ptGen*resp1,sigma1);
+    }
     double pt2 = randGen.Gaus(ptGen*resp2,sigma2);
-
+    while( pt2 < 0. || pt2 > 2*ptGen*resp2 ) {
+      pt2 = randGen.Gaus(ptGen*resp2,sigma2);
+    }
     Event evt(ptGen,pt1,pt2,eta1,eta2,sigma1,sigma2);
     data.at(n) = evt;
   }
@@ -217,17 +222,24 @@ void plotDijets(const Data& data, const std::vector<double>& par) {
   std::cout << "Plotting histograms... " << std::flush;
   gStyle->SetOptStat(0);
 
-  double ptMin = 0.;
-  double ptMax = 800.;
+  double ptMin = -50.;
+  double ptMax = 950.;
   TH2D * hPt1vsPt2 = new TH2D("hPt1vsPt2",";p^{1}_{T};p^{2}_{T}",
 			      50,ptMin,ptMax,50,ptMin,ptMax);
+  TH2D * hPtvsEta = new TH2D("hPtvsEta",";#eta;p_{T}",
+			      50,etaMin_,etaMax_,50,ptMin,ptMax);
+
   TH2D * hRespVsEta = new TH2D("hRespVsEta",";#eta;p_{T} / p^{gen}_{T}",
 			       25,etaMin_,etaMax_,51,0,2);
   TH2D * hCorrRespVsEta = static_cast<TH2D*>(hRespVsEta->Clone("hCorrRespVsEta"));
 
   TH2D * hBalVsEta = new TH2D("hBalVsEta",";#eta;Balance",
-			       25,etaMin_,etaMax_,51,-1,1);
+			       25,etaMin_,etaMax_,51,-2,2);
   TH2D * hCorrBalVsEta = static_cast<TH2D*>(hBalVsEta->Clone("hCorrBalVsEta"));
+
+  TH2D * hDiffVsEta = new TH2D("hDiffVsEta",";#eta;Difference",
+			       25,etaMin_,etaMax_,51,-ptMax,ptMax);
+  TH2D * hCorrDiffVsEta = static_cast<TH2D*>(hDiffVsEta->Clone("hCorrDiffVsEta"));
 
   TH2D * hRespVsPtGen = new TH2D("hRespVsPtGen",";p^{gen}_{T};p_{T} / p^{gen}_{T}",
 			       25,ptGenMin_,ptGenMax_,51,0,2);
@@ -242,17 +254,26 @@ void plotDijets(const Data& data, const std::vector<double>& par) {
     double pt2Corr = evt->pt2Corr(par);
 
     hPt1vsPt2->Fill(pt1,pt2);
+    hPtvsEta->Fill(evt->eta1(),pt1);
+    hPtvsEta->Fill(evt->eta2(),pt2);
+
     hRespVsEta->Fill(evt->eta1(),pt1/ptGen);
     hRespVsEta->Fill(evt->eta2(),pt2/ptGen);
     hRespVsPtGen->Fill(ptGen,pt1/ptGen);
     hRespVsPtGen->Fill(ptGen,pt2/ptGen);
     hBalVsEta->Fill(evt->eta1(),2*(pt1-pt2)/(pt1+pt2));
+    hBalVsEta->Fill(evt->eta2(),2*(pt1-pt2)/(pt1+pt2));
+    hDiffVsEta->Fill(evt->eta1(),pt1-pt2);
+    hDiffVsEta->Fill(evt->eta2(),pt1-pt2);
 
     hCorrRespVsEta->Fill(evt->eta1(),pt1Corr/ptGen);
     hCorrRespVsEta->Fill(evt->eta2(),pt2Corr/ptGen);
     hCorrRespVsPtGen->Fill(ptGen,pt1Corr/ptGen);
     hCorrRespVsPtGen->Fill(ptGen,pt2Corr/ptGen);
     hCorrBalVsEta->Fill(evt->eta1(),2*(pt1Corr-pt2Corr)/(pt1Corr+pt2Corr));
+    hCorrBalVsEta->Fill(evt->eta2(),2*(pt1Corr-pt2Corr)/(pt1Corr+pt2Corr));
+    hCorrDiffVsEta->Fill(evt->eta1(),pt1Corr-pt2Corr);
+    hCorrDiffVsEta->Fill(evt->eta2(),pt1Corr-pt2Corr);
   }
 
   TProfile * pRespVsEta = hRespVsEta->ProfileX("pRespVsEta");
@@ -273,9 +294,18 @@ void plotDijets(const Data& data, const std::vector<double>& par) {
   pCorrBalVsEta->SetLineColor(2);
   pCorrBalVsEta->SetMarkerColor(2);
 
-  TCanvas * c1 = new TCanvas("c1","pt1 vs pt2",600,600);
-  c1->cd();
+  TProfile * pDiffVsEta = hDiffVsEta->ProfileX("pDiffVsEta");
+  //  pDiffVsEta->GetYaxis()->SetRangeUser(-1,1);
+  TProfile * pCorrDiffVsEta = hCorrDiffVsEta->ProfileX("pCorrDiffVsEta");
+  pCorrDiffVsEta->SetLineColor(2);
+  pCorrDiffVsEta->SetMarkerColor(2);
+
+  TCanvas * c1 = new TCanvas("c1","pt1 vs pt2",800,400);
+  c1->Divide(2,1);
+  c1->cd(1);
   hPt1vsPt2->Draw("BOX");
+  c1->cd(2);
+  hPtvsEta->Draw("BOX");
   
   TCanvas * c2 = new TCanvas("c2","Response",800,800);
   c2->Divide(2,2);
@@ -304,7 +334,7 @@ void plotDijets(const Data& data, const std::vector<double>& par) {
   c3->cd(4);
   pCorrRespVsPtGen->Draw();
 
-  TCanvas * c4 = new TCanvas("c4","Balance profile",800,800);
+  TCanvas * c4 = new TCanvas("c4","Balance",800,800);
   c4->Divide(2,2);
   c4->cd(1);
   hBalVsEta->Draw("BOX");
@@ -317,6 +347,20 @@ void plotDijets(const Data& data, const std::vector<double>& par) {
   double meanBalEta = pCorrBalVsEta->GetMean(2);
   pCorrBalVsEta->GetYaxis()->SetRangeUser(meanBalEta-0.05,meanBalEta+0.05);
   pCorrBalVsEta->Draw();
+
+  TCanvas * c5 = new TCanvas("c5","Difference",800,800);
+  c5->Divide(2,2);
+  c5->cd(1);
+  hDiffVsEta->Draw("BOX");
+  c5->cd(2);
+  hCorrDiffVsEta->Draw("BOX");
+  c5->cd(3);
+  pDiffVsEta->Draw();
+  pCorrDiffVsEta->Draw("same");
+  c5->cd(4);
+  double meanDiffEta = pCorrDiffVsEta->GetMean(2);
+  pCorrDiffVsEta->GetYaxis()->SetRangeUser(meanDiffEta-4,meanDiffEta+4);
+  pCorrDiffVsEta->Draw();
 
   std::cout << "ok\n";
 }
