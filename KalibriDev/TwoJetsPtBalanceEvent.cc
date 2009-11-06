@@ -1,4 +1,4 @@
-// $Id: TwoJetsPtBalanceEvent.cc,v 1.4 2009/10/30 12:35:17 mschrode Exp $
+// $Id: TwoJetsPtBalanceEvent.cc,v 1.2 2009/10/30 12:38:17 mschrode Exp $
 
 #include "TwoJetsPtBalanceEvent.h"
 
@@ -138,7 +138,7 @@ double TwoJetsPtBalanceEvent::chi2_fast_simple_dRes2(double pt1, double pt2) con
 //!  \brief Calculates \f$ \chi^{2} \f$ from pt balance
 // --------------------------------------------------
 double TwoJetsPtBalanceEvent::chi2_fast_balance(double * temp_derivative1, 
-					       double * temp_derivative2, double const epsilon) const
+						double * temp_derivative2, double const epsilon) const
 {
   // Corrected jet pt
   double pt1 = GetParametrizedMess();
