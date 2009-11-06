@@ -1,7 +1,7 @@
 //
 // Original Author:  Christian Autermann
 //         Created:  Wed Jul 18 13:54:50 CEST 2007
-// $Id: Parameters.h,v 1.56 2009/09/10 15:47:57 mschrode Exp $
+// $Id: Parameters.h,v 1.2 2009/10/30 13:15:09 mschrode Exp $
 //
 #ifndef TParameters_h
 #define TParameters_h
@@ -28,7 +28,7 @@
 //!         interface to response and error parametrizations
 //!  \author Christian Autermann
 //!  \date   Wed Jul 18 13:54:50 CEST 2007
-//!  $Id: Parameters.h,v 1.56 2009/09/10 15:47:57 mschrode Exp $
+//!  $Id: Parameters.h,v 1.2 2009/10/30 13:15:09 mschrode Exp $
 // -----------------------------------------------------------------
 class TParameters {  
 public :
@@ -223,7 +223,7 @@ public :
     */
     double E = x[0] * xorig->E/xorig->pt;
     //double sqE = sqrt(E);
-    return sqrt(1.3*1.3/E + 0.056 * 0.056) * x[0];
+    return sqrt(4.44*4.44/E/E + 1.11*1.11/E + 0.03 * 0.03) * x[0];
   }
 
 
