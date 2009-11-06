@@ -2461,7 +2461,7 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
   for(int ptbin = 0; ptbin < bins.nBinsX(); ptbin++) {
     char name[50];
     sprintf(name,"h2BUncorrVsEta_ptDijet%i",ptbin);
-    TH2F * h2 = new TH2F(name,";#eta;"+ptSumLabel,21,-5,5,51,-2,2);
+    TH2F * h2 = new TH2F(name,";#eta;"+ptSumLabel,21,-5,5,501,-2,2);
     h2BUncorr.at(0).push_back(h2);
     
     sprintf(name,"h2BCorrVsEta_ptDijet%i",ptbin);
@@ -2472,7 +2472,7 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
 
 
     sprintf(name,"h2BUncorrVsEta_ptDijetGen%i",ptbin);
-    h2 = new TH2F(name,";#eta;"+ptSumLabel,21,-5,5,51,-2,2);
+    h2 = new TH2F(name,";#eta;"+ptSumLabel,21,-5,5,501,-2,2);
     h2BUncorr.at(1).push_back(h2);
     
     sprintf(name,"h2BCorrVsEta_ptDijetGen%i",ptbin);
@@ -2483,7 +2483,7 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
 
 
     sprintf(name,"h2RUncorrVsEta_ptGen%i",ptbin);
-    h2 = new TH2F(name,";#eta;"+respLabel,21,-5,5,51,0,2);
+    h2 = new TH2F(name,";#eta;"+respLabel,21,-5,5,501,0,2);
     h2RUncorr.at(0).push_back(h2);
     
     sprintf(name,"h2RCorrVsEta_ptGen%i",ptbin);
@@ -2807,6 +2807,8 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
 
   // -- Draw histograms into ps file ----------------------------
   // Draw mean balance
+  bool drawCorrL2L3 = false;
+
   TPostScript * const ps1 = new TPostScript("controlplotsTwoJetsPtBalanceMean.ps",111);
   TCanvas * const c1 = new TCanvas("c1","",500,500); // Mean values
 
@@ -2822,13 +2824,17 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
   ps1->NewPage();
   c1->SetLogy(0);
 
-  TLegend * legBal = new TLegend(0.4,0.65,0.93,0.85);
+  TLegend * legBal = new TLegend(0.4,0.71,0.93,0.85);
+  if( drawCorrL2L3 ) {
+    delete legBal;
+    legBal = new TLegend(0.4,0.65,0.93,0.85);
+  }
   legBal->SetBorderSize(0);
   legBal->SetFillColor(0);
   legBal->SetTextFont(42);
   legBal->AddEntry(hBUncorr.at(0).at(0),"Uncorrected","P");
   legBal->AddEntry(hBCorr.at(0).at(0),"Kalibri","P");
-  //legBal->AddEntry(hBCorrL2L3.at(0).at(0),"L2L3 correction","P");
+  if( drawCorrL2L3 ) legBal->AddEntry(hBCorrL2L3.at(0).at(0),"L2L3 correction","P");
 
   TH1F * hist = hBUncorr.at(0).at(0);
   TLine *lEtaBal = new TLine(hist->GetXaxis()->GetBinLowEdge(1),0,
@@ -2850,7 +2856,7 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
     hBUncorr.at(0).at(ptDijetBin)->Draw("PE1");
     lEtaBal->Draw("same");
     hBCorr.at(0).at(ptDijetBin)->Draw("PE1same");
-    //hBCorrL2L3.at(0).at(ptDijetBin)->Draw("PE1same");
+    if( drawCorrL2L3 ) hBCorrL2L3.at(0).at(ptDijetBin)->Draw("PE1same");
     legBal->Draw("same");
     c1->Draw();
     ps1->NewPage();
@@ -2862,7 +2868,7 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
     hBUncorr.at(0).at(ptDijetBin)->Draw("PE1");
     lEtaBal->Draw("same");
     hBCorr.at(0).at(ptDijetBin)->Draw("PE1same");
-    //hBCorrL2L3.at(0).at(ptDijetBin)->Draw("PE1same");
+    if( drawCorrL2L3 ) hBCorrL2L3.at(0).at(ptDijetBin)->Draw("PE1same");
     legBal->Draw("same");
     c1->Draw();
     ps1->NewPage();
@@ -2876,7 +2882,7 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
     hBUncorr.at(1).at(ptDijetBin)->Draw("PE1");
     lEtaBal->Draw("same");
     hBCorr.at(1).at(ptDijetBin)->Draw("PE1same");
-    //hBCorrL2L3.at(1).at(ptDijetBin)->Draw("PE1same");
+    if( drawCorrL2L3 ) hBCorrL2L3.at(1).at(ptDijetBin)->Draw("PE1same");
     legBal->Draw("same");
     c1->Draw();
     ps1->NewPage();
@@ -2888,7 +2894,7 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
     hBUncorr.at(1).at(ptDijetBin)->Draw("PE1");
     lEtaBal->Draw("same");
     hBCorr.at(1).at(ptDijetBin)->Draw("PE1same");
-    //hBCorrL2L3.at(1).at(ptDijetBin)->Draw("PE1same");
+    if( drawCorrL2L3 ) hBCorrL2L3.at(1).at(ptDijetBin)->Draw("PE1same");
     legBal->Draw("same");
     c1->Draw();
     ps1->NewPage();
@@ -2909,7 +2915,7 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
     hBUncorr.at(2).at(etaBin)->Draw("PE1");
     lPtDijet->Draw("same");
     hBCorr.at(2).at(etaBin)->Draw("PE1same");
-    //hBCorrL2L3.at(2).at(etaBin)->Draw("PE1same");
+    if( drawCorrL2L3 ) hBCorrL2L3.at(2).at(etaBin)->Draw("PE1same");
     legBal->Draw("same");
     c1->Draw();
     ps1->NewPage();
@@ -2921,7 +2927,7 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
     hBUncorr.at(2).at(etaBin)->Draw("PE1");
     lPtDijet->Draw("same");
     hBCorr.at(2).at(etaBin)->Draw("PE1same");
-    //hBCorrL2L3.at(2).at(etaBin)->Draw("PE1same");
+    if( drawCorrL2L3 ) hBCorrL2L3.at(2).at(etaBin)->Draw("PE1same");
     legBal->Draw("same");
     c1->Draw();
     ps1->NewPage();
@@ -2935,7 +2941,7 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
     hBUncorr.at(3).at(etaBin)->Draw("PE1");
     lPtDijet->Draw("same");
     hBCorr.at(3).at(etaBin)->Draw("PE1same");
-    //hBCorrL2L3.at(3).at(etaBin)->Draw("PE1same");
+    if( drawCorrL2L3 ) hBCorrL2L3.at(3).at(etaBin)->Draw("PE1same");
     legBal->Draw("same");
     c1->Draw();
     ps1->NewPage();
@@ -2947,7 +2953,7 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
     hBUncorr.at(3).at(etaBin)->Draw("PE1");
     lPtDijet->Draw("same");
     hBCorr.at(3).at(etaBin)->Draw("PE1same");
-    //hBCorrL2L3.at(3).at(etaBin)->Draw("PE1same");
+    if( drawCorrL2L3 ) hBCorrL2L3.at(3).at(etaBin)->Draw("PE1same");
     legBal->Draw("same");
     c1->Draw();
     ps1->NewPage();
@@ -2957,16 +2963,20 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
   // Draw response
   double rMin = 0.;
   double rMax = 2.5;
-  double rMinZoom = 0.8;
-  double rMaxZoom = 1.4;
+  double rMinZoom = 0.2;
+  double rMaxZoom = 0.8;
 
-  TLegend * legResp = new TLegend(0.4,0.65,0.93,0.85);
+  TLegend * legResp = new TLegend(0.4,0.71,0.93,0.85);
+  if( drawCorrL2L3 ) {
+    delete legResp;
+    legResp = new TLegend(0.4,0.65,0.93,0.85);
+  }
   legResp->SetBorderSize(0);
   legResp->SetFillColor(0);
   legResp->SetTextFont(42);
   legResp->AddEntry(hRUncorr.at(0).at(0),"Uncorrected","P");
   legResp->AddEntry(hRCorr.at(0).at(0),"Kalibri","P");
-  //legResp->AddEntry(hRCorrL2L3.at(0).at(0),"L2L3 correction","P");
+  if( drawCorrL2L3 ) legResp->AddEntry(hRCorrL2L3.at(0).at(0),"L2L3 correction","P");
 
   hist = hRUncorr.at(0).at(0);
   TLine *lEtaResp = new TLine(hist->GetXaxis()->GetBinLowEdge(1),1,
@@ -2990,7 +3000,7 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
     hRUncorr.at(0).at(ptGenBin)->Draw("PE1");
     lEtaResp->Draw("same");
     hRCorr.at(0).at(ptGenBin)->Draw("PE1same");
-    //hRCorrL2L3.at(0).at(ptGenBin)->Draw("PE1same");
+    if( drawCorrL2L3 ) hRCorrL2L3.at(0).at(ptGenBin)->Draw("PE1same");
     legResp->Draw("same");
     c1->Draw();
     ps1->NewPage();
@@ -3001,7 +3011,7 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
     hRUncorr.at(0).at(ptGenBin)->GetYaxis()->SetRangeUser(rMinZoom,rMaxZoom);
     hRUncorr.at(0).at(ptGenBin)->Draw("PE1");
     hRCorr.at(0).at(ptGenBin)->Draw("PE1same");
-    //hRCorrL2L3.at(0).at(ptGenBin)->Draw("PE1same");
+    if( drawCorrL2L3 ) hRCorrL2L3.at(0).at(ptGenBin)->Draw("PE1same");
     legResp->Draw("same");
     c1->Draw();
     ps1->NewPage();
@@ -3014,7 +3024,7 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
     hRUncorr.at(1).at(etaBin)->Draw("PE1");
     lPtGenResp->Draw("same");
     hRCorr.at(1).at(etaBin)->Draw("PE1same");
-    //hRCorrL2L3.at(1).at(etaBin)->Draw("PE1same");
+    if( drawCorrL2L3 ) hRCorrL2L3.at(1).at(etaBin)->Draw("PE1same");
     legResp->Draw("same");
     c1->Draw();
     ps1->NewPage();
@@ -3025,7 +3035,7 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
     hRUncorr.at(1).at(etaBin)->GetYaxis()->SetRangeUser(rMinZoom,rMaxZoom);
     hRUncorr.at(1).at(etaBin)->Draw("PE1");
     hRCorr.at(1).at(etaBin)->Draw("PE1same");
-    //hRCorrL2L3.at(1).at(etaBin)->Draw("PE1same");
+    if( drawCorrL2L3 ) hRCorrL2L3.at(1).at(etaBin)->Draw("PE1same");
     legResp->Draw("same");
     c1->Draw();
     ps1->NewPage();
