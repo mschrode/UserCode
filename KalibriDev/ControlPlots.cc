@@ -2543,6 +2543,22 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
   hPtDijetSpectrum->SetLineWidth(2);
   objToBeWritten.push_back(hPtDijetSpectrum);
 
+  TH1F * hPtGenJetSpectrum = new TH1F("hPtGenJetSpectrum",";p^{gen}_{T} (GeV);dN / dp^{gen}_{T}  1 / (GeV)",50,bins.xLow(0),bins.xUp(bins.nBinsX()-1));
+  hPtGenJetSpectrum->Sumw2();
+  hPtGenJetSpectrum->SetLineWidth(2);
+  objToBeWritten.push_back(hPtGenJetSpectrum);
+
+  TH2F * hPt1vsPt2 = new TH2F("hPt1vsPt2",";p^{1}_{T} (GeV);p^{2}_{T} (GeV)",
+			      50,bins.xLow(0),bins.xUp(bins.nBinsX()-1),
+			      50,bins.xLow(0),bins.xUp(bins.nBinsX()-1));
+  hPt1vsPt2->Sumw2();
+  objToBeWritten.push_back(hPt1vsPt2);
+
+  TH2F * hCorrPt1vsCorrPt2 = new TH2F("hCorrPt1vsCorrPt2",";Corrected p^{1}_{T} (GeV);Corrected p^{2}_{T} (GeV)",
+			      50,bins.xLow(0),bins.xUp(bins.nBinsX()-1),
+			      50,bins.xLow(0),bins.xUp(bins.nBinsX()-1));
+  hCorrPt1vsCorrPt2->Sumw2();
+  objToBeWritten.push_back(hCorrPt1vsCorrPt2);
   
   if( debug ) std::cout << "Filling 2D histograms\n";
 
@@ -2557,6 +2573,8 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
 
       h2Eta->Fill(evt->getJet1()->eta(),evt->getJet2()->eta(),evt->GetWeight());
       hPtDijetSpectrum->Fill(evt->ptDijet(),evt->GetWeight());
+      hPt1vsPt2->Fill(evt->getJet1()->Et(),evt->getJet2()->Et(),evt->GetWeight());
+      hCorrPt1vsCorrPt2->Fill(evt->getJet1()->correctedEt(),evt->getJet2()->correctedEt(),evt->GetWeight());
 
       // Find ptDijet bins
       int ptDijetBin = bins.iX(evt->ptDijet());
@@ -2565,6 +2583,8 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
       for(int i = 0; i < 2; i++) {
 	Jet * jet = evt->getJet1();
 	if( i == 1 ) evt->getJet2();
+
+	hPtGenJetSpectrum->Fill(jet->genPt,evt->GetWeight());
 
 	if( 0 <= ptDijetBin && ptDijetBin < bins.nBinsX() ) {
 	  h2BUncorr.at(0).at(ptDijetBin)->Fill(jet->eta(),evt->ptBalance(),weight);
@@ -2814,20 +2834,35 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
 
   c1->Draw();
   ps1->NewPage();
-  h2Eta->Draw();
+
+  hPtGenJetSpectrum->Draw("E");
+  c1->SetLogy(1);
   c1->Draw();
   ps1->NewPage();
 
   hPtDijetSpectrum->Draw("E");
-  c1->SetLogy(1);
   c1->Draw();
   ps1->NewPage();
   c1->SetLogy(0);
 
-  TLegend * legBal = new TLegend(0.4,0.71,0.93,0.85);
+  h2Eta->Draw("COLZ");
+  c1->SetLogz(1);
+  c1->Draw();
+  ps1->NewPage();
+
+  hPt1vsPt2->Draw("COLZ");
+  c1->Draw();
+  ps1->NewPage();
+
+  hCorrPt1vsCorrPt2->Draw("COLZ");
+  c1->Draw();
+  ps1->NewPage();
+  c1->SetLogz(0);
+
+  TLegend * legBal = new TLegend(0.35,0.66,0.8,0.8);
   if( drawCorrL2L3 ) {
     delete legBal;
-    legBal = new TLegend(0.4,0.65,0.93,0.85);
+    legBal = new TLegend(0.35,0.6,0.8,0.8);
   }
   legBal->SetBorderSize(0);
   legBal->SetFillColor(0);
@@ -2966,10 +3001,10 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
   double rMinZoom = 0.2;
   double rMaxZoom = 0.8;
 
-  TLegend * legResp = new TLegend(0.4,0.71,0.93,0.85);
+  TLegend * legResp = new TLegend(0.35,0.66,0.8,0.8);
   if( drawCorrL2L3 ) {
     delete legResp;
-    legResp = new TLegend(0.4,0.65,0.93,0.85);
+    legResp = new TLegend(0.35,0.6,0.8,0.8);
   }
   legResp->SetBorderSize(0);
   legResp->SetFillColor(0);
@@ -3802,6 +3837,8 @@ void TControlPlots::resetFittedParameters() {
 //---------------------------------------------------------------
 void TControlPlots::setGStyle() const
 {
+  gStyle->SetPalette(1);
+
   // For the canvas:
   gStyle->SetCanvasBorderMode(0);
   gStyle->SetCanvasColor(kWhite);
@@ -3847,14 +3884,15 @@ void TControlPlots::setGStyle() const
   gStyle->SetStatH(0.16);
   gStyle->SetStatW(0.22);
 
-  // For the leegnd
+  // For the legend
   gStyle->SetLegendBorderSize(1);
 
-  // Margins:
-  gStyle->SetPadTopMargin(0.11);
+  //  Margins
+  // -------------------------------------------
+  gStyle->SetPadTopMargin(0.16);
   gStyle->SetPadBottomMargin(0.18);
-  gStyle->SetPadLeftMargin(0.25);
-  gStyle->SetPadRightMargin(0.04);
+  gStyle->SetPadLeftMargin(0.19);
+  gStyle->SetPadRightMargin(0.16);
 
   // For the Global title:
   gStyle->SetOptTitle(1);
@@ -3862,31 +3900,31 @@ void TControlPlots::setGStyle() const
   gStyle->SetTitleColor(1);
   gStyle->SetTitleTextColor(1);
   gStyle->SetTitleFillColor(0);
-  gStyle->SetTitleFontSize(0.1);
+  gStyle->SetTitleFontSize(0.12);
   gStyle->SetTitleAlign(23);
-  gStyle->SetTitleX(0.6);
-  gStyle->SetTitleH(0.05);
+  gStyle->SetTitleX(0.515);
+  gStyle->SetTitleH(0.06);
+  gStyle->SetTitleXOffset(0);
+  gStyle->SetTitleYOffset(0);
   gStyle->SetTitleBorderSize(0);
 
-  // For the axis titles:
+  // For the axis labels:
+  //  For the axis labels and titles
+  // -------------------------------------------
   gStyle->SetTitleColor(1,"XYZ");
   gStyle->SetLabelColor(1,"XYZ");
   // For the axis labels:
   gStyle->SetLabelFont(42,"XYZ");
   gStyle->SetLabelOffset(0.007,"XYZ");
   gStyle->SetLabelSize(0.045,"XYZ");
+  
   // For the axis titles:
   gStyle->SetTitleFont(42,"XYZ");
   gStyle->SetTitleSize(0.06,"XYZ");
   gStyle->SetTitleXOffset(1.2);
-  gStyle->SetTitleYOffset(2.0);
+  gStyle->SetTitleYOffset(1.5);
 
-  // For the axis:
-  gStyle->SetAxisColor(1,"XYZ");
-  gStyle->SetStripDecimals(kTRUE);
-  gStyle->SetTickLength(0.03,"XYZ");
-  gStyle->SetNdivisions(510,"XYZ");
-  gStyle->SetPadTickX(1);  // To get tick marks on the opposite side of the frame
+  gStyle->SetPadTickX(1);
   gStyle->SetPadTickY(1);
 }
 
