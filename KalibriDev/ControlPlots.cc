@@ -2458,10 +2458,16 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
   TString respLabel = "p_{T} / p_{T,gen}";
 
   // Loop over ptDijet bins
+  int nEtaBins = 82;
+  double etaMin = -5.191;
+  double etaMax = -etaMin;
+  std::vector<double> etaBinEdges = getEtaBinEdges(1);
+  nEtaBins = etaBinEdges.size()-1;
   for(int ptbin = 0; ptbin < bins.nBinsX(); ptbin++) {
     char name[50];
     sprintf(name,"h2BUncorrVsEta_ptDijet%i",ptbin);
-    TH2F * h2 = new TH2F(name,";#eta;"+ptSumLabel,21,-5,5,501,-2,2);
+    //    TH2F * h2 = new TH2F(name,";#eta;"+ptSumLabel,nEtaBins,etaMin,etaMax,81,-2,2);
+    TH2F * h2 = new TH2F(name,";#eta;"+ptSumLabel,nEtaBins,&etaBinEdges.front(),81,-2.,2.);
     h2BUncorr.at(0).push_back(h2);
     
     sprintf(name,"h2BCorrVsEta_ptDijet%i",ptbin);
@@ -2472,7 +2478,8 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
 
 
     sprintf(name,"h2BUncorrVsEta_ptDijetGen%i",ptbin);
-    h2 = new TH2F(name,";#eta;"+ptSumLabel,21,-5,5,501,-2,2);
+    //    h2 = new TH2F(name,";#eta;"+ptSumLabel,nEtaBins,etaMin,etaMax,81,-2,2);
+    h2 = new TH2F(name,";#eta;"+ptSumLabel,nEtaBins,&etaBinEdges.front(),81,-2,2);
     h2BUncorr.at(1).push_back(h2);
     
     sprintf(name,"h2BCorrVsEta_ptDijetGen%i",ptbin);
@@ -2483,7 +2490,8 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
 
 
     sprintf(name,"h2RUncorrVsEta_ptGen%i",ptbin);
-    h2 = new TH2F(name,";#eta;"+respLabel,21,-5,5,501,0,2);
+    //    h2 = new TH2F(name,";#eta;"+respLabel,nEtaBins,etaMin,etaMax,81,0,2);
+    h2 = new TH2F(name,";#eta;"+respLabel,nEtaBins,&etaBinEdges.front(),81,0,2);
     h2RUncorr.at(0).push_back(h2);
     
     sprintf(name,"h2RCorrVsEta_ptGen%i",ptbin);
@@ -2998,8 +3006,8 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
   // Draw response
   double rMin = 0.;
   double rMax = 2.5;
-  double rMinZoom = 0.2;
-  double rMaxZoom = 0.8;
+  double rMinZoom = 0.7;
+  double rMaxZoom = 1.4;
 
   TLegend * legResp = new TLegend(0.35,0.66,0.8,0.8);
   if( drawCorrL2L3 ) {
@@ -3045,6 +3053,7 @@ void TControlPlots::makeControlPlotsTwoJetsPtBalance() {
     c1->cd();
     hRUncorr.at(0).at(ptGenBin)->GetYaxis()->SetRangeUser(rMinZoom,rMaxZoom);
     hRUncorr.at(0).at(ptGenBin)->Draw("PE1");
+    lEtaResp->Draw("same");
     hRCorr.at(0).at(ptGenBin)->Draw("PE1same");
     if( drawCorrL2L3 ) hRCorrL2L3.at(0).at(ptGenBin)->Draw("PE1same");
     legResp->Draw("same");
@@ -3754,6 +3763,40 @@ void TControlPlots::fit2D(const TH2F* hist,
       }
     }
   delete htemp;
+}
+
+
+//!  \brief Returns the eta bin edges for different binning models
+//!
+//!  The method uses the eta binning of the CMS calo towers.
+//!  Different models can be chosen by \p binningModel:
+//!  - 0: 82 bins from -5.191 to 5.191
+//!  - 1: 41 bins from -5.191 to 5.191 (merges two adjacent towers)
+// ---------------------------------------------------------------
+std::vector<double> TControlPlots::getEtaBinEdges(int binningModel) const {
+  int nBins = 0;
+  if( binningModel == 0 ) nBins = 82;
+  else if( binningModel == 1 ) nBins = 41;
+  std::vector<double> etaBinEdges(nBins+1);
+  if( binningModel == 0 ) {
+    int iEta = -42;
+    for(int i = 0; i < nBins; i++) {
+      iEta++;
+      if( iEta == 0 ) iEta++;
+      etaBinEdges.at(i) = static_cast<double>(par_->etaLowerEdge(iEta));
+    }
+    etaBinEdges.at(nBins) = static_cast<double>(par_->etaUpperEdge(iEta));
+  } else if( binningModel == 1 ) {
+    int iEta = -43;
+    for(int i = 0; i < nBins; i++) {
+      iEta += 2;
+      if( iEta == 1 ) iEta++;
+      etaBinEdges.at(i) = static_cast<double>(par_->etaLowerEdge(iEta));
+    }
+    etaBinEdges.at(nBins) = static_cast<double>(par_->etaUpperEdge(iEta+1));
+  }
+
+  return etaBinEdges;
 }
 
 

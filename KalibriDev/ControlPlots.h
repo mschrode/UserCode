@@ -29,7 +29,7 @@
 //!
 //!  \author Christian Autermann
 //!  \date Fri Jan 18 13:55:15 2008 UTC
-//!  $Id: ControlPlots.h,v 1.31 2009/10/26 20:57:33 mschrode Exp $
+//!  $Id: ControlPlots.h,v 1.1 2009/10/30 08:59:42 mschrode Exp $
 // -------------------------------------------------------------
 class TControlPlots
 {
@@ -62,6 +62,7 @@ public:
 		      std::vector<TH1F*>& distributions,
 		      std::vector<TF1*>& gaussFits, int color) const;
   void fit2DGaussMean(const TH2F* hist, TH1F*& hresult, int color) const;
+  std::vector<double> getEtaBinEdges(int binningModel = 0) const;
   bool readJetMETParameters();
   void resetFittedParameters();
   void setGStyle() const;
