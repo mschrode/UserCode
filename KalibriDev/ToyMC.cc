@@ -1,4 +1,4 @@
-// $Id: ToyMC.cc,v 1.38 2009/10/26 20:50:17 mschrode Exp $
+// $Id: ToyMC.cc,v 1.1 2009/10/30 08:59:48 mschrode Exp $
 
 #include "ToyMC.h"
 
@@ -69,22 +69,14 @@ void ToyMC::genInput() {
 // -----------------------------------------------------------------
 void ToyMC::calIds(float& eta, float &phi, int& ieta, int& iphi) 
 {
-  const static float dEta = 2.5/30;
+  ieta = etaBin(eta);
+  if(useTowerCenterEtaPhi_) eta = etaBinCenter(ieta);
+
+  assert(ieta != 0);
+  assert(ieta <= 41);
+  assert(ieta >= -41);
+
   const static float dPhi =  2 * M_PI / 72;
-  
-  if(eta > 0) {
-    ieta = (int)(eta / dEta) + 1;
-  } else {
-    ieta = -((int)(std::abs(eta) / dEta) + 1);
-  }
-  if(useTowerCenterEtaPhi_) {
-    if(ieta > 0) {
-      eta = (ieta - 0.5) * dEta;
-    } else {
-      eta = (ieta + 0.5) * dEta;
-    }
-  }
-  
   if(phi < 0) phi += 2 * M_PI;
   iphi = (int)(phi / dPhi);
   iphi++;
@@ -94,11 +86,8 @@ void ToyMC::calIds(float& eta, float &phi, int& ieta, int& iphi)
   }
 
   assert(phi < 2 * M_PI);
-  assert(ieta != 0);
   assert(iphi > 0);
   assert(iphi <= 72);
-  assert(ieta <= 40);
-  assert(ieta >= -40);
 }
 
 
@@ -1561,4 +1550,191 @@ void ToyMC::print() const {
     std::cout << "Top events\n";
 
   std::cout << "\n";
+}
+
+
+
+// -----------------------------------------------------------------
+int ToyMC::etaBin(float eta) const {
+  assert( eta > -5.191 && eta < 5.191 ); 
+
+  int etaBin = 10000;
+
+  if( eta < -4.889 )      etaBin = -41;
+  else if( eta < -4.716 ) etaBin = -40;
+  else if( eta < -4.538 ) etaBin = -39;
+  else if( eta < -4.363 ) etaBin = -38;
+  else if( eta < -4.191 ) etaBin = -37;
+  else if( eta < -4.013 ) etaBin = -36;
+  else if( eta < -3.839 ) etaBin = -35;
+  else if( eta < -3.664 ) etaBin = -34;
+  else if( eta < -3.489 ) etaBin = -33;
+  else if( eta < -3.314 ) etaBin = -32;
+  else if( eta < -3.139 ) etaBin = -31;
+  else if( eta < -2.964 ) etaBin = -30;
+  else if( eta < -2.853 ) etaBin = -29; 
+  else if( eta <  -2.65 ) etaBin = -28;
+  else if( eta <   -2.5 ) etaBin = -27;
+  else if( eta < -2.322 ) etaBin = -26;
+  else if( eta < -2.172 ) etaBin = -25;
+  else if( eta < -2.043 ) etaBin = -24;
+  else if( eta <  -1.93 ) etaBin = -23;
+  else if( eta <  -1.83 ) etaBin = -22;
+  else if( eta <  -1.74 ) etaBin = -21;
+  else if( eta < -1.653 ) etaBin = -20;
+  else if( eta < -1.566 ) etaBin = -19;
+  else if( eta < -1.479 ) etaBin = -18;
+  else if( eta < -1.392 ) etaBin = -17;
+  else if( eta < -1.305 ) etaBin = -16;
+  else if( eta < -1.218 ) etaBin = -15;
+  else if( eta < -1.131 ) etaBin = -14;
+  else if( eta < -1.044 ) etaBin = -13;
+  else if( eta < -0.957 ) etaBin = -12;
+  else if( eta < -0.879 ) etaBin = -11;
+  else if( eta < -0.783 ) etaBin = -10;
+  else if( eta < -0.696 ) etaBin = -9;
+  else if( eta < -0.609 ) etaBin = -8;
+  else if( eta < -0.522 ) etaBin = -7;
+  else if( eta < -0.435 ) etaBin = -6;
+  else if( eta < -0.348 ) etaBin = -5;
+  else if( eta < -0.261 ) etaBin = -4;
+  else if( eta < -0.174 ) etaBin = -3;
+  else if( eta < -0.087 ) etaBin = -2;
+  else if( eta <      0 ) etaBin = -1;
+  else if( eta <  0.087 ) etaBin =  1;
+  else if( eta <  0.174 ) etaBin =  2;
+  else if( eta <  0.261 ) etaBin =  3;
+  else if( eta <  0.348 ) etaBin =  4;
+  else if( eta <  0.435 ) etaBin =  5;
+  else if( eta <  0.522 ) etaBin =  6;
+  else if( eta <  0.609 ) etaBin =  7;
+  else if( eta <  0.696 ) etaBin =  8;
+  else if( eta <  0.783 ) etaBin =  9;
+  else if( eta <  0.879 ) etaBin =  10;
+  else if( eta <  0.957 ) etaBin =  11;
+  else if( eta <  1.044 ) etaBin =  12;
+  else if( eta <  1.131 ) etaBin =  13;
+  else if( eta <  1.218 ) etaBin =  14;
+  else if( eta <  1.305 ) etaBin =  15;
+  else if( eta <  1.392 ) etaBin =  16;
+  else if( eta <  1.479 ) etaBin =  17;
+  else if( eta <  1.566 ) etaBin =  18;
+  else if( eta <  1.653 ) etaBin =  19;
+  else if( eta <   1.74 ) etaBin =  20;
+  else if( eta <   1.83 ) etaBin =  21;
+  else if( eta <   1.93 ) etaBin =  22;
+  else if( eta <  2.043 ) etaBin =  23;
+  else if( eta <  2.172 ) etaBin =  24;
+  else if( eta <  2.322 ) etaBin =  25;
+  else if( eta <    2.5 ) etaBin =  26;
+  else if( eta <   2.65 ) etaBin =  27;
+  else if( eta <  2.853 ) etaBin =  28;
+  else if( eta <  2.964 ) etaBin =  29;
+  else if( eta <  3.139 ) etaBin =  30;
+  else if( eta <  3.314 ) etaBin =  31;
+  else if( eta <  3.489 ) etaBin =  32;
+  else if( eta <  3.664 ) etaBin =  33;
+  else if( eta <  3.839 ) etaBin =  34;
+  else if( eta <  4.013 ) etaBin =  35;
+  else if( eta <  4.191 ) etaBin =  36;
+  else if( eta <  4.363 ) etaBin =  37;
+  else if( eta <  4.538 ) etaBin =  38;
+  else if( eta <  4.716 ) etaBin =  39;
+  else if( eta <  4.889 ) etaBin =  40;
+  else if( eta <  5.191 ) etaBin =  41;
+
+  return etaBin;
+}
+
+
+
+float ToyMC::etaBinEdge(int etaBin, bool lowerEdge) const {
+  assert( etaBin >= -41 && etaBin <= 41 );
+  // return eta bin - eta edge mappting
+  switch(etaBin){
+  case -41: return (lowerEdge ? -5.191 : -4.889); break;
+  case -40: return (lowerEdge ? -4.889 : -4.716); break;
+  case -39: return (lowerEdge ? -4.716 : -4.538); break;
+  case -38: return (lowerEdge ? -4.538 : -4.363); break;
+  case -37: return (lowerEdge ? -4.363 : -4.191); break;
+  case -36: return (lowerEdge ? -4.191 : -4.013); break;
+  case -35: return (lowerEdge ? -4.013 : -3.839); break;
+  case -34: return (lowerEdge ? -3.839 : -3.664); break;
+  case -33: return (lowerEdge ? -3.664 : -3.489); break;
+  case -32: return (lowerEdge ? -3.489 : -3.314); break;
+  case -31: return (lowerEdge ? -3.314 : -3.139); break;
+  case -30: return (lowerEdge ? -3.139 : -2.964); break;
+  case -29: return (lowerEdge ? -2.964 : -2.853); break; 
+  case -28: return (lowerEdge ? -2.853 :  -2.65); break;
+  case -27: return (lowerEdge ?  -2.65 :   -2.5); break;
+  case -26: return (lowerEdge ?   -2.5 : -2.322); break;
+  case -25: return (lowerEdge ? -2.322 : -2.172); break;
+  case -24: return (lowerEdge ? -2.172 : -2.043); break;
+  case -23: return (lowerEdge ? -2.043 :  -1.93); break;
+  case -22: return (lowerEdge ?  -1.93 :  -1.83); break;
+  case -21: return (lowerEdge ?  -1.83 :  -1.74); break;
+  case -20: return (lowerEdge ?  -1.74 : -1.653); break;
+  case -19: return (lowerEdge ? -1.653 : -1.566); break;
+  case -18: return (lowerEdge ? -1.566 : -1.479); break;
+  case -17: return (lowerEdge ? -1.479 : -1.392); break;
+  case -16: return (lowerEdge ? -1.392 : -1.305); break;
+  case -15: return (lowerEdge ? -1.305 : -1.218); break;
+  case -14: return (lowerEdge ? -1.218 : -1.131); break;
+  case -13: return (lowerEdge ? -1.131 : -1.044); break;
+  case -12: return (lowerEdge ? -1.044 : -0.957); break;
+  case -11: return (lowerEdge ? -0.957 : -0.879); break;
+  case -10: return (lowerEdge ? -0.879 : -0.783); break;
+  case  -9: return (lowerEdge ? -0.783 : -0.696); break;
+  case  -8: return (lowerEdge ? -0.696 : -0.609); break;
+  case  -7: return (lowerEdge ? -0.609 : -0.522); break;
+  case  -6: return (lowerEdge ? -0.522 : -0.435); break;
+  case  -5: return (lowerEdge ? -0.435 : -0.348); break;
+  case  -4: return (lowerEdge ? -0.348 : -0.261); break;
+  case  -3: return (lowerEdge ? -0.261 : -0.174); break;
+  case  -2: return (lowerEdge ? -0.174 : -0.087); break;
+  case  -1: return (lowerEdge ? -0.087 :      0); break;
+  case  +1: return (lowerEdge ?      0 :  0.087); break;
+  case  +2: return (lowerEdge ?  0.087 :  0.174); break;
+  case  +3: return (lowerEdge ?  0.174 :  0.261); break;
+  case  +4: return (lowerEdge ?  0.261 :  0.348); break;
+  case  +5: return (lowerEdge ?  0.348 :  0.435); break;
+  case  +6: return (lowerEdge ?  0.435 :  0.522); break;
+  case  +7: return (lowerEdge ?  0.522 :  0.609); break;
+  case  +8: return (lowerEdge ?  0.609 :  0.696); break;
+  case  +9: return (lowerEdge ?  0.696 :  0.783); break;
+  case +10: return (lowerEdge ?  0.783 :  0.879); break;
+  case +11: return (lowerEdge ?  0.879 :  0.957); break;
+  case +12: return (lowerEdge ?  0.957 :  1.044); break;
+  case +13: return (lowerEdge ?  1.044 :  1.131); break;
+  case +14: return (lowerEdge ?  1.131 :  1.218); break;
+  case +15: return (lowerEdge ?  1.218 :  1.305); break;
+  case +16: return (lowerEdge ?  1.305 :  1.392); break;
+  case +17: return (lowerEdge ?  1.392 :  1.479); break;
+  case +18: return (lowerEdge ?  1.479 :  1.566); break;
+  case +19: return (lowerEdge ?  1.566 :  1.653); break;
+  case +20: return (lowerEdge ?  1.653 :   1.74); break;
+  case +21: return (lowerEdge ?   1.74 :   1.83); break;
+  case +22: return (lowerEdge ?   1.83 :   1.93); break;
+  case +23: return (lowerEdge ?   1.93 :  2.043); break;
+  case +24: return (lowerEdge ?  2.043 :  2.172); break;
+  case +25: return (lowerEdge ?  2.172 :  2.322); break;
+  case +26: return (lowerEdge ?  2.322 :    2.5); break;
+  case +27: return (lowerEdge ?    2.5 :   2.65); break;
+  case +28: return (lowerEdge ?   2.65 :  2.853); break;
+  case +29: return (lowerEdge ?  2.853 :  2.964); break;
+  case +30: return (lowerEdge ?  2.964 :  3.139); break;
+  case +31: return (lowerEdge ?  3.139 :  3.314); break;
+  case +32: return (lowerEdge ?  3.314 :  3.489); break;
+  case +33: return (lowerEdge ?  3.489 :  3.664); break;
+  case +34: return (lowerEdge ?  3.664 :  3.839); break;
+  case +35: return (lowerEdge ?  3.839 :  4.013); break;
+  case +36: return (lowerEdge ?  4.013 :  4.191); break;
+  case +37: return (lowerEdge ?  4.191 :  4.363); break;
+  case +38: return (lowerEdge ?  4.363 :  4.538); break;
+  case +39: return (lowerEdge ?  4.538 :  4.716); break;
+  case +40: return (lowerEdge ?  4.716 :  4.889); break;
+  case +41: return (lowerEdge ?  4.889 :  5.191); break;
+    //something went wrong;
+  default : return -1; break;
+  }
 }

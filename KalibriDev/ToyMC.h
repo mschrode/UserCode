@@ -15,7 +15,7 @@ class TTree;
 //!
 //!  \author Hartmut Stadie
 //!  \date   Mon Jun 30 11:00:00 CEST 2008
-//!  $Id: ToyMC.h,v 1.22 2009/10/25 14:17:02 mschrode Exp $
+//!  $Id: ToyMC.h,v 1.1 2009/10/30 08:59:45 mschrode Exp $
 // ----------------------------------------------------------------  
 class ToyMC {
 
@@ -162,6 +162,11 @@ class ToyMC {
     if( histResp_ ) delete histResp_;
     if( histPtEta_ ) delete histPtEta_;
   }
+  int etaBin(float eta) const;
+  float etaBinCenter(int etaBin) const { return 0.5*(etaLowerBinEdge(etaBin)+etaUpperBinEdge(etaBin)); }
+  float etaUpperBinEdge(int etaBin) const { return etaBinEdge(etaBin, false); }
+  float etaLowerBinEdge(int etaBin) const { return etaBinEdge(etaBin, true ); }
+  float etaBinEdge(int etaBin, bool lowerEdge) const;
   int generatePhotonJetTree(TTree *tree, int nevents);
   int generateTrackClusterTree(TTree *tree, int nevents);
   int generateDiJetTree(TTree* CalibTree, int nevents);
