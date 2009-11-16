@@ -1,4 +1,4 @@
-// $Id: ControlPlotsJetSmearing.cc,v 1.5 2009/11/01 17:10:54 mschrode Exp $
+// $Id: ControlPlotsJetSmearing.cc,v 1.9 2009/11/06 11:59:51 mschrode Exp $
 
 #include "ControlPlotsJetSmearing.h"
 
@@ -924,12 +924,16 @@ void ControlPlotsJetSmearing::plotMeanResponseAndResolution() const {
       }
     }
   }
-
+//   minCalJetPt = 0.;
+//   maxCalJetPt = 1500.;
+//   minGenJetPt = 0.;
+//   maxGenJetPt = 1500.;
 
   // Create histograms
+  double ptGenBinEdges[16] = {0.,15.,20.,30.,50.,70.,100.,150.,200.,300.,400.,500.,600.,800.,1000.,1400.};
   TH2F * hRespVsPtGen = new TH2F("hRespVsPtGen",
 				 ";p^{gen}_{T} (GeV);p^{jet}_{T} / p^{gen}_{T}",
-				 25,0.9*minGenJetPt,1.1*maxGenJetPt,51,0,2);
+				 15,ptGenBinEdges,51,0,2);
   hRespVsPtGen->SetNdivisions(505);
   hRespVsPtGen->Sumw2();
 
@@ -979,7 +983,7 @@ void ControlPlotsJetSmearing::plotMeanResponseAndResolution() const {
 		  1.1*minGenJetPt,0.9*maxGenJetPt);
       f->SetParameter(0,4.4);
       f->SetParameter(1,1.1);
-      f->SetParameter(2,0.0);
+      f->SetParameter(2,0.03);
     }
     f->SetLineWidth(2);
     f->SetLineColor(2);
@@ -1023,7 +1027,6 @@ void ControlPlotsJetSmearing::plotMeanResponseAndResolution() const {
 
     objs.clear();
     objs.push_back(hRes.at(i));
-    objs.push_back(fResp.at(i));
 
     if( i%2 == 0 ) {
       line = new TLine(hRes.at(i)->GetXaxis()->GetXmin(),1.,
@@ -1037,14 +1040,15 @@ void ControlPlotsJetSmearing::plotMeanResponseAndResolution() const {
       sprintf(label,"< p^{jet}_{T} / p^{gen}_{T} > = %.3f %.0f #upoint10^{-6} p^{gen}_{T}",
 	      fResp.at(i)->GetParameter(0),
 	      1E6*(fResp.at(i)->GetParameter(1)));
-      fitstat->AddEntry(fResp.at(i),label,"L");
+      //fitstat->AddEntry(fResp.at(i),label,"L");
     } else {
       char label[150];
-      sprintf(label,"#frac{#sigma(p^{jet}_{T}/p^{gen}_{T})}{<p^{jet}_{T}/p^{gen}_{T}>} = #frac{%.2f}{p^{gen}_{T}} #oplus #frac{%.2f}{#sqrt{p^{gen}_{T}}} #oplus %.2f",
+      sprintf(label,"#frac{#sigma(p^{jet}_{T}/p^{gen}_{T})}{<p^{jet}_{T}/p^{gen}_{T}>} = #frac{%.3f}{p^{gen}_{T}} #oplus #frac{%.3f}{#sqrt{p^{gen}_{T}}} #oplus %.3f",
 	      fResp.at(i)->GetParameter(0),
 	      fResp.at(i)->GetParameter(1),
 	      fResp.at(i)->GetParameter(2));
       fitstat->AddEntry(fResp.at(i),label,"L");
+      objs.push_back(fResp.at(i));
     }
     objs.push_back(fitstat);
     drawPSPage(ps,c1,objs,"PE");
@@ -1204,16 +1208,17 @@ void ControlPlotsJetSmearing::fitSlices(const TH2F * h2, std::vector<TH1F*>& hFi
   
   for(int i = 0; i < nResHist; i++) {
     TH1F * h = 0;
-    if( i % 2 == 0 ) {
-      h = new TH1F((name+quant[i]).c_str(),
-		   (title[i]+";"+xTitle+";< "+yTitle+" >").c_str(),
-		   h2->GetNbinsX(),h2->GetXaxis()->GetXmin(),h2->GetXaxis()->GetXmax());
-      h->GetYaxis()->SetRangeUser(0.95,1.05);
+    if( h2->GetXaxis()->GetXbins()->GetSize() == h2->GetNbinsX() +1) {
+      h = new TH1F((name+quant[i]).c_str(),"",h2->GetNbinsX(),h2->GetXaxis()->GetXbins()->GetArray());
     } else {
-      h = new TH1F((name+quant[i]).c_str(),
-		   (title[i]+";"+xTitle+";#sigma("+yTitle+") / < "+yTitle+" >").c_str(),
-		   h2->GetNbinsX(),h2->GetXaxis()->GetXmin(),h2->GetXaxis()->GetXmax());
-      h->GetYaxis()->SetRangeUser(0.,0.15);
+      h = new TH1F((name+quant[i]).c_str(),"",h2->GetNbinsX(),h2->GetXaxis()->GetXmin(),h2->GetXaxis()->GetXmax());
+    }
+    if( i % 2 == 0 ) {
+      h->SetTitle((title[i]+";"+xTitle+";< "+yTitle+" >").c_str());
+      h->GetYaxis()->SetRangeUser(0.95,1.2);
+    } else {
+      h->SetTitle((title[i]+";"+xTitle+";#sigma("+yTitle+") / < "+yTitle+" >").c_str());
+      h->GetYaxis()->SetRangeUser(0.,0.2);
     }
     h->SetMarkerStyle(20);
     h->SetLineWidth(2);
