@@ -1,4 +1,4 @@
-// $Id: ControlPlotsJetSmearing.cc,v 1.9 2009/11/06 11:59:51 mschrode Exp $
+// $Id: ControlPlotsJetSmearing.cc,v 1.7 2009/11/16 10:21:57 mschrode Exp $
 
 #include "ControlPlotsJetSmearing.h"
 
@@ -64,6 +64,7 @@ void ControlPlotsJetSmearing::plotResponse() const
   int nPlotBins = 6;
   std::vector<TH1F*> hRespMeasAbs(nPlotBins);   // The measured response ptJet / ptGen absolute entries
   std::vector<TH1F*> hRespMeas(nPlotBins);      // The measured response ptJet / ptGen
+  std::vector<TH1F*> hRespTrue(nPlotBins);      // Same as hRespMeas but binning as hResFit
   std::vector<TH1F*> hRespFitStart(nPlotBins);  // The response pdf with start values
   std::vector<TH1F*> hRespFit(nPlotBins);       // The fitted response pdf
   std::vector<TH1F*> hRespFitStep(nPlotBins);   // Step function part of the response pdf
@@ -77,25 +78,31 @@ void ControlPlotsJetSmearing::plotResponse() const
   for(int plotBin = 0; plotBin < nPlotBins; plotBin++) {
     std::string name = "hRespMeasAbs_" + toString(plotBin);
     hRespMeasAbs.at(plotBin) = new TH1F(name.c_str(),";R = p^{jet}_{T} / p^{gen}_{T};dN / dR",
-			    respNBins_,respMin_,respMax_);
+					respNBins_,respMin_,respMax_);
     hRespMeasAbs.at(plotBin)->SetLineWidth(2);
 
     name = "hRespMeas_" + toString(plotBin);
     hRespMeas.at(plotBin) = new TH1F(name.c_str(),";R = p^{jet}_{T} / p^{gen}_{T};1/(Nw)  dN / dR",
-			       respNBins_,respMin_,respMax_);
+				     respNBins_,respMin_,respMax_);
     hRespMeas.at(plotBin)->Sumw2();
     hRespMeas.at(plotBin)->SetLineWidth(2);
 
     name = "hRespFit_" + toString(plotBin);
     hRespFit.at(plotBin) = new TH1F(name.c_str(),";R = p^{jet}_{T} / p^{true}_{T};1/(Nw)  dN / dR",
-			      5*respNBins_,respMin_,respMax_);
+				    5*respNBins_,respMin_,respMax_);
     hRespFit.at(plotBin)->SetLineColor(2);
     hRespFit.at(plotBin)->SetLineWidth(2);
     hRespFit.at(plotBin)->Sumw2();
 
+    name = "hRespTrue_" + toString(plotBin);
+    hRespTrue.at(plotBin) = new TH1F(name.c_str(),";R = p^{jet}_{T} / p^{gen}_{T};1/(Nw)  dN / dR",
+				     5*respNBins_,respMin_,respMax_);
+    hRespTrue.at(plotBin)->Sumw2();
+    hRespTrue.at(plotBin)->SetLineWidth(2);
+
     name = "hRespFitStart_" + toString(plotBin);
     hRespFitStart.at(plotBin) = new TH1F(name.c_str(),";R = p^{jet}_{T} / p^{true}_{T};1/(Nw)  dN / dR",
-				   5*respNBins_,respMin_,respMax_);
+					 5*respNBins_,respMin_,respMax_);
     hRespFitStart.at(plotBin)->SetLineColor(2);
     hRespFitStart.at(plotBin)->SetLineWidth(2);
     hRespFitStart.at(plotBin)->SetLineStyle(2);
@@ -103,9 +110,9 @@ void ControlPlotsJetSmearing::plotResponse() const
 
     name = "hRespFitStep_" + toString(plotBin);
     hRespFitStep.at(plotBin) = new TH1F(name.c_str(),";R = p^{jet}_{T} / p^{true}_{T};1/(Nw)  dN / dR",
-				  config_->read<int>("Response pdf nsteps",10),
-				  config_->read<double>("Response pdf min",0.),
-				  config_->read<double>("Response pdf max",1.8));
+					config_->read<int>("Response pdf nsteps",10),
+					config_->read<double>("Response pdf min",0.),
+					config_->read<double>("Response pdf max",1.8));
     hRespFitStep.at(plotBin)->Sumw2();
     hRespFitStep.at(plotBin)->SetLineColor(9);
     hRespFitStep.at(plotBin)->SetLineWidth(2);
@@ -119,7 +126,7 @@ void ControlPlotsJetSmearing::plotResponse() const
 
     name = "hRespFitSum_" + toString(plotBin);
     hRespFitSum.at(plotBin) = new TH1F(name.c_str(),";R = p^{jet}_{T} / p^{true}_{T};1/(Nw)  dN / dR",
-				 5*respNBins_,respMin_,respMax_);
+				       5*respNBins_,respMin_,respMax_);
     hRespFitSum.at(plotBin)->Sumw2();
     hRespFitSum.at(plotBin)->SetLineColor(1);
     hRespFitSum.at(plotBin)->SetLineWidth(2);
@@ -173,11 +180,13 @@ void ControlPlotsJetSmearing::plotResponse() const
 
 	hRespMeasAbs.at(0)->Fill( jet->pt / jet->genPt, dijet->GetWeight() );
 	hRespMeas.at(0)->Fill( jet->pt / jet->genPt, dijet->GetWeight() );
+	hRespTrue.at(0)->Fill( jet->pt / jet->genPt, dijet->GetWeight() );
 
 	for(int i = 0; i < nPtGenBins; i++) {
 	  if( ptGenBinEdges.at(i) <= jet->genPt && jet->genPt < ptGenBinEdges.at(i+1) ) {
 	    hRespMeasAbs.at(i+1)->Fill( jet->pt / jet->genPt, dijet->GetWeight() );
 	    hRespMeas.at(i+1)->Fill( jet->pt / jet->genPt, dijet->GetWeight() );
+	    hRespTrue.at(i+1)->Fill( jet->pt / jet->genPt, dijet->GetWeight() );
 	    continue;
 	  }
 	}
@@ -187,6 +196,7 @@ void ControlPlotsJetSmearing::plotResponse() const
   } // End of loop over data
   for(int plotBin = 0; plotBin < nPlotBins; plotBin++) {
     normHist(hRespMeas.at(plotBin),"width");
+    normHist(hRespTrue.at(plotBin),"width");
   }
   normHist(hPtGen,"width");
   normHist(hPtHat,"width");
@@ -334,6 +344,7 @@ void ControlPlotsJetSmearing::plotResponse() const
   }
   for(int plotBin = 0; plotBin < nPlotBins; plotBin++) {
     hRespMeas.at(plotBin)->GetYaxis()->SetRangeUser(yMin,yMax);
+    hRespTrue.at(plotBin)->GetYaxis()->SetRangeUser(yMin,yMax);
     setYRange(hRespMeasAbs.at(plotBin),0.5,50.);
   }
   setYRange(hPtDijet, 0.5, 100.);
@@ -431,6 +442,14 @@ void ControlPlotsJetSmearing::plotResponse() const
     legPtRangeAndCenters.at(plotBin)->Draw("same");
     c1->SetLogy();
     c1->Draw();
+
+    ps->NewPage();
+    c1->cd();
+    hRespTrue.at(plotBin)->Draw("HISTL");
+    hRespFit.at(plotBin)->Draw("Lsame");
+    legPtRangeAndCenters.at(plotBin)->Draw("same");
+    c1->SetLogy();
+    c1->Draw();
   }
 
   // Truth spectrum
@@ -470,6 +489,7 @@ void ControlPlotsJetSmearing::plotResponse() const
   for(int plotBin = 0; plotBin < nPlotBins; plotBin++) {
     rootfile.WriteTObject(hRespMeasAbs.at(plotBin));
     rootfile.WriteTObject(hRespMeas.at(plotBin));
+    rootfile.WriteTObject(hRespTrue.at(plotBin));
     rootfile.WriteTObject(hRespFit.at(plotBin));
     rootfile.WriteTObject(hRespFitStart.at(plotBin));
     rootfile.WriteTObject(hRespFitStep.at(plotBin));
@@ -488,6 +508,7 @@ void ControlPlotsJetSmearing::plotResponse() const
   for(int plotBin = 0; plotBin < nPlotBins; plotBin++) {
     delete hRespMeasAbs.at(plotBin);
     delete hRespMeas.at(plotBin);
+    delete hRespTrue.at(plotBin);
     delete hRespFit.at(plotBin);
     delete hRespFitStart.at(plotBin);
     delete hRespFitStep.at(plotBin);
