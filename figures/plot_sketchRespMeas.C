@@ -8,6 +8,7 @@
 #include "TF1.h"
 #include "TH1D.h"
 #include "TH2D.h"
+#include "TLatex.h"
 #include "TLine.h"
 #include "TPad.h"
 #include "TRandom3.h"
@@ -34,6 +35,8 @@ typedef std::vector<Event>::const_iterator DataIt;
 
 // === Declaration of global functions ===
 Data generateData(int nEvents, const std::vector<double>& par);
+void plotResponseDistribution();
+void plotMeasVsTruth(const Data& data);
 void plotRespMeasVsTruth(const Data& data);
 void plotRespMeasVsMeas(const Data& data);
 TString truthTitle();
@@ -49,6 +52,7 @@ void run(int nEvents) {
   parResp.at(0) = 0.;
   parResp.at(1) = 1.;
   Data data = generateData(nEvents,parResp);
+  plotMeasVsTruth(data);
   plotRespMeasVsTruth(data);
   plotRespMeasVsMeas(data);
 }
@@ -106,14 +110,114 @@ Data generateData(int nEvents, const std::vector<double>& par) {
 }
 
 
+// ---------------------------------------------------------------
+void plotMeasVsTruth(const Data& data) {
+  // Create histogram
+  TH2D *hMeasVsTruth = new TH2D("hMeasVsTruth","",
+				nBinsX_,xMin_,xMax_,
+				nBinsX_,xMin_,xMax_);
+  hMeasVsTruth->SetXTitle(truthTitle());
+  hMeasVsTruth->SetYTitle(measTitle());
 
+  // Filling histos
+  for(DataIt evt = data.begin(); evt != data.end(); evt++) {
+    hMeasVsTruth->Fill(evt->ptGen(),evt->pt());
+  }
+
+  // Draw histogram
+  TLine *diag = new TLine(xMin_,xMin_,xMax_,xMax_);
+  diag->SetLineColor(4);
+  diag->SetLineStyle(2);
+  diag->SetLineWidth(2);
+
+  TCanvas *can = new TCanvas("canMeasVsTruth","MeasVsTruth",
+			     500,500);
+  can->cd();
+  hMeasVsTruth->Draw("BOX");
+  diag->Draw("same");
+}
+
+
+// --------------------------------------------------------------------------------
+void plotResponseDistribution() {
+  // Create new canvas
+  setGStyle();
+  gStyle->SetFrameBorderSize(0);
+  gStyle->SetFrameLineWidth(0);
+  TCanvas *can = new TCanvas("canResponseDistribution","ResponseDistribution",500,500);
+
+  TH1D *hFrame = new TH1D("hFrame","",8,0,8);
+  hFrame->GetYaxis()->SetRangeUser(0,10);
+
+  TF1 *fMeas = new TF1("fMeas","gaus",0.6,5.4);
+  fMeas->SetParameter(0,7);
+  fMeas->SetParameter(1,3);
+  fMeas->SetParameter(2,0.8);
+  fMeas->SetLineColor(2);
+  fMeas->SetLineWidth(3);
+
+  TLine *line = new TLine(3,0,3,7);
+  line->SetLineWidth(3);
+  line->SetLineStyle(2);
+  line->SetLineColor(2);
+
+  TLine *Line = new TLine(7.4,0,7.4,10);
+  Line->SetLineWidth(3);
+  Line->SetLineStyle(1);
+  Line->SetLineColor(2);
+
+  TArrow *arrow = new TArrow(3,3.5,7.4,3.5,0.05,"<|");
+  arrow->SetAngle(30);
+  arrow->SetLineWidth(3);
+  arrow->SetLineColor(4);
+  arrow->SetFillColor(4);
+
+  TLatex *labelM = new TLatex(1.8,-0.97,"<p^{meas}_{T}>");
+  labelM->SetTextAlign(11);
+  labelM->SetTextFont(42);
+  labelM->SetTextSize(0.10);
+  labelM->SetTextColor(2);
+
+  TLatex *labelT = new TLatex(6.7,-0.97,"p^{true}_{T}");
+  labelT->SetTextAlign(11);
+  labelT->SetTextFont(42);
+  labelT->SetTextSize(0.10);
+  labelT->SetTextColor(2);
+
+  TLatex *labelR = new TLatex(1.1,7.8,"R(p^{true}_{T}) #upoint p^{true}_{T}");
+  labelR->SetTextAlign(11);
+  labelR->SetTextFont(42);
+  labelR->SetTextSize(0.10);
+  labelR->SetTextColor(4);
+
+  can->cd();
+  can->SetTopMargin(0.01);
+  can->SetBottomMargin(0.13);
+  can->SetLeftMargin(0.01);
+  can->SetRightMargin(0.01);
+
+  hFrame->Draw("AH");
+  fMeas->Draw("same");
+  line->Draw("same");
+  Line->Draw("same");
+  labelM->Draw("same");
+  labelT->Draw("same");
+  labelR->Draw("same");
+  arrow->Draw("same");
+
+  gStyle->SetFrameBorderSize(1);
+  gStyle->SetFrameLineWidth(1);
+}
+
+
+// ---------------------------------------------------------------
 void plotRespMeasVsTruth(const Data& data) {
   TH2D *hRespVsTruth = new TH2D("hRespVsTruth","",
 				nBinsX_,xMin_,xMax_,
 				51,0.,2.);
   hRespVsTruth->SetXTitle(truthTitle());
   hRespVsTruth->SetYTitle(responseTitle());
-  TH2D *hMeasVsTruth = new TH2D("hMeasVsTruth","",
+  TH2D *hMeasVsTruth = new TH2D("hMeasVsTruth1","",
 				nBinsX_,xMin_,xMax_,
 				nBinsX_,xMin_,xMax_);
   hMeasVsTruth->SetXTitle(truthTitle());
@@ -269,6 +373,7 @@ void plotRespMeasVsTruth(const Data& data) {
 }
 
 
+// ---------------------------------------------------------------
 void plotRespMeasVsMeas(const Data& data) {
   TH2D *hRespVsMeas = new TH2D("hRespVsMeas","",
 			       nBinsX_,xMin_,xMax_,
@@ -386,7 +491,6 @@ void plotRespMeasVsMeas(const Data& data) {
   aLeft   = 0.56;
   aRight  = 0.6 + 0.4*(gStyle->GetPadLeftMargin()+(1-gStyle->GetPadLeftMargin()-gStyle->GetPadRightMargin())*((hProf->GetBinCenter(bin1))/(xMax_ - xMin_)));
   aHeight = 0.1 + 0.8*(gStyle->GetPadBottomMargin() + (1-gStyle->GetPadTopMargin()-gStyle->GetPadBottomMargin())*(hProf->GetBinContent(bin1)-respYMin)/(respYMax-respYMin));
-  std::cout << hProf->GetBinContent(bin1) << std::endl;
   TArrow *hArrow21 = new TArrow(aLeft,0.2,aRight,aHeight-0.04,0.03,"|>");
   hArrow21->SetAngle(30);
   hArrow21->SetLineColor(2);
@@ -396,7 +500,6 @@ void plotRespMeasVsMeas(const Data& data) {
   aLeft   = 0.56;
   aRight  = 0.6 + 0.4*(gStyle->GetPadLeftMargin()+(1-gStyle->GetPadLeftMargin()-gStyle->GetPadRightMargin())*((hProf->GetBinCenter(bin2))/(xMax_ - xMin_)));
   aHeight = 0.1 + 0.8*(gStyle->GetPadBottomMargin() + (1-gStyle->GetPadTopMargin()-gStyle->GetPadBottomMargin())*(hProf->GetBinContent(bin2)-respYMin)/(respYMax-respYMin));
-  std::cout << hProf->GetBinContent(bin1) << std::endl;
   TArrow *hArrow22 = new TArrow(aLeft,0.8,aRight,aHeight+0.04,0.03,"|>");
   hArrow22->SetAngle(30);
   hArrow22->SetLineColor(2);
@@ -499,18 +602,22 @@ void plotRespMeasVsMeas(const Data& data) {
 }
 
 
+// ---------------------------------------------------------------
 TString truthTitle() {
   return "p^{true}_{T} (GeV)";
 }
 
+// ---------------------------------------------------------------
 TString measTitle() {
   return "p^{meas}_{T} (GeV)";
 }
 
+// ---------------------------------------------------------------
 TString responseTitle() {
   return "p^{meas}_{T} / p^{true}_{T}";
 }
 
+// ---------------------------------------------------------------
 void setGStyle() {
   //  For the canvas
   // -------------------------------------------
