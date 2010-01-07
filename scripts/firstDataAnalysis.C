@@ -1,4 +1,4 @@
-// $Id: firstDataAnalysis.C,v 1.3 2009/12/29 16:16:02 mschrode Exp $
+// $Id: firstDataAnalysis.C,v 1.4 2009/12/29 19:05:45 mschrode Exp $
 //
 // Plot simple distributions of different samples
 // (data, MC,...) from Kalibri ntuples. Meant for
@@ -13,7 +13,10 @@
 #include "TChain.h"
 #include "TH1D.h"
 #include "TFile.h"
+#include "TLegend.h"
+#include "TRandom3.h"
 #include "TString.h"
+#include "TStyle.h"
 #include "TTree.h"
 #include "TVector2.h"
 
@@ -27,6 +30,8 @@ std::vector<TChain*> chain_;
 std::vector<TString> drawOption_;
 std::vector<int> markerStyle_;
 std::vector<int> color_;
+TString legendHeader_;
+TRandom3 *rand_;
 
 int nCuts_;
 std::vector< std::vector<TH1D*> > hCuts_;    // N-1 distributions
@@ -43,6 +48,7 @@ std::vector<TH1D*> hPtAsym_;
 std::vector<TH1D*> hPtCorr_;
 std::vector<TH1D*> hEta_;
 std::vector<TH1D*> hPhi_;
+std::vector<TH1D*> hDeltaPhi_;
 
 bool isInit_ = false;
 
@@ -50,30 +56,52 @@ bool isInit_ = false;
 
 // === Function declarations ===
 void addFile(const TString &fileName, int sample);
-void draw(const std::vector<int>& drawnSamples);
-void fillHistos();
+void draw(int normSample, const TString &sampleName);
+void fillHistos(int events = -1);
 void init(const TString &treeName, int nSamples);
 bool isGoodLumiBlock(int lumiBlockNumber, int runNumber);
 void normaliseDistributions(int normSample);
+void printCutFlow(int normSample);
 
 
 
 // === Main functions ===
-void runFirstDataAnalysis() {
+void firstDataAnalysis(int nEvts, const TString &sample = "900GeV") {
   init("DiJetTree",2);
-  addFile("/scratch/hh/current/cms/user/mschrode/data/MinBias-BeamCommissioning09-Dec14thReReco_v1/MinBias-BeamCommissioning09-900GeV-Dec14thReReco_v1.root",0);
-  addFile("/scratch/hh/current/cms/user/mschrode/mc/MinBias-Summer09-DESIGN_3X_V8A_900GeV-v1/MinBias-Summer09-DESIGN_3X_V8A_900GeV-v1__1.root",1);
-  addFile("/scratch/hh/current/cms/user/mschrode/mc/MinBias-Summer09-DESIGN_3X_V8A_900GeV-v1/MinBias-Summer09-DESIGN_3X_V8A_900GeV-v1__2.root",1);
-  addFile("/scratch/hh/current/cms/user/mschrode/mc/MinBias-Summer09-DESIGN_3X_V8A_900GeV-v1/MinBias-Summer09-DESIGN_3X_V8A_900GeV-v1__3.root",1);
-  fillHistos();
+  TString dir = "/scratch/hh/current/cms/user/mschrode/";
+  if( sample == "900GeV" ) {
+    TString name = dir;
+    name += "data/MinBias-BeamCommissioning09-Dec14thReReco_v1/MinBias-BeamCommissioning09-900GeV-Dec14thReReco_v1.root";
+    addFile(name,0);
+    for(int f = 1; f <= 3; f++) {
+      name = dir;
+      name += "mc/MinBias-Summer09-DESIGN_3X_V8A_900GeV-v1/MinBias-Summer09-DESIGN_3X_V8A_900GeV-v1__";
+      name += f;
+      name += ".root";
+      addFile(name,1);
+    }
+    legendHeader_ = "900 GeV MinBias";
+  } else if( sample == "2360GeV" ) {
+    TString name = dir;
+    name += "data/MinBias-BeamCommissioning09-Dec14thReReco_v1/MinBias-BeamCommissioning09-2360GeV-Dec14thReReco_v1.root";
+    addFile(name,0);
+    for(int f = 1; f <= 5; f++) {
+      name = dir;
+      name += "mc/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1__";
+      name += f;
+      name += ".root";
+      addFile(name,1);
+    }
+    legendHeader_ = "2360 GeV MinBias";
+  }
+  
+  fillHistos(nEvts);
   normaliseDistributions(0);
 
   drawOption_[0] = "PE1";
+  draw(0,sample);
 
-  std::vector<int> drawnSamples(2);
-  drawnSamples.at(0) = 0;
-  drawnSamples.at(1) = 1;
-  draw(drawnSamples);
+  printCutFlow(0);
 }
 
 
@@ -94,49 +122,112 @@ void addFile(const TString &fileName, int sample) {
 }
 
 
-void draw(const std::vector<int>& drawnSamples) {
+void draw(int normSample, const TString &sampleName) {
   if( isInit_ ) {
     std::cout << "Plotting distributions... " << std::flush;
 
+    gStyle->SetOptStat(0);
     std::vector<TCanvas*> canCuts(nCuts_);
     for(int c = 0; c < nCuts_; c++) {
       TString name = "canCut";
       name += c;
-      TString title = "Cut: ";
+      TString title = "Cut_";
       title += c;
       canCuts.at(c) = new TCanvas(name,title,10*c,20*c,500,500);
     }
+    std::vector<TCanvas*> canDist(6);
+    canDist[0] = new TCanvas("canPt","Pt",0,300,500,500);
+    canDist[1] = new TCanvas("canPtAsym","PtAsymmetry",10,320,500,500);
+    canDist[2] = new TCanvas("canPtCorr","CorrectedPt",20,340,500,500);
+    canDist[3] = new TCanvas("canEta","Eta",30,360,500,500);
+    canDist[4] = new TCanvas("canPhi","Phi",40,380,500,500);
+    canDist[5] = new TCanvas("canDeltaPhi","DeltaPhi",50,400,500,500);
 
-    TCanvas *canPt = new TCanvas("canPt","Pt",0,300,500,500);
-    TCanvas *canPtAsym = new TCanvas("canPtAsym","Pt Asymmetry",10,320,500,500);
-    TCanvas *canPtCorr = new TCanvas("canPtCorr","Corrected Pt",20,340,500,500);
-    TCanvas *canEta = new TCanvas("canEta","Eta",30,360,500,500);
-    TCanvas *canPhi = new TCanvas("canPhi","Phi",40,380,500,500);
+    std::vector<TLegend*> leg(nCuts_+6);
+    for(size_t i = 0; i < leg.size(); i++) {
+      leg[i] = new TLegend(0.5,0.6,0.93,0.85);
+      leg[i]->SetBorderSize(0);
+      leg[i]->SetFillColor(0);
+      leg[i]->SetTextFont(42);
+      leg[i]->SetHeader(legendHeader_);
+    }
+    std::vector<bool> logY(nCuts_+6,false);
+    logY[0] = true;
+    logY[2] = true;
+    logY[6] = true;
+    logY[10] = true;
 
+    for(int i = 0; i < nSamples_; i++) {
+      TString opt = drawOption_.at(i);
+      if( i ) opt += "same";
 
-    std::vector<int>::const_iterator sampleIt = drawnSamples.begin();
-    for(; sampleIt != drawnSamples.end(); sampleIt++) {
-      TString opt = drawOption_.at(*sampleIt);
-      if( sampleIt - drawnSamples.begin() != 0 ) opt += "same";
+      for(int n = 0; n < 6; n++) {
+	TH1D *h = hPt_[i];
+	if( n == 1 ) h = hPtAsym_[i];
+	else if( n == 2 ) h = hPtCorr_[i];
+	else if( n == 3 ) h = hEta_[i];
+	else if( n == 4 ) h = hPhi_[i];
+	else if( n == 5 ) h = hDeltaPhi_[i];
 
-      canPt->cd();
-      hPt_.at(*sampleIt)->Draw(opt);
+	if( i == normSample ) {
+	  char text[50];
+      	  sprintf(text,"Data: %i entries",static_cast<int>(h->GetEntries()));
+	  leg[n]->AddEntry(h,text,"PL");
+	} else {
+	  leg[n]->AddEntry(h,"MC: normalized","L");
+	}
 
-      canPtAsym->cd();
-      hPtAsym_.at(*sampleIt)->Draw(opt);
+	if( i == 0 ) {
+	  double max = h->GetMaximum();
+	  h->GetYaxis()->SetRangeUser(0.,2.*max);
+	  if( logY[n] ) {
+	    h->GetYaxis()->SetRangeUser(0.1,5*h->GetMaximum());
+	  }
+	}
 
-      canPtCorr->cd();
-      hPtCorr_.at(*sampleIt)->Draw(opt);
+	canDist[n]->cd();
+	h->Draw(opt);
 
-      canEta->cd();
-      hEta_.at(*sampleIt)->Draw(opt);
+	if( i == nSamples_ - 1 ) {
+	  if( logY[n] ) canDist[n]->SetLogy(1);
+	  leg[n]->Draw("same");
+	  TString name = "plots/";
+	  name += sampleName;
+	  name += "_";
+	  name += canDist[n]->GetTitle();
+	  name += ".eps";
+	  canDist[n]->SaveAs(name,"eps");
+	}
+      }      
 
-      canPhi->cd();
-      hPhi_.at(*sampleIt)->Draw(opt);
-      
       for(int c = 0; c < nCuts_; c++) {
 	canCuts.at(c)->cd();
-	hCuts_.at(c).at(*sampleIt)->Draw(opt);
+	TH1D *h = hCuts_[c][i];
+	int idx = c + 6;
+	if( i == normSample ) {
+	  char text[50];
+      	  sprintf(text,"Data: %i entries",static_cast<int>(h->GetEntries()));
+	  leg[idx]->AddEntry(h,text,"PL");
+	} else {
+	  leg[idx]->AddEntry(h,"MC: normalized","L");
+	}
+	if( i == 0 ) {
+	  h->GetYaxis()->SetRangeUser(0.,1.5*h->GetMaximum());
+	  if( logY[idx] ) {
+	    h->GetYaxis()->SetRangeUser(0.1,5*h->GetMaximum());
+	  }
+	}
+	h->Draw(opt);
+	if( i == nSamples_ - 1 ) {
+	  if( logY[idx] ) canCuts.at(c)->SetLogy(1); 
+	  leg[idx]->Draw("same");
+	  TString name = "plots/";
+	  name += sampleName;
+	  name += "_";
+	  name += canCuts[c]->GetTitle();
+	  name += ".eps";
+	  canCuts[c]->SaveAs(name,"eps");
+	}
       }
     }
     std::cout << "ok\n";
@@ -146,7 +237,7 @@ void draw(const std::vector<int>& drawnSamples) {
 }
 
 
-void fillHistos() {
+void fillHistos(int events) {
   if( isInit_ ) {
     std::cout << "Selecting events and filling distributions... " << std::flush;
     
@@ -191,7 +282,9 @@ void fillHistos() {
       chain_[i]->SetBranchAddress("JetCorrL2L3",jetCorrL2L3);
   
       // Loop over tree entries
-      for(int n = 0; n < chain_[i]->GetEntries(); n++) {
+      int nEntries = chain_[i]->GetEntries();
+      if( events > 0 && nEntries > events ) nEntries = events;
+      for(int n = 0; n < nEntries; n++) {
 	chain_[i]->GetEntry(n);
 
 	if( nObjJet > maxNJet_ ) {
@@ -203,17 +296,17 @@ void fillHistos() {
 	nEvents_[i]++;
 	bool isGood = true;
 
-	// Cut on number of jets
-	hCuts_[0][i]->Fill(nObjJet);
-	if( nObjJet < cutValue_[0] ) {
-	  nCutEvents_[0][i]++;
+	// Cut on luminosity block
+	if( !isGoodLumiBlock(lumiBlockNumber,runNumber) ) {
+	  nCutLumiBlock_[i]++;
 	  isGood = false;
 	}
 	if( !isGood ) continue;
 
-	// Cut on luminosity block
-	if( !isGoodLumiBlock(lumiBlockNumber,runNumber) ) {
-	  nCutLumiBlock_[i]++;
+	// Cut on number of jets
+	hCuts_[0][i]->Fill(nObjJet);
+	if( nObjJet < cutValue_[0] ) {
+	  nCutEvents_[0][i]++;
 	  isGood = false;
 	}
 	if( !isGood ) continue;
@@ -307,7 +400,11 @@ void fillHistos() {
 
 	// Fill distributions of selected events
 	nGoodEvents_[i]++;
-	hPtAsym_[i]->Fill((jetPt[0]-jetPt[1])/(jetPt[0]+jetPt[1]));
+	double diff = jetPt[0]-jetPt[1];
+	if( rand_->Uniform() > 0.5 ) diff = jetPt[1]-jetPt[0];
+	hPtAsym_[i]->Fill(diff/(jetPt[0]+jetPt[1]));
+	if( deltaPhi < 0 ) deltaPhi += 2*M_PI;
+	hDeltaPhi_[i]->Fill(deltaPhi);
 	for(int j = 0; j < 2; j++) {
 	  hPt_[i]->Fill(jetPt[j]);
 	  hPtCorr_[i]->Fill(jetCorrL2L3[j]*jetPt[j]);
@@ -329,6 +426,7 @@ void init(const TString &treeName, int nSamples) {
   } else {
     std::cout << "Initializing objects... " << std::flush;
 
+    rand_ = new TRandom3(0);
     treeName_ = treeName;
     nSamples_ = nSamples;
 
@@ -352,7 +450,7 @@ void init(const TString &treeName, int nSamples) {
     cutValue_[1] = 1;     //MinVtxNTracks
     cutValue_[2] = 20.;   //MaxVtxPosZ
     cutValue_[3] = 0.5;   //MaxRelMet
-    cutValue_[4] = 10.;   //MinJetPt
+    cutValue_[4] = 4.;   //MinJetPt
     cutValue_[5] = 3.;    //MaxJetEta
     cutValue_[6] = 2.1;   //MinDeltaPhi
     cutValue_[7] = 0.01;  //MinEMF
@@ -383,48 +481,51 @@ void init(const TString &treeName, int nSamples) {
 	name += c;
 	name += "_";
 	name += i;
+	TString title = "Cut (";
+	title += c;
+	title += "): n - 1 plot";
 	if( c == 0 ) {
-	  hCuts_[c][i] = new TH1D(name,"n - 1 plot",30,0,30);
+	  hCuts_[c][i] = new TH1D(name,title,30,0,30);
 	  hCuts_[c][i]->GetXaxis()->SetTitle("Number of jets");
 	  hCuts_[c][i]->GetYaxis()->SetTitle("Number of events");
 	} else if( c == 1 ) {
-	  hCuts_[c][i] = new TH1D(name,"n - 1 plot",50,0,50);
+	  hCuts_[c][i] = new TH1D(name,title,50,0,50);
 	  hCuts_[c][i]->GetXaxis()->SetTitle("Number of primary vertex tracks");
 	  hCuts_[c][i]->GetYaxis()->SetTitle("Number of events");
 	} else if( c == 2 ) {
-	  hCuts_[c][i] = new TH1D(name,"n - 1 plot",30,-30,30);
+	  hCuts_[c][i] = new TH1D(name,title,30,-30,30);
 	  hCuts_[c][i]->GetXaxis()->SetTitle("Primary vertex z-position (cm)");
 	  hCuts_[c][i]->GetYaxis()->SetTitle("Number of events");
 	} else if( c == 3 ) {
-	  hCuts_[c][i] = new TH1D(name,"n - 1 plot",50,0,1);
+	  hCuts_[c][i] = new TH1D(name,title,50,0,1);
 	  hCuts_[c][i]->GetXaxis()->SetTitle("MET / sumET");
 	  hCuts_[c][i]->GetYaxis()->SetTitle("Number of events");
 	} else if( c == 4 ) {
-	  hCuts_[c][i] = new TH1D(name,"n - 1 plot",30,0,30);
+	  hCuts_[c][i] = new TH1D(name,title,30,0,30);
 	  hCuts_[c][i]->GetXaxis()->SetTitle("p^{jet2}_{T} (GeV)");
 	  hCuts_[c][i]->GetYaxis()->SetTitle("Number of jets");
 	} else if( c == 5 ) {
-	  hCuts_[c][i] = new TH1D(name,"n - 1 plot",25,-5.2,5.2);
+	  hCuts_[c][i] = new TH1D(name,title,20,-5.2,5.2);
 	  hCuts_[c][i]->GetXaxis()->SetTitle("#eta");
 	  hCuts_[c][i]->GetYaxis()->SetTitle("Number of jets");
 	} else if( c == 6 ) {
-	  hCuts_[c][i] = new TH1D(name,"n - 1 plot",25,-3.2,3.2);
+	  hCuts_[c][i] = new TH1D(name,title,20,-3.2,3.2);
 	  hCuts_[c][i]->GetXaxis()->SetTitle("#Delta #phi");
 	  hCuts_[c][i]->GetYaxis()->SetTitle("Number of jets");
 	} else if( c == 7 ) {
-	  hCuts_[c][i] = new TH1D(name,"n - 1 plot",25,0,1);
+	  hCuts_[c][i] = new TH1D(name,title,20,0,1);
 	  hCuts_[c][i]->GetXaxis()->SetTitle("f_{EM}");
 	  hCuts_[c][i]->GetYaxis()->SetTitle("Number of jets");
 	} else if( c == 8 ) {
-	  hCuts_[c][i] = new TH1D(name,"n - 1 plot",50,0,50);
+	  hCuts_[c][i] = new TH1D(name,title,25,0,50);
 	  hCuts_[c][i]->GetXaxis()->SetTitle("n90Hits");
 	  hCuts_[c][i]->GetYaxis()->SetTitle("Number of jets");
 	} else if( c == 9 ) {
-	  hCuts_[c][i] = new TH1D(name,"n - 1 plot",25,0,1);
+	  hCuts_[c][i] = new TH1D(name,title,20,0,1);
 	  hCuts_[c][i]->GetXaxis()->SetTitle("f_{HPD}");
 	  hCuts_[c][i]->GetYaxis()->SetTitle("Number of jets");
 	} else if( c == 10 ) {
-	  hCuts_[c][i] = new TH1D(name,"n - 1 plot",25,0,1);
+	  hCuts_[c][i] = new TH1D(name,title,20,0,1);
 	  hCuts_[c][i]->GetXaxis()->SetTitle("f_{RBX}");
 	  hCuts_[c][i]->GetYaxis()->SetTitle("Number of jets");
 	}
@@ -439,45 +540,52 @@ void init(const TString &treeName, int nSamples) {
     hPtCorr_ = std::vector<TH1D*>(nSamples_);
     hEta_ = std::vector<TH1D*>(nSamples_);
     hPhi_ = std::vector<TH1D*>(nSamples_);
-
+    hDeltaPhi_ = std::vector<TH1D*>(nSamples_);
     for(int i = 0; i < nSamples_; i++) {
       chain_[i] = new TChain(treeName_);
       
       TString name;
       name = "hPt";
       name += i;
-      hPt_[i] = new TH1D(name,"Selected dijet events",20,0,100);
+      hPt_[i] = new TH1D(name,"Selected dijet events",15,0,60);
       hPt_[i]->GetXaxis()->SetTitle("p_{T} (GeV)");
       hPt_[i]->GetYaxis()->SetTitle("Number of jets");
       hPt_[i]->SetMarkerStyle(markerStyle_[i]);
 
       name = "hPtAsym";
       name += i;
-      hPtAsym_[i] = new TH1D(name,"Selected dijet events",20,-1.5,1.5);
+      hPtAsym_[i] = new TH1D(name,"Selected dijet events",15,-1.5,1.5);
       hPtAsym_[i]->GetXaxis()->SetTitle("p_{T} asymmetry");
       hPtAsym_[i]->GetYaxis()->SetTitle("Number of dijet events");
       hPtAsym_[i]->SetMarkerStyle(markerStyle_[i]);
 
       name = "hPtCorr";
       name += i;
-      hPtCorr_[i] = new TH1D(name,"Selected dijet events",20,0,100);
+      hPtCorr_[i] = new TH1D(name,"Selected dijet events",15,0,60);
       hPtCorr_[i]->GetXaxis()->SetTitle("L2L3 corrected p_{T} (GeV)");
       hPtCorr_[i]->GetYaxis()->SetTitle("Number of jets");
       hPtCorr_[i]->SetMarkerStyle(markerStyle_[i]);
 
       name = "hEta";
       name += i;
-      hEta_[i] = new TH1D(name,"Selected dijet events",20,-5.,5.);
+      hEta_[i] = new TH1D(name,"Selected dijet events",15,-5.,5.);
       hEta_[i]->GetXaxis()->SetTitle("#eta");
       hEta_[i]->GetYaxis()->SetTitle("Number of jets");
       hEta_[i]->SetMarkerStyle(markerStyle_[i]);
 
       name = "hPhi";
       name += i;
-      hPhi_[i] = new TH1D(name,"Selected dijet events",20,-3.2,3.2);
+      hPhi_[i] = new TH1D(name,"Selected dijet events",15,-3.2,3.2);
       hPhi_[i]->GetXaxis()->SetTitle("#phi");
       hPhi_[i]->GetYaxis()->SetTitle("Number of jets");
       hPhi_[i]->SetMarkerStyle(markerStyle_[i]);
+
+      name = "hDeltaPhi";
+      name += i;
+      hDeltaPhi_[i] = new TH1D(name,"Selected dijet events",15,2,4);
+      hDeltaPhi_[i]->GetXaxis()->SetTitle("#Delta#phi");
+      hDeltaPhi_[i]->GetYaxis()->SetTitle("Number of events");
+      hDeltaPhi_[i]->SetMarkerStyle(markerStyle_[i]);
     }
 
     isInit_ = true;
@@ -503,7 +611,7 @@ void normaliseDistributions(int normSample) {
   for(int i = 0; i < nSamples_; i++) {
     if( i == normSample ) continue;
 
-    for(int k = 0; k < 5; k++) {
+    for(int k = 0; k < 6; k++) {
       TH1D *h0 = hPt_.at(normSample);
       TH1D *h1 = hPt_.at(i);
       if( k == 1 ) {
@@ -518,6 +626,9 @@ void normaliseDistributions(int normSample) {
       } else if( k == 4 ) {
 	h0 = hPhi_.at(normSample);
 	h1 = hPhi_.at(i);
+      } else if( k == 5 ) {
+	h0 = hDeltaPhi_.at(normSample);
+	h1 = hDeltaPhi_.at(i);
       }
 
       double norm = h0->Integral();
@@ -539,4 +650,50 @@ void normaliseDistributions(int normSample) {
     }
   }
   std::cout << "ok\n";
+}
+
+
+void printCutFlow(int normSample) {
+  std::vector<TString> cutLabel(nCuts_);
+  cutLabel[0] = "N jets                 >=  ";
+  cutLabel[1] = "N vtx tracks           >=  ";
+  cutLabel[2] = "Vtx |z|                <   ";
+  cutLabel[3] = "MET/SumEt              <   ";
+  cutLabel[4] = "Pt jet (2)             >   ";
+  cutLabel[5] = "|eta| jet (1,2)        <   ";
+  cutLabel[6] = "|DeltaPhi| jet (1,2)   >   ";
+  cutLabel[7] = "fEMF jet (1,2)         >   ";
+  cutLabel[8] = "n90Hits jet (1,2)      >=  ";
+  cutLabel[9] = "fHPD jet (1,2)         <   ";
+  cutLabel[10] = "fRBX jet (1,2)        <   ";
+
+  std::cout << "\n\n                                 \tData\tMC\n";
+
+  std::vector<int> nEvts = nEvents_;
+  std::cout << "Total                            \t";
+  for(int n = 0; n < nSamples_; n++) {
+    if( n != normSample ) std::cout << "(";
+    std::cout << nEvts[n];
+    if( n != normSample ) std::cout << ")";
+    std::cout << "\t";
+  }
+  std::cout << std::endl;
+  std::cout << "Good luminosity block               \t";
+  for(int n = 0; n < nSamples_; n++) {
+    if( n != normSample ) std::cout << "(";
+    std::cout << (nEvts[n] -= nCutLumiBlock_[n]);
+    if( n != normSample ) std::cout << ")";
+    std::cout << "\t";
+  }
+  std::cout << std::endl;
+  for(int c = 0; c < nCuts_; c++) {
+    std::cout << c << ": " << cutLabel[c] << cutValue_[c] << "   \t" << std::flush;
+    for(int n = 0; n < nSamples_; n++) {
+    if( n != normSample ) std::cout << "(";
+    std::cout << (nEvts[n] -= nCutEvents_[c][n]);
+    if( n != normSample ) std::cout << ")";
+    std::cout << "\t";
+    }
+    std::cout << std::endl;
+  }
 }
