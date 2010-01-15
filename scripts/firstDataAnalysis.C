@@ -1,12 +1,13 @@
-// $Id: firstDataAnalysis.C,v 1.4 2009/12/29 19:05:45 mschrode Exp $
+// $Id: firstDataAnalysis.C,v 1.5 2010/01/07 17:55:27 mschrode Exp $
 //
 // Plot simple distributions of different samples
 // (data, MC,...) from Kalibri ntuples. Meant for
 // first data analysis.
 
-
+#include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <fstream>
 #include <vector>
 
 #include "TCanvas.h"
@@ -14,6 +15,7 @@
 #include "TH1D.h"
 #include "TFile.h"
 #include "TLegend.h"
+#include "TLine.h"
 #include "TRandom3.h"
 #include "TString.h"
 #include "TStyle.h"
@@ -40,6 +42,7 @@ std::vector< std::vector<int> > nCutEvents_; // Number of events rejected by cut
 std::vector<int> nEvents_;
 std::vector<int> nGoodEvents_;
 std::vector<int> nCutLumiBlock_;
+std::vector<unsigned int> runs_;
 
 
 // Distributions after all cuts
@@ -61,7 +64,7 @@ void fillHistos(int events = -1);
 void init(const TString &treeName, int nSamples);
 bool isGoodLumiBlock(int lumiBlockNumber, int runNumber);
 void normaliseDistributions(int normSample);
-void printCutFlow(int normSample);
+void printCutFlow(bool writeLaTex = false);
 
 
 
@@ -71,7 +74,8 @@ void firstDataAnalysis(int nEvts, const TString &sample = "900GeV") {
   TString dir = "/scratch/hh/current/cms/user/mschrode/";
   if( sample == "900GeV" ) {
     TString name = dir;
-    name += "data/MinBias-BeamCommissioning09-Dec14thReReco_v1/MinBias-BeamCommissioning09-900GeV-Dec14thReReco_v1.root";
+    //    name += "data/MinBias-BeamCommissioning09-Dec14thReReco_v1/MinBias-BeamCommissioning09-900GeV-Dec14thReReco_v1.root";
+    name += "data/MinBias-BeamCommissioning09-Dec19thReReco_336p3_v2/MinBias-BeamCommissioning09-900GeV-Dec19thReReco_336p3_v2.root";
     addFile(name,0);
     for(int f = 1; f <= 3; f++) {
       name = dir;
@@ -83,7 +87,8 @@ void firstDataAnalysis(int nEvts, const TString &sample = "900GeV") {
     legendHeader_ = "900 GeV MinBias";
   } else if( sample == "2360GeV" ) {
     TString name = dir;
-    name += "data/MinBias-BeamCommissioning09-Dec14thReReco_v1/MinBias-BeamCommissioning09-2360GeV-Dec14thReReco_v1.root";
+    //    name += "data/MinBias-BeamCommissioning09-Dec14thReReco_v1/MinBias-BeamCommissioning09-2360GeV-Dec14thReReco_v1.root";
+    name += "data/MinBias-BeamCommissioning09-Dec19thReReco_336p3_v2/MinBias-BeamCommissioning09-2360GeV-Dec19thReReco_336p3_v2.root";
     addFile(name,0);
     for(int f = 1; f <= 5; f++) {
       name = dir;
@@ -101,7 +106,7 @@ void firstDataAnalysis(int nEvts, const TString &sample = "900GeV") {
   drawOption_[0] = "PE1";
   draw(0,sample);
 
-  printCutFlow(0);
+  printCutFlow(true);
 }
 
 
@@ -220,6 +225,17 @@ void draw(int normSample, const TString &sampleName) {
 	h->Draw(opt);
 	if( i == nSamples_ - 1 ) {
 	  if( logY[idx] ) canCuts.at(c)->SetLogy(1); 
+	  TLine *line = new TLine(cutValue_[c],0.,
+				  cutValue_[c],1.5*hCuts_[c][1]->GetMaximum());
+	  if( logY[idx] ) {
+	    delete line;
+	    line = new TLine(cutValue_[c],0.1,
+			     cutValue_[c],5*hCuts_[c][1]->GetMaximum());
+	  }
+	  line->SetLineColor(2);
+	  line->SetLineStyle(2);
+	  line->SetLineWidth(2);
+	  line->Draw("same");
 	  leg[idx]->Draw("same");
 	  TString name = "plots/";
 	  name += sampleName;
@@ -296,6 +312,21 @@ void fillHistos(int events) {
 	nEvents_[i]++;
 	bool isGood = true;
 
+	// Run number
+	if( i == 0 ) {
+	  bool isNewRun = true;
+	  for(std::vector<unsigned int>::const_iterator r = runs_.begin();
+	      r != runs_.end(); r++) {
+	    if( runNumber == *r ) {
+	      isNewRun = false;
+	      break;
+	    }
+	  }
+	  if( isNewRun ) {
+	    runs_.push_back(runNumber);
+	  }
+	}
+
 	// Cut on luminosity block
 	if( !isGoodLumiBlock(lumiBlockNumber,runNumber) ) {
 	  nCutLumiBlock_[i]++;
@@ -337,7 +368,7 @@ void fillHistos(int events) {
 
 	// Cut on jet pt
 	hCuts_[4][i]->Fill(jetPt[1]);
-	if( jetPt[1] < cutValue_[4] ) {
+	if( jetCorrL2L3[1]*jetPt[1] < cutValue_[4] ) {
 	  nCutEvents_[4][i]++;
 	  isGood = false;
 	}
@@ -413,6 +444,7 @@ void fillHistos(int events) {
 	}
       } // End of loop over tree entries
     } // End of loop over samples
+    std::sort(runs_.begin(),runs_.end());
     std::cout << "ok\n";
   } else {
     std::cerr << "ERROR: Objects not initialized. Run init() first.\n";
@@ -447,10 +479,10 @@ void init(const TString &treeName, int nSamples) {
     nCuts_ = 11;
     cutValue_ = std::vector<double>(nCuts_);
     cutValue_[0] = 2;     //MinNJets
-    cutValue_[1] = 1;     //MinVtxNTracks
+    cutValue_[1] = 2;     //MinVtxNTracks
     cutValue_[2] = 20.;   //MaxVtxPosZ
     cutValue_[3] = 0.5;   //MaxRelMet
-    cutValue_[4] = 4.;   //MinJetPt
+    cutValue_[4] = 10.;   //MinJetPt
     cutValue_[5] = 3.;    //MaxJetEta
     cutValue_[6] = 2.1;   //MinDeltaPhi
     cutValue_[7] = 0.01;  //MinEMF
@@ -653,13 +685,19 @@ void normaliseDistributions(int normSample) {
 }
 
 
-void printCutFlow(int normSample) {
+void printCutFlow(bool writeLaTex) {
+  std::cout << "\n\nRuns:\n";
+  for(std::vector<unsigned int>::const_iterator r = runs_.begin();
+      r != runs_.end(); r++) {
+    std::cout << *r << std::endl;
+  }
+
   std::vector<TString> cutLabel(nCuts_);
   cutLabel[0] = "N jets                 >=  ";
   cutLabel[1] = "N vtx tracks           >=  ";
   cutLabel[2] = "Vtx |z|                <   ";
   cutLabel[3] = "MET/SumEt              <   ";
-  cutLabel[4] = "Pt jet (2)             >   ";
+  cutLabel[4] = "Corrected pt jet (2)   >   ";
   cutLabel[5] = "|eta| jet (1,2)        <   ";
   cutLabel[6] = "|DeltaPhi| jet (1,2)   >   ";
   cutLabel[7] = "fEMF jet (1,2)         >   ";
@@ -672,28 +710,72 @@ void printCutFlow(int normSample) {
   std::vector<int> nEvts = nEvents_;
   std::cout << "Total                            \t";
   for(int n = 0; n < nSamples_; n++) {
-    if( n != normSample ) std::cout << "(";
     std::cout << nEvts[n];
-    if( n != normSample ) std::cout << ")";
     std::cout << "\t";
   }
   std::cout << std::endl;
   std::cout << "Good luminosity block               \t";
   for(int n = 0; n < nSamples_; n++) {
-    if( n != normSample ) std::cout << "(";
     std::cout << (nEvts[n] -= nCutLumiBlock_[n]);
-    if( n != normSample ) std::cout << ")";
     std::cout << "\t";
   }
   std::cout << std::endl;
   for(int c = 0; c < nCuts_; c++) {
     std::cout << c << ": " << cutLabel[c] << cutValue_[c] << "   \t" << std::flush;
     for(int n = 0; n < nSamples_; n++) {
-    if( n != normSample ) std::cout << "(";
-    std::cout << (nEvts[n] -= nCutEvents_[c][n]);
-    if( n != normSample ) std::cout << ")";
-    std::cout << "\t";
+      std::cout << (nEvts[n] -= nCutEvents_[c][n]);
+      std::cout << "\t";
     }
     std::cout << std::endl;
   }
+
+
+  if( writeLaTex ) {
+    std::cout << "Writing cut flow table to LaTeX file... " << std::flush;
+
+    ofstream file("plots/cutFlowLaTex.txt");
+    nEvts = nEvents_;
+
+    cutLabel[0] = "\\texttt{N jets}                $ >= ";
+    cutLabel[1] = "\\texttt{N vtx tracks}          $ >= ";
+    cutLabel[2] = "\\texttt{Vtx |z|}               $ < ";
+    cutLabel[3] = "\\texttt{MET/SumEt}             $ < ";
+    cutLabel[4] = "\\texttt{Corrected pt jet (2)}  $ > ";
+    cutLabel[5] = "\\texttt{|eta| jet (1,2)}       $ < ";
+    cutLabel[6] = "\\texttt{|DeltaPhi| jet (1,2)}  $ > ";
+    cutLabel[7] = "\\texttt{fEMF jet (1,2)}        $ > ";
+    cutLabel[8] = "\\texttt{n90Hits jet (1,2)}     $ \\geq ";
+    cutLabel[9] = "\\texttt{fHPD jet (1,2)}        $ < ";
+    cutLabel[10] = "\\texttt{fRBX jet (1,2)}       $ < ";
+  
+    file << "\\begin{center}\n";
+    file << "\\begin{tabular}[h]{rl";
+    for(int n = 0; n < nSamples_; n++) {
+      file << "r";
+    }
+    file << "}\n";
+    file << "\\hline\n\\hline\n & Total ";
+    for(int n = 0; n < nSamples_; n++) {
+      file << " & " << nEvts[n];
+    }
+    file << "\\\\ \n \\hline \n";
+    file << " & Good luminosity block";
+    for(int n = 0; n < nSamples_; n++) {
+      file << " & " << (nEvts[n] -= nCutLumiBlock_[n]);
+    }
+    file << "\\\\ \n \\hline \n";
+    for(int c = 0; c < nCuts_; c++) {
+      file << c << " & " << cutLabel[c] << cutValue_[c] << "$ ";
+      for(int n = 0; n < nSamples_; n++) {
+	file << " & " << (nEvts[n] -= nCutEvents_[c][n]);
+      }
+      file << "\\\\ \n";
+    }
+    file << "\\hline\n\\hline\n";
+    file << "\\end{tabular}\n";
+    file << "\\end{center}\n";
+
+    std::cout << "ok\n";
+  }
 }
+
