@@ -1,11 +1,33 @@
+// $Id: $
+
+// ===== Script for dijet analysis from Kalibri ntuples =====
+//
+// This script takes Kalibri ntuples as an input, performes
+// a dijet selection, and plots some quantities of the selected
+// events. The n-1 distributions of the selection are also
+// plotted and a cut flow is printed (optionally into a LaTeX
+// table). The distributions of different samples can be 
+// superimposed (normalized to the first sample) in order to
+// e.g. compare MC with data.
+//
+// Author: Matthias Schroeder
+// Date: So 17 Jan 2010 16:24:25 CET
+
 #include <algorithm>
+#include <cmath>
+#include <fstream>
 #include <iostream>
 #include <vector>
 
 #include "TCanvas.h"
 #include "TChain.h"
 #include "TH1D.h"
+#include "TLegend.h"
+#include "TLine.h"
+#include "TRandom3.h"
 #include "TString.h"
+#include "TStyle.h"
+#include "TVector2.h"
 
 
 
@@ -14,6 +36,8 @@
 
 class Jet;
 class Event;
+class Cut;
+class CutFlow;
 class Sample;
 
 typedef std::vector<Event*> Data;
@@ -169,6 +193,271 @@ Event::~Event() {
 }
 
 
+// ----- Cut -----
+class Cut {
+public:
+  Cut(const TString &sampleName, int idx, const TString &id, const TString &label, bool isEvtCut, double min, double max, bool abs, int nBins, double xMin, double xMax, const TString &xAxisTitle,bool logy = false);
+  Cut(const TString &sampleName, int idx, const TString &id, const TString &label, bool isEvtCut, double val, bool low, bool abs, int nBins, double xMin, double xMax, const TString &xAxisTitle, bool logy = false);
+  ~Cut();
+
+  bool abs() const { return abs_; }
+  bool isEvtCut() const { return isEvtCut_; }
+  bool hasMin() const { return hasMin_; }
+  bool hasMax() const { return hasMax_; }
+  double min() const { return min_; }
+  double max() const { return max_; }
+  int nPassed() const { return nPassed_; }
+  int nRejected() const { return nRejected_; }
+  TString distName() const;
+  bool distLogY() const { return logY_; }
+  TString printLineScreen() const { return printLine(false); }
+  TString printLineLaTeX() const { return printLine(true); }
+
+  TH1D *dist() { return dist_; }
+  bool passes(double val1, double val2 = 0.);
+
+private:
+  const int idx_;
+  const TString id_;
+  const TString label_;
+  const bool isEvtCut_; // Cut on event or on first two jets
+  const double min_;
+  const double max_;
+  const bool abs_;
+  const bool hasMin_;
+  const bool hasMax_;
+  const bool logY_;
+
+  TH1D *dist_;
+  int nPassed_;
+  int nRejected_;
+
+  void init(const TString &sampleName, int nBins, double xMin, double xMax, const TString &xAxisTitle);
+  TString printLine(bool latex) const;
+};
+
+Cut::Cut(const TString &sampleName, int idx, const TString &id, const TString &label, bool isEvtCut, double min, double max, bool abs, int nBins, double xMin, double xMax, const TString &xAxisTitle, bool logy)
+  : idx_(idx), id_(id), label_(label), isEvtCut_(isEvtCut), min_(min), max_(max), abs_(abs), hasMin_ (true), hasMax_(true), logY_(logy) {
+  init(sampleName,nBins,xMin,xMax,xAxisTitle);
+}
+
+Cut::Cut(const TString &sampleName, int idx, const TString &id, const TString &label, bool isEvtCut, double val, bool low, bool abs, int nBins, double xMin, double xMax, const TString &xAxisTitle, bool logy)
+  : idx_(idx), id_(id), label_(label), isEvtCut_(isEvtCut), min_(val), max_(val), abs_(abs), hasMin_ (low), hasMax_(!low), logY_(logy) {
+  init(sampleName,nBins,xMin,xMax,xAxisTitle);
+}
+
+Cut::~Cut() {
+  delete dist_;
+}
+
+bool Cut::passes(double val1, double val2) {
+  bool passes = false;
+  int nVal = 2;
+  if( isEvtCut() ) nVal = 1;
+  for(int i = 0; i < nVal; i++) {
+    double val = val1;
+    if( i == 1 ) val = val2;
+    dist_->Fill(val);
+    if( abs() ) val = std::abs(val);
+
+    if( hasMin() && hasMax() ) {
+      if( val >= min() && val <= max() ) passes = true;
+    } else if( hasMin() ) {
+      if( val >= min() ) passes = true;
+    } else if( hasMax() ) {
+      if( val <= max() ) passes = true;
+    }
+  }
+
+  if( passes ) nPassed_++;
+  else nRejected_++;
+
+  return passes;
+}
+
+TString Cut::distName() const {
+  TString name = "Cut_";
+  name += idx_;
+  name += "_";
+  name += id_;
+  return name;
+}
+
+TString Cut::printLine(bool latex) const {
+  TString line;
+  if( idx_ < 10 ) line += " ";
+  line += idx_;
+  if( latex ) line += " & \\texttt{";
+  else line += ": ";
+  if( abs() ) line += "|";
+  line += label_;
+  if( abs() ) line += "|";
+  if( latex ) line += "}";
+  if( hasMin() ) {
+    char min[20];
+    sprintf(min,"%.2f",min_);
+    if( latex ) line += " $ \\geq ";
+    else line += " >= ";
+    line += min;
+  }
+  if( hasMax() ) {
+    char max[20];
+    sprintf(max,"%.2f",max_);
+    if( latex ) line += " $ \\leq ";
+    else line += " <= ";
+    line += max;
+  }
+  // In case of int remove decimal digits
+  size_t pos = line.First('.');
+  TString end = line(pos+1,line.Length()-1);
+  while( end.Length() > 0 ) {
+    if( end.Chop() != "0" ) break;
+  }
+  if( end.Length() == 0 ) {
+    line = line(0,pos);
+  }
+  if( latex ) line += " $ ";
+  else while( line.Length() < 40 ) line += " ";
+
+  return line;
+}
+
+void Cut::init(const TString &sampleName, int nBins, double xMin, double xMax, const TString &xAxisTitle) {
+  TString name = sampleName;
+  name += ":Cut_";
+  name += idx_;
+  name += "_";
+  name += id_;
+  TString title = "Cut ";
+  title += idx_;
+  title += ": ";
+  title += label_;
+  title += " (n-1 plot)";
+  dist_ = new TH1D(name,title,nBins,xMin,xMax);
+  dist_->SetXTitle(xAxisTitle);
+  if( isEvtCut() ) dist_->SetYTitle("Number of events");
+  else dist_->SetYTitle("Number of jets");
+  dist_->SetMarkerStyle(20);
+  
+  nPassed_ = 0;
+  nRejected_ = 0;
+}
+
+// ----- CutFlow -----
+class CutFlow {
+public:
+  CutFlow(const TString &sampleName);
+  ~CutFlow();
+
+  bool abs(int idx) const { return isValidCutIdx(idx) ? cuts_[idx]->abs() : false; }
+  double min(int idx) const { return isValidCutIdx(idx) ? cuts_[idx]->min() : 0; }
+  double max(int idx) const { return isValidCutIdx(idx) ? cuts_[idx]->max() : 0; }
+  double hasMin(int idx) const { return isValidCutIdx(idx) ? cuts_[idx]->hasMin() : 0; }
+  double hasMax(int idx) const { return isValidCutIdx(idx) ? cuts_[idx]->hasMax() : 0; }
+  int nTotalEvts() const { 
+    return isValidCutIdx(0) ? cuts_[0]->nRejected() + cuts_[0]->nPassed() : 0;
+  }
+  int nPassedEvts() const { 
+    return isValidCutIdx(nCuts()-1) ? cuts_[nCuts()-1]->nPassed() : 0;
+  }
+  int nPassedEvts(int idx) const { 
+    return isValidCutIdx(idx) ? cuts_[idx]->nPassed() : 0;
+  }
+  int nCuts() const { return static_cast<int>(cuts_.size()); }
+  TString distName(int idx) const { return isValidCutIdx(idx) ? cuts_[idx]->distName() : ""; }
+  bool distLogY(int idx) const { return isValidCutIdx(idx) ? cuts_[idx]->distLogY() : false; }
+  double distIntegral(int idx) const { 
+    return isValidCutIdx(idx) ? cuts_[idx]->dist()->Integral() : 0;
+  }
+  TString printLineScreen(int idx) const {
+    return isValidCutIdx(idx) ? cuts_[idx]->printLineScreen() : "";
+  }
+  TString printLineLaTeX(int idx) const {
+    return isValidCutIdx(idx) ? cuts_[idx]->printLineLaTeX() : "";
+  }
+  
+  TH1D *dist(int idx) { return isValidCutIdx(idx) ? cuts_[idx]->dist() : 0; }
+  void normaliseDists(const CutFlow *cutFlow);
+  bool passes(const Event *evt);
+
+private:
+  std::vector<Cut*> cuts_;
+
+  bool isValidCutIdx(int idx) const { return (idx >= 0 && idx < nCuts() ); }
+};
+
+CutFlow::CutFlow(const TString &sampleName) {
+  cuts_.push_back(new Cut(sampleName,0,"NJets","N jets",true,2.,true,false,
+			  30,0.,30.,"Number of jets",true));
+
+  cuts_.push_back(new Cut(sampleName,1,"NVtxTracks","N vtx tracks",true,2.,true,false,
+			  50,0.,50.,"Number of primary vertex tracks"));
+
+  cuts_.push_back(new Cut(sampleName,2,"VtxZPos","Vtx z",true,20.,false,true,
+			  30,-30.,30.,"Primary vertex z (cm)"));
+
+  cuts_.push_back(new Cut(sampleName,3,"RelMET","MET / SumEt",true,0.5,false,false,
+			  50,0.,1.,"MET / sumEt",true));
+
+  cuts_.push_back(new Cut(sampleName,4,"PtJet2","Pt jet (2)",true,4.,true,false,
+			  30,0.,30.,"p^{jet2}_{T} (GeV)",true));
+
+  cuts_.push_back(new Cut(sampleName,5,"Eta","Eta jet (1,2)",false,3.,false,true,
+			  20,-5.2,5.2,"#eta"));
+
+  cuts_.push_back(new Cut(sampleName,6,"DeltaPhi","Delta phi jet (1,2)",true,2.1,true,true,
+			  20,-3.2,3.2,"#Delta#phi(jet1,jet2)"));
+
+  cuts_.push_back(new Cut(sampleName,7,"fEMF","fEMF jet (1,2)",false,0.01,true,false,
+			  20,0.,1.,"f_{EM}"));
+
+  cuts_.push_back(new Cut(sampleName,8,"N90Hits","n90Hits jet (1,2)",false,2,true,false,
+			  20,0.,50.,"n90Hits"));
+
+  cuts_.push_back(new Cut(sampleName,9,"fHPD","fHPDX jet (1,2)",false,0.98,false,false,
+			  20,0.,1.,"f_{HPD}"));
+
+  cuts_.push_back(new Cut(sampleName,10,"fRBX","fRBX jet (1,2)",false,0.98,false,false,
+			  20,0.,1.,"f_{RBX}"));
+
+}
+
+CutFlow::~CutFlow() {
+  for(std::vector<Cut*>::iterator it = cuts_.begin();
+      it != cuts_.end(); it++) {
+    delete *it;
+  }
+  cuts_.clear();
+}
+
+void CutFlow::normaliseDists(const CutFlow *cutFlow) {
+  for(int i = 0; i < nCuts(); i++) {
+    double norm = cutFlow->distIntegral(i);
+    if( distIntegral(i) ) {
+      norm /= distIntegral(i);
+      cuts_[i]->dist()->Scale(norm);
+    }
+  }
+}
+
+bool CutFlow::passes(const Event *evt) {
+  bool passes = true;
+  if( !cuts_[0]->passes( evt->nJets()) ) passes = false;
+  else if( !cuts_[1]->passes(evt->vtxNTracks()) ) passes = false;
+  else if( !cuts_[2]->passes(evt->vtxPosZ()) ) passes = false;
+  else if( !cuts_[3]->passes(evt->met()/evt->sumEt()) ) passes = false;
+  else if( !cuts_[4]->passes(evt->jet(1)->pt()) ) passes = false;
+  else if( !cuts_[5]->passes(evt->jet(0)->eta(),evt->jet(1)->eta()) ) passes = false;
+  else if( !cuts_[6]->passes(TVector2::Phi_mpi_pi(evt->jet(0)->phi()-evt->jet(1)->phi())) ) passes = false;
+  else if( !cuts_[7]->passes(evt->jet(0)->emf(),evt->jet(1)->emf()) ) passes = false;
+  else if( !cuts_[8]->passes(evt->jet(0)->n90Hits(),evt->jet(1)->n90Hits()) ) passes = false;
+  else if( !cuts_[9]->passes(evt->jet(0)->fHPD(),evt->jet(1)->fHPD()) ) passes = false;
+  else if( !cuts_[10]->passes(evt->jet(0)->fRBX(),evt->jet(1)->fRBX()) ) passes = false;
+
+  return passes;
+}
+
+
 // ----- Sample -----
 class Sample {
 public:
@@ -180,9 +469,21 @@ public:
 
   int nDists() const { return static_cast<int>(dists_.size()); }
   TString distName(int idx) const;
-  void normaliseDists(const Sample *sample);
+  bool distLogY(int idx) const { return isValidDistIdx(idx) ? distLogY_[idx] : false; }
+  void normaliseDists(Sample *sample);
   double distIntegral(int idx) const { return isValidDistIdx(idx) ? dists_[idx]->Integral() : 0; }
   TH1D *dist(int idx) const { return isValidDistIdx(idx) ? dists_[idx]: 0; }
+
+  CutFlow *cutFlow() { return cutFlow_; }
+  int nTotalEvts() const { return cutFlow_->nTotalEvts(); }
+  int nPassedEvts() const { return cutFlow_->nPassedEvts(); }
+  int nPassedEvts(int idx) const { return cutFlow_->nPassedEvts(idx); }
+  int nCuts() const { return cutFlow_->nCuts(); }
+  TH1D *cutDist(int idx) { return cutFlow_->dist(idx); }
+  TString cutDistName(int idx) const { return cutFlow_->distName(idx); }
+  bool cutDistLogY(int idx) const { return cutFlow_->distLogY(idx); }
+  TString printCutLineScreen(int idx) const { return cutFlow_->printLineScreen(idx); }
+  TString printCutLineLaTeX(int idx) const { return cutFlow_->printLineLaTeX(idx); }
 
   void addFile(const TString &name);
   void fillDistributions();
@@ -196,8 +497,11 @@ private:
   TChain *chain_;
   Data data_;
   Distributions dists_;
+  std::vector<bool> distLogY_;
   std::vector<unsigned int> runs_;
   TString drawOpt_;
+  CutFlow *cutFlow_;
+  TRandom3 *rand_;
 
   bool isValidDistIdx(int idx) const { return (idx >= 0 && idx < nDists() ); }
 };
@@ -205,17 +509,53 @@ private:
 Sample::Sample(const TString &sampleName,const TString &treeName)
   : name_(sampleName), maxNJet_(50) {
   chain_ = new TChain(treeName);
-  dists_ = Distributions(1);
+  dists_ = Distributions(6);
+  distLogY_ = std::vector<bool>(dists_.size(),false);
 
   TString name = name_;
   name += ":Pt";
   dists_[0] = new TH1D(name,"Selected dijet events",15,0,60);
   dists_[0]->GetXaxis()->SetTitle("p_{T} (GeV)");
   dists_[0]->GetYaxis()->SetTitle("Number of jets");
+  distLogY_[0] = true;
+
+  name = name_;
+  name += ":PtCorr";
+  dists_[1] = new TH1D(name,"Selected dijet events",15,0,60);
+  dists_[1]->GetXaxis()->SetTitle("Corrected p_{T} (GeV)");
+  dists_[1]->GetYaxis()->SetTitle("Number of jets");
+  distLogY_[1] = true;
+
+  name = name_;
+  name += ":PtAsym";
+  dists_[2] = new TH1D(name,"Selected dijet events",15,-1.5,1.5);
+  dists_[2]->GetXaxis()->SetTitle("p_{T} asymmetry");
+  dists_[2]->GetYaxis()->SetTitle("Number of events");
+
+  name = name_;
+  name += ":Phi";
+  dists_[3] = new TH1D(name,"Selected dijet events",15,-3.,3.);
+  dists_[3]->GetXaxis()->SetTitle("#phi");
+  dists_[3]->GetYaxis()->SetTitle("Number of jets");
+
+  name = name_;
+  name += ":DeltaPhi";
+  dists_[4] = new TH1D(name,"Selected dijet events",15,2.,4.);
+  dists_[4]->GetXaxis()->SetTitle("#Delta#phi");
+  dists_[4]->GetYaxis()->SetTitle("Number of events");
+
+  name = name_;
+  name += ":Eta";
+  dists_[5] = new TH1D(name,"Selected dijet events",15,-5,5);
+  dists_[5]->GetXaxis()->SetTitle("#eta");
+  dists_[5]->GetYaxis()->SetTitle("Number of jets");
 
   for(int d = 0; d < nDists(); d++) {
     dists_[d]->SetMarkerStyle(20);
   }
+
+  cutFlow_ = new CutFlow(name_);
+  rand_ = new TRandom3(0);
 }
 
 Sample::~Sample() {
@@ -229,6 +569,8 @@ Sample::~Sample() {
   }
   dists_.clear();
   runs_.clear();
+  delete cutFlow_;
+  delete rand_;
 }
 
 TString Sample::distName(int idx) const {
@@ -259,25 +601,27 @@ void Sample::fillDistributions() {
   for(DataIt it = data_.begin(); it != data_.end(); it++) {
     Event *evt = *it;
 
+    double diff = evt->jet(0)->pt() - evt->jet(1)->pt();
+    if( rand_->Uniform() > 0.5 ) diff = evt->jet(1)->pt() - evt->jet(0)->pt();
+    dists_[2]->Fill(diff/(evt->jet(0)->pt() + evt->jet(1)->pt()));
+
+    double deltaPhi = TVector2::Phi_mpi_pi(evt->jet(0)->phi() - evt->jet(1)->phi());
+    if( deltaPhi < 0 ) deltaPhi += 2*M_PI;
+    dists_[4]->Fill(deltaPhi);
+
     // Loop over two jets leading in pt
     for(int j = 0; j < 2; j++) {
       dists_[0]->Fill(evt->jet(j)->pt());
-// 	hPtCorr_[i]->Fill(jetCorrL2L3[j]*jetPt[j]);
-// 	hEta_[i]->Fill(jetEta[j]);
-// 	hPhi_[i]->Fill(jetPhi[j]);
+      dists_[1]->Fill(evt->jet(j)->corrL2L3Pt());
+      dists_[3]->Fill(evt->jet(j)->phi());
+      dists_[5]->Fill(evt->jet(j)->eta());
     } // End of loop over dijets
   } // End of loop over data
 
-      // Fill distributions of selected events
-//       double diff = jetPt[0]-jetPt[1];
-//       if( rand_->Uniform() > 0.5 ) diff = jetPt[1]-jetPt[0];
-//       hPtAsym_[i]->Fill(diff/(jetPt[0]+jetPt[1]));
-//       if( deltaPhi < 0 ) deltaPhi += 2*M_PI;
-//       hDeltaPhi_[i]->Fill(deltaPhi);
   std::cout << "ok" << std::endl;
 }
 
-void Sample::normaliseDists(const Sample *sample) {
+void Sample::normaliseDists(Sample *sample) {
   for(int i = 0; i < nDists(); i++) {
     double norm = sample->distIntegral(i);
     if( distIntegral(i) ) {
@@ -285,6 +629,7 @@ void Sample::normaliseDists(const Sample *sample) {
       dists_[i]->Scale(norm);
     }
   }
+  cutFlow_->normaliseDists(sample->cutFlow());
 }
 
 void Sample::readData(int nMaxEvts) {
@@ -331,6 +676,7 @@ void Sample::readData(int nMaxEvts) {
     chain_->SetBranchAddress("JetCorrL2L3",jetCorrL2L3);
   
     // Loop over tree entries
+    int dummy = 0;
     int nEntries = chain_->GetEntries();
     if( nMaxEvts > 0 && nEntries > nMaxEvts ) nEntries = nMaxEvts;
     for(int n = 0; n < nEntries; n++) {
@@ -341,7 +687,7 @@ void Sample::readData(int nMaxEvts) {
 	continue;
       }
 
-      if( nObjJet < 2 ) continue;
+      //      if( nObjJet < 2 ) continue;
 
       // Create event
       std::vector<Jet*> jets(nObjJet);
@@ -350,7 +696,10 @@ void Sample::readData(int nMaxEvts) {
 			  jetFHPD[i],jetFRBX[i],jetCorrL2L3[i]);
       }
       Event *evt = new Event(runNumber,lumiBlockNumber,vtxNTracks,vtxPosZ,sumEt,met,jets);
-      data_.push_back(evt);
+      dummy++;
+      if( cutFlow_->passes(evt) ) {
+	data_.push_back(evt);
+      }
 
       // Run number
       bool isNewRun = true;
@@ -366,7 +715,7 @@ void Sample::readData(int nMaxEvts) {
       }
     } // End of loop over tree entries
     std::sort(runs_.begin(),runs_.end());
-    std::cout << "ok\n";
+    std::cout << dummy << "ok\n";
 }
 
 
@@ -375,33 +724,216 @@ void Sample::readData(int nMaxEvts) {
 // ===== Main script =====
 // =======================
 
-void draw(std::vector<Sample*> samples, const TString &prefix) {
-  std::cout << "Drawing distributions... " << std::flush;
-  // Normalize distributions to sample 0
-  for(size_t i = 1; i < samples.size(); i++) {
-    samples[i]->normaliseDists(samples[0]);
-  }
+void draw(std::vector<Sample*> samples, const TString &label, const TString &prefix) {
+  if( samples.size() > 0 ) {
+    std::cout << "Drawing distributions... " << std::flush;
+    gStyle->SetOptStat(0);
 
-  // Draw and save distributions
-  for(int d = 0; d < samples[0]->nDists(); d++) {
-    std::cout << d << " " << std::flush;
-    TString canName = "can";
-    canName += samples[0]->distName(d);
-    TCanvas *can = new TCanvas(canName,samples[0]->distName(d),500,500);
-    can->cd();
-    for(size_t s = 0; s < samples.size(); s++) {
-      TString opt = samples[s]->drawOptions();
-      if( s > 0 ) opt += "same";
-      TH1D *h = samples[s]->dist(d);
-      if( h ) h->Draw(opt);
+    // Normalize distributions to sample 0
+    for(size_t i = 1; i < samples.size(); i++) {
+      samples[i]->normaliseDists(samples[0]);
     }
-    TString fileName = prefix;
-    fileName += "_";
-    fileName += samples[0]->distName(d);
-    fileName += ".eps";
-    can->SaveAs(fileName,"eps");
+
+    // Draw and save cut flow distributions
+    for(int d = 0; d < samples[0]->nCuts(); d++) {
+      TString canName = "can";
+      canName += samples[0]->cutDistName(d);
+      TCanvas *can = new TCanvas(canName,samples[0]->cutDistName(d),500,500);
+      can->cd();
+
+      TLegend *leg = new TLegend(0.5,0.85-samples.size()*0.08,0.93,0.85);
+      leg->SetBorderSize(0);
+      leg->SetFillColor(10);
+      leg->SetTextFont(42);
+      leg->SetHeader(label);
+
+      std::vector<TLine*> lines;
+
+      for(size_t s = 0; s < samples.size(); s++) {
+	TString opt = samples[s]->drawOptions();
+	if( s > 0 ) opt += "same";
+	TH1D *h = samples[s]->cutDist(d);
+	if( h ) h->Draw(opt);
+	if( s == 0 ) {
+	  char text[50];
+      	  sprintf(text,"%s: %i entries",samples[s]->name().Data(),static_cast<int>(h->GetEntries()));
+	  leg->AddEntry(h,text,"PL");
+
+	  double min = 0.;
+	  double max = 2.*h->GetMaximum();
+	  if( samples[s]->cutDistLogY(d) ) {
+	    min = 0.1;
+	    max *= 2.5;
+	  }
+	  h->GetYaxis()->SetRangeUser(min,max);
+
+	  if( samples[0]->cutFlow()->hasMin(d) ) {
+	    lines.push_back(new TLine(samples[0]->cutFlow()->min(d),min,
+				      samples[0]->cutFlow()->min(d),max));
+	    if( samples[0]->cutFlow()->abs(d) ) {
+	      lines.push_back(new TLine(-samples[0]->cutFlow()->min(d),min,
+					-samples[0]->cutFlow()->min(d),max));
+	    }
+	  }
+	  if( samples[0]->cutFlow()->hasMax(d) ) {
+	    lines.push_back(new TLine(samples[0]->cutFlow()->max(d),min,
+				      samples[0]->cutFlow()->max(d),max));
+	    if( samples[0]->cutFlow()->abs(d) ) {
+	      lines.push_back(new TLine(-samples[0]->cutFlow()->max(d),min,
+					-samples[0]->cutFlow()->max(d),max));
+	    }
+	  }
+	} else {
+	  char text[50];
+      	  sprintf(text,"%s: normalized",samples[s]->name().Data());
+	  leg->AddEntry(h,"MC: normalized","L");
+	}
+      }
+      leg->Draw("same");
+      if( samples[0]->cutDistLogY(d) ) can->SetLogy();
+
+      for(std::vector<TLine*>::iterator it = lines.begin();
+	  it != lines.end(); it++) {
+	(*it)->SetLineWidth(2);
+	(*it)->SetLineColor(2);
+	(*it)->SetLineStyle(2);
+	(*it)->Draw("same");
+      }
+
+      TString fileName = prefix;
+      fileName += "_";
+      fileName += samples[0]->cutDistName(d);
+      fileName += ".eps";
+      can->SaveAs(fileName,"eps");
+    }
+
+    // Draw and save distributions
+    for(int d = 0; d < samples[0]->nDists(); d++) {
+      TString canName = "can";
+      canName += samples[0]->distName(d);
+      TCanvas *can = new TCanvas(canName,samples[0]->distName(d),500,500);
+      can->cd();
+
+      TLegend *leg = new TLegend(0.5,0.85-samples.size()*0.08,0.93,0.85);
+      leg->SetBorderSize(0);
+      leg->SetFillColor(0);
+      leg->SetTextFont(42);
+      leg->SetHeader(label);
+
+      for(size_t s = 0; s < samples.size(); s++) {
+	TString opt = samples[s]->drawOptions();
+	if( s > 0 ) opt += "same";
+	TH1D *h = samples[s]->dist(d);
+	if( h ) h->Draw(opt);
+	if( s == 0 ) {
+	  char text[50];
+      	  sprintf(text,"%s: %i entries",samples[s]->name().Data(),static_cast<int>(h->GetEntries()));
+	  leg->AddEntry(h,text,"PL");
+
+	  double max = h->GetMaximum();
+	  h->GetYaxis()->SetRangeUser(0.,2.*max);
+	  if( samples[s]->distLogY(d) ) {
+	    h->GetYaxis()->SetRangeUser(0.1,5*h->GetMaximum());
+	  }
+	} else {
+	  char text[50];
+      	  sprintf(text,"%s: normalized",samples[s]->name().Data());
+	  leg->AddEntry(h,"MC: normalized","L");
+	}
+      }
+      leg->Draw("same");
+      if( samples[0]->distLogY(d) ) can->SetLogy();
+
+      TString fileName = prefix;
+      fileName += "_";
+      fileName += samples[0]->distName(d);
+      fileName += ".eps";
+      can->SaveAs(fileName,"eps");
+    }
+    std::cout << "ok" << std::endl;
   }
-  std::cout << "ok" << std::endl;
+}
+
+void printCutFlow(const std::vector<Sample*> samples) {
+  if( samples.size() > 0 ) {
+    std::cout << "\n\n";
+
+    TString line;
+    while( line.Length() < 40 ) line += " ";
+    std::cout << line << std::flush;
+    for(size_t s = 0; s < samples.size(); s++) {
+      line = samples[s]->name();
+      while( line.Length() < 12 ) line += " ";
+      std::cout << line << std::flush;
+    }
+    std::cout << std::endl;
+
+    line = "Total";
+    while( line.Length() < 40 ) line += " ";
+    std::cout << line << std::flush;
+    for(size_t s = 0; s < samples.size(); s++) {
+      line = "";
+      line += samples[s]->nTotalEvts();
+      while( line.Length() < 12 ) line += " ";
+      std::cout << line << std::flush;
+    }
+    std::cout << std::endl;
+
+    for(int c = 0; c < samples[0]->nCuts(); c++) {
+      line = samples[0]->printCutLineScreen(c);
+      std::cout << line << std::flush;
+      for(size_t s = 0; s < samples.size(); s++) {
+	line = "";
+	line += samples[s]->nPassedEvts(c);
+	while( line.Length() < 12 ) line += " ";
+	std::cout << line << std::flush;
+      }
+      std::cout << std::endl;
+    }
+    std::cout << std::endl;
+  }
+}
+
+void writeCutFlowLaTeX(const std::vector<Sample*> samples, const TString &prefix) {
+  if( samples.size() > 0 ) {
+    TString name = prefix;
+    name += "_CutFlowLaTeX";
+    std::cout << "Writing cut flow table to LaTeX file '" << name << "'... " << std::flush;
+    ofstream file(name);
+
+    file << "\\begin{center}\n";
+    file << "\\begin{tabular}[h]{rl";
+    for(size_t s = 0; s < samples.size(); s++) {
+      file << "r";
+    }
+    file << "}\n";
+    file << " \\\\hline\n\\hline\n";
+
+    file << " & Cut";
+    for(size_t s = 0; s < samples.size(); s++) {
+      file << " & " << samples[s]->name();
+    }
+    file << " \\\\\n\\hline\\hline\n";
+
+    file << " & Total";
+    for(size_t s = 0; s < samples.size(); s++) {
+      file << " & " << samples[s]->nTotalEvts();
+    }
+    file << " \\\\\n\\hline\n";
+
+    for(int c = 0; c < samples[0]->nCuts(); c++) {
+      file << samples[0]->printCutLineLaTeX(c);
+      for(size_t s = 0; s < samples.size(); s++) {
+	file << " & " << samples[s]->nPassedEvts(c);
+      }
+      file << " \\\\\n";
+    }
+    file << "\\hline\\hline\n";
+    file << "\\end{tabular}\n";
+    file << "\\end{center}\n";
+    
+    std::cout << "ok" << std::endl;
+  }
 }
 
 void run() {
@@ -411,16 +943,22 @@ void run() {
   // The data sample
   samples[0] = new Sample("Data","DiJetTree");
   samples[0]->addFile("/Users/matthias/CMS/MinBias-BeamCommissioning09-2360GeV-Dec19thReReco_336p3_v2.root");
-  samples[0]->setDrawOptions("P");
+  samples[0]->setDrawOptions("PE1");
 
   // The MC sample
   samples[1] = new Sample("MC","DiJetTree");
-  samples[1]->addFile("/Users/matthias/CMS/MinBias-BeamCommissioning09-2360GeV-Dec19thReReco_336p3_v2.root");
+  samples[1]->addFile("/Users/matthias/CMS/test.root");
 
   for(int s = 0; s < nSamples; s++) {
     samples[s]->readData();
     samples[s]->fillDistributions();
   }
 
-  draw(samples,"plots/test");
+  draw(samples,"900 GeV MinBias","plots/test");
+  printCutFlow(samples);
+  writeCutFlowLaTeX(samples,"plots/test");
+}
+
+void firstDataAnalysis() {
+  run();
 }
