@@ -1,4 +1,4 @@
-// $Id: firstDataAnalysis.C,v 1.8 2010/01/17 15:21:41 mschrode Exp $
+// $Id: firstDataAnalysis.C,v 1.9 2010/01/18 10:52:56 mschrode Exp $
 
 // ===== Script for dijet analysis from Kalibri ntuples =====
 //
@@ -697,7 +697,6 @@ void Sample::readData(int nMaxEvts) {
 			  jetFHPD[i],jetFRBX[i],jetCorrL2L3[i]);
       }
       Event *evt = new Event(runNumber,lumiBlockNumber,vtxNTracks,vtxPosZ,sumEt,met,jets);
-      dummy++;
       if( cutFlow_->passes(evt) ) {
 	data_.push_back(evt);
       }
@@ -716,6 +715,13 @@ void Sample::readData(int nMaxEvts) {
       }
     } // End of loop over tree entries
     std::sort(runs_.begin(),runs_.end());
+    std::cout << "ok" << std::endl;
+
+    std::cout << " Covered runs:\n";
+    for(std::vector<unsigned int>::const_iterator r = runs_.begin();
+	r != runs_.end(); r++) {
+      std::cout << "  " << *r << std::endl;
+    }
 }
 
 
@@ -907,7 +913,7 @@ void writeCutFlowLaTeX(const std::vector<Sample*> samples, const TString &prefix
       file << "r";
     }
     file << "}\n";
-    file << " \\\\hline\n\\hline\n";
+    file << " \\hline\n\\hline\n";
 
     file << " & Cut";
     for(size_t s = 0; s < samples.size(); s++) {
@@ -942,25 +948,30 @@ void run(int nMax = -1) {
 
   // The data sample
   samples[0] = new Sample("Data","DiJetTree");
-  samples[0]->addFile("/afs/naf.desy.de/user/m/mschrode/lustre/data/MinBias-BeamCommissioning09-Dec14thReReco_v1/MinBias-BeamCommissioning09-2360GeV-Dec14thReReco_v1.root");
+  //samples[0]->addFile("/afs/naf.desy.de/user/m/mschrode/lustre/data/MinBias-BeamCommissioning09-Dec19thReReco_336p3_v2/MinBias-BeamCommissioning09-900GeV-Dec19thReReco_336p3_v2.root");
+  samples[0]->addFile("/afs/naf.desy.de/user/m/mschrode/lustre/data/MinBias-BeamCommissioning09-Dec19thReReco_336p3_v2/MinBias-BeamCommissioning09-2360GeV-Dec19thReReco_336p3_v2.root");
   samples[0]->setDrawOptions("PE1");
 
   // The MC sample
+  //  TString mcFileBase = "/afs/naf.desy.de/user/m/mschrode/lustre/mc/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1__";
+  TString mcFileBase = "/afs/naf.desy.de/user/m/mschrode/lustre/mc/MinBias-Summer09-STARTUP3X_V8L_2360GeV-v1/MinBias-Summer09-STARTUP3X_V8L_2360GeV-v1__";
+  //  TString mcFileBase = "/afs/naf.desy.de/user/m/mschrode/lustre/mc/MinBias-Summer09-STARTUP3X_V8I_900GeV-v2/MinBias-Summer09-STARTUP3X_V8I_900GeV-v2__";
   samples[1] = new Sample("MC","DiJetTree");
-  samples[1]->addFile("/afs/naf.desy.de/user/m/mschrode/lustre/mc/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1__1.root");
-  samples[1]->addFile("/afs/naf.desy.de/user/m/mschrode/lustre/mc/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1__2.root");
-  samples[1]->addFile("/afs/naf.desy.de/user/m/mschrode/lustre/mc/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1__3.root");
-  samples[1]->addFile("/afs/naf.desy.de/user/m/mschrode/lustre/mc/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1__4.root");
-  samples[1]->addFile("/afs/naf.desy.de/user/m/mschrode/lustre/mc/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1__5.root");
+  for(int i = 1; i <=3; i++) {
+    TString mcFileName = mcFileBase;
+    mcFileName += i;
+    mcFileName += ".root";
+    samples[1]->addFile(mcFileName);
+  }
 
   for(int s = 0; s < nSamples; s++) {
     samples[s]->readData(nMax);
     samples[s]->fillDistributions();
   }
 
-  draw(samples,"2360 GeV MinBias","plots/2360GeV");
+  draw(samples,"900 GeV MinBias","plots/900GeV");
   printCutFlow(samples);
-  writeCutFlowLaTeX(samples,"plots/2360GeV");
+  writeCutFlowLaTeX(samples,"plots/900GeV");
 }
 
 void firstDataAnalysis() {
