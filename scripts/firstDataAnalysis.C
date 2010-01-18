@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: firstDataAnalysis.C,v 1.8 2010/01/17 15:21:41 mschrode Exp $
 
 // ===== Script for dijet analysis from Kalibri ntuples =====
 //
@@ -251,22 +251,24 @@ Cut::~Cut() {
 }
 
 bool Cut::passes(double val1, double val2) {
-  bool passes = false;
+  bool passes = true;
   int nVal = 2;
   if( isEvtCut() ) nVal = 1;
   for(int i = 0; i < nVal; i++) {
+    bool iPass = false;
     double val = val1;
     if( i == 1 ) val = val2;
     dist_->Fill(val);
     if( abs() ) val = std::abs(val);
 
     if( hasMin() && hasMax() ) {
-      if( val >= min() && val <= max() ) passes = true;
+      if( val >= min() && val <= max() ) iPass = true;
     } else if( hasMin() ) {
-      if( val >= min() ) passes = true;
+      if( val >= min() ) iPass = true;
     } else if( hasMax() ) {
-      if( val <= max() ) passes = true;
+      if( val <= max() ) iPass = true;
     }
+    passes = passes && iPass;
   }
 
   if( passes ) nPassed_++;
@@ -676,7 +678,6 @@ void Sample::readData(int nMaxEvts) {
     chain_->SetBranchAddress("JetCorrL2L3",jetCorrL2L3);
   
     // Loop over tree entries
-    int dummy = 0;
     int nEntries = chain_->GetEntries();
     if( nMaxEvts > 0 && nEntries > nMaxEvts ) nEntries = nMaxEvts;
     for(int n = 0; n < nEntries; n++) {
@@ -715,7 +716,6 @@ void Sample::readData(int nMaxEvts) {
       }
     } // End of loop over tree entries
     std::sort(runs_.begin(),runs_.end());
-    std::cout << dummy << "ok\n";
 }
 
 
@@ -936,27 +936,31 @@ void writeCutFlowLaTeX(const std::vector<Sample*> samples, const TString &prefix
   }
 }
 
-void run() {
+void run(int nMax = -1) {
   int nSamples = 2;
   std::vector<Sample*> samples(nSamples);
 
   // The data sample
   samples[0] = new Sample("Data","DiJetTree");
-  samples[0]->addFile("/Users/matthias/CMS/MinBias-BeamCommissioning09-2360GeV-Dec19thReReco_336p3_v2.root");
+  samples[0]->addFile("/afs/naf.desy.de/user/m/mschrode/lustre/data/MinBias-BeamCommissioning09-Dec14thReReco_v1/MinBias-BeamCommissioning09-2360GeV-Dec14thReReco_v1.root");
   samples[0]->setDrawOptions("PE1");
 
   // The MC sample
   samples[1] = new Sample("MC","DiJetTree");
-  samples[1]->addFile("/Users/matthias/CMS/test.root");
+  samples[1]->addFile("/afs/naf.desy.de/user/m/mschrode/lustre/mc/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1__1.root");
+  samples[1]->addFile("/afs/naf.desy.de/user/m/mschrode/lustre/mc/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1__2.root");
+  samples[1]->addFile("/afs/naf.desy.de/user/m/mschrode/lustre/mc/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1__3.root");
+  samples[1]->addFile("/afs/naf.desy.de/user/m/mschrode/lustre/mc/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1__4.root");
+  samples[1]->addFile("/afs/naf.desy.de/user/m/mschrode/lustre/mc/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1/MinBias-Summer09-DESIGN_3X_V8A_2360GeV-v1__5.root");
 
   for(int s = 0; s < nSamples; s++) {
-    samples[s]->readData();
+    samples[s]->readData(nMax);
     samples[s]->fillDistributions();
   }
 
-  draw(samples,"900 GeV MinBias","plots/test");
+  draw(samples,"2360 GeV MinBias","plots/2360GeV");
   printCutFlow(samples);
-  writeCutFlowLaTeX(samples,"plots/test");
+  writeCutFlowLaTeX(samples,"plots/2360GeV");
 }
 
 void firstDataAnalysis() {
