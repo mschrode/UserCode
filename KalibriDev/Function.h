@@ -2,10 +2,12 @@
 //    Class representing a correction function
 //
 //    first version: Hartmut Stadie 2008/12/14
-//    $Id: Function.h,v 1.4 2009/11/24 16:52:59 stadie Exp $
+//    $Id: Function.h,v 1.2 2010/01/21 16:48:54 mschrode Exp $
 //   
 #ifndef FUNCTION_H
 #define FUNCTION_H
+
+#include <vector>
  
 class Measurement;
 class Parametrization;
