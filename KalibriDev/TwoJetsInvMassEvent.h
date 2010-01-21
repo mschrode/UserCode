@@ -3,7 +3,7 @@
 //
 //    first version: Hartmut Stadie 2008/12/14
 //
-//    $Id: TwoJetsInvMassEvent.h,v 1.8 2009/10/30 08:14:24 mschrode Exp $
+//    $Id: TwoJetsInvMassEvent.h,v 1.9 2009/11/24 16:52:59 stadie Exp $
 //   
 
 #ifndef TWOJETSINVMASSEVENT_H
@@ -14,23 +14,23 @@
 #include "Jet.h"
 
 //interface to Data
-class TwoJetsInvMassEvent : public TData
+class TwoJetsInvMassEvent : public Event
 {
 public:
   TwoJetsInvMassEvent(Jet *j1, Jet *j2, double t, double w, double* p) 
     : jet1(j1), jet2(j2),truth(t),weight(w),flagged_bad(false),chi2plots(1000.),par(p) {}
   ~TwoJetsInvMassEvent() { delete jet1; delete jet2;}
 
-  //interface from TData
-  TMeasurement *GetMess() const {return jet1;}
+  //interface from Event
+  Measurement *GetMess() const {return jet1;}
   double GetTruth() const { return truth;}
   double GetParametrizedMess() const { return jet1->correctedEt(jet1->Et());}
   
-  TMeasurement *GetMess2() const {return jet2;}
+  Measurement *GetMess2() const {return jet2;}
   double GetParametrizedMess2() const { return jet2->correctedEt(jet2->Et());}
 
-  TJet *GetJet1() const {return jet1;}
-  TJet *GetJet2() const {return jet2;}
+  Jet *GetJet1() const {return jet1;}
+  Jet *GetJet2() const {return jet2;}
 
   void ChangeParAddress(double* oldpar, double* newpar) {
     par = newpar;

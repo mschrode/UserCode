@@ -1,4 +1,4 @@
-//  $Id: caliber.h,v 1.50 2009/08/07 12:20:50 mschrode Exp $
+//  $Id: Kalibri.h,v 1.3 2010/01/04 17:04:51 mschrode Exp $
 
 //!  \mainpage
 //!
@@ -35,7 +35,7 @@
 //!
 //!  \section label_sec_geninfo General information about and results of the calibration method
 //!
-//!  - J. Naumann-Emme:
+//!  - S. Naumann-Emme:
 //!    <A HREF="http://indico.cern.ch/conferenceDisplay.py?confId=65022">
 //!    JEC from top using "Kalibri" method</A>,
 //!    CMS Jet Energy Corrections Meeting, 24th July, 2009
@@ -123,9 +123,9 @@
 #include <string>
 
 class TParameters;
-class TControlPlots;
-class TData;
-class TMeasurement;
+class Controlplots;
+class Event;
+class Measurement;
 
 
 //!  \brief Main program
@@ -134,16 +134,16 @@ class TMeasurement;
 //!         wget http://sam.zoy.org/writings/programming/gprof-helper.c
 //!         gcc -shared -fPIC gprof-helper.c -o gprof-helper.so -lpthread -ldl 
 //!         LD_PRELOAD=./gprof-helper.so ./junk
-//!  \author Christian Autermann
+//!  \authors Christian Autermann, Hartmut Stadie, Matthias Schroeder
 //!  \date Wed Jul 18 13:54:50 CEST 2007
-//!  $Id: caliber.h,v 1.50 2009/08/07 12:20:50 mschrode Exp $
+//!  $Id: Kalibri.h,v 1.3 2010/01/04 17:04:51 mschrode Exp $
 // -----------------------------------------------------------------
-class TCaliber {
+class Kalibri {
 public :
   //!  \brief Constructor
   //!  \param f Name of the configuration file
   // -----------------------------------------------------------------
-  TCaliber(const std::string& f)
+  Kalibri(const std::string& f)
   : configFile_(f),
   par_(0),
   fitMethod_(1),
@@ -160,10 +160,11 @@ public :
   nIter_(100),
   eps_(1e-02),
   wlf1_(1e-04),
-  wlf2_(0.9)
+  wlf2_(0.9),
+  calcCov_(false)
   {};
 
-  ~TCaliber(){};
+  ~Kalibri(){};
 
   void init();   //!< Read parameters from configfile, read data
   void run();    //!< Run the fit
@@ -181,7 +182,7 @@ private:
   TParameters * par_;         //!< Fit parameters, depend on number of bins & geometry
   int fitMethod_;             //!< Running mode
   int nThreads_;              //!< Number of threads
-  std::vector<TData*> data_;  //!< The data
+  std::vector<Event*> data_;  //!< The data
   int nGammajetEvents_;       //!< Number of gamma-jet events
   int nDijetEvents_;          //!< Number of dijet events
   int nTrijetEvents_;         //!< Number of trijet events
@@ -204,6 +205,7 @@ private:
   float eps_;               //!< Convergence parameter in LVMINI
   float wlf1_;              //!< Parameter 1 of strong Wolfe condition in LVMINI
   float wlf2_;              //!< Parameter 2 of strong Wolfe condition in LVMINI
+  bool calcCov_;            //!< If true, calculate covariance matrix of fitted parameters
 };
 
 #endif

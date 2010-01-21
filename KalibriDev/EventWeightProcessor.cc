@@ -58,11 +58,11 @@ EventWeightProcessor::~EventWeightProcessor() {
 //!  \param data The data
 //!  \return Number of weighted events
 // -----------------------------------------------------------------
-int EventWeightProcessor::process(std::vector<TData*>& data) {
+int EventWeightProcessor::process(std::vector<Event*>& data) {
   int nProcEvts = 0; // Number of processed events
 
   if( weightEvents_ ) {
-    std::vector<TData*>::iterator evt = data.begin();
+    std::vector<Event*>::iterator evt = data.begin();
     for(; evt != data.end(); evt++) {
       if( (*evt)->GetType() == ParLimit ) continue;
 

@@ -1,19 +1,21 @@
 //
-//    Base class for all event readers
+// $Id: EventReader.cc,v 1.6 2010/01/08 18:23:28 mschrode Exp $
 //
-//    first version: Hartmut Stadie 2008/12/12
-//    $Id: EventReader.cc,v 1.2 2009/10/26 20:56:29 mschrode Exp $
-//   
 #include "EventReader.h"
 
 #include "ConfigFile.h"
 #include "Parameters.h" 
+#include "CorFactorsFactory.h"
+#include "TChain.h"
+#include "ToyMC.h"
+#include "TTree.h"
 
+#include <dlfcn.h>
 
 unsigned int EventReader::numberOfEventReaders_ = 0;
 
 EventReader::EventReader(const std::string& configfile, TParameters* param) 
-  : config_(0),par_(param)
+  : config_(0),par_(param),corFactorsFactory_(0)
 {
   numberOfEventReaders_++;
 
@@ -24,8 +26,8 @@ EventReader::EventReader(const std::string& configfile, TParameters* param)
 
   // Print info on track usage only once for all readers
   if( numberOfEventReaders_ == 1 ) {
-    if(useTracks_) cout<<"Tracks are used to calibrate jets"<<endl;
-    else cout<<"Only Calorimeter information is used"<<endl;
+    if(useTracks_)  std::cout<<"Tracks are used to calibrate jets"<< std::endl;
+    else std::cout<<"Only Calorimeter information is used"<< std::endl;
   }
   
   //Error Parametrization...
@@ -48,7 +50,7 @@ EventReader::EventReader(const std::string& configfile, TParameters* param)
   else  
     tower_error_param = par_->tower_error_parametrization;
   //...for jets:
-  string je = config_->read<string>("jet error parametrization","standard");
+   std::string je = config_->read<string>("jet error parametrization","standard");
   if (je=="standard")
     jet_error_param   = par_->jet_error_parametrization;
   else if (je=="fast")
@@ -65,9 +67,100 @@ EventReader::EventReader(const std::string& configfile, TParameters* param)
     jet_error_param   = par_->jet_only_jet_error_parametrization_energy;
   else  
     jet_error_param   = par_->jet_error_parametrization;
+
+  std::string jcs = config_->read<string>("jet correction source","");
+  std::string jcn = config_->read<string>("jet correction name","");
+  
+  if(jcs != "") {
+    std::string libname = "lib/lib"+jcs+".so";
+    void *hndl = dlopen(libname.c_str(), RTLD_NOW);
+    if(hndl == NULL){
+      std::cerr << "failed to load plugin: " << dlerror() << std::endl;
+      exit(-1);
+    }
+  }
+  corFactorsFactory_ = CorFactorsFactory::map[jcn];
+
+  correctToL3_ = config_->read<bool>("correct jets to L3",false);
 }
 
 EventReader::~EventReader()
 {
   delete config_;
 }
+
+
+
+TTree * EventReader::createTree(const std::string &dataType) const {
+  std::string readerName;
+  std::string treeName;
+  std::vector<std::string> inputFileNames;
+  int nEvts = 0;
+  if( dataType == "dijet" ) {
+    readerName = "DiJetReader";
+    treeName = config_->read<string>("Di-Jet tree","CalibTree");
+    inputFileNames = bag_of_string(config_->read<std::string>("Di-Jet input file","input/dijet.root"));  
+    nEvts = config_->read<int>("use Di-Jet events",-1);
+  }
+
+  int inputMode = -1;
+  if( inputFileNames[0] == "toy" ) {
+    inputMode = 0;
+  } else {
+    std::string fileEnding = "";
+    if( inputFileNames[0].size() > 5 ) {
+      fileEnding = inputFileNames[0].substr(inputFileNames[0].size()-5,inputFileNames[0].size());
+      if( fileEnding == ".root" ) {
+	inputMode = 1;
+      }
+    }
+    if( fileEnding != ".root" && inputFileNames.size() == 1 ) {
+      inputMode = 2;
+    }
+  }
+  
+  TTree *tree = 0;
+
+  if( inputMode == 0 ) { // Generate Toy MC sample
+    std::cout << "\n" << readerName << ": generating ToyMC events\n";
+    ToyMC* mc = new ToyMC();
+    mc->init(config_);
+    mc->print();
+    tree = new TTree(treeName.c_str(),dataType.c_str());
+    if( dataType == "dijet" ) {
+      mc->generateDiJetTree(tree,nEvts);
+    }
+    delete mc;
+  } else if( inputMode == 1 ) { // Open all files listed in configfile
+    TChain* chain = new TChain(treeName.c_str()); 
+    std::cout << "\n" << readerName << ": opening files\n";
+    for(std::vector<std::string>::const_iterator it = inputFileNames.begin();
+	it!=inputFileNames.end(); ++it){
+      std::cout << " " << (*it) << std::endl;
+      chain->Add( it->c_str() );
+    }  
+    tree = chain;
+  } else if( inputMode == 2 ) { // Open all files listed in input file
+    std::cout << "\n" << readerName << ": opening files in list '" << inputFileNames[0] << "'\n";
+    TChain* chain = new TChain(treeName.c_str()); 
+    std::ifstream filelist;
+    filelist.open(inputFileNames[0].c_str());
+    int nOpenedFiles = 0;
+    std::string name = "";
+    while( !filelist.eof() ) {
+      filelist >> name;
+      if( filelist.eof() ) break;
+      chain->Add( name.c_str() );
+      nOpenedFiles++;
+    }
+    filelist.close();
+    tree = chain;
+    std::cout << "Opened " << nOpenedFiles << " files\n";
+  } else {
+    tree = new TTree();
+    std::cerr << "WARNING: Wrong input file name syntax. No files opened.\n";
+  }
+
+  return tree;
+}
+ 

@@ -5,6 +5,7 @@
 
 #include "CalibData.h"
 #include "Jet.h"
+#include "CorFactors.h"
 
 //!
 //!  \brief Class for relative calibration in pseudorapidity
@@ -12,9 +13,9 @@
 //!
 //!  \author Matthias Schroeder
 //!  \date Mon Oct 26 21:03:43 CET 2009 
-//!  $Id: TwoJetsPtBalanceEvent.h,v 1.3 2009/11/06 14:14:18 mschrode Exp $
+//!  $Id: TwoJetsPtBalanceEvent.h,v 1.7 2009/11/25 13:07:45 stadie Exp $
 // --------------------------------------------------
-class TwoJetsPtBalanceEvent : public TData {
+class TwoJetsPtBalanceEvent : public Event {
  public:
   TwoJetsPtBalanceEvent(Jet *j1, Jet *j2, Jet *j3, double ptHat, double w) 
     : ptHat_(ptHat),
@@ -29,13 +30,13 @@ class TwoJetsPtBalanceEvent : public TData {
   }
   ~TwoJetsPtBalanceEvent() { delete jet1_; delete jet2_; if( hasJet3() ) delete jet3_; }
 
-  virtual TMeasurement *GetMess() const { return jet1_; }
+  virtual Measurement *GetMess() const { return jet1_; }
   virtual double GetParametrizedMess() const { return jet1_->correctedEt();}
   
-  TMeasurement *GetMess2() const { return jet2_; }
+  Measurement *GetMess2() const { return jet2_; }
   double GetParametrizedMess2() const { return jet2_->correctedEt();}
 
-  TMeasurement *GetMess3() const { return jet3_; }
+  Measurement *GetMess3() const { return jet3_; }
   double GetParametrizedMess3() const { return hasJet3() ? jet3_->correctedEt() : 0.;}
 
   Jet *getJet1() const { return jet1_; }
@@ -69,14 +70,14 @@ class TwoJetsPtBalanceEvent : public TData {
   }
 
   double ptDijet() const { return 0.5*(jet1_->Et()+jet2_->Et()); }
-  double ptDijetGen() const { return 0.5*(jet1_->GenPt()+jet2_->GenPt()); }
+  double ptDijetGen() const { return 0.5*(jet1_->genPt()+jet2_->genPt()); }
   double ptDijetCorr() const { return 0.5*(GetParametrizedMess()+GetParametrizedMess2()); }
-  double ptDijetCorrL2L3() const { return 0.5*( jet1_->corFactors.getL2L3() * jet1_->Et() + jet2_->corFactors.getL2L3() * jet2_->Et() ); }
+  double ptDijetCorrL2L3() const { return 0.5*( jet1_->corFactors().getL2L3() * jet1_->Et() + jet2_->corFactors().getL2L3() * jet2_->Et() ); }
 
   double ptBalance() const { return (jet1_->Et() - jet2_->Et()) / ptDijet(); }
-  double ptBalanceGen() const { return (jet1_->GenPt()-jet2_->GenPt()) / ptDijetGen(); }
+  double ptBalanceGen() const { return (jet1_->genPt()-jet2_->genPt()) / ptDijetGen(); }
   double ptBalanceCorr() const { return (GetParametrizedMess()-GetParametrizedMess2()) / ptDijetCorr(); }
-  double ptBalanceCorrL2L3() const { return ( jet1_->corFactors.getL2L3() * jet1_->Et() - jet2_->corFactors.getL2L3() * jet2_->Et() ) / ptDijetCorrL2L3(); }
+  double ptBalanceCorrL2L3() const { return ( jet1_->corFactors().getL2L3() * jet1_->Et() - jet2_->corFactors().getL2L3() * jet2_->Et() ) / ptDijetCorrL2L3(); }
 
   double ptSumAbs(double pt1, double pt2) const;
   double ptSumAbs() const;
@@ -84,7 +85,7 @@ class TwoJetsPtBalanceEvent : public TData {
   double ptSumAbsGen() const;
   double ptSumAbsCorrL2L3() const;
 
-  double relPtJet3() const { return hasJet3() ? jet3_->pt / ptDijet() : 0.; }
+  double relPtJet3() const { return hasJet3() ? jet3_->pt() / ptDijet() : 0.; }
 
   bool flaggedBad() const { return flaggedBad_; }  //!< Status
 

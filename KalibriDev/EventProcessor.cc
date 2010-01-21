@@ -5,7 +5,7 @@
 //    Thus they are implemented directly in this class
 //
 //    first version: Hartmut Stadie 2008/12/14
-//    $Id: EventProcessor.cc,v 1.2 2009/07/23 13:46:20 mschrode Exp $
+//    $Id: EventProcessor.cc,v 1.3 2009/11/24 16:52:58 stadie Exp $
 //   
 #include "EventProcessor.h"
 
@@ -52,7 +52,7 @@ EventProcessor::~EventProcessor()
 }
   
 
-int EventProcessor::process(std::vector<TData*>& data)
+int EventProcessor::process(std::vector<Event*>& data)
 {
   if(flattenSpectra_) {
     std::cout << "Flatten spectra for ";
@@ -62,7 +62,7 @@ int EventProcessor::process(std::vector<TData*>& data)
   return data.size();
 }
  
-bool EventProcessor::NotBalancedRejection::operator()(TData *d) {
+bool EventProcessor::NotBalancedRejection::operator()(Event *d) {
   bool result = false;
   TAbstractData *ad = dynamic_cast<TAbstractData*>(d);
   if(! ad) return true;
@@ -127,7 +127,7 @@ void EventProcessor::fitWithoutBottom(TH1 * hist, TF1 * func, double bottom)
   result->Fit("gauss_step","LLQNO","");
 }
 
-int EventProcessor::flattenSpectra(std::vector<TData*>& data)
+int EventProcessor::flattenSpectra(std::vector<Event*>& data)
 {
   int numProcEvts = 0; // Number of processed events
 
@@ -136,7 +136,7 @@ int EventProcessor::flattenSpectra(std::vector<TData*>& data)
   for(int i=0;i<7;++i)
     allweights += relWeight_[i];
 
-  map<int,double> weights[7];
+  std::map<int,double> weights[7];
   double tot[7];
   double alltotal=0;
   for(int i=0;i<7;++i)
@@ -229,7 +229,7 @@ int EventProcessor::flattenSpectra(std::vector<TData*>& data)
     double had = 0;
     int index=0;
     double ptmax=0;
-    for(std::vector<TData*>::const_iterator t=dt->GetRef().begin(); t!=dt->GetRef().end(); ++t) {
+    for(std::vector<Event*>::const_iterator t=dt->GetRef().begin(); t!=dt->GetRef().end(); ++t) {
     em  += (*t)->GetMess()[1];
     had += (*t)->GetMess()[2];
     had += (*t)->GetMess()[3];
@@ -253,7 +253,7 @@ int EventProcessor::flattenSpectra(std::vector<TData*>& data)
     double had = 0;
     int index=0;
     double ptmax=0;
-    for(std::vector<TData*>::const_iterator t=dt->GetRef().begin(); t!=dt->GetRef().end(); ++t) {
+    for(std::vector<Event*>::const_iterator t=dt->GetRef().begin(); t!=dt->GetRef().end(); ++t) {
     em  += (*t)->GetMess()[1];
     had += (*t)->GetMess()[2];
     had += (*t)->GetMess()[3];
@@ -278,7 +278,7 @@ int EventProcessor::flattenSpectra(std::vector<TData*>& data)
 }
   
 //further weighting.............................................................
-void EventProcessor::balanceSpectra(std::vector<TData*>& data)
+void EventProcessor::balanceSpectra(std::vector<Event*>& data)
 {
   cout<<"...further weighting"<<endl;
   double min = etCutOnGamma_;
@@ -306,7 +306,7 @@ void EventProcessor::balanceSpectra(std::vector<TData*>& data)
 
   cout<<"...fill truth histograms for each jet-pT bin"<<endl;
   //loop over all fit-events
-  for ( std::vector<TData*>::iterator i = data.begin(); 
+  for ( std::vector<Event*>::iterator i = data.begin(); 
         i != data.end() ; ++i )  {
     TAbstractData* jg = dynamic_cast<TAbstractData*>(*i);
     if(! jg) continue;

@@ -2,7 +2,7 @@
 //    Class for all events with two jets constraint to one invariant mass
 //
 //    first version: Hartmut Stadie 2008/12/14
-//    $Id: TwoJetsInvMassEvent.cc,v 1.7 2009/08/04 13:10:58 snaumann Exp $
+//    $Id: TwoJetsInvMassEvent.cc,v 1.8 2009/11/24 16:52:59 stadie Exp $
 //     
 #include "TwoJetsInvMassEvent.h"
 
@@ -56,7 +56,7 @@ double TwoJetsInvMassEvent::chi2_fast_simple(double * temp_derivative1,
   if(chi2 != chi2) {//check for NAN
     std::cout <<et1 << ", " << et2 << ", " <<  jet1->Et() << ", " << jet2->Et() << ", " << chi2 << '\n';
   }
-  chi2 = weight * TData::ScaleResidual(-log(err2inv) + chi2);
+  chi2 = weight * Event::ScaleResidual(-log(err2inv) + chi2);
 
   if(!temp_derivative1) return chi2;
 
@@ -87,7 +87,7 @@ double TwoJetsInvMassEvent::chi2_fast_simple(double * temp_derivative1,
     err2inv += err2 * err2;
     err2inv = 1/err2inv;
     temp1 *= temp1 * err2inv;
-    temp1 = weight * TData::ScaleResidual(-log(err2inv) + temp1);
+    temp1 = weight * Event::ScaleResidual(-log(err2inv) + temp1);
     p1.SetPtEtaPhiM(i1->upperEt,jet1->eta(),jet1->phi(),0);
     c1 = i1->upperEt/jet1->Et();
     if(i2 != varcoll2.end()) {
@@ -107,7 +107,7 @@ double TwoJetsInvMassEvent::chi2_fast_simple(double * temp_derivative1,
     err2inv += err2 * err2;
     err2inv = 1/err2inv;
     temp2 *= temp2 * err2inv;
-    temp2 = weight * TData::ScaleResidual(-log(err2inv) + temp2);
+    temp2 = weight * Event::ScaleResidual(-log(err2inv) + temp2);
     temp_derivative1[i1->parid] += (temp2 - temp1); // for 1st derivative
     temp_derivative2[i1->parid] += (temp2 + temp1 - 2 * chi2); // for 2nd derivative
     //if(i2 != varcoll2.end()) {
@@ -136,7 +136,7 @@ double TwoJetsInvMassEvent::chi2_fast_simple(double * temp_derivative1,
     err2inv += err2 * err2;
     err2inv = 1/err2inv;
     temp1 *= temp1 * err2inv;
-    temp1 = weight * TData::ScaleResidual(-log(err2inv) + temp1);
+    temp1 = weight * Event::ScaleResidual(-log(err2inv) + temp1);
     p2.SetPtEtaPhiM(i2->upperEt,jet2->eta(),jet2->phi(),0);
     c2 = i2->upperEt/jet2->Et();
     m = sqrt(2 * p1.P()*p2.P() * alpha);
@@ -149,7 +149,7 @@ double TwoJetsInvMassEvent::chi2_fast_simple(double * temp_derivative1,
     err2inv += err2 * err2;
     err2inv = 1/err2inv;
     temp2 *= temp2 * err2inv;
-    temp2 = weight * TData::ScaleResidual(-log(err2inv) + temp2);
+    temp2 = weight * Event::ScaleResidual(-log(err2inv) + temp2);
     temp_derivative1[i2->parid] += (temp2 - temp1); // for 1st derivative
     temp_derivative2[i2->parid] += (temp2 + temp1 - 2 * chi2); // for 2nd derivative
   }
@@ -176,7 +176,7 @@ double TwoJetsInvMassEvent::chi2_fast_const_error(double * temp_derivative1,
   if(chi2 != chi2) {//check for NAN
     std::cout <<et1 << ", " << et2 << ", " <<  jet1->Et() << ", " << jet2->Et() << ", " << chi2 << '\n';
   }
-  chi2 = weight * TData::ScaleResidual(chi2);
+  chi2 = weight * Event::ScaleResidual(chi2);
 
   if(!temp_derivative1) return chi2;
 
@@ -195,7 +195,7 @@ double TwoJetsInvMassEvent::chi2_fast_const_error(double * temp_derivative1,
     m = sqrt(2 * p1.P()*p2.P() * alpha);
     temp1 = truth - m;
     temp1 *= temp1 * err2inv;
-    temp1 = weight * TData::ScaleResidual(temp1);
+    temp1 = weight * Event::ScaleResidual(temp1);
     p1.SetPtEtaPhiM(i1->upperEt,jet1->eta(),jet1->phi(),0);
     if(i2 != varcoll2.end()) {
       p2.SetPtEtaPhiM(i2->upperEt,jet2->eta(),jet2->phi(),0);
@@ -203,7 +203,7 @@ double TwoJetsInvMassEvent::chi2_fast_const_error(double * temp_derivative1,
     m = sqrt(2 * p1.P()*p2.P() * alpha);
     temp2 = truth - m;
     temp2 *= temp2 * err2inv;
-    temp2 = weight * TData::ScaleResidual(temp2);
+    temp2 = weight * Event::ScaleResidual(temp2);
     temp_derivative1[i1->parid] += (temp2 - temp1); // for 1st derivative
     temp_derivative2[i1->parid] += (temp2 + temp1 - 2 * chi2); // for 2nd derivative
     //if(i2 != varcoll2.end()) {
@@ -222,12 +222,12 @@ double TwoJetsInvMassEvent::chi2_fast_const_error(double * temp_derivative1,
     m = sqrt(2 * p1.P()*p2.P() * alpha);
     temp1 = truth - m;
     temp1 *= temp1 * err2inv;
-    temp1 = weight * TData::ScaleResidual(temp1);
+    temp1 = weight * Event::ScaleResidual(temp1);
     p2.SetPtEtaPhiM(i2->upperEt,jet2->eta(),jet2->phi(),0);
     m = sqrt(2 * p1.P()*p2.P() * alpha);
     temp2 = truth - m;
     temp2 *= temp2 * err2inv;
-    temp2 = weight * TData::ScaleResidual(temp2);
+    temp2 = weight * Event::ScaleResidual(temp2);
     temp_derivative1[i2->parid] += (temp2 - temp1); // for 1st derivative
     temp_derivative2[i2->parid] += (temp2 + temp1 - 2 * chi2); // for 2nd derivative
   }
@@ -272,7 +272,7 @@ double TwoJetsInvMassEvent::chi2_fast_scaled(double * temp_derivative1,
   if(chi2 != chi2) {//check for NAN
     std::cout <<et1 << ", " << et2 << ", " <<  jet1->Et() << ", " << jet2->Et() << ", " << chi2 << '\n';
   }
-  chi2 = weight * TData::ScaleResidual(-log(err2inv) + chi2);
+  chi2 = weight * Event::ScaleResidual(-log(err2inv) + chi2);
 
   if(!temp_derivative1) return chi2;
 
@@ -303,7 +303,7 @@ double TwoJetsInvMassEvent::chi2_fast_scaled(double * temp_derivative1,
     err2inv += err2 * err2;
     err2inv = 1/err2inv;
     temp1 *= temp1 * err2inv;
-    temp1 = weight * TData::ScaleResidual(-log(err2inv) + temp1);
+    temp1 = weight * Event::ScaleResidual(-log(err2inv) + temp1);
     if(std::abs(temp1 - chi2) > 1.0) {
       std::cout << "Et1:" << jet1->Et() << " c1:" << et1prime << ", " << et1/jet1->Et() << '\n';
       std::cout << "Et2:" << jet2->Et() << " c1:" << et2prime << ", " << et2/jet2->Et() << '\n';
@@ -329,7 +329,7 @@ double TwoJetsInvMassEvent::chi2_fast_scaled(double * temp_derivative1,
     err2inv += err2 * err2;
     err2inv = 1/err2inv;
     temp2 *= temp2 * err2inv;
-    temp2 = weight * TData::ScaleResidual(-log(err2inv) + temp2); 
+    temp2 = weight * Event::ScaleResidual(-log(err2inv) + temp2); 
     //std::cout << "chi2:" << chi2 << "  temp2:" << temp2 << '\n';
     assert(std::abs(temp2 - chi2) < 1.0);
     temp_derivative1[i1->parid] += (temp2 - temp1); // for 1st derivative
@@ -356,7 +356,7 @@ double TwoJetsInvMassEvent::chi2_fast_scaled(double * temp_derivative1,
     err2inv += err2 * err2;
     err2inv = 1/err2inv;
     temp1 *= temp1 * err2inv;
-    temp1 = weight * TData::ScaleResidual(-log(err2inv) + temp1); 
+    temp1 = weight * Event::ScaleResidual(-log(err2inv) + temp1); 
     //std::cout << "chi2:" << chi2 << "  temp1:" << temp1 << '\n';
     assert(std::abs(temp1 - chi2) <1.0);
     p2.SetPtEtaPhiM(i2->upperEt,jet2->eta(),jet2->phi(),0);
@@ -371,7 +371,7 @@ double TwoJetsInvMassEvent::chi2_fast_scaled(double * temp_derivative1,
     err2inv += err2 * err2;
     err2inv = 1/err2inv;
     temp2 *= temp2 * err2inv;
-    temp2 = weight * TData::ScaleResidual(-log(err2inv) + temp2);  
+    temp2 = weight * Event::ScaleResidual(-log(err2inv) + temp2);  
     //std::cout << "chi2:" << chi2 << "  temp2:" << temp2 << '\n';
     assert(std::abs(temp2 - chi2) < 1.0);
     temp_derivative1[i2->parid] += (temp2 - temp1); // for 1st derivative
@@ -423,7 +423,7 @@ double TwoJetsInvMassEvent::chi2_fast_inv(double * temp_derivative1,
   if(chi2 != chi2) {//check for NAN
     std::cout <<et1 << ", " << et2 << ", " <<  jet1->Et() << ", " << jet2->Et() << ", " << chi2 << '\n';
   }
-  chi2 = weight * TData::ScaleResidual(chi2);
+  chi2 = weight * Event::ScaleResidual(chi2);
 
   if(!temp_derivative1) return chi2;
 
@@ -458,7 +458,7 @@ double TwoJetsInvMassEvent::chi2_fast_inv(double * temp_derivative1,
     err21 *= err21;
     err22 *= err22;
     temp1 = chi21/err21 + chi22/err22 + log(err21) + log(err22);
-    temp1 = weight * TData::ScaleResidual(temp1);
+    temp1 = weight * Event::ScaleResidual(temp1);
     p1.SetPtEtaPhiM(i1->upperEt,jet1->eta(),jet1->phi(),0);
     if(i2 != varcoll2.end()) {
       p2.SetPtEtaPhiM(i2->upperEt,jet2->eta(),jet2->phi(),0);
@@ -483,7 +483,7 @@ double TwoJetsInvMassEvent::chi2_fast_inv(double * temp_derivative1,
     err21 *= err21;
     err22 *= err22;
     temp2 = chi21/err21 + chi22/err22 + log(err21) + log(err22);
-    temp2 = weight * TData::ScaleResidual(temp2);
+    temp2 = weight * Event::ScaleResidual(temp2);
     //std::cout << temp2 << " - " << temp1 << " : " << chi2 << '\n';
     temp_derivative1[i1->parid] += (temp2 - temp1); // for 1st derivative
     temp_derivative2[i1->parid] += (temp2 + temp1 - 2 * chi2); // for 2nd derivative
@@ -515,7 +515,7 @@ double TwoJetsInvMassEvent::chi2_fast_inv(double * temp_derivative1,
     err21 *= err21;
     err22 *= err22;
     temp1 = chi21/err21 + chi22/err22 + log(err21) + log(err22);
-    temp1 = weight * TData::ScaleResidual(temp1);
+    temp1 = weight * Event::ScaleResidual(temp1);
     p2.SetPtEtaPhiM(i2->upperEt,jet2->eta(),jet2->phi(),0);
     m = sqrt(2 * p1.P()*p2.P() * alpha);
     K = truth / m;
@@ -537,7 +537,7 @@ double TwoJetsInvMassEvent::chi2_fast_inv(double * temp_derivative1,
     err21 *= err21;
     err22 *= err22;
     temp2 = chi21/err21 + chi22/err22 + log(err21) + log(err22);
-    temp2 = weight * TData::ScaleResidual(temp2);
+    temp2 = weight * Event::ScaleResidual(temp2);
     //std::cout << i2->lowerEt << " - " << i2->upperEt << ", " << et2 << '\n';
     //std::cout << temp2 << " - " << temp1 << " : " << chi2 << '\n';
     temp_derivative1[i2->parid] += (temp2 - temp1); // for 1st derivative

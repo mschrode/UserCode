@@ -2,38 +2,49 @@
 //    Class for basic jets 
 //
 //    first version: Hartmut Stadie 2008/12/14
-//    $Id: Jet.cc,v 1.31 2009/10/26 21:00:36 mschrode Exp $
+//    $Id: Jet.cc,v 1.36 2009/11/27 15:28:12 stadie Exp $
 //   
 #include "Jet.h"  
-#include "TMath.h"
+
+#include "CorFactors.h"
 
 #include <iostream>
 #include <iomanip>
 
 Jet::Jet(double Et, double EmEt, double HadEt ,double OutEt, double E,
-	 double eta,double phi, Flavor flavor,   
-	 const Function& f, 
-	 double (*errfunc)(const double *x, const TMeasurement *xorig, double err), 
+         double eta,double phi, double etaeta, Flavor flavor, double genPt, 
+	 double dR, CorFactors* corFactors, const Function& f, 
+	 double (*errfunc)(const double *x, const Measurement *xorig, double err), 
 	 const Function& gf, double Etmin) 
-  : TJet(Et,EmEt,HadEt,OutEt,E,eta,phi,flavor,0.0,0.0,TJet::CorFactors()), 
-    f(f),gf(gf),errf(errfunc),etmin(Etmin),EoverPt(E/Et),gsl_impl(this)
+  : Measurement(Et,EmEt,HadEt,OutEt,E,eta,phi,etaeta),flavor_(flavor), genPt_(genPt), 
+    dR_(dR), ptHat_(0.), corFactors_(corFactors),f(f),gf(gf),errf(errfunc),
+    etmin(Etmin),EoverPt(E/Et),gsl_impl(this)
 {
   temp = *this;
   varcoll.resize(f.nPars() + gf.nPars());
 }
 
-Jet::Jet(double Et, double EmEt, double HadEt ,double OutEt, double E,
-         double eta,double phi, Flavor flavor, double genPt, double dR,
-	 TJet::CorFactors corFactors, const Function& f, 
-	 double (*errfunc)(const double *x, const TMeasurement *xorig, double err), 
-	 const Function& gf, double Etmin) 
-  : TJet(Et,EmEt,HadEt,OutEt,E,eta,phi,flavor,genPt,dR,corFactors),
-    f(f),gf(gf),errf(errfunc),etmin(Etmin),EoverPt(E/Et),gsl_impl(this)
+Jet::~Jet()
 {
-  temp = *this;
-  varcoll.resize(f.nPars() + gf.nPars());
+  delete corFactors_;
 }
- 
+
+void Jet::updateCorFactors(CorFactors *cor)
+{
+  delete corFactors_;
+  corFactors_ = cor;
+}
+
+void Jet::correctToL3()
+{
+  Measurement::pt   *= corFactors_->getToL3();
+  Measurement::E    *= corFactors_->getToL3();
+  Measurement::EMF  *= corFactors_->getToL3();
+  Measurement::HadF *= corFactors_->getToL3();
+  Measurement::OutF *= corFactors_->getToL3();
+  temp = *this;
+}
+
 //!  \brief Varies all parameters for this jet by +/-eps
 //!
 //!  The corrected Et and errors obtained by applying the
@@ -96,26 +107,26 @@ const Jet::VariationColl& Jet::varyParsDirectly(double eps)
   for(int i = 0 ; i < f.nPars() ; ++i) {
     double orig = f.firstPar()[i];
     f.firstPar()[i] += eps;
-    varcoll[i].upperEt = correctedEt(pt);
+    varcoll[i].upperEt = correctedEt(Measurement::pt);
     varcoll[i].upperError = expectedError(varcoll[i].upperEt);
-    varcoll[i].upperEtDeriv =  (correctedEt(pt+deltaE) -  correctedEt(pt-deltaE))/2/deltaE;
+    varcoll[i].upperEtDeriv =  (correctedEt(Measurement::pt+deltaE) -  correctedEt(Measurement::pt-deltaE))/2/deltaE;
     f.firstPar()[i] = orig - eps;
-    varcoll[i].lowerEt = correctedEt(pt); 
+    varcoll[i].lowerEt = correctedEt(Measurement::pt); 
     varcoll[i].lowerError = expectedError(varcoll[i].lowerEt);
-    varcoll[i].lowerEtDeriv =  (correctedEt(pt+deltaE) -  correctedEt(pt-deltaE))/2/deltaE;
+    varcoll[i].lowerEtDeriv =  (correctedEt(Measurement::pt+deltaE) -  correctedEt(Measurement::pt-deltaE))/2/deltaE;
     f.firstPar()[i] = orig;
     varcoll[i].parid = f.parIndex() + i;
   }  
   for(int i = 0, j =  f.nPars(); i < gf.nPars() ; ++i,++j) {
     double orig = gf.firstPar()[i];
     gf.firstPar()[i] += eps;
-    varcoll[j].upperEt = correctedEt(pt);
+    varcoll[j].upperEt = correctedEt(Measurement::pt);
     varcoll[j].upperError = expectedError(varcoll[j].upperEt);
-    varcoll[j].upperEtDeriv =  (correctedEt(pt+deltaE) -  correctedEt(pt-deltaE))/2/deltaE;
+    varcoll[j].upperEtDeriv =  (correctedEt(Measurement::pt+deltaE) -  correctedEt(Measurement::pt-deltaE))/2/deltaE;
     gf.firstPar()[i] = orig - eps;
-    varcoll[j].lowerEt = correctedEt(pt); 
+    varcoll[j].lowerEt = correctedEt(Measurement::pt); 
     varcoll[j].lowerError = expectedError(varcoll[j].lowerEt);
-    varcoll[j].lowerEtDeriv =  (correctedEt(pt+deltaE) -  correctedEt(pt-deltaE))/2/deltaE;
+    varcoll[j].lowerEtDeriv =  (correctedEt(Measurement::pt+deltaE) -  correctedEt(Measurement::pt-deltaE))/2/deltaE;
     gf.firstPar()[i] = orig;
     varcoll[j].parid = gf.parIndex() + i;
   }
@@ -198,7 +209,7 @@ double Jet::expectedEt(double truth, double start, bool fast)
     temp.pt   = truth;  
     temp.HadF = truth - OutF - EMF;
     if(temp.HadF < 0) temp.HadF = 0;
-    temp.E    = TJet::E * truth/TJet::pt;
+    temp.E    = Measurement::E * truth/Measurement::pt;
     return f.inverse(&temp);
   }
   static const double eps = 1.0e-12;

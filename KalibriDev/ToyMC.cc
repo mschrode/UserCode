@@ -1,4 +1,4 @@
-// $Id: ToyMC.cc,v 1.1 2009/10/30 08:59:48 mschrode Exp $
+// $Id: ToyMC.cc,v 1.41 2010/01/08 18:14:36 mschrode Exp $
 
 #include "ToyMC.h"
 
@@ -12,6 +12,10 @@
 #include "TFile.h"
 #include "TRandom3.h"
 #include "TTree.h"
+#include "TH1F.h"
+#include "TH2F.h"
+#include "TLorentzVector.h"
+
 
 #include "ConfigFile.h"
 
@@ -19,15 +23,22 @@
 //!  \brief Default constructor
 // -----------------------------------------------------------------
 ToyMC::ToyMC() : type_(1), minEta_(-2.5),maxEta_(2.5),minPt_(30), maxPt_(400),ptSpectrum_(Uniform),
-		 chunks_(200),jetSpreadA_(0.5),jetSpreadB_(0),noOutOfCone_(true),maxPi0Frac_(0.5),
-		 maxEmf_(0.5),responseModel_(Constant),histResp_(0),
+		 histPtEta_(0),chunks_(200),jetSpreadA_(0.5),jetSpreadB_(0),noOutOfCone_(true),
+		 maxPi0Frac_(0.5),maxEmf_(0.5),responseModel_(Constant),histResp_(0),
 		 resolutionModel_(Gauss), smearFactor_(1.), smearTowersIndividually_(true)
 {
-  random_      = new TRandom3();
+  pInput_ = new TLorentzVector();
+  random_ = new TRandom3();
   random_->SetSeed(0);
-  histResp_ = 0;
 }
 
+ToyMC::~ToyMC() 
+{
+  delete random_;
+  delete histResp_;
+  delete histPtEta_;
+  delete pInput_;
+}
 
 //!  \brief Generates the input (truth) of an event
 //!
@@ -55,7 +66,7 @@ void ToyMC::genInput() {
   } else if(ptSpectrum_ == PtEtaHistogram) {
     histPtEta_->GetRandom2(eta, pt);
   }
-  pInput_.SetPtEtaPhiM(pt, eta, (rand[2]*2 * M_PI - M_PI), 0);
+  pInput_->SetPtEtaPhiM(pt, eta, (rand[2]*2 * M_PI - M_PI), 0);
 }
 
 
@@ -97,12 +108,12 @@ void ToyMC::calIds(float& eta, float &phi, int& ieta, int& iphi)
 //!  \param jet the four vector of the jet
 //!  \param E  Energy for calculation of some smear factors
 //----------------------------------------------------------
-void ToyMC::calculateSmearFactor(const TLorentzVector& jet, double E) {
+void ToyMC::calculateSmearFactor(const TLorentzVector* jet, double E) {
   // Reset smear factor
   smearFactor_ = 1.;
 
   // Pt
-  double pt    = E * jet.Pt()/jet.E();
+  double pt    = E * jet->Pt()/jet->E();
 
   // Apply response
   if( responseModel_ == Constant
@@ -122,13 +133,13 @@ void ToyMC::calculateSmearFactor(const TLorentzVector& jet, double E) {
     smearFactor_ *= 1. - parResp_.at(0)/(pt + parResp_.at(1));
   }
   else if( responseModel_ == StepEta ) {
-    smearFactor_ *= jet.Eta() < 0 ? parResp_.at(0) : parResp_.at(1);
+    smearFactor_ *= jet->Eta() < 0 ? parResp_.at(0) : parResp_.at(1);
   }
   else if( responseModel_ == SinusEta ) {
-    smearFactor_ *= 1. + parResp_.at(0)*sin( parResp_.at(1)*jet.Eta() );
+    smearFactor_ *= 1. + parResp_.at(0)*sin( parResp_.at(1)*jet->Eta() );
   }
   else if( responseModel_ == SinusEtaSimpleInversePt ) {
-    smearFactor_ *= 1. + parResp_.at(0)*sin( parResp_.at(1)*jet.Eta() );
+    smearFactor_ *= 1. + parResp_.at(0)*sin( parResp_.at(1)*jet->Eta() );
     smearFactor_ *= 1. - parResp_.at(2)/(pt + parResp_.at(3));
   }
 
@@ -182,7 +193,7 @@ void ToyMC::calculateSmearFactor(const TLorentzVector& jet, double E) {
 //!  \param thadtrue True had part of tower energy after scaling
 //!  \param touttrue True HO part of tower energy after scaling
 // -----------------------------------------------------------------
-void ToyMC::smearTower(const TLorentzVector& jet, double e, bool calcSmearFactor, float& te, float& tem, float& thad, 
+void ToyMC::smearTower(const TLorentzVector* jet, double e, bool calcSmearFactor, float& te, float& tem, float& thad, 
 		       float& tout, float& temtrue, float& thadtrue, float& touttrue) 
 {
   // Generate emf and set electromagnetic
@@ -199,7 +210,7 @@ void ToyMC::smearTower(const TLorentzVector& jet, double e, bool calcSmearFactor
   // Apply response and resolution to hadronic fraction
   if( calcSmearFactor ) {
     if( smearTowersIndividually_ ) calculateSmearFactor(jet, thad);
-    else                           calculateSmearFactor(jet, jet.E());
+    else                           calculateSmearFactor(jet, jet->E());
   }
   thad      *= smearFactor_;
 
@@ -215,10 +226,10 @@ void ToyMC::smearTower(const TLorentzVector& jet, double e, bool calcSmearFactor
 //!  (particles), spreads them in eta and phi and sums up
 //!  tower pt.
 // -----------------------------------------------------------------
-int ToyMC::splitJet(const TLorentzVector& jet ,float* et,float* eta,float * phi, int* ieta,int* iphi) {
+int ToyMC::splitJet(const TLorentzVector* jet ,float* et,float* eta,float * phi, int* ieta,int* iphi) {
   typedef __gnu_cxx::hash_map<int,int> TowerMap;
   TowerMap towers;
-  double jphi = jet.Phi();
+  double jphi = jet->Phi();
   if(jphi < 0) jphi += 2 * M_PI;
   //std::cout << "jet: Pt:" << jet.Pt() << " Phi:" << jet.Phi() << " Eta:" << jet.Eta() << '\n';
   //double de = jet.E() / chunks_;
@@ -226,10 +237,10 @@ int ToyMC::splitJet(const TLorentzVector& jet ,float* et,float* eta,float * phi,
   TLorentzVector rec(0,0,0,0);
   TLorentzVector tow;
   double lostPt = 0;
-  double dpt = jet.Pt() / chunks_;
+  double dpt = jet->Pt() / chunks_;
   if(chunks_ < 0) {
     dpt = 0.3;
-    chunks_ = (int)std::ceil(jet.Pt() / dpt);
+    chunks_ = (int)std::ceil(jet->Pt() / dpt);
   }
   for(int i = 0 ; i < chunks_ ; ++i) {
     //float teta = random_->Gaus(jet.Eta(), jetspread);
@@ -237,12 +248,12 @@ int ToyMC::splitJet(const TLorentzVector& jet ,float* et,float* eta,float * phi,
     float R = 0.0;
     float PHI = 0.0;
     if(jetSpreadA_ != 0 || jetSpreadB_ != 0) {
-      R = random_->Exp(1/(jetSpreadA_ +jetSpreadB_ * jet.E()));
+      R = random_->Exp(1/(jetSpreadA_ +jetSpreadB_ * jet->E()));
       PHI = random_->Uniform(2 * M_PI);
     }
     //std::cout << "E:" << jet.E() << "  R:" << R << '\n';
-    float teta = jet.Eta() + R * cos(PHI);
-    float tphi = jet.Phi() + R * sin(PHI);
+    float teta = jet->Eta() + R * cos(PHI);
+    float tphi = jet->Phi() + R * sin(PHI);
     tphi = TVector2::Phi_0_2pi(tphi);
     if(std::abs(teta) > 3.33333) {
       //std::cout << "chunk outside simulated calo\n";
@@ -256,7 +267,7 @@ int ToyMC::splitJet(const TLorentzVector& jet ,float* et,float* eta,float * phi,
     //std::cout << "vorher:" << teta << ", " << tphi << ", " << ie << ", " 
     //	      << ip << "\n";
     float dphi = TVector2::Phi_mpi_pi(tphi-jphi);
-    float deta = teta-jet.Eta();
+    float deta = teta-jet->Eta();
     if(sqrt(deta*deta + dphi*dphi) > 0.5) {
       //std::cout << "Out of cone:" << teta << ":" << jet.Eta() << " , " << dphi << '\n';
       if(noOutOfCone_) --i;
@@ -287,7 +298,7 @@ int ToyMC::splitJet(const TLorentzVector& jet ,float* et,float* eta,float * phi,
   //std::cout  << "Eta:" << jet.Eta() <<  "       : " << rec.Pt() << "," << rec.E() << "  == " << jet.Pt() << "," << jet.E() << '\n';
   //std::cout << "lost energy:" << lostE/jet.E() << '\n';
   if(noOutOfCone_) {
-    double scale = jet.Pt()/rec.Pt();
+    double scale = jet->Pt()/rec.Pt();
     assert(scale < 1.1); 
     TLorentzVector rec2(0,0,0,0);
     for(int i = 0 ; i < ntowers ; ++i) {
@@ -295,7 +306,7 @@ int ToyMC::splitJet(const TLorentzVector& jet ,float* et,float* eta,float * phi,
       tow.SetPtEtaPhiM(et[i],eta[i],phi[i],0);
       rec2 += tow;
     }
-    assert(std::abs((rec2.Pt()-jet.Pt())/jet.Pt()) < 0.001); 
+    assert(std::abs((rec2.Pt()-jet->Pt())/jet->Pt()) < 0.001); 
     //std::cout << " vorher:" << scale << "  nachher:" << rec2.E()/jet.E() << "\n";
   }
   return ntowers;
@@ -349,14 +360,14 @@ int ToyMC::generateTrackClusterTree(TTree* CalibTree, int nevents)
 
   for(int i = 0; i < nevents ; ++i) {
     genInput();
-    tracket = pInput_.Pt();
+    tracket = pInput_->Pt();
     tracketerr = 0;
-    tracketa = pInput_.Eta();
-    trackphi = pInput_.Phi();
-    tracken = pInput_.E();
+    tracketa = pInput_->Eta();
+    trackphi = pInput_->Phi();
+    tracken = pInput_->E();
     NobjTowCal = 1;
-    towphi[0] = pInput_.Phi(); 
-    toweta[0] = pInput_.Eta();
+    towphi[0] = pInput_->Phi(); 
+    toweta[0] = pInput_->Eta();
     towid[0] = 0;
     //std::cout << "vorher:" << toweta[0] << ", " << towphi[0] << ", " << towid_eta[0] << ", " 
     //	      << towid_phi[0] << "\n";
@@ -368,9 +379,9 @@ int ToyMC::generateTrackClusterTree(TTree* CalibTree, int nevents)
     bool calcSmearFactor = false;
     if( i == 0 || smearTowersIndividually_ ) calcSmearFactor = true;
 
-    smearTower(pInput_,pInput_.E(),calcSmearFactor,towen[0],towem[0],towhd[0],towoe[0],towemtrue[0],
+    smearTower(pInput_,pInput_->E(),calcSmearFactor,towen[0],towem[0],towhd[0],towoe[0],towemtrue[0],
 	       towhdtrue[0],towoetrue[0]);
-    towet[0] = towen[0]/pInput_.E() * pInput_.Pt();
+    towet[0] = towen[0]/pInput_->E() * pInput_->Pt();
     CalibTree->Fill();
     if(i % 1000 == 0) std::cout << "generated event " << i << '\n';
   }
@@ -556,11 +567,11 @@ int ToyMC::generatePhotonJetTree(TTree* CalibTree, int nevents)
 
     // Assign it's variables to genphoton
     // and genphoton (perfectly measured)
-    photonpt   = pInput_.Pt();
-    photoneta  = pInput_.Eta();
-    photonphi  = pInput_.Phi();
-    photonet   = pInput_.Pt();
-    photone    = pInput_.E();
+    photonpt   = pInput_->Pt();
+    photoneta  = pInput_->Eta();
+    photonphi  = pInput_->Phi();
+    photonet   = pInput_->Pt();
+    photone    = pInput_->E();
     gphotonpt  = photonpt;
     gphotoneta = photoneta;
     gphotonphi = photonphi;
@@ -578,9 +589,9 @@ int ToyMC::generatePhotonJetTree(TTree* CalibTree, int nevents)
 
     // Create 4-momentum of genjet (massless)
     genjet.SetPtEtaPhiM(jgenpt,jgeneta,jgenphi,0);
-    pInput_= genjet;
+    *pInput_= genjet;
     // Split it into towers and set tower truth
-    NobjTowCal = splitJet(genjet,towet,toweta,towphi,towid_eta,towid_phi);
+    NobjTowCal = splitJet(&genjet,towet,toweta,towphi,towid_eta,towid_phi);
 
     // Reset jet and genjet 4-momenta. They will
     // be repopulated by sum of tower 4-momenta
@@ -855,14 +866,14 @@ int ToyMC::generateDiJetTree(TTree* CalibTree, int nevents)
   for(int n = 0; n < nevents ; ++n) {
     // Generate truth 4-momentum
     genInput();
-    genevtscale  = pInput_.Pt();
+    genevtscale  = pInput_->Pt();
 
     // Assign it's variables to first genjet
-    jetgenpt[0]  = pInput_.Pt();
-    jetgeneta[0] = pInput_.Eta();
-    jetgenphi[0] = pInput_.Phi();
-    jetgenet[0]  = pInput_.Pt();
-    jetgene[0]   = pInput_.E();
+    jetgenpt[0]  = pInput_->Pt();
+    jetgeneta[0] = pInput_->Eta();
+    jetgenphi[0] = pInput_->Phi();
+    jetgenet[0]  = pInput_->Pt();
+    jetgene[0]   = pInput_->E();
 
     // Second genjet gets random eta
     // between -3 and 3, and phi+PI
@@ -891,7 +902,7 @@ int ToyMC::generateDiJetTree(TTree* CalibTree, int nevents)
       // Create 4-momentum of genjet (massless)
       orijet.SetPtEtaPhiM(jetgenpt[i],jetgeneta[i],jetgenphi[i],0);
       // Split it into towers and set truth of towers
-      int ntow = splitJet(orijet,ttowet,ttoweta,ttowphi,ttowid_eta,ttowid_phi);  
+      int ntow = splitJet(&orijet,ttowet,ttoweta,ttowphi,ttowid_eta,ttowid_phi);  
       // Reset jet and genjet 4-momenta. They will
       // be repopulated by sum of tower 4-momenta
       jet[i].SetPtEtaPhiM(0,0,0,0);
@@ -924,7 +935,7 @@ int ToyMC::generateDiJetTree(TTree* CalibTree, int nevents)
 	if( j == 0 || smearTowersIndividually_ ) calcSmearFactor = true;
 
 	// Smear hadronic par of tower energy
-	smearTower(orijet, (1 - p0frac) * tower.E(),calcSmearFactor,towen[k],towem[k],towhd[k],
+	smearTower(&orijet, (1 - p0frac) * tower.E(),calcSmearFactor,towen[k],towem[k],towhd[k],
 		   towoe[k],towemtrue[k],towhdtrue[k],towoetrue[k]); 
 
 	// Add remaining em part
@@ -1151,7 +1162,7 @@ int ToyMC::generateTopTree(TTree* CalibTree, int nevents)
   for(int n = 0; n < nevents ; ++n) {
     // Generate truth 4-momentum of W boson
     genInput();	
-    pInput_.SetVectM(pInput_.Vect(),Wmass);
+    pInput_->SetVectM(pInput_->Vect(),Wmass);
     // Generate two jets
     wjet[0].SetPtEtaPhiM(0,0,0,0);
     wjet[1].SetPtEtaPhiM(0,0,0,0);    
@@ -1162,7 +1173,7 @@ int ToyMC::generateTopTree(TTree* CalibTree, int nevents)
     wjet[0].SetXYZM(pt * cos(phi),pt * sin(phi),p * cos(theta),0);
     wjet[1].SetVectM(-wjet[0].Vect(),0);
     // Boost jets according to momentum of W boson
-    TVector3 b = pInput_.BoostVector();
+    TVector3 b = pInput_->BoostVector();
     wjet[0].Boost(b);
     wjet[1].Boost(b);    
 
@@ -1194,11 +1205,11 @@ int ToyMC::generateTopTree(TTree* CalibTree, int nevents)
     NobjTow = 0;
     for(int i = 0 ; i < 2 ; ++i) {
       // Split it into towers and set truth of towers
-      int ntow = splitJet(wjet[i],ttowet,ttoweta,ttowphi,ttowid_eta,ttowid_phi);  
+      int ntow = splitJet(&wjet[i],ttowet,ttoweta,ttowphi,ttowid_eta,ttowid_phi);  
 
       // Reset jet and genjet 4-momenta. They will
       // be repopulated by sum of tower 4-momenta
-      pInput_ = wjet[i];
+      *pInput_ = wjet[i];
       jet.SetPtEtaPhiM(0,0,0,0);
       wjet[i].SetPtEtaPhiM(0,0,0,0);
 
@@ -1326,16 +1337,21 @@ int ToyMC::makeTop(const char* filename, int nevents) {
 //----------------------------------------------------------
 void ToyMC::init(const std::string& configfile) {
   ConfigFile config(configfile.c_str());
+  init(&config);
+}
+
+//----------------------------------------------------------
+void ToyMC::init(const ConfigFile* config) {
 
   // Ranges
-  minEta_ = config.read<double>("ToyMC min eta",-2.5);
-  maxEta_ = config.read<double>("ToyMC max eta",2.5);
-  minPt_  = config.read<double>("ToyMC min pt",30);
-  maxPt_  = config.read<double>("ToyMC max pt",400);
+  minEta_ = config->read<double>("ToyMC min eta",-2.5);
+  maxEta_ = config->read<double>("ToyMC max eta",2.5);
+  minPt_  = config->read<double>("ToyMC min pt",30);
+  maxPt_  = config->read<double>("ToyMC max pt",400);
 
   // Truth spectrum
-  std::string spectrum = config.read<std::string>("ToyMC pt spectrum","uniform");
-  parTruth_            = bag_of<double>(config.read<string>("ToyMC pt spectrum parameters",";"));
+  std::string spectrum = config->read<std::string>("ToyMC pt spectrum","uniform");
+  parTruth_            = bag_of<double>(config->read<string>("ToyMC pt spectrum parameters",";"));
   if(spectrum == "powerlaw") {
     ptSpectrum_ = PowerLaw; 
     assert( parTruth_.size() > 0 );
@@ -1352,8 +1368,8 @@ void ToyMC::init(const std::string& configfile) {
   }
 
   // Response model
-  parResp_ = bag_of<double>(config.read<string>("ToyMC response parameters","1"));
-  std::string response = config.read<std::string>("ToyMC response model","Constant");
+  parResp_ = bag_of<double>(config->read<string>("ToyMC response parameters","1"));
+  std::string response = config->read<std::string>("ToyMC response model","Constant");
   if        ( response == "Constant" ) {
     responseModel_ = Constant;
     assert( parResp_.size() >= 1 );
@@ -1387,8 +1403,8 @@ void ToyMC::init(const std::string& configfile) {
   }
 
   // Resolution model
-  parReso_               = bag_of<double>(config.read<string>("ToyMC resolution parameters","4.44 1.11 0.03"));
-  std::string resolution = config.read<std::string>("ToyMC resolution model","Gauss");
+  parReso_               = bag_of<double>(config->read<string>("ToyMC resolution parameters","4.44 1.11 0.03"));
+  std::string resolution = config->read<std::string>("ToyMC resolution model","Gauss");
   if(resolution == "Gauss") {
     resolutionModel_ = Gauss;
     assert( parReso_.size() >= 3 );
@@ -1438,21 +1454,21 @@ void ToyMC::init(const std::string& configfile) {
    }
 
   // Calculate smear factor for each tower or each jet
-  smearTowersIndividually_ = config.read<bool>("ToyMC smear towers individually",false);
+  smearTowersIndividually_ = config->read<bool>("ToyMC smear towers individually",false);
 
   // Jets
-  jetSpreadA_  = config.read<double>("ToyMC jet spread A",0.5);
-  jetSpreadB_  = config.read<double>("ToyMC jet spread B",0);
-  noOutOfCone_ = config.read<bool>("ToyMC avoid out-of-cone",true);
-  useTowerCenterEtaPhi_ = config.read<bool>("ToyMC use eta and phi at tower center",true);
-  chunks_      = config.read<int>("ToyMC chunks",200);
-  maxPi0Frac_  = config.read<double>("ToyMC max pi0 fraction",0.5);
-  maxEmf_      = config.read<double>("ToyMC tower max EMF",0.5);
+  jetSpreadA_  = config->read<double>("ToyMC jet spread A",0.5);
+  jetSpreadB_  = config->read<double>("ToyMC jet spread B",0);
+  noOutOfCone_ = config->read<bool>("ToyMC avoid out-of-cone",true);
+  useTowerCenterEtaPhi_ = config->read<bool>("ToyMC use eta and phi at tower center",true);
+  chunks_      = config->read<int>("ToyMC chunks",200);
+  maxPi0Frac_  = config->read<double>("ToyMC max pi0 fraction",0.5);
+  maxEmf_      = config->read<double>("ToyMC tower max EMF",0.5);
   
   // General
-  int seed = config.read<int>("ToyMC seed",0); 
+  int seed = config->read<int>("ToyMC seed",0); 
   random_->SetSeed(seed);
-  type_ = config.read<int>("ToyMC type",1);
+  type_ = config->read<int>("ToyMC type",1);
   if( !( type_ == 1 || type_ == 2 || type_ == 3 ) ) {
     std::cout << "unknown ToyMC event type " << type_ << std::endl;
     exit(1);
@@ -1648,6 +1664,7 @@ int ToyMC::etaBin(float eta) const {
 
 
 
+// -----------------------------------------------------------------
 float ToyMC::etaBinEdge(int etaBin, bool lowerEdge) const {
   assert( etaBin >= -41 && etaBin <= 41 );
   // return eta bin - eta edge mappting

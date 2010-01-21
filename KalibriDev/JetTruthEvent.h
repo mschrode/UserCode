@@ -2,7 +2,7 @@
 //    Class for all events with one jet and truth informatio
 //
 //    first version: Hartmut Stadie 2008/12/14
-//    $Id: JetTruthEvent.h,v 1.11 2009/10/30 08:14:24 mschrode Exp $
+//    $Id: JetTruthEvent.h,v 1.12 2009/11/24 16:52:59 stadie Exp $
 //   
 #ifndef JETTRUTHEVENT_H
 #define JETTRUTHEVENT_H
@@ -12,14 +12,14 @@
 #include "Jet.h"
 
 //interface to Data
-class JetTruthEvent : public TData
+class JetTruthEvent : public Event
 {
 public:
   JetTruthEvent(Jet *j, double t, double w) : jet(j),truth(t),weight(w),chi2plots(1000.),flagged_bad(false) {}
   ~JetTruthEvent();
 
-  //interface from TData
-  TMeasurement *GetMess() const {return jet;}
+  //interface from Event
+  Measurement *GetMess() const {return jet;}
   double GetTruth() const { return truth;}
   double GetParametrizedMess() const { return jet->correctedEt(jet->Et());}
 

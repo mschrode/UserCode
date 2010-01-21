@@ -1,6 +1,6 @@
-//  $Id: caliber.cc,v 1.2 2009/10/30 13:14:20 mschrode Exp $
+//  $Id: Kalibri.cc,v 1.3 2010/01/04 17:04:51 mschrode Exp $
 
-#include "caliber.h"
+#include "Kalibri.h"
 
 #include <algorithm>
 #include <iomanip>
@@ -22,19 +22,16 @@ boost::mutex io_mutex;
 #include "TriJetReader.h"
 #include "ZJetReader.h"
 #include "TopReader.h"
-#include "TrackClusterReader.h"
 #include "ParameterLimitsReader.h"
-#include "TowerConstraintsReader.h"
 #include "JetConstraintsReader.h"
 #include "EventProcessor.h"
 #include "EventWeightProcessor.h"
-#include "Jet.h"
-#include "JetTruthEvent.h"
+
 
 using namespace std;
 
-typedef std::vector<TData*>::iterator DataIter;
-typedef std::vector<TData*>::const_iterator DataConstIter;
+typedef std::vector<Event*>::iterator DataIter;
+typedef std::vector<Event*>::const_iterator DataConstIter;
 
 
 
@@ -42,7 +39,7 @@ typedef std::vector<TData*>::const_iterator DataConstIter;
 // -----------------------------------------------------------------
 struct OutlierRejection {
   OutlierRejection(double cut):_cut(cut){};
-  bool operator()(TData *d){
+  bool operator()(Event *d){
     if(d->GetType()==typeTowerConstraint) return true;
     return (d->chi2()/d->GetWeight())<_cut;
   }
@@ -60,7 +57,7 @@ private:
   double * td2;
   double *parorig, *mypar;
   double epsilon;
-  std::vector<TData*> data;
+  std::vector<Event*> data;
   bool data_changed;
   struct calc_chi2_on
   {
@@ -105,7 +102,7 @@ public:
     delete [] td2;
     delete [] mypar;
   }
-  void AddData(TData* d) { 
+  void AddData(Event* d) { 
     //d->ChangeParAddress(parorig, mypar);
     data_changed = true;
     data.push_back(d);
@@ -128,7 +125,7 @@ public:
 
 
 //--------------------------------------------------------------------------------------------
-void TCaliber::run()
+void Kalibri::run()
 {
   if (fitMethod_!=3){
 
@@ -156,13 +153,15 @@ void TCaliber::run()
 
 
 // -----------------------------------------------------------------
-void TCaliber::run_Lvmini()
+void Kalibri::run_Lvmini()
 { 
   int naux = 3000000, iret=0;
   
   int npar = par_->GetNumberOfParameters();
+  int mvec = mvec_;
+  if( calcCov_ ) mvec = -mvec_;
 
-  naux = lvmdim_(npar,mvec_);
+  naux = lvmdim_(npar,mvec);
   cout<<"array of size "<<naux<<" needed."<<endl;
 
   double* aux = new double[naux], fsum = 0;
@@ -216,7 +215,7 @@ void TCaliber::run_Lvmini()
     else cout << "th" << flush;
     cout << " of " << residualScalingScheme_.size() <<" iteration(s): " << flush;
     if(  residualScalingScheme_.at(loop) == 0  ) {
-	TData::ScaleResidual = &TData::ScaleNone;	
+	Event::ScaleResidual = &Event::ScaleNone;	
 	cout << "no scaling of residuals." << endl;
 
 	cout << "Rejecting outliers " << flush;
@@ -228,26 +227,26 @@ void TCaliber::run_Lvmini()
 	cout << "and using " << data_.size() << " events." << endl;
       }
     else if(  residualScalingScheme_.at(loop) == 1  ) {
-	TData::ScaleResidual = &TData::ScaleCauchy;	
+	Event::ScaleResidual = &Event::ScaleCauchy;	
 	cout << "scaling of residuals with Cauchy-Function." << endl;
       }
     else if(  residualScalingScheme_.at(loop) == 2  ) {
-	TData::ScaleResidual = &TData::ScaleHuber;	
+	Event::ScaleResidual = &Event::ScaleHuber;	
 	cout << "scaling of residuals with Huber-Function." << endl;
       }
     else if(  residualScalingScheme_.at(loop) == 3  ) {
-      TData::ScaleResidual = &TData::ScaleTukey;	
+      Event::ScaleResidual = &Event::ScaleTukey;	
       cout << "scaling of residuals a la Tukey." << endl;
     }
     else {
       cerr << "ERROR: " << residualScalingScheme_.at(loop) << " is not a valid scheme for resdiual scaling! Breaking iteration!" << endl;
       break;
     }
-    if(lvmdim_(npar,mvec_) > naux)
-      cout<<"Aux field too small. "<<lvmdim_(npar,mvec_)<<" enntires needed."<<endl;
+    if(lvmdim_(npar,mvec) > naux)
+      cout<<"Aux field too small. "<<lvmdim_(npar,mvec)<<" enntires needed."<<endl;
     if (npar>0) npar*=-1; //Show output
     //initialization
-    lvmini_( npar, mvec_, nIter_, aux);
+    lvmini_( npar, mvec, nIter_, aux);
     npar=std::abs(npar);
     
     int n = 0;
@@ -332,10 +331,15 @@ void TCaliber::run_Lvmini()
       }
       lvmfun_(par_->GetPars(),fsum,iret,aux);
       //par_->SetParameters(aux + par_index); 
-      lvmprt_(2,aux,2); //print out
+      //print out
+      if( calcCov_ ) lvmprt_(2,aux,3);
+      else lvmprt_(2,aux,2);
     } while (iret<0); 
 
-    lvmprt_(2,aux,2); //print out
+    //print out
+    if( calcCov_ ) lvmprt_(2,aux,6);
+    else lvmprt_(2,aux,2);
+
     for (int ithreads=0; ithreads<nThreads_; ++ithreads){
       t[ithreads]->ClearData();
     }  
@@ -345,8 +349,32 @@ void TCaliber::run_Lvmini()
   }
   //Copy Parameter errors from aux array to the TParameter::e array
   error_index=2;
-  error_index = lvmind_(error_index);
-  par_->SetErrors(aux+error_index);
+  if( !calcCov_ ) {
+    error_index = lvmind_(error_index);
+    par_->SetErrors(aux+error_index);
+  } else {
+    // Retrieve parameter errors
+    error_index = 3;
+    error_index = lvmind_(error_index);
+    std::cout << "\nErrors " << error_index << std::endl;
+    for(int i = 0; i < npar; i++) {
+      std::cout << "Error " << i << ": " << aux[error_index+i] << std::endl;
+    }
+    // Retrieve global parameter correlation coefficients
+    error_index = 4;
+    error_index = lvmind_(error_index);
+    std::cout << "\nGlobal corr " << error_index << std::endl;
+    for(int i = 0; i < npar; i++) {
+      std::cout << "Global corr " << i << ": " << aux[error_index+i] << std::endl;
+    }
+    // Retrieve parameter correlations
+    error_index = 5;
+    error_index = lvmind_(error_index);
+    std::cout << "\nCov " << error_index << std::endl;
+    for(int i = 0; i < (npar*npar+npar)/2; i++) {
+      std::cout << "Cov " << i << ": " << aux[error_index+i] << std::endl;
+    }
+  }
   for( std::vector<int>::const_iterator iter = globalJetPars_.begin();
        iter != globalJetPars_.end() ; ++ iter) {
     double val =  par_->GetPars()[*iter];
@@ -371,7 +399,7 @@ void TCaliber::run_Lvmini()
 
 
 //--------------------------------------------------------------------------------------------
-void TCaliber::done()
+void Kalibri::done()
 {
   ConfigFile config( configFile_.c_str() );
 
@@ -413,13 +441,13 @@ void TCaliber::done()
   if( config.read<bool>("create plots",0) ) {
     int mode = config.read<int>("Mode",0);
     if( mode == 0 ) {  // Control plots for calibration
-      TControlPlots * plots = new TControlPlots(configFile_,&data_,par_);
+      ControlPlots * plots = new ControlPlots(&config,&data_);
       plots->makePlots();
       delete plots;
     } else if( mode == 1 ) {  // Control plots for jetsmearing
       ControlPlotsJetSmearing * plotsjs = new ControlPlotsJetSmearing(configFile_,&data_,par_);
       plotsjs->plotResponse();
-      //plotsjs->plotMeanResponseAndResolution();
+      //      plotsjs->plotMeanResponseAndResolution();
       plotsjs->plotDijets();
       delete plotsjs;
     }
@@ -437,7 +465,7 @@ void TCaliber::done()
 
 
 //--------------------------------------------------------------------------------------------
-void TCaliber::init()
+void Kalibri::init()
 {
   ConfigFile config(configFile_.c_str() );
 
@@ -477,6 +505,7 @@ void TCaliber::init()
   eps_        = config.read<double>("BFGS eps",1e-02);
   wlf1_       = config.read<double>("BFGS 1st wolfe parameter",1e-04);
   wlf2_       = config.read<double>("BFGS 2nd wolfe parameter",0.9);
+  calcCov_    = config.read<double>("BFGS calculate covariance",false);
   printParNDeriv_ = config.read<bool>("BFGS print derivatives",false);
   //global parameters ?
   globalJetPars_ = bag_of<int>(config.read<string>("global jet parameters","")); 
@@ -559,61 +588,12 @@ void TCaliber::init()
   TopReader tr(configFile_,par_);
   nTopEvents_ = tr.readEvents(data_);
   
-  TrackClusterReader tcr(configFile_,par_);
-  nTrackClusterEvents_ = tcr.readEvents(data_);
-
   ParameterLimitsReader plr(configFile_,par_);
   plr.readEvents(data_);
-
-  TowerConstraintsReader cr(configFile_,par_);
-  cr.readEvents(data_);  
 
   JetConstraintsReader jcr(configFile_,par_);
   jcr.readEvents(data_);
 }
-//--^-TCaliber class-^------------------------------------------------------------------------
+//--^-Kalibri class-^------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------
-
-
-
-//--------------------------------------------------------------------------------------------
-int caliber(int argc, char *argv[])
-{
-  std::cout << "The University Hamburg Calorimeter Calibration Tool, 2007/08/15." << std::endl;
-  
-  TCaliber * Calibration;
-  if (argc>1)
-    Calibration = new TCaliber( argv[1] );
-  else  
-    Calibration = new TCaliber("config/calibration.cfg"); //Read input defined in config file
-  
-  Calibration->init();
-  Calibration->run();  //Run Fit
-  Calibration->done(); //Do Plots & Write Calibration to file
-  JetTruthEvent::printStats();
-  Jet::printInversionStats();
-  delete Calibration;    
-
-  return 0;
-}
-
-
-
-//--------------------------------------------------------------------------------------------
-void printUsage()
-{
-  std::cerr << "ERROR: You did something wrong! Better fix it." << std::endl;
-}
-
-
-
-//--------------------------------------------------------------------------------------------
-int main(int argc, char *argv[])
-{
-  if (argc>2) {
-    printUsage();
-    exit(EXIT_FAILURE);
-  }
-  return caliber(argc, argv);
-}
 

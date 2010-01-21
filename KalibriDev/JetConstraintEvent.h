@@ -2,7 +2,7 @@
 //    Class for constraints on the jet correction
 //
 //    first version: Hartmut Stadie 2009/07/23
-//    $Id: JetConstraintEvent.h,v 1.3 2009/10/30 08:14:24 mschrode Exp $
+//    $Id: JetConstraintEvent.h,v 1.4 2009/11/24 16:52:59 stadie Exp $
 //   
 #ifndef JETCONSTRAINTEVENT_H
 #define JETCONSTRAINTEVENT_H
@@ -17,7 +17,7 @@
 
 
 //interface to Data
-class JetConstraintEvent : public TData
+class JetConstraintEvent : public Event
 {
  public:
   JetConstraintEvent(double t, double w) : truth(t), weight(w) {}
@@ -27,7 +27,7 @@ class JetConstraintEvent : public TData
   
 
   //interface from TData
-  TMeasurement *GetMess() const {return jets[0];}
+  Measurement *GetMess() const {return jets[0];}
   double GetTruth() const { return truth;}
   double GetParametrizedMess() const { return jets[0]->correctedEt(jets[0]->Et());}
 

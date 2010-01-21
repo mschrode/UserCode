@@ -4,7 +4,7 @@
 //    This class add user defined jet constraints
 //
 //    first version: Hartmut Stadie 2008/12/12
-//    $Id: JetConstraintsReader.cc,v 1.5 2009/10/26 20:56:29 mschrode Exp $
+//    $Id: JetConstraintsReader.cc,v 1.8 2009/11/26 18:24:41 stadie Exp $
 //   
 
 #include "JetConstraintsReader.h"
@@ -13,7 +13,8 @@
 #include "ConfigFile.h"
 #include "Parameters.h"
 #include "JetConstraintEvent.h"
-
+#include "Parametrization.h"
+#include "CorFactors.h"
 
 #include <iostream>
 
@@ -21,7 +22,7 @@ JetConstraintsReader::JetConstraintsReader(const std::string& configfile, TParam
   EventReader(configfile,p),cp(new ConstParametrization())
 {
   //specify constraints
-  vector<double> jet_constraint = bag_of<double>(config_->read<string>( "jet constraint",""));
+  std::vector<double> jet_constraint = bag_of<double>(config_->read<std::string>( "jet constraint",""));
   if(jet_constraint.size() % 4 == 0) {
     for(unsigned int i = 0 ; i < jet_constraint.size() ; i += 4) {
       jet_constraints.push_back(JetConstraint((int)jet_constraint[i],(int)jet_constraint[i+1],
@@ -36,7 +37,7 @@ JetConstraintsReader::~JetConstraintsReader()
 {
 }
 
-int JetConstraintsReader::readEvents(std::vector<TData*>& data)
+int JetConstraintsReader::readEvents(std::vector<Event*>& data)
 {
   for(std::vector<JetConstraint>::const_iterator ic = jet_constraints.begin() ;
       ic != jet_constraints.end() ; ++ic) {
@@ -48,8 +49,8 @@ int JetConstraintsReader::readEvents(std::vector<TData*>& data)
     JetConstraintEvent* jce = new JetConstraintEvent(ic->Et,ic->weight);
     for(int ideta = ic->mineta ; ideta <= ic->maxeta  ; ++ideta) {
       if(ideta == 0) ideta = 1;
-      jce->addJet(new  Jet(ic->Et,0,ic->Et,0,ic->Et,0,0,TJet::uds,ic->Et,0,
-			   TJet::CorFactors(1,1,1,1,1,1,1),par_->jet_function(ideta,1),
+      jce->addJet(new  Jet(ic->Et,0,ic->Et,0,ic->Et,0,0,0.13,Jet::uds,ic->Et,0,
+			   new CorFactors(1,1,1,1,1,1,1),par_->jet_function(ideta,1),
 			   jet_error_param,Function(&Parametrization::correctedJetEt,0,0,0,0,cp),0));
     }
     data.push_back(jce);

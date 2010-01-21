@@ -2,7 +2,7 @@
 //    Class for all events with one jet and truth informatio
 //
 //    first version: Hartmut Stadie 2008/12/14
-//    $Id: JetTruthEvent.cc,v 1.17 2009/07/23 15:51:17 stadie Exp $
+//    $Id: JetTruthEvent.cc,v 1.18 2009/11/24 16:52:58 stadie Exp $
 //   
 
 #include "JetTruthEvent.h"
@@ -17,7 +17,7 @@ JetTruthEvent::~JetTruthEvent()
 double JetTruthEvent::chi2() const
 {
   double diff = (jet->correctedEt(jet->Et()) - truth)/jet->Error();
-  return weight * TData::ScaleResidual(diff*diff);
+  return weight * Event::ScaleResidual(diff*diff);
 }
 
 double JetTruthEvent::chi2_fast_blobel(double * temp_derivative1, 
@@ -30,7 +30,7 @@ double JetTruthEvent::chi2_fast_blobel(double * temp_derivative1,
   err2inv = 1/err2inv;
   double chi2 = truth - et;
   chi2 *= chi2 * err2inv;
-  chi2 = weight * TData::ScaleResidual(chi2);
+  chi2 = weight * Event::ScaleResidual(chi2);
   double temp1,temp2;
   const Jet::VariationColl& varcoll = jet->varyParsDirectly(epsilon);
   for(Jet::VariationCollIter i = varcoll.begin() ; i != varcoll.end() ; ++i) {
@@ -39,13 +39,13 @@ double JetTruthEvent::chi2_fast_blobel(double * temp_derivative1,
     //err2inv *= err2inv;
     //err2inv = 1/err2inv;
     temp1 *= temp1 * err2inv;
-    temp1 = weight * TData::ScaleResidual(temp1);
+    temp1 = weight * Event::ScaleResidual(temp1);
     temp2 = truth - i->upperEt; 
     //err2inv = jet->expectedError(i->upperEt);
     //err2inv *= err2inv;
     //err2inv = 1/err2inv;
     temp2 *= temp2 * err2inv;
-    temp2 = weight * TData::ScaleResidual(temp2);
+    temp2 = weight * Event::ScaleResidual(temp2);
     temp_derivative1[i->parid] += (temp2 - temp1); // for 1st derivative
     temp_derivative2[i->parid] += (temp2 + temp1 - 2 * chi2); // for 2nd derivative
   }
@@ -64,7 +64,7 @@ double JetTruthEvent::chi2_fast_simple_scaled(double * temp_derivative1,
   err2inv = 1/err2inv;
   double chi2 = truth - et;
   chi2 *= chi2 * err2inv;
-  chi2 = weight * TData::ScaleResidual(chi2);
+  chi2 = weight * Event::ScaleResidual(chi2);
   if(chi2 != chi2) {//check for NAN
     std::cout << truth << ", " << et << ", " <<  jet->Et() << ", " << c << ", " << chi2 << '\n';
   }
@@ -78,7 +78,7 @@ double JetTruthEvent::chi2_fast_simple_scaled(double * temp_derivative1,
     err2inv *= err2inv;
     err2inv = 1/err2inv;
     temp1 *= temp1 * err2inv;
-    temp1 = weight * TData::ScaleResidual(temp1);
+    temp1 = weight * Event::ScaleResidual(temp1);
     assert(temp1 == temp1);
     temp2 = truth - i->upperEt;
     c = i->upperEt / jet->Et();  
@@ -87,7 +87,7 @@ double JetTruthEvent::chi2_fast_simple_scaled(double * temp_derivative1,
     err2inv *= err2inv;
     err2inv = 1/err2inv;
     temp2 *= temp2 * err2inv;
-    temp2 = weight * TData::ScaleResidual(temp2);
+    temp2 = weight * Event::ScaleResidual(temp2);
     assert(temp2 == temp2);
     temp_derivative1[i->parid] += (temp2 - temp1); // for 1st derivative
     temp_derivative2[i->parid] += (temp2 + temp1 - 2 * chi2); // for 2nd derivative   
@@ -117,8 +117,8 @@ double JetTruthEvent::chi2_fast_scaled(double * temp_derivative1,
   err2 *= err2;
   double chi2 = truth - et;
   chi2 *= chi2 / err2;
-  chi2 = weight * TData::ScaleResidual(log(err2) + chi2);
-  //chi2 = weight *  TData::ScaleResidual(chi2);
+  chi2 = weight * Event::ScaleResidual(log(err2) + chi2);
+  //chi2 = weight *  Event::ScaleResidual(chi2);
   if(chi2 != chi2) {//check for NAN
     std::cout << truth << ", " << et << ", " <<  jet->Et() << ", " << c << ", " << chi2 << '\n';
     assert(chi2 == chi2);
@@ -141,8 +141,8 @@ double JetTruthEvent::chi2_fast_scaled(double * temp_derivative1,
     err2 *= err2;
     temp1 *= temp1 / err2; 
     //temp1 = weight * (log(err2) + temp1);
-    temp1 = weight * TData::ScaleResidual(log(err2) + temp1);
-    //temp1 = weight * TData::ScaleResidual(temp1);
+    temp1 = weight * Event::ScaleResidual(log(err2) + temp1);
+    //temp1 = weight * Event::ScaleResidual(temp1);
     assert(temp1 == temp1);
     assert(! std::isinf(temp1));
     temp2 = truth - i->upperEt;
@@ -158,8 +158,8 @@ double JetTruthEvent::chi2_fast_scaled(double * temp_derivative1,
     }
     err2 *= err2;
     temp2 *= temp2 / err2;
-    temp2 = weight * TData::ScaleResidual(log(err2) + temp2);
-    //temp2 = weight * TData::ScaleResidual(temp2);
+    temp2 = weight * Event::ScaleResidual(log(err2) + temp2);
+    //temp2 = weight * Event::ScaleResidual(temp2);
     assert(temp2 == temp2);
     assert(! std::isinf(temp2));
     temp_derivative1[i->parid] += (temp2 - temp1); // for 1st derivative
@@ -183,7 +183,7 @@ double JetTruthEvent::chi2_fast_simple(double * temp_derivative1,
   if(chi2 != chi2) {//check for NAN
     std::cout << truth << ", " << et << ", " <<  jet->Et() << ", " << c << ", " << chi2 << '\n';
   }
-  chi2 = weight * TData::ScaleResidual(chi2);
+  chi2 = weight * Event::ScaleResidual(chi2);
   double temp1,temp2;
   const Jet::VariationColl& varcoll = jet->varyParsDirectly(epsilon);
   for(Jet::VariationCollIter i = varcoll.begin() ; i != varcoll.end() ; ++i) {
@@ -193,14 +193,14 @@ double JetTruthEvent::chi2_fast_simple(double * temp_derivative1,
     err2inv *= err2inv;
     err2inv = 1/err2inv;
     temp1 *= temp1 * err2inv;
-    temp1 = weight * TData::ScaleResidual(temp1);
+    temp1 = weight * Event::ScaleResidual(temp1);
     temp2 = truth - i->upperEt;
     c = i->upperEt/jet->Et(); 
     err2inv = jet->expectedError(truth/c); 
     err2inv *= err2inv;
     err2inv = 1/err2inv;
     temp2 *= temp2 * err2inv;
-    temp2 = weight * TData::ScaleResidual(temp2);
+    temp2 = weight * Event::ScaleResidual(temp2);
     temp_derivative1[i->parid] += (temp2 - temp1); // for 1st derivative
     temp_derivative2[i->parid] += (temp2 + temp1 - 2 * chi2); // for 2nd derivative
   }
@@ -230,7 +230,7 @@ double JetTruthEvent::chi2_fast_invert(double * temp_derivative1,
   err2inv = 1/err2inv;
   double chi2 = jet->Et() - expectedEt;
   chi2 *= chi2 * err2inv;
-  chi2 = weight * TData::ScaleResidual(chi2);
+  chi2 = weight * Event::ScaleResidual(chi2);
   
   if(chi2 != chi2) {//check for NAN
     std::cout << truth << ", " << expectedEt << ", " << chi2 << '\n';
@@ -264,14 +264,14 @@ double JetTruthEvent::chi2_fast_invert(double * temp_derivative1,
     err2inv *= err2inv;
     err2inv = 1/err2inv;
     temp1 *= temp1 * err2inv;
-    temp1 = weight * TData::ScaleResidual(temp1);
+    temp1 = weight * Event::ScaleResidual(temp1);
     assert(temp1 == temp1);
     temp2 = i->upperEt - jet->Et(); 
     err2inv = i->upperError;
     err2inv *= err2inv;
     err2inv = 1/err2inv;
     temp2 *= temp2 * err2inv;
-    temp2 = weight * TData::ScaleResidual(temp2);
+    temp2 = weight * Event::ScaleResidual(temp2);
     assert(temp2 == temp2);
     temp_derivative1[i->parid] += (temp2 - temp1); // for 1st derivative
     temp_derivative2[i->parid] += (temp2 + temp1 - 2 * chi2); // for 2nd derivative
@@ -318,12 +318,12 @@ double JetTruthEvent::chi2_log_fast_invert(double * temp_derivative1,
   err2 *= err2;
   double chi2 = jet->Et() - expectedEt;
   chi2 *= chi2 / err2;
-  chi2 = weight * TData::ScaleResidual(log(err2) + chi2);
+  chi2 = weight * Event::ScaleResidual(log(err2) + chi2);
   
   if(chi2 != chi2) {//check for NAN
     std::cout << truth << ", " << expectedEt << ", " << chi2 << '\n';
   }
-  
+
   //calculate chi2 for derivatives
   double temp1,temp2;
   const Jet::VariationColl& varcoll = jet->varyPars(epsilon,truth,expectedEt);
@@ -347,13 +347,13 @@ double JetTruthEvent::chi2_log_fast_invert(double * temp_derivative1,
     err2 = i->lowerError;
     err2 *= err2;
     temp1 *= temp1 / err2;
-    temp1 = weight * TData::ScaleResidual(log(err2) + temp1);
+    temp1 = weight * Event::ScaleResidual(log(err2) + temp1);
     assert(temp1 == temp1);
     temp2 = i->upperEt - jet->Et(); 
     err2 = i->upperError;
     err2 *= err2;
     temp2 *= temp2 / err2;
-    temp2 = weight * TData::ScaleResidual(log(err2) + temp2);
+    temp2 = weight * Event::ScaleResidual(log(err2) + temp2);
     assert(temp2 == temp2);
     temp_derivative1[i->parid] += (temp2 - temp1); // for 1st derivative
     temp_derivative2[i->parid] += (temp2 + temp1 - 2 * chi2); // for 2nd derivative

@@ -1,12 +1,11 @@
-// $Id: SmearDiJet.cc,v 1.6 2009/09/02 13:52:26 mschrode Exp $
+// $Id: SmearDiJet.cc,v 1.8 2010/01/08 18:16:02 mschrode Exp $
 
 #include "SmearDiJet.h"
 
-
 //!  \brief Constructor
-//!  \param mess First jet
-//!  \param secndMess Second jet
-//!  \param thirdMess Third jet (for cuts)
+//!  \param jet1 First jet
+//!  \param jet2 Second jet
+//!  \param jet3 Third jet (for cuts)
 //!  \param weight Event weight
 //!  \param respPDF Response probability density
 //!  \param truthPDF True pt probability density
@@ -15,9 +14,9 @@
 //!  \param eps Integration precision for convergence
 //!  \param niter Maximum number of iterations in integration
 // --------------------------------------------------
-SmearDiJet::SmearDiJet(TMeasurement * mess,
-		       TMeasurement * secndMess,
-		       TMeasurement * thirdMess,
+SmearDiJet::SmearDiJet(Jet * jet1,
+		       Jet * jet2,
+		       Jet * jet3,
 		       double weight,
 		       const Function& respPDF,
 		       const Function& truthPDF,
@@ -25,14 +24,22 @@ SmearDiJet::SmearDiJet(TMeasurement * mess,
 		       double max,
 		       double eps,
 		       int niter)
-  : SmearData(TypeSmearDiJet,mess,0,weight,respPDF),
+  : SmearData(TypeSmearDiJet,jet1,0,weight,respPDF),
     kMaxNIter_(niter),
     kEps_(eps),
     kMin_(min),
     kMax_(max),
-    secndMess_(secndMess),
-    thirdMess_(thirdMess),
+    jet2_(jet2),
+    jet3_(jet3),
     truthPDF_(truthPDF) { };
+
+
+
+// --------------------------------------------------
+SmearDiJet::~SmearDiJet() { 
+  delete jet2_;
+  delete jet3_;
+}
 
 
 
@@ -84,8 +91,8 @@ double SmearDiJet::chi2() const
       
       // Calculate probability only at new nodes
       if(nIter == 0 || i % 3 != 0) {
-	double p0 = respPDF( GetMess()->pt / t, t );
-	double p1 = respPDF( GetSecondMess()->pt / t, t );
+	double p0 = respPDF( jet1()->pt() / t, t );
+	double p1 = respPDF( jet2()->pt() / t, t );
 	pp.push_back(p0 * p1 * truthPDF(t)); // Store product of pdfs and normalization
       } else {
 	pp.push_back(pp_old.at(i/3));       // Store product of pdfs previously calcluated
@@ -200,7 +207,7 @@ double SmearDiJet::chi2_fast(double * temp_derivative1,
 //!          is normalized
 // --------------------------------------------------
 double SmearDiJet::truthPDF(double t) const {
-  TMeasurement meas;
+  Measurement meas;
   meas.pt = t;
   return truthPDF_(&meas);
 }
@@ -215,15 +222,4 @@ void SmearDiJet::printInitStats() const {
   std::cout << "  niter: " << kMaxNIter_ << "\n";
   std::cout << "  eps:   " << kEps_ << "\n";
   std::cout << "  range: " << kMin_ << " < truth < " << kMax_ << " (GeV)\n";
-}
-
-
-
-//!  \brief Get \f$ \hat{p}_{T} \f$ of the dijet event
-// --------------------------------------------------
-double SmearDiJet::ptHat() const {
-  double ptHat = 0.;
-  TJet * jet = dynamic_cast<TJet*>(GetMess());
-  if( jet ) ptHat = jet->ptHat;
-  return ptHat;
 }

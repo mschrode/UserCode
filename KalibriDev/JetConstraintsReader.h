@@ -4,7 +4,7 @@
 //    This class add user defined jet constraints
 //
 //    first version: Hartmut Stadie 2008/12/12
-//    $Id: JetConstraintsReader.h,v 1.2 2009/10/09 16:40:44 stadie Exp $
+//    $Id: JetConstraintsReader.h,v 1.3 2009/11/24 16:52:59 stadie Exp $
 //   
 #ifndef JETCONSTRAINTSREADER_H
 #define JETCONSTRAINTSREADER_H
@@ -20,7 +20,7 @@ class JetConstraintsReader : public EventReader{
  public:
   JetConstraintsReader(const std::string& configfile, TParameters *p);
   virtual ~JetConstraintsReader();
-  int readEvents(std::vector<TData*>& data);
+  int readEvents(std::vector<Event*>& data);
  private:
   class JetConstraint {
   public:

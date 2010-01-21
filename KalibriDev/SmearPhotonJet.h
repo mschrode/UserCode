@@ -1,4 +1,4 @@
-// $Id: SmearPhotonJet.h,v 1.3 2009/07/23 13:44:41 mschrode Exp $
+// $Id: SmearPhotonJet.h,v 1.4 2009/11/24 16:52:59 stadie Exp $
 
 #ifndef SmearPhotonJet_h
 #define SmearPhotonJet_h
@@ -10,11 +10,11 @@
 //!  \brief Photon-jet data for jetsmearing method
 //!  \author Matthias Schroeder
 //!  \date Tue Jun  9 18:23:44 CEST 2009
-//!  $Id: SmearPhotonJet.h,v 1.3 2009/07/23 13:44:41 mschrode Exp $
+//!  $Id: SmearPhotonJet.h,v 1.4 2009/11/24 16:52:59 stadie Exp $
 // --------------------------------------------------
 class SmearPhotonJet : public SmearData {
  public:
-  SmearPhotonJet(TMeasurement * mess, double photonpt, double weight, const Function& respPDF)
+  SmearPhotonJet(Measurement * mess, double photonpt, double weight, const Function& respPDF)
     : SmearData(TypeSmearPhotonJet,mess,photonpt,weight,respPDF) {};
   ~SmearPhotonJet() {};
 

@@ -1,3 +1,6 @@
+//
+// $Id: ControlPlotsComparison.h,v 1.2 2009/11/24 16:52:59 stadie Exp $
+//
 #ifndef ControlPlotsComparison_h
 #define ControlPlotsComparison_h
 

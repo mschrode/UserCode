@@ -1,7 +1,8 @@
-// $Id: SmearData.cc,v 1.6 2009/09/02 13:52:26 mschrode Exp $
+// $Id: SmearData.cc,v 1.8 2010/01/08 18:16:02 mschrode Exp $
 
 #include "SmearData.h"
 
+#include "CalibData.h"
 
 
 //!  \brief Constructor
@@ -11,13 +12,13 @@
 //!  \param weight Event weight
 //!  \param respPDF Response probability density
 // --------------------------------------------------
-SmearData::SmearData(DataType type, TMeasurement * mess, double truth, double weight, const Function& respPDF)
-  : TData(),
+SmearData::SmearData(DataType type, Measurement * mess, double truth, double weight, const Function& respPDF)
+  : Event(),
     respPDF_(respPDF),
+    mess_(mess),
     kTruth_(truth),
     kType_(type),
-    weight_(weight),
-    mess_(mess) {};
+    weight_(weight) {};
 
 
 
@@ -28,7 +29,7 @@ SmearData::SmearData(DataType type, TMeasurement * mess, double truth, double we
 //!          for an event with true pt \p pt
 // --------------------------------------------------
 double SmearData::respPDF(double r, double pt) const {
-  TMeasurement meas;
+  Measurement meas;
   meas.E  = r;
   meas.pt = pt;
   return respPDF_(&meas);

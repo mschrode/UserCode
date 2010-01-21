@@ -1,12 +1,5 @@
 #ifndef PHOTONJETREADER_H
 #define PHOTONJETREADER_H
-
-#include "EventReader.h"
-
-#include <string>
-
-#include "GammaJetSel.h"
-
 //!
 //!  \brief Reader for Photon Jet Events
 //!
@@ -14,23 +7,32 @@
 //!
 //!  \author Hartmut Stadie
 //!  \date 2008/12/12
-//!  $Id: PhotonJetReader.h,v 1.6 2009/10/26 20:56:29 mschrode Exp $
+//!  $Id: PhotonJetReader.h,v 1.9 2009/11/25 13:07:45 stadie Exp $
 // ----------------------------------------------------------------   
+
+
+#include "EventReader.h"
+
+#include <string>
+#include <memory>
+
+class CorFactors;
+class GammaJetSel;
+
 class PhotonJetReader : public EventReader{
  public:
   PhotonJetReader(const std::string& configfile, TParameters *p);
-  virtual ~PhotonJetReader() {};
-  int readEvents(std::vector<TData*>& data);
+  ~PhotonJetReader();
+  int readEvents(std::vector<Event*>& data);
 
  private:
-  TData* createTruthMultMessEvent();
-  TData* createJetTruthEvent();
-  TData* createSmearEvent();
+  Event* createJetTruthEvent();
+  Event* createSmearEvent();
+  CorFactors* createCorFactors(int jetid) const;
 
+  std::auto_ptr<GammaJetSel> gammaJet_;        //!< Gamma-jet Selector
 
-  GammaJetSel gammaJet_;        //!< Gamma-jet Selector
-
-  int    dataClass_;            //!< Data class, see also TData
+  int    dataClass_;            //!< Data class, see also Event
   int    nGammaJetEvents_;    //!< Maximum number of read photon jet events
 
   double minJetEt_;            //!< Minimum pt of jet

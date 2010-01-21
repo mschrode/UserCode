@@ -2,28 +2,18 @@
 //    Class for jets with tracks 
 //
 //    first version: Hartmut Stadie 2009/04/08
-//    $Id: JetWithTracks.cc,v 1.5 2009/07/23 11:43:42 stadie Exp $
+//    $Id: JetWithTracks.cc,v 1.8 2009/11/26 18:24:41 stadie Exp $
 //   
 #include"JetWithTracks.h"
 
 #include "TLorentzVector.h"
 
-JetWithTracks::JetWithTracks(double Et, double EmEt, double HadEt,
-			     double OutEt, double E,double eta,double phi, 
-			     Flavor flavor, const Function& func,
-			     double (*errfunc)(const double *x, const TMeasurement *xorig,double err), 
-			     const Function& gfunc,double Etmin)
-  : Jet(Et,EmEt,HadEt,OutEt,E,eta,phi,flavor,func,errfunc,gfunc,Etmin),
-    ntrackpars(0), expectedCaloEt(0), trackPt(0)
-{
-}
-
 JetWithTracks::JetWithTracks(double Et, double EmEt, double HadEt ,double OutEt, double E,
-			     double eta,double phi, Flavor flavor, double genPt, double dR,
-			     TJet::CorFactors corFactors, const Function& func, 
-			     double (*errfunc)(const double *x, const TMeasurement *xorig, double err), 
+			     double eta,double phi, double etaeta, Flavor flavor, double genPt, double dR,
+			     CorFactors* corFactors, const Function& func, 
+			     double (*errfunc)(const double *x, const Measurement *xorig, double err), 
 			     const Function& gfunc, double Etmin) 
-  :  Jet(Et,EmEt,HadEt,OutEt,E,eta,phi,flavor,genPt,dR,corFactors,
+  :  Jet(Et,EmEt,HadEt,OutEt,E,eta,phi,etaeta,flavor,genPt,dR,corFactors,
 	 func,errfunc,gfunc,Etmin),
      ntrackpars(0), expectedCaloEt(0), trackPt(0)
 {
@@ -129,13 +119,13 @@ const Jet::VariationColl& JetWithTracks::varyParsDirectly(double eps)
       //		<< ", " << p << std::endl;
       double orig = p[trkpar]; 
       p[trkpar] += eps;
-      varcoll[i].upperEt = correctedEt(pt);
+      varcoll[i].upperEt = correctedEt(Measurement::pt);
       varcoll[i].upperError = expectedError(varcoll[i].upperEt);
-      varcoll[i].upperEtDeriv =  (correctedEt(pt+deltaE) -  correctedEt(pt-deltaE))/2/deltaE;
+      varcoll[i].upperEtDeriv =  (correctedEt(Measurement::pt+deltaE) -  correctedEt(Measurement::pt-deltaE))/2/deltaE;
       p[trkpar] = orig - eps;
-      varcoll[i].lowerEt = correctedEt(pt); 
+      varcoll[i].lowerEt = correctedEt(Measurement::pt); 
       varcoll[i].lowerError = expectedError(varcoll[i].lowerEt);
-      varcoll[i].lowerEtDeriv =  (correctedEt(pt+deltaE) -  correctedEt(pt-deltaE))/2/deltaE;
+      varcoll[i].lowerEtDeriv =  (correctedEt(Measurement::pt+deltaE) -  correctedEt(Measurement::pt-deltaE))/2/deltaE;
       p[trkpar] = orig;
       varcoll[i].parid = id + trkpar;
       //std::cout << "up:" << varcoll[i].upperEt << " low:" << varcoll[i].lowerEt << '\n'; 
@@ -174,7 +164,7 @@ void JetWithTracks::addTrack(double Et, double EmEt, double HadEt ,
 			     double Had1, double Had5, double TrackChi2, 
 			     int NValidHits, bool TrackQualityT, double MuDR, 
 			     double MuDE, double Efficiency, const Function& func,
-			     double (*errfunc)(const double *x, const TMeasurement *xorig, double err))
+			     double (*errfunc)(const double *x, const Measurement *xorig, double err))
 {
   tracks.push_back(new Track(Et,EmEt,HadEt,OutEt,E,eta,phi,TrackId,TowerId,DR,DRout,etaOut,phiOut,
 			     EM1,EM5,Had1,Had5,TrackChi2,NValidHits,TrackQualityT,MuDR,MuDE,Efficiency,
@@ -193,7 +183,7 @@ JetWithTracks::Track::Track(double Et, double EmEt, double HadEt ,
 			    double Had1, double Had5, double TrackChi2, 
 			    int NValidHits, bool TrackQualityT, double MuDR, 
 			    double MuDE, double Efficiency, const Function& func,
-			    double (*errfunc)(const double *x, const TMeasurement *xorig, double err))
+			    double (*errfunc)(const double *x, const Measurement *xorig, double err))
   :  TTrack(Et,EmEt,HadEt,OutEt,E,eta,phi,TrackId,TowerId,DR,DRout,etaOut,phiOut,EM1,EM5,Had1,Had5,
 	    TrackChi2,NValidHits,TrackQualityT,MuDR,MuDE,Efficiency), f(func), errf(errfunc)
 { 
@@ -214,7 +204,7 @@ double JetWithTracks::expectedEt(double truth, double start, bool fast)
   //std::cout << truth << ", " << pt << ", " << cet << ", " 
   //	    <<  expectedCaloEt << ", " << trackPt << "\n";
   if(truth < trackPt) return (expectedCaloEt > 0) ? expectedCaloEt : 1.0;
-  if(expectedCaloEt >= Jet::pt) return expectedCaloEt;
+  if(expectedCaloEt >=  Measurement::pt) return expectedCaloEt;
   double m = Jet::expectedEt(truth, start, fast);
   //std::cout << "expected ET:" << m << '\n';
   //assert(m > 0);

@@ -1,46 +1,72 @@
-#ifndef JET_H
-#define JET_H
-
-#include"CalibData.h"
-#include "Function.h"
-
-
 //!    \brief Class for basic jets 
 //!
 //!    \author Hartmut Stadie
 //!
 //!    \date 2008/12/14
 //!
-//!    $Id: Jet.h,v 1.23 2009/10/26 21:00:36 mschrode Exp $
+//!    $Id: Jet.h,v 1.29 2010/01/12 19:24:48 mschrode Exp $
+#ifndef JET_H
+#define JET_H
 
+#include"CalibData.h"
+#include "Function.h"
 
 #include "gsl/gsl_errno.h"
 #include "gsl/gsl_math.h"
 #include "gsl/gsl_roots.h"
      
-class Jet : public TJet
+class CorFactors;
+
+class Jet : public Measurement
 {
  public:
-  Jet(double Et, double EmEt, double HadEt ,double OutEt, double E,
-      double eta,double phi, Flavor flavor, const Function& f, 
-      double (*errfunc)(const double *x, const TMeasurement *xorig, double err), 
-      const Function& gf, double Etmin = 0);
-  Jet(double Et, double EmEt, double HadEt ,double OutEt, double E,
-      double eta,double phi, Flavor flavor, double genPt, double dR,
-      TJet::CorFactors corFactors, const Function& f,
-      double (*errfunc)(const double *x, const TMeasurement *xorig, double err), 
-      const Function& gf, double Etmin = 0); 
-  virtual ~Jet() {};
+  //! For sorting jets in calo pt
+  static bool caloPtGreaterThan(const Jet *j1, const Jet *j2) {
+    // check for 0
+    if (j1 == 0) {
+      return j2 != 0;
+    } else if (j2 == 0) {
+      return false;
+    } else {
+      return j1->pt() > j2->pt();
+    }
+  }
 
-  double Et()     const {return pt;}                 //!< Return transverse energy Et
+
+  //!  \brief Jet flavor
+  //!
+  //!  The possible flavors are
+  //!  - 0: Gluon
+  //!  - 1: u, d, or s quark
+  //!  - 2: c quark
+  //!  - 3: b quark
+  enum Flavor{ gluon=0, uds=1, c=2, b=3 };
+
+
+ public:
+  Jet(double Et, double EmEt, double HadEt ,double OutEt, double E,
+      double eta,double phi, double etaeta, Flavor flavor, double genPt, 
+      double dR, CorFactors* corFactors, const Function& f,
+      double (*errfunc)(const double *x, const Measurement *xorig, double err), 
+      const Function& gf, double Etmin = 0); 
+  virtual ~Jet();
+
+  double Et()     const {return Measurement::pt;}                 //!< Return transverse energy Et
+  double pt()     const {return Measurement::pt;}                 //!< Return transverse energy Et
   double EmEt()   const {return EMF;}                //!< Return Et from the ECAL part of the towers
   double HadEt()  const {return HadF;}               //!< Return Et from the HCAL part of the towers
   double OutEt()  const {return OutF;}               //!< Return Et from the HOut part of the towers
-  double E()      const {return TMeasurement::E;}    //!< Return energy
-  double eta()    const {return TMeasurement::eta;}  //!< Return pseudorapidity
-  double phi()    const {return TMeasurement::phi;}  //!< Return azimuthal angle
-  Flavor flavor() const {return TJet::flavor;}       //!< Return jet flavor
-  double GenPt()  const {return TJet::genPt;}        //!< Return Pt for corresponding GenJet
+  double E()      const {return Measurement::E;}    //!< Return energy
+  double eta()    const {return Measurement::eta;}  //!< Return pseudorapidity
+  double phi()    const {return Measurement::phi;}  //!< Return azimuthal angle
+  double momentEtaEta() const {return Measurement::etaeta;}  //!< Return eta-eta moment (width of jet in eta)
+  Flavor flavor() const {return flavor_;}       //!< Return jet flavor
+  double genPt()  const {return genPt_;}        //!< Return Pt for corresponding GenJet 
+  double ptHat()  const {return ptHat_;}     //!< \f$ \hat{p}_{T} \f$ of the event
+  double dR() const {return dR_;}               //!< \f$ \Delta R \f$ between jet and genjet
+  const CorFactors& corFactors() const { return *corFactors_;}
+  void updateCorFactors(CorFactors *cor);
+  void correctToL3();
 
   //!  \brief Change address of parameters covered by this jet
   //!  \sa Parameters
@@ -57,12 +83,12 @@ class Jet : public TJet
   //!  \brief Calculate error from original measurement
   //!
   //!  The error is calculated using the error function
-  //!  errf and TMeasurement::pt, the pt of the original
+  //!  errf and Measurement::pt, the pt of the original
   //!  measurement.
   //!  
   //!  \return Error of original measurement
   // ---------------------------------------------------------
-  virtual double Error() const {return errf(&(TMeasurement::pt),this,0);}
+  virtual double Error() const {return errf(&(Measurement::pt),this,0);}
 
   //!  \brief Calculate error from given Et
   //!
@@ -110,17 +136,20 @@ class Jet : public TJet
   static void printInversionStats();  //!< Print some info on inversion
 
   int parIndex() const { return f.parIndex(); }
-
-
  protected:
   mutable VariationColl varcoll;
   virtual double expectedEt(double truth, double start, bool fast = false);
 
- private:
+ private: 
+  Flavor flavor_;           //!< The jet's Flavor
+  double genPt_;            //!< The genjet pt
+  double dR_;               //!< \f$ \Delta R \f$ between jet and genjet
+  double ptHat_;            //!< \f$ \hat{p}_{T} \f$ of the event
+  const CorFactors* corFactors_;   //!< The correction factors
   double    error;                //!< Stores error for constant error mode
   Function  f;                    //!< Jet correction function
   Function  gf;                   //!< Global jet correction function
-  double    (*errf)(const double *x, const TMeasurement *xorig, double err);   //!< Error function
+  double    (*errf)(const double *x, const Measurement *xorig, double err);   //!< Error function
   double    etmin;                //!< Lower cut on measured Et
 
   bool      secant(double truth, double& x1, double& x2, double eps);
@@ -131,7 +160,7 @@ class Jet : public TJet
   static long long nfails;        //!< Number of failed tries during inversion
   static long long nwarns;        //!< Number of warnings during inversion
 
-  mutable TMeasurement temp;
+  mutable Measurement temp;
   const double EoverPt;
   class GslImplementation {
     struct rf_par {

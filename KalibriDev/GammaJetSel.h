@@ -161,8 +161,8 @@ public :
    //TBranch        *b_ProcessID;   //!
    TBranch        *b_EventWeight;   //!
 
-   //GammaJetSel(TTree * /*tree*/ =0) : ProcessID(-1), EventWeight(1) { }
-   GammaJetSel(TTree * /*tree*/ =0) : EventWeight(1) { }
+   //GammaJetSel(TTree * tree = 0) : ProcessID(-1), EventWeight(1) { }
+   GammaJetSel(TTree * tree = 0) : EventWeight(1) { }
    virtual ~GammaJetSel() { }
    virtual Int_t   Version() const { return 2; }
    virtual void    Begin(TTree *tree);

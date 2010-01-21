@@ -2,20 +2,20 @@
 #define TOYMC_H
 
 #include <vector>
+#include <string>
 
-#include "TH1F.h"
-#include "TH2F.h"
-#include "TLorentzVector.h"
-#include "TRandom.h"
-
+class TH1F;
+class TH2F;
+class TRandom;
 class TTree;
-
+class TLorentzVector;
+class ConfigFile;
 
 //!  \brief Generate toy MC data
 //!
 //!  \author Hartmut Stadie
 //!  \date   Mon Jun 30 11:00:00 CEST 2008
-//!  $Id: ToyMC.h,v 1.1 2009/10/30 08:59:45 mschrode Exp $
+//!  $Id: ToyMC.h,v 1.25 2010/01/08 18:14:36 mschrode Exp $
 // ----------------------------------------------------------------  
 class ToyMC {
 
@@ -25,7 +25,7 @@ class ToyMC {
   //!  - For calibration:
   //!    - 'Gauss': An energy dependent Gaussian resolution
   //!      \f[
-  //!       \frac{\sigma}{E} = \frac{b}{E} \oplus \frac{b}{\sqrt{E}} \oplus b
+  //!       \frac{\sigma}{E} = \frac{a}{E} \oplus \frac{b}{\sqrt{E}} \oplus c
   //!      \f]
   //!      
   //!    - 'Landau': An energy dependent Landau resolution
@@ -123,7 +123,7 @@ class ToyMC {
   double          maxPt_;              //!< Maximum truth pt
   TruthSpectrum   ptSpectrum_;         //!< Truth pt spectrum
   std::vector<double> parTruth_;       //!< Parameters for truth spectrum
-  TLorentzVector  pInput_;             //!< Stores the truth lorentz vector of the current event
+  TLorentzVector*  pInput_;             //!< Stores the truth lorentz vector of the current event
 
   TH2F          * histPtEta_;          //!< For histogramed truth spectrum
 
@@ -149,19 +149,15 @@ class ToyMC {
 
   void genInput();
   void calIds(float& eta, float &phi, int& ieta, int& iphi);
-  void smearTower(const TLorentzVector& jet, double e, bool calcSmearFactor, float& te, float& tem, float& thad, 
+  void smearTower(const TLorentzVector* jet, double e, bool calcSmearFactor, float& te, float& tem, float& thad, 
 		  float& tout, float& temtrue, float& thadtrue, float& touttrue);  
-  int  splitJet(const TLorentzVector& jet ,float* et,float* eta,float * phi, int* ieta,int* iphi);
-  void calculateSmearFactor(const TLorentzVector& jet, double pt);
+  int  splitJet(const TLorentzVector* jet ,float* et,float* eta,float * phi, int* ieta,int* iphi);
+  void calculateSmearFactor(const TLorentzVector* jet, double pt);
 
 
  public:
   ToyMC();
-  ~ToyMC() {
-    delete random_;
-    if( histResp_ ) delete histResp_;
-    if( histPtEta_ ) delete histPtEta_;
-  }
+  ~ToyMC();
   int etaBin(float eta) const;
   float etaBinCenter(int etaBin) const { return 0.5*(etaLowerBinEdge(etaBin)+etaUpperBinEdge(etaBin)); }
   float etaUpperBinEdge(int etaBin) const { return etaBinEdge(etaBin, false); }
@@ -176,6 +172,7 @@ class ToyMC {
   int makeDiJet(const char* filename, int nevents);
   int makeTop(const char* filename, int nevents);
   void init(const std::string& configfile);
+  void init(const ConfigFile *config);
   void print() const;
 };
 

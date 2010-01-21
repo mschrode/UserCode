@@ -1,22 +1,13 @@
 #ifndef DIJETREADER_H
 #define DIJETREADER_H
-
-#include "EventReader.h"
-#include "NJetSel.h"
-
-#include <string>
-
-#include "TRandom3.h"
-
-
 //!
 //!  \brief Reader for dijet events
 //!
 //!  This class reads dijet events from a ROOT-tree. They are read
-//!  by calling the method readEvents(std::vector<TData*>& data).
-//!  The data is stored in a format derived from TData depending on the
+//!  by calling the method readEvents(std::vector<Event*>& data).
+//!  The data is stored in a format derived from Event depending on the
 //!  'Di-Jet data class' field in the config file:
-//!    - class 0: TData_PtBalance
+//!    - class 0: Event_PtBalance
 //!
 //!  It is also possible to store the first two jets of the dijet
 //!  event as a JetTruthEvent, where the \f$ p^{\textrm{gen}}_{T} \f$
@@ -37,25 +28,40 @@
 //!
 //!  \author Hartmut Stadie
 //!  \date 2008/12/12
-//!  $Id: DiJetReader.h,v 1.13 2009/10/26 20:56:29 mschrode Exp $
+//!  $Id: DiJetReader.h,v 1.16 2010/01/12 19:24:48 mschrode Exp $
 // ----------------------------------------------------------------   
+
+
+
+#include "EventReader.h"
+
+#include <string>
+#include <memory>
+
+
+class Jet;
+class NJetSel;
+class TRandom;
+
 class DiJetReader : public EventReader{
  public:
   DiJetReader(const std::string& configfile, TParameters *p);
-  virtual ~DiJetReader();
-  int readEvents(std::vector<TData*>& data);
+  ~DiJetReader();
+  int readEvents(std::vector<Event*>& data);
 
 
  private:
-  TData* createPtBalanceEvent();
-  TData* createTwoJetsPtBalanceEvent();
-  TData* createSmearEvent();
-  int createJetTruthEvents(std::vector<TData*>& data);
+  Event* createTwoJetsPtBalanceEvent();
+  Event* createSmearEvent();
+  int createJetTruthEvents(std::vector<Event*>& data);
+  CorFactors* createCorFactors(int jetid) const;
+  std::vector<Jet*> readCaloJets(int nJets) const;
 
-  NJetSel nJet_;                //!< Njet Selector
-  TRandom3 * rand_;             //!< Random number generator
 
-  int    dataClass_;            //!< Data class, see also TData
+  std::auto_ptr<NJetSel> nJet_;                //!< Njet Selector
+  TRandom* rand_;             //!< Random number generator
+
+  int    dataClass_;            //!< Data class, see also Event
   int    nDijetEvents_;         //!< Maximum number of read dijet events
   int    prescale_;             //!< only read every nth event
 

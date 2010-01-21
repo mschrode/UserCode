@@ -4,32 +4,31 @@
 //    This class reads events according to the TopSel
 //
 //    first version: Hartmut Stadie 2008/12/12
-//    $Id: TopReader.h,v 1.7 2009/08/07 12:33:32 snaumann Exp $
+//    $Id: TopReader.h,v 1.9 2009/11/25 13:07:45 stadie Exp $
 //   
 #ifndef TOPREADER_H
 #define TOPREADER_H
 
 #include <string>
-
-#include "TH2F.h"
+#include <memory>
 
 #include "EventReader.h"
-#include "TopSel.h"
 
-class TData;
+class TopSel;
+class Event;
+class TH2F;
 
 class TopReader : public EventReader{
  public:
-
   TopReader(const std::string& configfile, TParameters *p);
   virtual ~TopReader();
-  int readEvents(std::vector<TData*>& data);
+  int readEvents(std::vector<Event*>& data);
 
  private:
+  Event* createTwoJetsInvMassEvents();
+  CorFactors* createCorFactors(int jetid) const;
 
-  TData* createTwoJetsInvMassEvents();
-
-  TopSel top_;
+  std::auto_ptr<TopSel> top_;
   double minJetEt_;
   double maxJetEta_;
   double minJetHadFrac_;
