@@ -1,4 +1,4 @@
-// $Id: SmearData.cc,v 1.8 2010/01/08 18:16:02 mschrode Exp $
+// $Id: SmearData.cc,v 1.2 2010/01/21 16:49:22 mschrode Exp $
 
 #include "SmearData.h"
 
@@ -34,3 +34,16 @@ double SmearData::respPDF(double r, double pt) const {
   meas.pt = pt;
   return respPDF_(&meas);
 }
+
+
+
+// --------------------------------------------------
+double SmearData::respPDFSigma(double r, double pt) const {
+  Measurement meas;
+  meas.E  = r;
+  meas.pt = pt;
+  return respPDF_.sigma(&meas);
+}
+
+
+

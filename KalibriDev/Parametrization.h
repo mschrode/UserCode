@@ -1,5 +1,5 @@
 //
-//  $Id: Parametrization.h,v 1.54 2010/01/12 16:00:37 mschrode Exp $
+//  $Id: Parametrization.h,v 1.5 2010/01/21 16:49:19 mschrode Exp $
 //
 #ifndef CALIBCORE_PARAMETRIZATION_H
 #define CALIBCORE_PARAMETRIZATION_H
@@ -24,7 +24,7 @@ class TH1D;
 //!  to correct a tower or jet measurement.
 //!  \author Hartmut Stadie
 //!  \date Thu Apr 03 17:09:50 CEST 2008
-//!  $Id: Parametrization.h,v 1.54 2010/01/12 16:00:37 mschrode Exp $
+//!  $Id: Parametrization.h,v 1.5 2010/01/21 16:49:19 mschrode Exp $
 // -----------------------------------------------------------------
 class Parametrization 
 {
@@ -82,6 +82,9 @@ public:
   //!  \return The corrected Et of a jet
   // -----------------------------------------------------------------
   virtual double correctedJetEt(const Measurement *x,const double *par) const = 0;
+  virtual double correctedJetEtSigma(const Measurement *x,const double *par,const double *cov, const std::vector<int> &covIdx) const {
+    return correctedJetEt(x,par);
+  };
 
  
   //!  \brief Returns the expected signal of a track in the Calorimeter
@@ -1155,6 +1158,8 @@ class SmearStepGaussInter : public Parametrization
 
   //! Returns probability density of response
   double correctedJetEt(const Measurement *x,const double *par) const;
+  double correctedJetEtSigma(const Measurement *x,const double *par,const double *cov, const std::vector<int> &covIdx) const;
+
 
   //! Returns probability density of true pt multiplied by normalization
   //! of dijet probability (see also \p SmearDiJet::truthPDF(t)).
@@ -1169,6 +1174,7 @@ class SmearStepGaussInter : public Parametrization
   const double ptDijetMin_;             //!< Minimum of pt dijet
   const double ptDijetMax_;             //!< Maximum of pt dijet
   const int    nStepPar_;               //!< Number of parameters of step part of pdf
+  const int    nGaussPar_;              //!< Number of parameters of Gauss part of pdf
   const double binWidth_;               //!< Bin width
   const std::vector<double> respParScales_;     //!< Parameter scales
   const std::vector<double> gaussPar_;  //!< Parameters of Gaussian part of response pdf
@@ -1181,6 +1187,8 @@ class SmearStepGaussInter : public Parametrization
   //! Returns probability density (not normalised!) of truth
   //! considering cuts on dijet pt
   double truthPDF(double pt, double n) const;
+
+  double respDerivative(const Measurement *x, const double *par, int i) const;
 
   //! Print some initialization details
   void print() const;
@@ -1211,6 +1219,7 @@ class SmearCrystalBall : public Parametrization
 
   //! Returns probability density of response
   double correctedJetEt(const Measurement *x,const double *par) const;
+  double correctedJetEtSigma(const Measurement *x,const double *par,const double *cov, const std::vector<int> &covIdx) const;
 
   //! Returns probability density of true pt multiplied by normalization
   //! of dijet probability (see also \p SmearDiJet::truthPDF(t)).
@@ -1227,9 +1236,11 @@ class SmearCrystalBall : public Parametrization
   const std::vector<double> respParScales_;     //!< Parameter scales
   TH1D * ptDijetCutInt_;	        //!< Integral over dijet response for truth pdf for different t
 
-  //! Returns the function value of a non-normalized crystal
+  //! Returns the function value of a normalized crystal
   //! ball function
-  double crystallBallFunc(double x, double mean, double sigma, double alpha, double n) const;
+  double crystalBallFunc(double x, double mean, double sigma, double alpha, double n) const;
+  double crystalBallNorm(double mean, double sigma, double alpha, double n) const;
+  double crystalBallDerivative(double x, double mean, double sigma, double alpha, double n, int i) const;
 
   //! Returns probability density (not normalised!) of truth
   //! considering cuts on dijet pt

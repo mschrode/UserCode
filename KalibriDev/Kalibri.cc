@@ -1,4 +1,4 @@
-//  $Id: Kalibri.cc,v 1.3 2010/01/04 17:04:51 mschrode Exp $
+//  $Id: Kalibri.cc,v 1.1 2010/01/21 16:46:05 mschrode Exp $
 
 #include "Kalibri.h"
 
@@ -348,32 +348,31 @@ void Kalibri::run_Lvmini()
     par_->SetParameters(aux + par_index);
   }
   //Copy Parameter errors from aux array to the TParameter::e array
-  error_index=2;
   if( !calcCov_ ) {
+    error_index=2;
     error_index = lvmind_(error_index);
     par_->SetErrors(aux+error_index);
   } else {
     // Retrieve parameter errors
     error_index = 3;
     error_index = lvmind_(error_index);
-    std::cout << "\nErrors " << error_index << std::endl;
-    for(int i = 0; i < npar; i++) {
-      std::cout << "Error " << i << ": " << aux[error_index+i] << std::endl;
-    }
+    par_->SetErrors(aux+error_index);
     // Retrieve global parameter correlation coefficients
     error_index = 4;
     error_index = lvmind_(error_index);
-    std::cout << "\nGlobal corr " << error_index << std::endl;
-    for(int i = 0; i < npar; i++) {
-      std::cout << "Global corr " << i << ": " << aux[error_index+i] << std::endl;
-    }
-    // Retrieve parameter correlations
+    par_->SetGlobalCorrCoeff(aux+error_index);
+    // Retrieve parameter covariances
     error_index = 5;
     error_index = lvmind_(error_index);
-    std::cout << "\nCov " << error_index << std::endl;
-    for(int i = 0; i < (npar*npar+npar)/2; i++) {
-      std::cout << "Cov " << i << ": " << aux[error_index+i] << std::endl;
+    // Set cov = 0 for fixed parameters
+    std::cout << "The following covariance elements are NAN:" << std::endl;
+    for(int i = 0; i < par_->GetNumberOfCovCoeffs(); i++) {
+      if( aux[error_index+i] != aux[error_index+i] ) { // Check for NAN
+	std::cout << " " << i << std::endl;
+	aux[error_index+i] = 0.;
+      }
     }
+    par_->SetCovCoeff(aux+error_index);
   }
   for( std::vector<int>::const_iterator iter = globalJetPars_.begin();
        iter != globalJetPars_.end() ; ++ iter) {
@@ -447,6 +446,7 @@ void Kalibri::done()
     } else if( mode == 1 ) {  // Control plots for jetsmearing
       ControlPlotsJetSmearing * plotsjs = new ControlPlotsJetSmearing(configFile_,&data_,par_);
       plotsjs->plotResponse();
+      plotsjs->plotParameters();
       //      plotsjs->plotMeanResponseAndResolution();
       plotsjs->plotDijets();
       delete plotsjs;

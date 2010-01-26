@@ -1,5 +1,5 @@
 //
-// $Id: ControlPlotsJetSmearing.h,v 1.8 2010/01/12 16:01:26 mschrode Exp $
+// $Id: ControlPlotsJetSmearing.h,v 1.2 2010/01/21 16:48:45 mschrode Exp $
 //
 #ifndef JS_CONTROLPLOTS_JETSMEARING_H
 #define JS_CONTROLPLOTS_JETSMEARING_H
@@ -21,7 +21,7 @@ class TCanvas;
 //!  \brief Generates validation plots for jet-smearing method
 //!  \author Matthias Schroeder
 //!  \date Thu May  7 11:30:28 CEST 2009 
-//!  $Id: ControlPlotsJetSmearing.h,v 1.8 2010/01/12 16:01:26 mschrode Exp $
+//!  $Id: ControlPlotsJetSmearing.h,v 1.2 2010/01/21 16:48:45 mschrode Exp $
 // --------------------------------------------------
 class ControlPlotsJetSmearing {
  public:
@@ -30,6 +30,7 @@ class ControlPlotsJetSmearing {
   
   void plotDijets() const;
   void plotResponse() const;
+  void plotParameters() const;
   void setBinningResp(int nbins, double min, double max) { respNBins_ = nbins; respMin_ = min; respMax_ = max;}
 
 

@@ -1,7 +1,7 @@
 //
 // Original Authors:  Christian Autermann, Hartmut Stadie
 //         Created:  Wed Jul 18 13:54:50 CEST 2007
-// $Id: Parameters.h,v 1.58 2009/11/24 16:52:59 stadie Exp $
+// $Id: Parameters.h,v 1.4 2010/01/21 16:49:18 mschrode Exp $
 //
 #ifndef TParameters_h
 #define TParameters_h
@@ -26,7 +26,7 @@
 //!         interface to response and error parametrizations
 //!  \author Christian Autermann
 //!  \date   Wed Jul 18 13:54:50 CEST 2007
-//!  $Id: Parameters.h,v 1.58 2009/11/24 16:52:59 stadie Exp $
+//!  $Id: Parameters.h,v 1.4 2010/01/21 16:49:18 mschrode Exp $
 // -----------------------------------------------------------------
 class TParameters {  
 public :
@@ -54,6 +54,9 @@ public :
   int GetNumberOfTowerParametersPerBin() const {return p->nTowerPars();}
   int GetNumberOfJetParametersPerBin() const {return p->nJetPars();}
   int GetNumberOfTrackParametersPerBin() const {return p->nTrackPars();}
+  int GetNumberOfCovCoeffs() const { 
+    return (GetNumberOfParameters()*GetNumberOfParameters()+GetNumberOfParameters())/2;
+  }
 
   int GetEtaGranularity() const { return eta_granularity;}
   int GetPhiGranularity() const { return phi_granularity;}
@@ -83,18 +86,31 @@ public :
   double* GetGlobalJetParErrorRef()  { 
     return parErrors_ + GetNumberOfTowerParameters() + GetNumberOfJetParameters() + GetNumberOfTrackParameters();
   }
+  
+  void SetParameters(double *np) {
+    std::memcpy(k,np,GetNumberOfParameters()*sizeof(double));
+  }
+  void SetErrors(double *ne) {
+    std::memcpy(parErrors_,ne,GetNumberOfParameters()*sizeof(double));
+  }  
+  void SetGlobalCorrCoeff(double *gcc) {
+    std::memcpy(parGCorr_,gcc,GetNumberOfParameters()*sizeof(double));
+  }  
+  void SetCovCoeff(double *cov) {
+    std::memcpy(parCov_,cov,GetNumberOfCovCoeffs()*sizeof(double));
+  }
 
-  void SetErrors(double *ne) { std::memcpy(parErrors_,ne,GetNumberOfParameters()*sizeof(double));}  
-  void SetGlobalCorrCoeff(double *gcc) { std::memcpy(parGCorr_,gcc,GetNumberOfParameters()*sizeof(double));}  
-  void SetParameters(double *np) { std::memcpy(k,np,GetNumberOfParameters()*sizeof(double));}
   void SetFitChi2(double chi2) { fitchi2 = chi2;}
   double GetFitChi2() const { return fitchi2;}
+
   void FillErrors(double* copy) const {
     std::memcpy(copy,parErrors_,GetNumberOfParameters()*sizeof(double));
   }
+
   double* GetPars() { return k; }
   double* GetErrors() { return parErrors_; }
-  double* GetCov() { return parCov_; }
+  double* GetGlobalCorrCoeff() { return parGCorr_; }
+  double* GetCovCoeff() { return parCov_; }
   double* GetEffMap() {return trackEff;}
   int GetTrackEffBin(double pt, double eta);
 

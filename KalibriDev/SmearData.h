@@ -1,4 +1,4 @@
-// $Id: SmearData.h,v 1.8 2010/01/08 18:16:02 mschrode Exp $
+// $Id: SmearData.h,v 1.2 2010/01/21 16:49:23 mschrode Exp $
 
 #ifndef SmearData_h
 #define SmearData_h
@@ -9,7 +9,7 @@
 //!  \brief Abstract base class for jetsmearing method
 //!  \author Matthias Schroeder
 //!  \date Tue Jun  9 15:24:49 CEST 2009
-//!  $Id: SmearData.h,v 1.8 2010/01/08 18:16:02 mschrode Exp $
+//!  $Id: SmearData.h,v 1.2 2010/01/21 16:49:23 mschrode Exp $
 // --------------------------------------------------
 class SmearData : public Event {
  public:
@@ -32,6 +32,7 @@ class SmearData : public Event {
 
   double * respPar() { return respPDF_.firstPar(); }
   double respPDF(double r, double pt) const;
+  double respPDFSigma(double r, double pt) const;
   virtual void setWeight(double w) { weight_ = w; } 
 
   virtual double chi2_plots() const { return 0.; }                 //!< Dummy, no functionality

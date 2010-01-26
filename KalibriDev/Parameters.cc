@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.45 2010/01/12 16:00:37 mschrode Exp $
+// $Id: Parameters.cc,v 1.3 2010/01/21 16:49:17 mschrode Exp $
 
 #include <fstream>
 #include <cassert>
@@ -203,16 +203,30 @@ void TParameters::Init(const ConfigFile& config)
   // Initialize storage for parameter values and errors
   k = new double[GetNumberOfParameters()];
   parErrors_ = new double[GetNumberOfParameters()];
+  parGCorr_ = new double[GetNumberOfParameters()];
   parCov_ = new double[(GetNumberOfParameters()*GetNumberOfParameters()+GetNumberOfParameters())/2];
   trackEff = new double[169];
 
   for(int i = 0; i < GetNumberOfParameters(); i++) {
     k[i] = 0.;
     parErrors_[i] = 0.;
+    parGCorr_[i] = 0.;
   }
   for(int i = 0; i < (GetNumberOfParameters()*GetNumberOfParameters()+GetNumberOfParameters())/2; i++) {
     parCov_[i] = 0.;
   }
+  //  parCov_[44] = 0.01;
+//   parCov_[4] = 0.01;
+//   parCov_[5] = 0.04;
+//   parCov_[5] = 0.01;
+//   parCov_[9] = 0.01;
+
+//   parErrors_[0] = 0.;
+//  parErrors_[8] = 0.1;
+//   parErrors_[2] = 0.2;
+//   parErrors_[3] = 0.1;
+//   parErrors_[4] = 0.;
+
 
   for (unsigned int bin=0; bin<eta_granularity*phi_granularity; ++bin){
     for (unsigned int tp=0; tp < p->nTowerPars(); ++tp){
@@ -225,14 +239,12 @@ void TParameters::Init(const ConfigFile& config)
     for (unsigned int jp=0; jp < p->nJetPars(); ++jp){
       int i = GetNumberOfTowerParameters() + bin*p->nJetPars() + jp;   
       k[i] = jet_start_values[jp];
-      parErrors_[i] = 0.0;
     }
   }
   for (unsigned int bin=0; bin<eta_granularity_track*phi_granularity_track; ++bin){
     for (unsigned int trp=0; trp < p->nTrackPars(); ++trp){
       int i = GetNumberOfTowerParameters() + GetNumberOfJetParameters() + bin*p->nTrackPars() + trp;   
       k[i] = track_start_values[trp];
-      parErrors_[i] = 0.0;
     }
   }
 
@@ -247,7 +259,6 @@ void TParameters::Init(const ConfigFile& config)
   for (unsigned int gjp = 0 ; gjp < p->nGlobalJetPars() ; ++gjp){
     int i = GetNumberOfTowerParameters() + GetNumberOfJetParameters() + GetNumberOfTrackParameters() + gjp;   
     k[i] = global_jet_start_values[gjp];
-    parErrors_[i] = 0.0;
   }
   
   // read predefined calibration contants from cfi
@@ -1554,9 +1565,9 @@ Function TParameters::tower_function(int etaid, int phiid) {
     exit(-2);  
   }
   int parIndex = id*GetNumberOfTowerParametersPerBin();
-  return Function(&Parametrization::correctedTowerEt,0,parIndex,
+  return Function(&Parametrization::correctedTowerEt,0,0,parIndex,
 		  GetNumberOfTowerParametersPerBin(),
-		  GetTowerParRef(id),GetTowerParErrorRef(id),GetCov(),
+		  GetTowerParRef(id),GetTowerParErrorRef(id),GetCovCoeff(),
 		  findCovIndices(parIndex,GetNumberOfTowerParametersPerBin()),p);
 }
 
@@ -1569,8 +1580,9 @@ Function TParameters::jet_function(int etaid, int phiid) {
   int parIndex = id * GetNumberOfJetParametersPerBin() + GetNumberOfTowerParameters();
   return Function(&Parametrization::correctedJetEt,
 		  p->hasInvertedCorrection() ? &Parametrization::inverseJetCorrection : 0,
+		  &Parametrization::correctedJetEtSigma,
 		  parIndex,GetNumberOfJetParametersPerBin(),
-		  GetJetParRef(id),GetJetParErrorRef(id),GetCov(),
+		  GetJetParRef(id),GetJetParErrorRef(id),GetCovCoeff(),
 		  findCovIndices(parIndex,GetNumberOfJetParametersPerBin()),p);
 }
 
@@ -1582,17 +1594,17 @@ Function TParameters::track_function(int etaid, int phiid) {
   }
   int parIndex = id * GetNumberOfTrackParametersPerBin() +
     GetNumberOfTowerParameters() + GetNumberOfJetParameters();
-  return Function(&Parametrization::GetExpectedResponse,0,
+  return Function(&Parametrization::GetExpectedResponse,0,0,
 		  parIndex,GetNumberOfTrackParametersPerBin(),
-		  GetTrackParRef(id),GetTrackParErrorRef(id),GetCov(),
+		  GetTrackParRef(id),GetTrackParErrorRef(id),GetCovCoeff(),
 		  findCovIndices(parIndex,GetNumberOfTrackParametersPerBin()),p);
 }
 
 Function TParameters::global_jet_function() {
   int parIndex = GetNumberOfTowerParameters()+GetNumberOfJetParameters()+GetNumberOfTrackParameters();
-  return Function(&Parametrization::correctedGlobalJetEt,0,
+  return Function(&Parametrization::correctedGlobalJetEt,0,0,
 		  parIndex,GetNumberOfGlobalJetParameters(),
-		  GetGlobalJetParRef(),GetGlobalJetParErrorRef(),GetCov(),
+		  GetGlobalJetParRef(),GetGlobalJetParErrorRef(),GetCovCoeff(),
 		  findCovIndices(parIndex,GetNumberOfGlobalJetParameters()),p);
 }
 
@@ -1666,7 +1678,7 @@ std::vector<int> TParameters::findCovIndices(int firstPar, int nPar) const {
     idx++;
   }
 
-  int maxNCov = (GetNumberOfParameters()*GetNumberOfParameters()+GetNumberOfParameters())/2;
+  int maxNCov = GetNumberOfCovCoeffs();
   assert( indices.back() < maxNCov );
 
   return indices;
