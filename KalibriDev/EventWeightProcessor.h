@@ -19,7 +19,7 @@
 //!
 //!  \author Matthias Schroeder
 //!  \date 2009/07/22
-//!  $Id: EventWeightProcessor.h,v 1.2 2009/11/24 16:52:59 stadie Exp $
+//!  $Id: EventWeightProcessor.h,v 1.2 2010/01/21 16:48:53 mschrode Exp $
 // -----------------------------------------------------------------
 
 #ifndef EVENT_WEIGHT_PROCESSOR_H
@@ -41,13 +41,18 @@ class EventWeightProcessor : public EventProcessor
 
   virtual int process(std::vector<Event*>& data);
 
+  bool applyWeights() const { return weightEvents_; }
+
  private:
-  void calculateWeights(const std::vector<double>& xSection,
-			const std::vector<int>& nEvents,
-			double lumi, int refPtHatBin);
+  void calculateWeightsForBins(const std::vector<double>& xSection,
+			       const std::vector<int>& nEvents,
+			       double lumi, int refPtHatBin);
 
   bool weightEvents_;              //!< Apply weighting if true
-  std::vector<double> minPtHat_;   //!< Minima of \f$ \hat{p}_{T} \f$ bins
-  std::vector<double> weights_;    //!< Weights of \f$ \hat{p}_{T} \f$ bins
+  int type_;                       //!< Type of weighting method
+  double lumi_;                    //!< Reference luminosity
+  std::vector<double> minPtHat_;   //!< Minima of \f$ \hat{p}_{T} \f$ bins (type 0)
+  std::vector<double> weights_;    //!< Weights of \f$ \hat{p}_{T} \f$ bins (type 0)
+  double expo_;                    //!< Exponent for pthat weighting (type 1)
 };
 #endif
