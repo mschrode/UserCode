@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.3 2010/01/21 16:49:17 mschrode Exp $
+// $Id: Parameters.cc,v 1.4 2010/01/26 17:49:22 mschrode Exp $
 
 #include <fstream>
 #include <cassert>
@@ -1602,7 +1602,8 @@ Function TParameters::track_function(int etaid, int phiid) {
 
 Function TParameters::global_jet_function() {
   int parIndex = GetNumberOfTowerParameters()+GetNumberOfJetParameters()+GetNumberOfTrackParameters();
-  return Function(&Parametrization::correctedGlobalJetEt,0,0,
+  return Function(&Parametrization::correctedGlobalJetEt,0,
+		  &Parametrization::correctedGlobalJetEtSigma,
 		  parIndex,GetNumberOfGlobalJetParameters(),
 		  GetGlobalJetParRef(),GetGlobalJetParErrorRef(),GetCovCoeff(),
 		  findCovIndices(parIndex,GetNumberOfGlobalJetParameters()),p);

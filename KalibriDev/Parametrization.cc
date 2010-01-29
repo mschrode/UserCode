@@ -1,5 +1,5 @@
 //
-//  $Id: Parametrization.cc,v 1.1 2010/01/21 16:46:05 mschrode Exp $
+//  $Id: Parametrization.cc,v 1.2 2010/01/26 17:49:22 mschrode Exp $
 //
 #include "Parametrization.h"
 
@@ -20,7 +20,7 @@
 //!  \param gaussPar   Parameters for mean of Gaussian
 // ------------------------------------------------------------------------
 SmearStepGaussInter::SmearStepGaussInter(double tMin, double tMax, double rMin, double rMax, int rNBins, double ptDijetMin, double ptDijetMax, const std::vector<double>& rParScales, const std::vector<double>& gaussPar)
-  : Parametrization(0,rNBins+2,0,0),
+  : Parametrization(0,rNBins+2,0,1),
     tMin_(tMin),
     tMax_(tMax),
     rMin_(rMin),
@@ -44,7 +44,7 @@ SmearStepGaussInter::SmearStepGaussInter(double tMin, double tMax, double rMin, 
   print();
   
   // Integral over dijet resolution for truth pdf
-  ptDijetCutInt_ = new TH1D("norm","",400,tMin_,tMax_);
+  ptDijetCutInt_ = new TH1D("norm","",100,tMin_,tMax_);
 }
 
 
@@ -143,15 +143,14 @@ double SmearStepGaussInter::correctedJetEtSigma(const Measurement *x,const doubl
 
   // Calculate variance
   double var = 0.;
-  if( x->E > 0.99 && x->E < 1. ) std::cout << std::endl;
   for(int i = 0; i < static_cast<int>(nJetPars()); i++) { // Outer loop over parameters
     for(int j = 0; j < i+1; j++) { // Inner loop over parameters
       int idx = (i*i + i)/2 + j; // Index of (i,j) in covariance vector
-      if( cov[idx] ) {
+      if( cov[covIdx[idx]] ) {
 	if( i == j ) { // Diagonal terms
-	  var += df[i]*df[i]*respParScales_[i]*respParScales_[i]*cov[idx];
+	  var += df[i]*df[i]*respParScales_[i]*respParScales_[i]*cov[covIdx[idx]];
 	} else { // Off-diagonal terms
-	  var += 2*df[i]*df[j]*respParScales_[i]*respParScales_[j]*cov[idx];
+	  var += 2*df[i]*df[j]*respParScales_[i]*respParScales_[j]*cov[covIdx[idx]];
 	}
       }
     } // End of inner loop over parameters
@@ -170,25 +169,56 @@ double SmearStepGaussInter::correctedJetEtSigma(const Measurement *x,const doubl
 //!  \return Probability density of truth times normalization of dijet probability
 // ------------------------------------------------------------------------
 double SmearStepGaussInter::correctedGlobalJetEt(const Measurement *x,const double *par) const {
-//   // Norm of probability of dijet event configuration
+  // Norm of probability of dijet event configuration
 //   double norm = 0.;
 //   for(int bin = 1; bin < ptDijetCutInt_->GetNbinsX(); bin++) {
 //     double pt = ptDijetCutInt_->GetBinCenter(bin);
-//     norm += pow(pt,2-par[0]) * ptDijetCutInt_->GetBinContent(bin) * ptDijetCutInt_->GetXaxis()->GetBinWidth(1);
+//     //    norm += pow(pt,2-par[0]) * ptDijetCutInt_->GetBinContent(bin) * ptDijetCutInt_->GetXaxis()->GetBinWidth(1);
+//     norm += pow(pt,2-par[0]) * ptDijetCutInt_->GetXaxis()->GetBinWidth(1);
 //   }
-  
-//   double p = 0.;
-//   if( norm ) {
-//     p = truthPDF(x->pt,par[0]);
-//     p /= norm;
-//   }
-  
-//   return p;
 
-  double norm = (pow(tMax_,3)-pow(tMin_,3))/3.;
-  return x->pt > tMin_ && x->pt < tMax_ ? 1./norm : 0.;
+  double norm = 0.;
+  double expo = 3. - par[0];
+  if( expo ) {
+    norm = (pow(tMax_,expo) - pow(tMin_,expo))/expo;
+  } else {
+    norm = log(tMax_/tMin_);
+  }
+  
+  double p = 0.;
+  if( norm ) {
+    p = truthPDF(x->pt,par[0]);
+    p /= norm;
+  }
+  
+  return p;
+
+//   double norm = (pow(tMax_,3)-pow(tMin_,3))/3.;
+//   return x->pt > tMin_ && x->pt < tMax_ ? 1./norm : 0.;
 }
 
+// ------------------------------------------------------------------------
+double SmearStepGaussInter::correctedGlobalJetEtSigma(const Measurement *x,const double *par,const double *cov, const std::vector<int> &covIdx) const {
+  double var = 0.;
+  if( tMin_ < x->pt && x->pt < tMax_ ) {
+    double n = par[0];
+    double norm = 0.;
+    double dnorm = 0.;
+    if( n == 1. ) {
+      norm = log(tMax_/tMin_);
+      dnorm = 0.;
+    } else {
+      norm = (pow(tMax_,1.-n)-pow(tMin_,1.-n))/(1.-n);
+      dnorm = norm/(1.-n) + (pow(tMax_,-n)-pow(tMin_,-n));
+    }
+    
+    double df = -1./norm/pow(x->pt,n)*( n/x->pt + dnorm/norm );
+    var = df*df*cov[covIdx[0]];
+  }
+
+  // Return standard deviation
+  return sqrt(var);
+}
 
 
 // ------------------------------------------------------------------------
@@ -317,16 +347,16 @@ double SmearStepGaussInter::interpolate(double r, const std::vector<double>& par
 //!      dx\,\frac{r(x/t) \cdot t}{\sqrt{2}} \f]
 // ------------------------------------------------------------------------
 double  SmearStepGaussInter::truthPDF(double pt, double n) const {
-//   double prob = 0.;
-//   if( tMin_ < pt && pt < tMax_ ) {
-//     prob = 1. / pow( pt, n );
-//     int bin = ptDijetCutInt_->FindBin(pt);
-//     prob *= ptDijetCutInt_->GetBinContent(bin);
-//   }
+  double prob = 0.;
+  if( tMin_ < pt && pt < tMax_ ) {
+    prob = 1. / pow( pt, n );
+    //int bin = ptDijetCutInt_->FindBin(pt);
+    //prob *= ptDijetCutInt_->GetBinContent(bin);
+  }
   
-//   return prob;
+  return prob;
 
-  return pt > tMin_ && pt < tMax_ ? 1./(tMax_-tMin_) : 0.;
+//  return pt > tMin_ && pt < tMax_ ? 1./(tMax_-tMin_) : 0.;
 }
 
 
@@ -354,7 +384,7 @@ void SmearStepGaussInter::print() const {
 
 // ------------------------------------------------------------------------
 SmearCrystalBall::SmearCrystalBall(double tMin, double tMax, double rMin, double rMax, double ptDijetMin, double ptDijetMax, const std::vector<double>& rParScales)
-  : Parametrization(0,4,0,0),
+  : Parametrization(0,4,0,1),
     tMin_(tMin),
     tMax_(tMax),
     rMin_(rMin),
@@ -474,7 +504,6 @@ double SmearCrystalBall::correctedJetEtSigma(const Measurement *x,const double *
   if( sigma <= 0 ) sigma = 1E-5;
   if( alpha <= 0 ) alpha = 1E-5;
   if( n <= 1 ) n = 1. + 1E-5;
-  //if( n <= alpha*alpha ) n = alpha*alpha + 1E-5;
 
   // Store derivatives
   std::vector<double> df(nJetPars());
@@ -509,24 +538,45 @@ double SmearCrystalBall::correctedJetEtSigma(const Measurement *x,const double *
 // ------------------------------------------------------------------------
 double SmearCrystalBall::correctedGlobalJetEt(const Measurement *x,const double *par) const {
   // Norm of probability of dijet event configuration
-//   double norm = 0.;
-//   for(int bin = 1; bin < ptDijetCutInt_->GetNbinsX(); bin++) {
-//     double pt = ptDijetCutInt_->GetBinCenter(bin);
-//     //    norm += pow(pt,2-par[0]) * ptDijetCutInt_->GetBinContent(bin) * ptDijetCutInt_->GetXaxis()->GetBinWidth(1);
-//     norm += pow(pt,2-par[0]) * ptDijetCutInt_->GetXaxis()->GetBinWidth(bin);
-//   }
-  
-//   double p = 0.;
-//   if( norm ) {
-//     p = truthPDF(x->pt,par[0]);
-//     p /= norm;
-//   }
- 
-//  return p;
+  double norm = 0.;
 
+  double expo = 3. - par[0];
+   if( expo ) {
+    norm = (pow(tMax_,expo) - pow(tMin_,expo))/expo;
+  } else {
+    norm = log(tMax_/tMin_);
+  }
   
-  double norm = (pow(tMax_,3)-pow(tMin_,3))/3.;
-  return 1./norm;
+  double p = 0.;
+  if( norm ) {
+    p = truthPDF(x->pt,par[0]);
+    p /= norm;
+  }
+  
+  return p;
+}
+
+// ------------------------------------------------------------------------
+double SmearCrystalBall::correctedGlobalJetEtSigma(const Measurement *x,const double *par,const double *cov, const std::vector<int> &covIdx) const {
+  double var = 0.;
+  if( tMin_ < x->pt && x->pt < tMax_ ) {
+    double n = par[0];
+    double norm = 0.;
+    double dnorm = 0.;
+    if( n == 1. ) {
+      norm = log(tMax_/tMin_);
+      dnorm = 0.;
+    } else {
+      norm = (pow(tMax_,1.-n)-pow(tMin_,1.-n))/(1.-n);
+      dnorm = norm/(1.-n) + (pow(tMax_,-n)-pow(tMin_,-n));
+    }
+    
+    double df = -1./norm/pow(x->pt,n)*( n/x->pt + dnorm/norm );
+    var = df*df*cov[covIdx[0]];
+  }
+
+  // Return standard deviation
+  return sqrt(var);
 }
 
 
@@ -547,7 +597,7 @@ double SmearCrystalBall::crystalBallFunc(double x, double mean, double sigma, do
     }
   }
 
-  return f/crystalBallNorm(mean,sigma,alpha,n);
+  return f*crystalBallNorm(mean,sigma,alpha,n);
 }
 
 
@@ -566,48 +616,51 @@ double SmearCrystalBall::crystalBallNorm(double mean, double sigma, double alpha
     norm += A*sigma/m*(1./pow(B+alpha,m) - 1./pow(B+(mean-rMin_)/sigma,m));
   }
 
-  return norm;
+  return norm > 0 ? 1./norm : 0.;
 }
 
 
 
 double SmearCrystalBall::crystalBallDerivative(double x, double mean, double sigma, double alpha, double n, int i) const {
   double d = 0.;
-  
+
   double u = (x - mean)/sigma;
-  double beta = (mean - rMin_)/sigma;
-  double gamma = (mean - rMax_)/sigma;
-  double A = pow(n/alpha,n)*exp(-0.5*alpha*alpha);
+  double beta = (rMax_ - mean)/sigma;
   double B = n/alpha - alpha;
   double m = n - 1.;
-  double term = pow(B+alpha,-m) - pow(B+beta,-m);
+  double c = rMin_-1.;
+  double s = n*sigma;
+  double k = s - alpha*c - alpha*alpha*sigma;
+  double ea = exp(-0.5*alpha*alpha);
 
-  // df/dmean
+  // df/dmu
   if( i == 0 ) {
     d = 0.;
   }
   // df/dsigma
-  else if( i == 1 ) { 
+  else if( i == 1 ) {
     if( u > -alpha ) {
       d = u*u/sigma;
     } else {
       d = -n*u/sigma/(B-u);
     }
-    d -= ( A*term/m - A*beta*sigma/pow(B+beta,n)
-	   + sqrt(M_PI/2.)*(erf(alpha/sqrt(2.)) - erf(gamma/sqrt(2.)))
-	   + gamma*exp(-gamma*gamma/2.) ) / crystalBallNorm(mean,sigma,alpha,n) ;
+    d -= (-beta*exp(-0.5*beta*beta)
+      + ea/(m*alpha*pow(k,n))
+      *((alpha*alpha-n)*pow(s,n)+n*n*(n-alpha*alpha)*sigma*pow(k,m)
+	+n*pow(k,n)-n*k/sigma*pow(s,n)-(s*pow(k,n)-pow(s,n)*k)*n*(n-alpha*alpha)/k)
+      +sqrt(M_PI/2.)*(erf(alpha/sqrt(2.))+erf(beta/sqrt(2.))))
+      * crystalBallNorm(mean,sigma,alpha,n);
   }
   // df/alpha
   else if( i == 2 ) {
     if( u > -alpha ) {
       d = 0.;
     } else {
-      d = (n*n/alpha/alpha + n)/(B - u) - (alpha + 1./alpha);
+      d = -(alpha*alpha+n)*(u+alpha)/(alpha*alpha-n+alpha*u);
     }
-    d -=( -A*term*sigma/m*(alpha + 1./alpha) 
-	  - A*sigma/m*( (1.+1./alpha)*m/pow(B+alpha,n) - m/alpha/pow(B+beta,n) )
-	  + exp(-alpha*alpha/2.) - sqrt(M_PI/2.)*sigma*erf(gamma/sqrt(2.))
-	  ) / crystalBallNorm(mean,sigma,alpha,n);
+    d -= (-ea*(n+alpha*alpha)*pow(s/k,n)/(m*alpha*alpha)
+	  *(c*alpha+sigma*alpha*alpha-sigma*(1.-pow(k/s,n))))
+      * crystalBallNorm(mean,sigma,alpha,n);
   }
   // df/n
   else if( i == 3 ) {
@@ -616,13 +669,11 @@ double SmearCrystalBall::crystalBallDerivative(double x, double mean, double sig
     } else {
       d = (1.+log(n/alpha)) - (log(B-u)+n/alpha/(B-u));
     }
-    d -= ( A*sigma/m*(
-		    1.+log(n/alpha)-term/m
-		    -1./pow(B+alpha,m)*(log(B+alpha)+m/(B+alpha)*(1.+1./alpha))
-		    +1./pow(B+beta,m)*(log(B+beta)+m/(B+beta)/alpha)
-		    ) ) / crystalBallNorm(mean,sigma,alpha,n);
+    d -= (ea/m/m/alpha/pow(k,n)
+	  *pow(s,n)*(c*alpha*(n-2.)+sigma*(1.+alpha*alpha*(n-2.))
+		     -sigma*pow(k/s,n)-m*k*log(s)+m*k*log(k)))
+      * crystalBallNorm(mean,sigma,alpha,n);
   }
-
   d *= crystalBallFunc(x,mean,sigma,alpha,n);
 
   return d;
@@ -640,9 +691,6 @@ double  SmearCrystalBall::truthPDF(double pt, double n) const {
   double prob = 0.;
   if( tMin_ < pt && pt < tMax_ ) {
     prob = 1. / pow( pt, n );
-    //int bin = ptDijetCutInt_->FindBin(pt);
-    //prob *= ptDijetCutInt_->GetBinContent(bin);
-    prob = 1.;
   }
   
   return prob;

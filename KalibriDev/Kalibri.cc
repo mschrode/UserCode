@@ -1,4 +1,4 @@
-//  $Id: Kalibri.cc,v 1.1 2010/01/21 16:46:05 mschrode Exp $
+//  $Id: Kalibri.cc,v 1.2 2010/01/26 17:49:22 mschrode Exp $
 
 #include "Kalibri.h"
 
@@ -137,7 +137,9 @@ void Kalibri::run()
 
     // Apply event weights if enabled
     EventWeightProcessor ewp(configFile_,par_);
-    ewp.process(data_);
+    if( ewp.applyWeights() ) {
+      ewp.process(data_);
+    }
 
     if(fitMethod_==1) {
       run_Lvmini();
@@ -360,15 +362,31 @@ void Kalibri::run_Lvmini()
     // Retrieve global parameter correlation coefficients
     error_index = 4;
     error_index = lvmind_(error_index);
+    bool nanOccured = false;
+    for(int i = 0; i < par_->GetNumberOfParameters(); i++) {
+      if( aux[error_index+i] != aux[error_index+i] ) { // Check for NAN
+	if( !nanOccured ) {
+	  nanOccured = true;
+	  std::cout << "The following global correlation coefficients are NAN and set to 0:\n";
+	}
+	std::cout << i << std::endl;
+	aux[error_index+i] = 0.;
+      }
+    }
     par_->SetGlobalCorrCoeff(aux+error_index);
     // Retrieve parameter covariances
     error_index = 5;
     error_index = lvmind_(error_index);
     // Set cov = 0 for fixed parameters
-    std::cout << "The following covariance elements are NAN:" << std::endl;
+    nanOccured = false;
     for(int i = 0; i < par_->GetNumberOfCovCoeffs(); i++) {
       if( aux[error_index+i] != aux[error_index+i] ) { // Check for NAN
-	std::cout << " " << i << std::endl;
+	if( !nanOccured ) {
+	  nanOccured = true;
+	  std::cout << "The following covariance elements are NAN and set to 0:\n";
+	}
+	std::cout << i << std::endl;
+
 	aux[error_index+i] = 0.;
       }
     }

@@ -1,4 +1,4 @@
-// $Id: ControlPlotsJetSmearing.cc,v 1.9 2010/01/21 16:48:44 mschrode Exp $
+// $Id: ControlPlotsJetSmearing.cc,v 1.10 2010/01/26 17:49:22 mschrode Exp $
 
 #include "ControlPlotsJetSmearing.h"
 
@@ -43,6 +43,9 @@ ControlPlotsJetSmearing::ControlPlotsJetSmearing(const std::string& configfile, 
     respMax_(3.),
     dir_("./controlPlots")
 {
+  // Override possible existing root file
+  TFile rootfile((dir_+"/jsResponse.root").c_str(),"RECREATE");
+  rootfile.Close();
   setGStyle();
 }
 
@@ -75,6 +78,7 @@ void ControlPlotsJetSmearing::plotResponse() const
   std::vector<TH1F*> hRespFitSum(nPlotBins);    // Sum of step and Gauss part
   std::vector<TH1F*> hRatio(nPlotBins);
   TH1F * hTruthPDF = 0;      // Truth pdf
+  TH1F * hTruthPDFErrStat = 0;      // Truth pdf
   TH1F * hPtGen = 0;         // PtGen spectrum
   TH1F * hPtHat = 0;         // PtHat spectrum
   TH1F * hPtDijet = 0;       // Dijet spectrum
@@ -151,6 +155,9 @@ void ControlPlotsJetSmearing::plotResponse() const
   hTruthPDF->SetLineColor(2);
   hTruthPDF->SetLineWidth(2);
 
+  hTruthPDFErrStat = static_cast<TH1F*>(hTruthPDF->Clone("hTruthPDFErrStat"));
+  hTruthPDFErrStat->SetFillColor(45);
+
 
   // --- Define ptDijet bins -------------
   int nPtGenBins = nPlotBins - 1;
@@ -167,12 +174,12 @@ void ControlPlotsJetSmearing::plotResponse() const
     if( (*datait)->GetType() == TypeSmearDiJet )  {
       SmearDiJet * dijet = static_cast<SmearDiJet*>(*datait);  
 
+      hPtHat->Fill( dijet->ptHat(), dijet->GetWeight() );
       for(int i = 0; i < 2; i++) {        // Loop over both jets
 	const Jet * jet = dijet->jet1();
 	if( i == 1 ) jet = dijet->jet2();
 
 	hPtGen->Fill( jet->genPt(), dijet->GetWeight() );
-	hPtHat->Fill( jet->ptHat(), dijet->GetWeight() );
 
 	hRespMeasAbs.at(0)->Fill( jet->pt() / jet->genPt(), dijet->GetWeight() );
 	hRespMeas.at(0)->Fill( jet->pt() / jet->genPt(), dijet->GetWeight() );
@@ -327,6 +334,11 @@ void ControlPlotsJetSmearing::plotResponse() const
       hTruthPDF->SetBinContent(bin,dijet->truthPDF(t));
     }
     normHist(hTruthPDF,"width");
+    for(int bin = 1; bin <= hTruthPDF->GetNbinsX(); bin++) {
+      hTruthPDFErrStat->SetBinContent(bin,hTruthPDF->GetBinContent(bin));
+      double t = hTruthPDFErrStat->GetBinCenter(bin);
+      hTruthPDFErrStat->SetBinError(bin,dijet->truthPDFSigma(t));
+    }
   }
 
 
@@ -390,7 +402,8 @@ void ControlPlotsJetSmearing::plotResponse() const
 
     std::string label;
     if( plotBin == 0 ) {
-      label = toString(ptDijetMin) + " < p^{dijet}_{T} < " + toString(ptDijetMax) + " GeV";
+      //      label = toString(ptDijetMin) + " < p^{dijet}_{T} < " + toString(ptDijetMax) + " GeV";
+      label = toString(ptGenBinEdges.front()) + " < p^{gen}_{T} < " + toString(ptGenBinEdges.back()) + " GeV";
       legPtRange.at(plotBin)->AddEntry(hRespMeas.at(plotBin),label.c_str(),"L");
       legPtRangeAndCenters.at(plotBin)->AddEntry(hRespMeas.at(plotBin),label.c_str(),"L");
     } else {
@@ -483,6 +496,8 @@ void ControlPlotsJetSmearing::plotResponse() const
   ps->NewPage();
   c1->cd();
   hPtGen->Draw();
+  hTruthPDFErrStat->Draw("E3same");
+  hPtGen->Draw("same");
   hTruthPDF->Draw("Lsame");
   legPtRange.at(0)->Draw("same");
   c1->SetLogy();
@@ -519,6 +534,7 @@ void ControlPlotsJetSmearing::plotResponse() const
   rootfile.WriteTObject(hPtHat);
   rootfile.WriteTObject(hPtDijet);
   rootfile.WriteTObject(hTruthPDF);
+  rootfile.WriteTObject(hTruthPDFErrStat);
 
   rootfile.Close();
 
@@ -541,6 +557,7 @@ void ControlPlotsJetSmearing::plotResponse() const
   delete hPtHat;
   delete hPtDijet;
   delete hTruthPDF;
+  delete hTruthPDFErrStat;
   delete c1;
   delete ps;
 }

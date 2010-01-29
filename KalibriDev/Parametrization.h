@@ -1,5 +1,5 @@
 //
-//  $Id: Parametrization.h,v 1.5 2010/01/21 16:49:19 mschrode Exp $
+//  $Id: Parametrization.h,v 1.6 2010/01/26 17:49:22 mschrode Exp $
 //
 #ifndef CALIBCORE_PARAMETRIZATION_H
 #define CALIBCORE_PARAMETRIZATION_H
@@ -24,7 +24,7 @@ class TH1D;
 //!  to correct a tower or jet measurement.
 //!  \author Hartmut Stadie
 //!  \date Thu Apr 03 17:09:50 CEST 2008
-//!  $Id: Parametrization.h,v 1.5 2010/01/21 16:49:19 mschrode Exp $
+//!  $Id: Parametrization.h,v 1.6 2010/01/26 17:49:22 mschrode Exp $
 // -----------------------------------------------------------------
 class Parametrization 
 {
@@ -117,6 +117,9 @@ public:
   //!  \return The corrected Et of a jet
   // -----------------------------------------------------------------
   virtual double correctedGlobalJetEt(const Measurement *x,const double *par) const { return x->pt;}
+  virtual double correctedGlobalJetEtSigma(const Measurement *x,const double *par,const double *cov, const std::vector<int> &covIdx) const {
+    return correctedGlobalJetEt(x,par);
+  }
 
 
   //!  \brief Get the name of the parametrization class
@@ -1160,10 +1163,10 @@ class SmearStepGaussInter : public Parametrization
   double correctedJetEt(const Measurement *x,const double *par) const;
   double correctedJetEtSigma(const Measurement *x,const double *par,const double *cov, const std::vector<int> &covIdx) const;
 
-
   //! Returns probability density of true pt multiplied by normalization
   //! of dijet probability (see also \p SmearDiJet::truthPDF(t)).
   double correctedGlobalJetEt(const Measurement *x,const double *par) const;
+  virtual double correctedGlobalJetEtSigma(const Measurement *x,const double *par,const double *cov, const std::vector<int> &covIdx) const;
 
 
  private:
@@ -1224,6 +1227,7 @@ class SmearCrystalBall : public Parametrization
   //! Returns probability density of true pt multiplied by normalization
   //! of dijet probability (see also \p SmearDiJet::truthPDF(t)).
   double correctedGlobalJetEt(const Measurement *x,const double *par) const;
+  double correctedGlobalJetEtSigma(const Measurement *x,const double *par,const double *cov, const std::vector<int> &covIdx) const;
 
 
  private:
