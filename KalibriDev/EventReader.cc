@@ -1,5 +1,5 @@
 //
-// $Id: EventReader.cc,v 1.6 2010/01/08 18:23:28 mschrode Exp $
+// $Id: EventReader.cc,v 1.2 2010/01/21 16:48:50 mschrode Exp $
 //
 #include "EventReader.h"
 
@@ -82,6 +82,11 @@ EventReader::EventReader(const std::string& configfile, TParameters* param)
   corFactorsFactory_ = CorFactorsFactory::map[jcn];
 
   correctToL3_ = config_->read<bool>("correct jets to L3",false);
+  correctL2L3_ = config_->read<bool>("correct jets L2L3",false);
+  if( correctToL3_ && correctL2L3_ ) {
+    std::cerr << "WARNING: Jets are corrected twice (to L3 and L2L3).\n" << std::endl;
+    exit(-9);
+  }
 }
 
 EventReader::~EventReader()

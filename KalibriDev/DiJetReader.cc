@@ -1,6 +1,6 @@
 //
 //    first version: Hartmut Stadie 2008/12/12
-//    $Id: DiJetReader.cc,v 1.35 2010/01/14 13:11:28 mschrode Exp $
+//    $Id: DiJetReader.cc,v 1.3 2010/01/21 16:48:46 mschrode Exp $
 //   
 #include "DiJetReader.h"
 
@@ -130,8 +130,8 @@ int DiJetReader::readEvents(std::vector<Event*>& data)
     std::cout << "'JetTruthEvent'";
   } else if(dataClass_ == 5) {
     std::cout << "'SmearData'";
-    if( !correctToL3_ ) {
-      std::cerr << "WARNING: Jets are not L2L3 corrected! Aborting\n";
+    if( !correctToL3_ && !correctL2L3_ ) {
+      std::cerr << "WARNING: Jets are not corrected! Aborting\n";
       exit(9);
     }
   } else {
@@ -392,6 +392,9 @@ int DiJetReader::createJetTruthEvents(std::vector<Event*>& data)
     if(correctToL3_) {
       jet->correctToL3();
     }
+    if(correctL2L3_) {
+      jet->correctL2L3();
+    }
     JetTruthEvent* jte = new JetTruthEvent(jet,nJet_->GenJetColEt[genJetIdx],1.);//nJet_->Weight);
     data.push_back(jte);
     ++njets;
@@ -430,6 +433,7 @@ Event* DiJetReader::createSmearEvent()
   SmearDiJet * smearDijet = new SmearDiJet(jets[0],                    // First jet
 					   jets[1],                    // Second jet
 					   jets[2],                    // Third jet
+					   nJet_->GenEvtScale,
 					   1.,                         // Weights from EventProcessor
 					   par_->jet_function(1,1),
 					   par_->global_jet_function(),   // Truth pdf
@@ -450,6 +454,7 @@ Event* DiJetReader::createSmearEvent()
   const Jet * j1 = smearDijet->jet1();
   const Jet * j2 = smearDijet->jet2();
   const Jet * j3 = smearDijet->jet3();
+
   if     ( j1->genPt() < minGenJetEt_ || j2->genPt() < minGenJetEt_ ) {
     nMinGenJetEt_++;
     isGoodEvt = false;
@@ -734,9 +739,13 @@ std::vector<Jet*> DiJetReader::readCaloJets(int nJets) const {
     if(corFactorsFactory_) {
       caloJets[j]->updateCorFactors(corFactorsFactory_->create(caloJets[j]));
     }
-    // Correct measurement to L3
+    // Correct measurement to L3 (L1*L2*L3)
     if(correctToL3_) {
       caloJets[j]->correctToL3();
+    }
+    // Correct measurement with L2*L3
+    if(correctL2L3_) {
+      caloJets[j]->correctL2L3();
     }
   }
 
