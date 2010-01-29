@@ -2,7 +2,7 @@
 //    Class for basic jets 
 //
 //    first version: Hartmut Stadie 2008/12/14
-//    $Id: Jet.cc,v 1.36 2009/11/27 15:28:12 stadie Exp $
+//    $Id: Jet.cc,v 1.2 2010/01/21 16:48:56 mschrode Exp $
 //   
 #include "Jet.h"  
 
@@ -17,7 +17,7 @@ Jet::Jet(double Et, double EmEt, double HadEt ,double OutEt, double E,
 	 double (*errfunc)(const double *x, const Measurement *xorig, double err), 
 	 const Function& gf, double Etmin) 
   : Measurement(Et,EmEt,HadEt,OutEt,E,eta,phi,etaeta),flavor_(flavor), genPt_(genPt), 
-    dR_(dR), ptHat_(0.), corFactors_(corFactors),f(f),gf(gf),errf(errfunc),
+    dR_(dR), corFactors_(corFactors),f(f),gf(gf),errf(errfunc),
     etmin(Etmin),EoverPt(E/Et),gsl_impl(this)
 {
   temp = *this;
@@ -42,6 +42,16 @@ void Jet::correctToL3()
   Measurement::EMF  *= corFactors_->getToL3();
   Measurement::HadF *= corFactors_->getToL3();
   Measurement::OutF *= corFactors_->getToL3();
+  temp = *this;
+}
+
+void Jet::correctL2L3()
+{
+  Measurement::pt   *= corFactors_->getL2L3();
+  Measurement::E    *= corFactors_->getL2L3();
+  Measurement::EMF  *= corFactors_->getL2L3();
+  Measurement::HadF *= corFactors_->getL2L3();
+  Measurement::OutF *= corFactors_->getL2L3();
   temp = *this;
 }
 

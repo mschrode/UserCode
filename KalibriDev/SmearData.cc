@@ -1,4 +1,4 @@
-// $Id: SmearData.cc,v 1.2 2010/01/21 16:49:22 mschrode Exp $
+// $Id: SmearData.cc,v 1.3 2010/01/26 17:49:22 mschrode Exp $
 
 #include "SmearData.h"
 
@@ -12,13 +12,15 @@
 //!  \param weight Event weight
 //!  \param respPDF Response probability density
 // --------------------------------------------------
-SmearData::SmearData(DataType type, Measurement * mess, double truth, double weight, const Function& respPDF)
+SmearData::SmearData(DataType type, Measurement * mess, double truth, double ptHat, double weight, const Function& respPDF)
   : Event(),
     respPDF_(respPDF),
     mess_(mess),
     kTruth_(truth),
     kType_(type),
-    weight_(weight) {};
+    weight_(weight) {
+  ptHat_ = ptHat;
+};
 
 
 

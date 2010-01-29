@@ -1,4 +1,4 @@
-// $Id: SmearDiJet.cc,v 1.8 2010/01/08 18:16:02 mschrode Exp $
+// $Id: SmearDiJet.cc,v 1.2 2010/01/21 16:49:24 mschrode Exp $
 
 #include "SmearDiJet.h"
 
@@ -17,6 +17,7 @@
 SmearDiJet::SmearDiJet(Jet * jet1,
 		       Jet * jet2,
 		       Jet * jet3,
+		       double ptHat,
 		       double weight,
 		       const Function& respPDF,
 		       const Function& truthPDF,
@@ -24,7 +25,7 @@ SmearDiJet::SmearDiJet(Jet * jet1,
 		       double max,
 		       double eps,
 		       int niter)
-  : SmearData(TypeSmearDiJet,jet1,0,weight,respPDF),
+  : SmearData(TypeSmearDiJet,jet1,0,ptHat,weight,respPDF),
     kMaxNIter_(niter),
     kEps_(eps),
     kMin_(min),
@@ -212,6 +213,12 @@ double SmearDiJet::truthPDF(double t) const {
   return truthPDF_(&meas);
 }
 
+// --------------------------------------------------
+double SmearDiJet::truthPDFSigma(double t) const {
+  Measurement meas;
+  meas.pt = t;
+  return truthPDF_.sigma(&meas);
+}
 
 
 //!  \brief Print event parameters

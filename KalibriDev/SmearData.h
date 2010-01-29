@@ -1,4 +1,4 @@
-// $Id: SmearData.h,v 1.2 2010/01/21 16:49:23 mschrode Exp $
+// $Id: SmearData.h,v 1.3 2010/01/26 17:49:22 mschrode Exp $
 
 #ifndef SmearData_h
 #define SmearData_h
@@ -9,11 +9,11 @@
 //!  \brief Abstract base class for jetsmearing method
 //!  \author Matthias Schroeder
 //!  \date Tue Jun  9 15:24:49 CEST 2009
-//!  $Id: SmearData.h,v 1.2 2010/01/21 16:49:23 mschrode Exp $
+//!  $Id: SmearData.h,v 1.3 2010/01/26 17:49:22 mschrode Exp $
 // --------------------------------------------------
 class SmearData : public Event {
  public:
-  SmearData(DataType type, Measurement * mess, double truth, double weight, const Function& respPDF);
+  SmearData(DataType type, Measurement * mess, double truth, double ptHat, double weight, const Function& respPDF);
   virtual ~SmearData() { delete mess_; }
 
   //!  \brief Get the negative log-likelihood of this event
@@ -22,7 +22,6 @@ class SmearData : public Event {
   virtual double chi2() const = 0;
   virtual double chi2_fast(double * temp_derivative1, double * temp_derivative2, double const epsilon) const = 0;
   virtual void printInitStats() const = 0;
-  virtual double ptHat() const = 0;
 
   virtual void ChangeParAddress(double* oldpar, double* newpar) { respPDF_.changeParBase(oldpar,newpar); }
   virtual Measurement * GetMess() const { return mess_; }

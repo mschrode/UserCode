@@ -4,7 +4,7 @@
 //!
 //!    \date 2008/12/14
 //!
-//!    $Id: Jet.h,v 1.29 2010/01/12 19:24:48 mschrode Exp $
+//!    $Id: Jet.h,v 1.2 2010/01/21 16:49:08 mschrode Exp $
 #ifndef JET_H
 #define JET_H
 
@@ -62,11 +62,11 @@ class Jet : public Measurement
   double momentEtaEta() const {return Measurement::etaeta;}  //!< Return eta-eta moment (width of jet in eta)
   Flavor flavor() const {return flavor_;}       //!< Return jet flavor
   double genPt()  const {return genPt_;}        //!< Return Pt for corresponding GenJet 
-  double ptHat()  const {return ptHat_;}     //!< \f$ \hat{p}_{T} \f$ of the event
   double dR() const {return dR_;}               //!< \f$ \Delta R \f$ between jet and genjet
   const CorFactors& corFactors() const { return *corFactors_;}
   void updateCorFactors(CorFactors *cor);
   void correctToL3();
+  void correctL2L3();
 
   //!  \brief Change address of parameters covered by this jet
   //!  \sa Parameters
@@ -144,7 +144,6 @@ class Jet : public Measurement
   Flavor flavor_;           //!< The jet's Flavor
   double genPt_;            //!< The genjet pt
   double dR_;               //!< \f$ \Delta R \f$ between jet and genjet
-  double ptHat_;            //!< \f$ \hat{p}_{T} \f$ of the event
   const CorFactors* corFactors_;   //!< The correction factors
   double    error;                //!< Stores error for constant error mode
   Function  f;                    //!< Jet correction function
