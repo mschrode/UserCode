@@ -1,7 +1,8 @@
-// $Id: ControlPlotsJetSmearing.cc,v 1.10 2010/01/26 17:49:22 mschrode Exp $
+// $Id: ControlPlotsJetSmearing.cc,v 1.11 2010/01/29 20:57:14 mschrode Exp $
 
 #include "ControlPlotsJetSmearing.h"
 
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <sstream>
@@ -38,7 +39,7 @@ ControlPlotsJetSmearing::ControlPlotsJetSmearing(const std::string& configfile, 
   : data_(data),
     config_(new ConfigFile(configfile.c_str())),
     param_(param),
-    respNBins_(40),
+    respNBins_(60),
     respMin_(0.),
     respMax_(3.),
     dir_("./controlPlots")
@@ -59,113 +60,128 @@ void ControlPlotsJetSmearing::plotResponse() const
   std::cout << "Creating response control plots\n";
 
   // --- Create histograms of response and spectrum ---------------------
+  std::string param = config_->read<std::string>("Parametrization Class","");
   double tMin = config_->read<double>("DiJet integration min",0.);
   double tMax = config_->read<double>("DiJet integration max",1.);
+  double rMin = config_->read<double>("Response pdf min",0.);
+  double rMax = config_->read<double>("Response pdf max",2.);
 
-  // The vectors contain the distribution for
-  // 0 - Resp function evaluated at mean of ptGen distribution
-  // Larger entries: Measured reponse in a certain ptGen bin; resp
-  //                 function evaluated at mean of ptGen spectrum 
-  //                 of that bin
-  int nPlotBins = 4;
-  std::vector<TH1F*> hRespMeasAbs(nPlotBins);   // The measured response ptJet / ptGen absolute entries
-  std::vector<TH1F*> hRespMeas(nPlotBins);      // The measured response ptJet / ptGen
-  std::vector<TH1F*> hRespFitStart(nPlotBins);  // The response pdf with start values
-  std::vector<TH1F*> hRespFit(nPlotBins);       // The fitted response pdf
-  std::vector<TH1F*> hRespFitErrStat(nPlotBins);// The fitted response pdf with fitted errors
-  std::vector<TH1F*> hRespFitStep(nPlotBins);   // Step function part of the response pdf
-  std::vector<TH1F*> hRespFitGaus(nPlotBins);   // Gauss part of the response pdf
-  std::vector<TH1F*> hRespFitSum(nPlotBins);    // Sum of step and Gauss part
-  std::vector<TH1F*> hRatio(nPlotBins);
+  // Create pt binning for response function evaluation
+  std::vector<double> ptBinEdges(2,0.);
+  std::string binning = config_->read<std::string>("plots pt binning","");
+  if( binning.find("binning") != std::string::npos ) {
+    ptBinEdges.clear();
+    ptBinEdges = bag_of<double>(config_->read<std::string>("plots pt bin edges","100 500"));
+  } else if( binning.find("ptGen cuts") != std::string::npos ) {
+    ptBinEdges.clear();
+    ptBinEdges.push_back(config_->read<double>("Et genJet min",100));
+    ptBinEdges.push_back(config_->read<double>("Et genJet max",500));
+  } else if( binning.find("ptDijet cuts") != std::string::npos ) {
+    ptBinEdges.clear();
+    ptBinEdges.push_back(config_->read<double>("Et min cut on dijet",100));
+    ptBinEdges.push_back(config_->read<double>("Et max cut on dijet",500));
+  }
+  int nPtBins = static_cast<int>(ptBinEdges.size()-1);
+  std::vector<double> ptBinCenters(nPtBins);
+  for(int i = 0; i < nPtBins; i++) {
+    ptBinCenters[i] = 0.5 * ( ptBinEdges[i] + ptBinEdges[i+1] );
+  }
+
+  std::vector<TH1F*> hRespMeasAbs(nPtBins);   // The measured response ptJet / ptGen absolute entries
+  std::vector<TH1F*> hRespMeas(nPtBins);      // The measured response ptJet / ptGen
+  std::vector<TH1F*> hRespFitStart(nPtBins);  // The response pdf with start values
+  std::vector<TH1F*> hRespFit(nPtBins);       // The fitted response pdf
+  std::vector<TH1F*> hRespFitErrStat(nPtBins);// The fitted response pdf with fitted errors
+  std::vector<TH1F*> hRespFitStep(nPtBins);   // Step function part of the response pdf
+  std::vector<TH1F*> hRespFitGaus(nPtBins);   // Gauss part of the response pdf
+  std::vector<TH1F*> hRespFitSum(nPtBins);    // Sum of step and Gauss part
+  std::vector<TH1F*> hRatio(nPtBins);
   TH1F * hTruthPDF = 0;      // Truth pdf
   TH1F * hTruthPDFErrStat = 0;      // Truth pdf
+  TH1F * hPtGenAbs = 0;         // PtGen spectrum
   TH1F * hPtGen = 0;         // PtGen spectrum
   TH1F * hPtHat = 0;         // PtHat spectrum
   TH1F * hPtDijet = 0;       // Dijet spectrum
 
-  for(int plotBin = 0; plotBin < nPlotBins; plotBin++) {
-    std::string name = "hRespMeasAbs_" + toString(plotBin);
-    hRespMeasAbs.at(plotBin) = new TH1F(name.c_str(),";R = p^{jet}_{T} / p^{gen}_{T};dN / dR",
-			    respNBins_,respMin_,respMax_);
-    hRespMeasAbs.at(plotBin)->SetLineWidth(2);
+  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
+    std::string name = "hRespMeasAbs_" + toString(ptBin);
+    hRespMeasAbs[ptBin] = new TH1F(name.c_str(),";R = p^{jet}_{T} / p^{gen}_{T};dN / dR",
+				   respNBins_,respMin_,respMax_);
+    hRespMeasAbs[ptBin]->SetLineWidth(2);
 
-    name = "hRespMeas_" + toString(plotBin);
-    hRespMeas.at(plotBin) = new TH1F(name.c_str(),";R = p^{jet}_{T} / p^{gen}_{T};1/(Nw)  dN / dR",
-			       respNBins_,respMin_,respMax_);
-    hRespMeas.at(plotBin)->Sumw2();
-    hRespMeas.at(plotBin)->SetLineWidth(2);
+    name = "hRespMeas_" + toString(ptBin);
+    hRespMeas[ptBin] = new TH1F(name.c_str(),";R = p^{jet}_{T} / p^{gen}_{T};1 / (N  dN / dR",
+				respNBins_,respMin_,respMax_);
+    hRespMeas[ptBin]->Sumw2();
+    hRespMeas[ptBin]->SetLineWidth(2);
 
-    name = "hRespFit_" + toString(plotBin);
-    hRespFit.at(plotBin) = new TH1F(name.c_str(),";R = p^{jet}_{T} / p^{true}_{T};1/(Nw)  dN / dR",
-			      5*respNBins_,respMin_,respMax_);
-    hRespFit.at(plotBin)->SetLineColor(2);
-    hRespFit.at(plotBin)->SetLineWidth(2);
+    name = "hRespFit_" + toString(ptBin);
+    hRespFit[ptBin] = new TH1F(name.c_str(),";R = p^{jet}_{T} / p^{true}_{T};1 / N  dN / dR",
+			       5*respNBins_,respMin_,respMax_);
+    hRespFit[ptBin]->SetLineColor(2);
+    hRespFit[ptBin]->SetLineWidth(2);
 
-    name = "hRespFitErrStat_" + toString(plotBin);
-    hRespFitErrStat.at(plotBin) = static_cast<TH1F*>(hRespFit[plotBin]->Clone(name.c_str()));
-    hRespFitErrStat.at(plotBin)->SetFillColor(45);
+    name = "hRespFitErrStat_" + toString(ptBin);
+    hRespFitErrStat[ptBin] = static_cast<TH1F*>(hRespFit[ptBin]->Clone(name.c_str()));
+    hRespFitErrStat[ptBin]->SetFillColor(45);
 
-    name = "hRespFitStart_" + toString(plotBin);
-    hRespFitStart.at(plotBin) = static_cast<TH1F*>(hRespFit[plotBin]->Clone(name.c_str()));
-    hRespFitStart.at(plotBin)->SetLineStyle(2);
+    name = "hRespFitStart_" + toString(ptBin);
+    hRespFitStart[ptBin] = static_cast<TH1F*>(hRespFit[ptBin]->Clone(name.c_str()));
+    hRespFitStart[ptBin]->SetLineStyle(2);
 
-    name = "hRespFitStep_" + toString(plotBin);
-    hRespFitStep.at(plotBin) = new TH1F(name.c_str(),";R = p^{jet}_{T} / p^{true}_{T};1/(Nw)  dN / dR",
+    name = "hRespFitStep_" + toString(ptBin);
+    hRespFitStep[ptBin] = new TH1F(name.c_str(),";R = p^{jet}_{T} / p^{true}_{T};1 / N  dN / dR",
 				  config_->read<int>("Response pdf nsteps",10),
 				  config_->read<double>("Response pdf min",0.),
 				  config_->read<double>("Response pdf max",1.8));
-    hRespFitStep.at(plotBin)->Sumw2();
-    hRespFitStep.at(plotBin)->SetLineColor(9);
-    hRespFitStep.at(plotBin)->SetLineWidth(2);
+    hRespFitStep[ptBin]->Sumw2();
+    hRespFitStep[ptBin]->SetLineColor(9);
+    hRespFitStep[ptBin]->SetLineWidth(2);
 
-    name = "hRespFitGaus_" + toString(plotBin);
-    hRespFitGaus.at(plotBin) = static_cast<TH1F*>(hRespFit[plotBin]->Clone(name.c_str()));
-    hRespFitGaus.at(plotBin)->SetLineColor(8);
+    name = "hRespFitGaus_" + toString(ptBin);
+    hRespFitGaus[ptBin] = static_cast<TH1F*>(hRespFit[ptBin]->Clone(name.c_str()));
+    hRespFitGaus[ptBin]->SetLineColor(8);
 
-    name = "hRespFitSum_" + toString(plotBin);
-    hRespFitSum.at(plotBin) = static_cast<TH1F*>(hRespFit[plotBin]->Clone(name.c_str()));
-    hRespFitSum.at(plotBin)->SetLineColor(1);
+    name = "hRespFitSum_" + toString(ptBin);
+    hRespFitSum[ptBin] = static_cast<TH1F*>(hRespFit[ptBin]->Clone(name.c_str()));
+    hRespFitSum[ptBin]->SetLineColor(1);
 
-    name = "hRatio_" + toString(plotBin);
-    hRatio.at(plotBin) = new TH1F(name.c_str(),";Prediction / truth",
+    name = "hRatio_" + toString(ptBin);
+    hRatio[ptBin] = new TH1F(name.c_str(),";Prediction / truth",
 				  respNBins_,respMin_,respMax_);
-    hRatio.at(plotBin)->SetLineWidth(2);
+    hRatio[ptBin]->SetLineWidth(2);
   }
-  
-  hPtGen = new TH1F("hPtGen",";p^{gen}_{T} (GeV);1/(Nw)  dN / dp^{gen}_{T}  1 / (GeV)"
-		    ,25,0.8*tMin,1.1*tMax);
+
+  hPtGenAbs = new TH1F("hPtGenAbs",";p^{gen}_{T} (GeV);dN / dp^{gen}_{T}  1 / (GeV)"
+		       ,50,0.8*tMin,1.1*tMax);
+  hPtGenAbs->GetXaxis()->SetNdivisions(505);
+  hPtGenAbs->SetLineWidth(2);
+
+  hPtGen = new TH1F("hPtGen",";p^{gen}_{T} (GeV);1 / N  dN / dp^{gen}_{T}  1 / (GeV)"
+		    ,50,0.8*tMin,1.1*tMax);
   hPtGen->GetXaxis()->SetNdivisions(505);
   hPtGen->Sumw2();
   hPtGen->SetLineWidth(2);
   
-  hPtHat = new TH1F("hPtHat",";#hat{p}_{T} (GeV);1/(Nw)  dN / d#hat{p}_{T}  1 / (GeV)",
-		    25,0.8*tMin,1.1*tMax);
+  hPtHat = new TH1F("hPtHat",";#hat{p}_{T} (GeV);1 / N  dN / d#hat{p}_{T}  1 / (GeV)",
+		    50,0.8*tMin,1.1*tMax);
   hPtHat->GetXaxis()->SetNdivisions(505);
   hPtHat->Sumw2();
   hPtHat->SetLineWidth(2);
 
-  hPtDijet = new TH1F("hPtDijet",";p^{dijet}_{T} (GeV);1/(Nw)  dN / dp^{dijet}_{T}  1 / (GeV)",
-		      25,0.8*tMin,1.1*tMax);
+  hPtDijet = new TH1F("hPtDijet",";p^{dijet}_{T} (GeV);1 / N  dN / dp^{dijet}_{T}  1 / (GeV)",
+		      50,0.8*tMin,1.1*tMax);
   hPtDijet->GetXaxis()->SetNdivisions(505);
   hPtDijet->Sumw2();
   hPtDijet->SetLineWidth(2);
 
-  hTruthPDF = new TH1F("hTruthPDF",";p^{true}_{T} (GeV);1 / (Nw)  dN / dp^{true}_{T}  1 /  (GeV)",
+  hTruthPDF = new TH1F("hTruthPDF",";p^{true}_{T} (GeV);1 / N  dN / dp^{true}_{T}  1 /  (GeV)",
 		       5*respNBins_,0.8*tMin,1.1*tMax);
   hTruthPDF->SetLineColor(2);
   hTruthPDF->SetLineWidth(2);
 
   hTruthPDFErrStat = static_cast<TH1F*>(hTruthPDF->Clone("hTruthPDFErrStat"));
   hTruthPDFErrStat->SetFillColor(45);
-
-
-  // --- Define ptDijet bins -------------
-  int nPtGenBins = nPlotBins - 1;
-  double deltaPtGen = (tMax - tMin) / nPtGenBins;
-  std::vector<double> ptGenBinEdges(nPtGenBins+1);
-  for(size_t i = 0; i < ptGenBinEdges.size(); i++) {
-    ptGenBinEdges.at(i) = tMin + i*deltaPtGen;
-  }
 
 
   // --- Fill histograms of measured response --------------
@@ -179,15 +195,13 @@ void ControlPlotsJetSmearing::plotResponse() const
 	const Jet * jet = dijet->jet1();
 	if( i == 1 ) jet = dijet->jet2();
 
+	hPtGenAbs->Fill( jet->genPt(), dijet->GetWeight() );
 	hPtGen->Fill( jet->genPt(), dijet->GetWeight() );
 
-	hRespMeasAbs.at(0)->Fill( jet->pt() / jet->genPt(), dijet->GetWeight() );
-	hRespMeas.at(0)->Fill( jet->pt() / jet->genPt(), dijet->GetWeight() );
-
-	for(int i = 0; i < nPtGenBins; i++) {
-	  if( ptGenBinEdges.at(i) <= jet->genPt() && jet->genPt() < ptGenBinEdges.at(i+1) ) {
-	    hRespMeasAbs.at(i+1)->Fill( jet->pt() / jet->genPt(), dijet->GetWeight() );
-	    hRespMeas.at(i+1)->Fill( jet->pt() / jet->genPt(), dijet->GetWeight() );
+	for(int i = 0; i < nPtBins; i++) {
+	  if( ptBinEdges[i] <= jet->genPt() && jet->genPt() < ptBinEdges[i+1] ) {
+	    hRespMeasAbs[i]->Fill( jet->pt() / jet->genPt(), dijet->GetWeight() );
+	    hRespMeas[i]->Fill( jet->pt() / jet->genPt(), dijet->GetWeight() );
 	    continue;
 	  }
 	}
@@ -195,8 +209,8 @@ void ControlPlotsJetSmearing::plotResponse() const
       hPtDijet->Fill( dijet->dijetPt(), dijet->GetWeight() );
     }
   } // End of loop over data
-  for(int plotBin = 0; plotBin < nPlotBins; plotBin++) {
-    normHist(hRespMeas.at(plotBin),"width");
+  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
+    normHist(hRespMeas[ptBin],"width");
   }
   normHist(hPtGen,"width");
   normHist(hPtHat,"width");
@@ -204,8 +218,6 @@ void ControlPlotsJetSmearing::plotResponse() const
 
 
   // --- Fill histograms of fitted response ----------------
-  std::string param = config_->read<std::string>("Parametrization Class","");
-
   // Get parameters
   std::vector<double> fittedPar(param_->GetNumberOfParameters());
   for(int i = 0; i < param_->GetNumberOfParameters(); i++) {
@@ -217,46 +229,38 @@ void ControlPlotsJetSmearing::plotResponse() const
   std::vector<double> startParGlobal = bag_of<double>(config_->read<string>("global jet start values",""));
   std::vector<double> auxPar = bag_of<double>(config_->read<string>("mean response parameters","1 0"));
 
-  // Find bin centers for response function evaluation
-  std::vector<double> ptGenBinCenters(nPlotBins);
-  ptGenBinCenters.at(0) = hPtGen->GetMean();
-  for(int i = 1; i < nPlotBins; i++) {
-    int j = i - 1;
-    ptGenBinCenters.at(i) = 0.5 * ( ptGenBinEdges.at(j) + ptGenBinEdges.at(j+1) );
-  }
-
-
   SmearData * smearData = dynamic_cast<SmearData*>(data_->front());
   if( smearData ) {
-    // Loop over plotBins
-    for(int plotBin = 0; plotBin < nPlotBins; plotBin++) {
+    // Loop over ptBins
+    for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
       // Interpolated response function
-      for(int bin = 1; bin <= hRespFit[plotBin]->GetNbinsX(); bin++) {
-	double r = hRespFit[plotBin]->GetBinCenter(bin);
-	hRespFit[plotBin]->SetBinContent(bin,smearData->respPDF(r,ptGenBinCenters[plotBin]));
-	hRespFitErrStat[plotBin]->SetBinContent(bin,smearData->respPDF(r,ptGenBinCenters[plotBin]));
-	hRespFitErrStat[plotBin]->SetBinError(bin,smearData->respPDFSigma(r,ptGenBinCenters[plotBin]));
+      for(int bin = 1; bin <= hRespFit[ptBin]->GetNbinsX(); bin++) {
+	double r = hRespFit[ptBin]->GetBinCenter(bin);
+	double val = smearData->respPDF(r,ptBinCenters[ptBin]);
+	hRespFit[ptBin]->SetBinContent(bin,val);
+	hRespFitErrStat[ptBin]->SetBinContent(bin,val);
+	hRespFitErrStat[ptBin]->SetBinError(bin,smearData->respPDFError(r,ptBinCenters[ptBin]));
 
-//  	if( plotBin == 0 ) {
-//  	  std::cout << r << ":  " << smearData->respPDF(r,ptGenBinCenters.at(plotBin)) << " +/- " << smearData->respPDFSigma(r,ptGenBinCenters.at(plotBin)) << std::endl;
-//  	}
+//   	if( ptBin == 0 ) {
+//   	  std::cout << r << ":  " << smearData->respPDF(r,ptBinCenters[ptBin]) << " +/- " << smearData->respPDFError(r,ptBinCenters[ptBin]) << std::endl;
+//   	}
       }
       // Ratio plot
-      for(int bin = 1; bin <= hRatio[plotBin]->GetNbinsX(); bin++) {
-	double rMin = hRatio[plotBin]->GetBinLowEdge(bin);
-	double rMax = rMin + hRatio[plotBin]->GetBinWidth(bin);
-	int min = hRespFit[plotBin]->FindBin(rMin);
-	int max = hRespFit[plotBin]->FindBin(rMax);
-	double pred = (hRespFit[plotBin]->Integral(min,max))/(1+max-min);
-	double truth = hRespMeas[plotBin]->GetBinContent(bin);
+      for(int bin = 1; bin <= hRatio[ptBin]->GetNbinsX(); bin++) {
+	double rMin = hRatio[ptBin]->GetBinLowEdge(bin);
+	double rMax = rMin + hRatio[ptBin]->GetBinWidth(bin);
+	int min = hRespFit[ptBin]->FindBin(rMin);
+	int max = hRespFit[ptBin]->FindBin(rMax);
+	double pred = (hRespFit[ptBin]->Integral(min,max))/(1+max-min);
+	double truth = hRespMeas[ptBin]->GetBinContent(bin);
 	double ratio = 0.;
 	double error = 0.;
 	if( truth ) {
 	  ratio = pred / truth;
-	  error = pred / truth / truth * hRespMeas[plotBin]->GetBinError(bin);
+	  error = pred / truth / truth * hRespMeas[ptBin]->GetBinError(bin);
 	}
-	hRatio[plotBin]->SetBinContent(bin,ratio);
-	hRatio[plotBin]->SetBinError(bin,error);
+	hRatio[ptBin]->SetBinContent(bin,ratio);
+	hRatio[ptBin]->SetBinError(bin,error);
       }
 
       // Interpolated fit function with start values
@@ -265,12 +269,12 @@ void ControlPlotsJetSmearing::plotResponse() const
 	if( i < param_->GetNumberOfJetParameters() )
 	  param_->GetPars()[i] = startParJet.at(i);
 	else
-	  param_->GetPars()[i] = startParGlobal.at(i-param_->GetNumberOfJetParameters());
+	  param_->GetPars()[i] = startParGlobal[i-param_->GetNumberOfJetParameters()];
       }
       // Plot response function
-      for(int bin = 1; bin <= hRespFitStart.at(plotBin)->GetNbinsX(); bin++) {
-	double r = hRespFitStart.at(plotBin)->GetBinCenter(bin);
-	hRespFitStart.at(plotBin)->SetBinContent(bin,smearData->respPDF(r,ptGenBinCenters.at(plotBin)));
+      for(int bin = 1; bin <= hRespFitStart[ptBin]->GetNbinsX(); bin++) {
+	double r = hRespFitStart[ptBin]->GetBinCenter(bin);
+	hRespFitStart[ptBin]->SetBinContent(bin,smearData->respPDF(r,ptBinCenters[ptBin]));
       }
       // Copy back fitted values into parameter array
       for(int i = 0; i < param_->GetNumberOfParameters(); i++) {
@@ -280,50 +284,51 @@ void ControlPlotsJetSmearing::plotResponse() const
       // In case of interpolated step + gauss parametrization
       if( param == "SmearParametrizationStepGaussInter" ) {
 	// Step part of fit function
-	for(int bin = 1; bin <= hRespFitStep.at(plotBin)->GetNbinsX(); bin++) {
-	  double val  = scale.at(bin+1)*(smearData->respPar()[bin+1]);
-	  hRespFitStep.at(plotBin)->SetBinContent(bin,val);
+	for(int bin = 1; bin <= hRespFitStep[ptBin]->GetNbinsX(); bin++) {
+	  double val  = scale.at(bin+1)*(smearData->respPar(bin+1));
+	  hRespFitStep[ptBin]->SetBinContent(bin,val);
 	}
-	normHist(hRespFitStep.at(plotBin),"width");
-	hRespFitStep.at(plotBin)->Scale(1. - scale.at(0)*(smearData->respPar()[0]));
+	normHist(hRespFitStep[ptBin],"width");
+	hRespFitStep[ptBin]->Scale(1. - scale.at(0)*(smearData->respPar(0)));
 	
 	// Gauss part of fit function
-	for(int bin = 1; bin <= hRespFitGaus.at(plotBin)->GetNbinsX(); bin++) {
+	for(int bin = 1; bin <= hRespFitGaus[ptBin]->GetNbinsX(); bin++) {
 	  // Mean
 	  double mu = auxPar.at(0);
 	  // Width
 // 	  double a1 = scale.at(1)*(smearData->respPar()[1]);
 // 	  double a2 = scale.at(2)*(smearData->respPar()[2]);
 // 	  double a3 = scale.at(3)*(smearData->respPar()[3]);
-// 	  double sigma = sqrt( a1*a1/ptGenBinCenters.at(plotBin)/ptGenBinCenters.at(plotBin)
-// 			       + a2*a2/ptGenBinCenters.at(plotBin) + a3*a3 );
-	  double sigma = scale[1]*(smearData->respPar()[1]);
+// 	  double sigma = sqrt( a1*a1/ptBinCenters[ptBin]/ptBinCenters[ptBin]
+// 			       + a2*a2/ptBinCenters[ptBin] + a3*a3 );
+	  double sigma = scale[1]*(smearData->respPar(1));
 	  // pdf
-	  double c     = scale.at(0)*(smearData->respPar()[0]);
-	  double r     = hRespFitGaus.at(plotBin)->GetBinCenter(bin);
+	  double c     = scale.at(0)*(smearData->respPar(0));
+	  double r     = hRespFitGaus[ptBin]->GetBinCenter(bin);
 	  double val   = c * exp( -pow((mu-r)/sigma,2) / 2. ) / sqrt(2.*M_PI) / sigma;
-	  hRespFitGaus.at(plotBin)->SetBinContent(bin,val);
+	  hRespFitGaus[ptBin]->SetBinContent(bin,val);
 	}
       
 	// Sum
-	for(int binGaus = 1; binGaus <= hRespFitGaus.at(plotBin)->GetNbinsX(); binGaus++) {
-	  int binStep = hRespFitStep.at(plotBin)->FindBin(hRespFitGaus.at(plotBin)->GetBinCenter(binGaus));
-	  double val = hRespFitStep.at(plotBin)->GetBinContent(binStep)
-	    + hRespFitGaus.at(plotBin)->GetBinContent(binGaus);
-	  hRespFitSum.at(plotBin)->SetBinContent(binGaus,val);
+	for(int binGaus = 1; binGaus <= hRespFitGaus[ptBin]->GetNbinsX(); binGaus++) {
+	  int binStep = hRespFitStep[ptBin]->FindBin(hRespFitGaus[ptBin]->GetBinCenter(binGaus));
+	  double val = hRespFitStep[ptBin]->GetBinContent(binStep)
+	    + hRespFitGaus[ptBin]->GetBinContent(binGaus);
+	  hRespFitSum[ptBin]->SetBinContent(binGaus,val);
 	}
-      } else if( param == "SmearParametrizationCrystalBall" ) {
+      } else if( param == "SmearParametrizationCrystalBall"
+		 ||  param == "SmearParametrizationCrystalBallPt"
+		 ||  param == "SmearParametrizationGauss") {
       } else {
 	std::cout << "WARNING: No controlplots implemented for parametrization '" << param << "'\n";
       }
-    } // End of loop over plotBins
+    } // End of loop over ptBins
   } // End if( smearData )
 
 
   // --- Fill histograms of fitted truth spectrum -----------
 
   // Fill histogram of assumed truth pdf
-  // and fit with 1/x^n function
   DataIt datait = data_->begin();
   while( (*datait)->GetType() != TypeSmearDiJet  &&  datait != data_->end() ) datait++;
   if( datait != data_->end() ) {
@@ -337,25 +342,24 @@ void ControlPlotsJetSmearing::plotResponse() const
     for(int bin = 1; bin <= hTruthPDF->GetNbinsX(); bin++) {
       hTruthPDFErrStat->SetBinContent(bin,hTruthPDF->GetBinContent(bin));
       double t = hTruthPDFErrStat->GetBinCenter(bin);
-      hTruthPDFErrStat->SetBinError(bin,dijet->truthPDFSigma(t));
+      hTruthPDFErrStat->SetBinError(bin,dijet->truthPDFError(t));
     }
   }
 
 
-  // --- Find populated x-axis ranges -----------------------
-  int maxBin = 0;
-  int minBin = 1;
-  for(int bin = 1; bin <= hRespMeas.at(0)->GetNbinsX(); bin++) {
-    if( hRespMeas.at(0)->GetBinContent(bin) > 0 ) maxBin = bin;
-    if( minBin > maxBin ) minBin = bin;
+  // --- Set x-axis ranges ----------------------------------
+  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
+    hRespMeasAbs[ptBin]->GetXaxis()->SetRangeUser(rMin,rMax);   
+    hRespMeas[ptBin]->GetXaxis()->SetRangeUser(rMin,rMax);      
+    hRespFitStart[ptBin]->GetXaxis()->SetRangeUser(rMin,rMax);  
+    hRespFit[ptBin]->GetXaxis()->SetRangeUser(rMin,rMax);       
+    hRespFitErrStat[ptBin]->GetXaxis()->SetRangeUser(rMin,rMax);
+    hRespFitStep[ptBin]->GetXaxis()->SetRangeUser(rMin,rMax);   
+    hRespFitGaus[ptBin]->GetXaxis()->SetRangeUser(rMin,rMax);   
+    hRespFitSum[ptBin]->GetXaxis()->SetRangeUser(rMin,rMax);    
+    hRatio[ptBin]->GetXaxis()->SetRangeUser(rMin,rMax);
   }
-  if( maxBin < hRespMeas.at(0)->GetNbinsX() ) maxBin++;
-  for(int plotBin = 0; plotBin < nPlotBins; plotBin++) {
-    hRespMeas.at(plotBin)->GetXaxis()->SetRange(minBin,maxBin);
-    hRespMeasAbs.at(plotBin)->GetXaxis()->SetRange(minBin,maxBin);
-    hRatio.at(plotBin)->GetXaxis()->SetRange(minBin,maxBin);
-  }
-
+  hPtGenAbs->GetXaxis()->SetRangeUser(tMin,tMax);
   hPtGen->GetXaxis()->SetRangeUser(tMin,tMax);
   hPtHat->GetXaxis()->SetRangeUser(tMin,tMax);
   
@@ -363,19 +367,19 @@ void ControlPlotsJetSmearing::plotResponse() const
   // --- Set y-axis ranges ----------------------------------
   double yMin = 10000.;
   double yMax = 0.;
-  for(int plotBin = 0; plotBin < nPlotBins; plotBin++) {
+  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
     double min = 0.;
     double max = 0.;
-    findYRange(hRespMeas.at(plotBin),min,max);
+    findYRange(hRespMeas[ptBin],min,max);
     min *= 0.5;
     max *= 80.;
     if( min < yMin ) yMin = min;
     if( max > yMax ) yMax = max;
     if( yMin < 8E-5 ) yMin = 8E-5;
   }
-  for(int plotBin = 0; plotBin < nPlotBins; plotBin++) {
-    hRespMeas.at(plotBin)->GetYaxis()->SetRangeUser(yMin,yMax);
-    setYRange(hRespMeasAbs.at(plotBin),0.5,50.);
+  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
+    hRespMeas[ptBin]->GetYaxis()->SetRangeUser(yMin,yMax);
+    setYRange(hRespMeasAbs[ptBin],0.5,50.);
   }
   setYRange(hPtDijet, 0.5, 100.);
   setYRange(hPtGen, 0.5, 100.);
@@ -384,36 +388,32 @@ void ControlPlotsJetSmearing::plotResponse() const
 
   // --- Plot histograms -----------------------------------
   // Label bins
-  double ptDijetMin = config_->read<double>("Et min cut on dijet",-1.);
-  double ptDijetMax = config_->read<double>("Et max cut on dijet",-1.);
+  std::vector<TLegend*> legPtRange(nPtBins);
+  std::vector<TLegend*> legPtRangeAndCenters(nPtBins);
+  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
+    legPtRange[ptBin] = new TLegend(0.23,0.72,0.78,0.8);
+    legPtRange[ptBin]->SetBorderSize(0);
+    legPtRange[ptBin]->SetFillColor(0);
+    legPtRange[ptBin]->SetTextFont(42);
 
-  std::vector<TLegend*> legPtRange(nPlotBins);
-  std::vector<TLegend*> legPtRangeAndCenters(nPlotBins);
-  for(int plotBin = 0; plotBin < nPlotBins; plotBin++) {
-    legPtRange.at(plotBin) = new TLegend(0.23,0.72,0.78,0.8);
-    legPtRange.at(plotBin)->SetBorderSize(0);
-    legPtRange.at(plotBin)->SetFillColor(0);
-    legPtRange.at(plotBin)->SetTextFont(42);
+    legPtRangeAndCenters[ptBin] = new TLegend(0.23,0.65,0.8,0.8);
+    legPtRangeAndCenters[ptBin]->SetBorderSize(0);
+    legPtRangeAndCenters[ptBin]->SetFillColor(0);
+    legPtRangeAndCenters[ptBin]->SetTextFont(42);
 
-    legPtRangeAndCenters.at(plotBin) = new TLegend(0.23,0.65,0.8,0.8);
-    legPtRangeAndCenters.at(plotBin)->SetBorderSize(0);
-    legPtRangeAndCenters.at(plotBin)->SetFillColor(0);
-    legPtRangeAndCenters.at(plotBin)->SetTextFont(42);
+    std::string binVar = config_->read<std::string>("plots pt binning","");
+    if( binVar.find("ptDijet") != std::string::npos ) binVar = "p^{dijet}_{T}";
+    else if( binVar.find("ptGen") != std::string::npos ) binVar = "p^{gen}_{T}";
+    else binVar = "p^{gen}_{T}";
 
-    std::string label;
-    if( plotBin == 0 ) {
-      //      label = toString(ptDijetMin) + " < p^{dijet}_{T} < " + toString(ptDijetMax) + " GeV";
-      label = toString(ptGenBinEdges.front()) + " < p^{gen}_{T} < " + toString(ptGenBinEdges.back()) + " GeV";
-      legPtRange.at(plotBin)->AddEntry(hRespMeas.at(plotBin),label.c_str(),"L");
-      legPtRangeAndCenters.at(plotBin)->AddEntry(hRespMeas.at(plotBin),label.c_str(),"L");
-    } else {
-      int i = plotBin - 1;
-      label = toString(ptGenBinEdges.at(i)) + " < p^{gen}_{T} < " + toString(ptGenBinEdges.at(1+i)) + " GeV";
-      legPtRange.at(plotBin)->AddEntry(hRespMeas.at(plotBin),label.c_str(),"L");
-      legPtRangeAndCenters.at(plotBin)->AddEntry(hRespMeas.at(plotBin),label.c_str(),"L");
-    }
-    label = "p_{T} = " + toString(ptGenBinCenters.at(plotBin)) + " GeV";
-    legPtRangeAndCenters.at(plotBin)->AddEntry(hRespFit.at(plotBin),label.c_str(),"L");
+    std::string label = toString(ptBinEdges[ptBin])
+      + " < " + binVar + " < "
+      + toString(ptBinEdges[ptBin+1])
+      + " GeV";
+    legPtRange[ptBin]->AddEntry(hRespMeas[ptBin],label.c_str(),"L");
+    legPtRangeAndCenters[ptBin]->AddEntry(hRespMeas[ptBin],label.c_str(),"L");
+    label = "p_{T} = " + toString(ptBinCenters[ptBin]) + " GeV";
+    legPtRangeAndCenters[ptBin]->AddEntry(hRespFit[ptBin],label.c_str(),"L");
   }
 
   // Write histos to ps file
@@ -424,82 +424,95 @@ void ControlPlotsJetSmearing::plotResponse() const
   legFitStart->SetBorderSize(0);
   legFitStart->SetFillColor(0);
   legFitStart->SetTextFont(42);
-  legFitStart->AddEntry(hRespFitStart.at(0),"At start","L");
-  legFitStart->AddEntry(hRespFit.at(0),"After fit","L");
+  legFitStart->AddEntry(hRespFitStart[0],"At start","L");
+  legFitStart->AddEntry(hRespFit[0],"After fit","L");
 
-  for(int plotBin = 0; plotBin < nPlotBins; plotBin++) {
+  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
     // Measured and fitted response
     ps->NewPage();
     c1->cd();
-    hRespMeasAbs.at(plotBin)->Draw();
-    legPtRange.at(plotBin)->Draw("same");
+    hRespMeasAbs[ptBin]->Draw();
+    legPtRange[ptBin]->Draw("same");
     c1->SetLogy();
     c1->Draw();
 
     ps->NewPage();
     c1->cd();
-    hRespMeas.at(plotBin)->Draw();
-    legPtRange.at(plotBin)->Draw("same");
+    hRespMeas[ptBin]->Draw();
+    legPtRange[ptBin]->Draw("same");
     c1->SetLogy();
     c1->Draw();
 
     ps->NewPage();
     c1->cd();
-    hRespMeas.at(plotBin)->Draw();
-    hRespFitErrStat.at(plotBin)->Draw("E3 same");
-    hRespMeas.at(plotBin)->Draw("same");
-    hRespFit.at(plotBin)->Draw("Lsame");
-    legPtRangeAndCenters.at(plotBin)->Draw("same");
+    hRespMeas[ptBin]->Draw();
+    hRespFitErrStat[ptBin]->Draw("E3 same");
+    hRespMeas[ptBin]->Draw("same");
+    hRespFit[ptBin]->Draw("Lsame");
+    legPtRangeAndCenters[ptBin]->Draw("same");
     c1->SetLogy();
     c1->Draw();
 
     ps->NewPage();
     c1->cd();
-    hRespMeas.at(plotBin)->Draw();
-    hRespFit.at(plotBin)->Draw("Lsame");
-    hRespFitStart.at(plotBin)->Draw("Lsame");
+    hRespMeas[ptBin]->Draw();
+    hRespFit[ptBin]->Draw("Lsame");
+    hRespFitStart[ptBin]->Draw("Lsame");
     c1->SetLogy();
-    legPtRangeAndCenters.at(plotBin)->Draw("same");
+    legPtRangeAndCenters[ptBin]->Draw("same");
     legFitStart->Draw("same");
     c1->Draw();
 
     ps->NewPage();
     c1->cd();
-    hRespMeas.at(plotBin)->Draw();
+    hRespMeas[ptBin]->Draw();
     if( param == "SmearParametrizationStepGaussInter" ) {
-      hRespFitStep.at(plotBin)->Draw("same");
-      hRespFitGaus.at(plotBin)->Draw("same");
-      //hRespFitSum.at(plotBin)->Draw("same");
+      hRespFitStep[ptBin]->Draw("same");
+      hRespFitGaus[ptBin]->Draw("same");
+      //hRespFitSum[ptBin]->Draw("same");
     }
-    hRespFit.at(plotBin)->Draw("Lsame");
-    legPtRangeAndCenters.at(plotBin)->Draw("same");
+    hRespFit[ptBin]->Draw("Lsame");
+    legPtRangeAndCenters[ptBin]->Draw("same");
     c1->SetLogy();
     c1->Draw();
 
     ps->NewPage();
     c1->cd();
-    hRatio[plotBin]->Draw();
+    hRatio[ptBin]->Draw();
     c1->SetLogy(0);
     c1->Draw();
   }
 
   // Truth spectrum
-  double n = param_->GetGlobalJetParRef()[0];
-  TLegend *legPtGen = new TLegend(0.4,0.67,0.8,0.8);
-  legPtGen->SetBorderSize(0);
-  legPtGen->SetFillColor(0);
-  legPtGen->SetTextFont(42);
-  char entry[50];
-  sprintf(entry,"#propto 1 / (p^{gen}_{T})^{%.1f}",n);
-  legPtGen->AddEntry(hTruthPDF,entry,"L");
+  delete legPtRange[0];
+  legPtRange[0] = new TLegend(0.23,0.72,0.78,0.8);
+  legPtRange[0]->SetBorderSize(0);
+  legPtRange[0]->SetFillColor(0);
+  legPtRange[0]->SetTextFont(42);
+  std::string binVar = config_->read<std::string>("plots pt binning","");
+  if( binVar.find("ptDijet") != std::string::npos ) binVar = "p^{dijet}_{T}";
+  else if( binVar.find("ptGen") != std::string::npos ) binVar = "p^{gen}_{T}";
+  else binVar = "p^{gen}_{T}";
+  std::string label = toString(ptBinEdges.front())
+    + " < " + binVar + " < "
+    + toString(ptBinEdges.back())
+    + " GeV";
+  legPtRange[0]->AddEntry(hPtGen,label.c_str(),"L");
+
+  ps->NewPage();
+  c1->cd();
+  hPtGenAbs->Draw();
+  legPtRange[0]->Draw("same");
+  c1->SetLogy();
+  c1->Draw();
 
   ps->NewPage();
   c1->cd();
   hPtGen->Draw();
-  hTruthPDFErrStat->Draw("E3same");
-  hPtGen->Draw("same");
+  //hTruthPDFErrStat->Draw("E3same");
+  //hPtGen->Draw("same");
   hTruthPDF->Draw("Lsame");
-  legPtRange.at(0)->Draw("same");
+  legPtRange[0]->Draw("same");
   c1->SetLogy();
   c1->Draw();
 
@@ -507,29 +520,28 @@ void ControlPlotsJetSmearing::plotResponse() const
   objs.clear();
   objs.push_back(hPtHat);
   objs.push_back(hTruthPDF);
-  objs.push_back(legPtRange.at(0));
   drawPSPage(ps,c1,objs,"",true);
 
   objs.clear();
   objs.push_back(hPtDijet);
   objs.push_back(hTruthPDF);
-  objs.push_back(legPtRange.at(0));
   drawPSPage(ps,c1,objs,"",true);
 
 
   // Write histos to root file
   TFile rootfile((dir_+"/jsResponse.root").c_str(),"UPDATE");
-  for(int plotBin = 0; plotBin < nPlotBins; plotBin++) {
-    rootfile.WriteTObject(hRespMeasAbs.at(plotBin));
-    rootfile.WriteTObject(hRespMeas.at(plotBin));
-    rootfile.WriteTObject(hRespFit.at(plotBin));
-    rootfile.WriteTObject(hRespFitErrStat.at(plotBin));
-    rootfile.WriteTObject(hRespFitStart.at(plotBin));
-    rootfile.WriteTObject(hRespFitStep.at(plotBin));
-    rootfile.WriteTObject(hRespFitGaus.at(plotBin));
-    rootfile.WriteTObject(hRespFitSum.at(plotBin));
-    rootfile.WriteTObject(hRatio.at(plotBin));
+  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
+    rootfile.WriteTObject(hRespMeasAbs[ptBin]);
+    rootfile.WriteTObject(hRespMeas[ptBin]);
+    rootfile.WriteTObject(hRespFit[ptBin]);
+    rootfile.WriteTObject(hRespFitErrStat[ptBin]);
+    rootfile.WriteTObject(hRespFitStart[ptBin]);
+    rootfile.WriteTObject(hRespFitStep[ptBin]);
+    rootfile.WriteTObject(hRespFitGaus[ptBin]);
+    rootfile.WriteTObject(hRespFitSum[ptBin]);
+    rootfile.WriteTObject(hRatio[ptBin]);
   }
+  rootfile.WriteTObject(hPtGenAbs);
   rootfile.WriteTObject(hPtGen);
   rootfile.WriteTObject(hPtHat);
   rootfile.WriteTObject(hPtDijet);
@@ -540,19 +552,20 @@ void ControlPlotsJetSmearing::plotResponse() const
 
 
   // --- Clean up ------------------------------------------
-  for(int plotBin = 0; plotBin < nPlotBins; plotBin++) {
-    delete hRespMeasAbs.at(plotBin);
-    delete hRespMeas.at(plotBin);
-    delete hRespFit.at(plotBin);
-    delete hRespFitErrStat.at(plotBin);
-    delete hRespFitStart.at(plotBin);
-    delete hRespFitStep.at(plotBin);
-    delete hRespFitGaus.at(plotBin);
-    delete hRespFitSum.at(plotBin);
-    delete legPtRangeAndCenters.at(plotBin);
-    delete hRatio[plotBin];
+  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
+    delete hRespMeasAbs[ptBin];
+    delete hRespMeas[ptBin];
+    delete hRespFit[ptBin];
+    delete hRespFitErrStat[ptBin];
+    delete hRespFitStart[ptBin];
+    delete hRespFitStep[ptBin];
+    delete hRespFitGaus[ptBin];
+    delete hRespFitSum[ptBin];
+    delete legPtRangeAndCenters[ptBin];
+    delete hRatio[ptBin];
   }
   delete legFitStart;
+  delete hPtGenAbs;
   delete hPtGen;
   delete hPtHat;
   delete hPtDijet;
@@ -614,9 +627,10 @@ void ControlPlotsJetSmearing::plotDijets() const
   }
 
   // Pt distributions
-  TH1F * hPtHat = new TH1F("hPtHat",";#hat{p}_{T} (GeV);1 / N  dN / d#hat{p}_{T}  1 / (GeV)",
+  TH1F * hPtHat = new TH1F("hPtHat",";#hat{p}_{T} (GeV);dN / d#hat{p}_{T}  1 / (GeV)",
 			   50,0.9*minPtHat, 1.1*maxPtHat);
   hPtHat->SetLineWidth(2);
+  hPtHat->SetNdivisions(505);
   hPtHat->Sumw2();
 
   std::vector<TH1F*> hGenJetPt;
@@ -631,18 +645,20 @@ void ControlPlotsJetSmearing::plotDijets() const
   for(int i = 0; i < 3; i++) {
     TH1F * h = 0;
 
-    h = new TH1F(genJetNames[i].c_str(),";p^{gen}_{T} (GeV);1 / N  dN / dp^{gen}_{T}  1 / (GeV)",
+    h = new TH1F(genJetNames[i].c_str(),";p^{gen}_{T} (GeV);dN / dp^{gen}_{T}  1 / (GeV)",
 		 50,0.9*minGenJetPt,1.1*maxGenJetPt);
     h->Sumw2();
     h->SetLineWidth(2);
     h->SetLineColor(color[i]);
+    h->SetNdivisions(505);
     hGenJetPt.push_back(h);
 
-    h = new TH1F(calJetNames[i].c_str(),";p^{jet}_{T} (GeV);1 / N  dN / dp^{jet}_{T}  1 / (GeV)",
+    h = new TH1F(calJetNames[i].c_str(),";p^{jet}_{T} (GeV);dN / dp^{jet}_{T}  1 / (GeV)",
 		 50,0.9*minCalJetPt,1.1*maxCalJetPt);
     h->Sumw2();
     h->SetLineWidth(2);
     h->SetLineColor(color[i]);
+    h->SetNdivisions(505);
     hCalJetPt.push_back(h);
   }
 
@@ -757,16 +773,15 @@ void ControlPlotsJetSmearing::plotDijets() const
 
 
   // Normalizing histograms
-  for(size_t i = 0; i < hGenJetPt.size(); i++) {
-    normHist( hGenJetPt.at(i) );
-    normHist( hCalJetPt.at(i) );
-  }
-  normHist( hPtHat );
-  normHist( hDijetPt );
-  normHist( h3rdJetPt );
-  normHist( hRel3rdJetPt );
-  normHist( hDeltaPhi );
-
+//   for(size_t i = 0; i < hGenJetPt.size(); i++) {
+//     normHist( hGenJetPt.at(i) );
+//     normHist( hCalJetPt.at(i) );
+//   }
+//  normHist( hPtHat );
+//  normHist( hDijetPt );
+//  normHist( h3rdJetPt );
+//  normHist( hRel3rdJetPt );
+//  normHist( hDeltaPhi );
 
 
   // --- Plot histograms ----------------------------
@@ -900,13 +915,17 @@ void ControlPlotsJetSmearing::plotParameters() const {
 
   // ----- Fill histograms -----
   for(int i = 0; i < nPar; i++) {
+    double s = 1.;
+    if( i < param_->GetNumberOfJetParameters() ) {
+      s = scale[i];
+    }
     int bin = 1+i;
 
     hPars->SetBinContent(bin,param_->GetPars()[i]);
     hPars->SetBinError(bin,param_->GetErrors()[i]);
 
-    hAbsPars->SetBinContent(bin,scale[i]*param_->GetPars()[i]);
-    hAbsPars->SetBinError(bin,scale[i]*param_->GetErrors()[i]);
+    hAbsPars->SetBinContent(bin,s*param_->GetPars()[i]);
+    hAbsPars->SetBinError(bin,s*param_->GetErrors()[i]);
   
     hRelParErrors->SetBinContent(bin,param_->GetErrors()[i]/param_->GetPars()[i]);
 
@@ -953,6 +972,245 @@ void ControlPlotsJetSmearing::plotParameters() const {
   delete hRelParErrors;
   delete hGlobalCorr;
   delete hParCorr;
+  delete c1;
+  delete ps;
+}
+
+
+
+//! For each pair (i,j) of free parameters in the fit the
+//! likelihood is plotted in the (i,j) plane.
+//!
+//! The plots are written to the files "jsResponse.root"
+//! and "jsParameterScans.ps".
+// --------------------------------------------------
+void ControlPlotsJetSmearing::plotParameterScan() const {
+  std::cout << "Creating parameter scan control plots\n";
+
+  // ----- Set up quantities -----
+  int n = 3;
+  int nSteps = 2*n+1;
+  int nPar = param_->GetNumberOfParameters();
+  std::vector<TH2D*> hParScans2D;
+  std::vector<TLine*> lines;
+
+  // ----- Vary parameters and calculate likelihood -----
+  // Store original parameter values
+  std::vector<double> origPars(nPar);
+  for(int i = 0; i < nPar; i++) {
+    origPars[i] = param_->GetPars()[i];
+  }
+  // Outer loop over parameters
+  for(int i = 0; i < nPar; i++) {
+    if( param_->isFixedPar(i) ) continue;
+    double idVal = param_->GetErrors()[i];
+    if( idVal == 0 ) idVal = 0.1;
+    // Inner loop over parameters
+    for(int j = 0; j < i; j++) {
+      if( param_->isFixedPar(j) ) continue;
+      double jdVal = param_->GetErrors()[j];
+      if( jdVal == 0 ) jdVal = 0.1;
+      // Create histogram of likelihood from i vs j
+      TString name = "hParScan2D";
+      name += hParScans2D.size();
+      TString title = "- ln(L);Parameter ";
+      title += i;
+      if( param_->parName(i) != "" ) title += " (" + param_->parName(i) + ")";
+      title += ";Parameter ";
+      title += j;
+      if( param_->parName(j) != "" ) title += " (" + param_->parName(j) + ")";
+      hParScans2D.push_back(new TH2D(name,title,
+				     nSteps,origPars[i]-(n+0.5)*idVal,origPars[i]+(n+0.5)*idVal,
+				     nSteps,origPars[j]-(n+0.5)*jdVal,origPars[j]+(n+0.5)*jdVal));
+			    
+      // Vary parameters i and j
+      for(int is = 0; is < nSteps; is++) {
+	double iPar = origPars[i] + (is-n)*idVal; 
+	param_->GetPars()[i] = iPar;
+	for(int js = 0; js < nSteps; js++) {
+	  double jPar = origPars[j] + (js-n)*jdVal; 
+	  param_->GetPars()[j] = jPar;
+	  // Store likelihood for varied parameters
+	  double lkh = 0.;
+	  for(DataIt dataIt = data_->begin(); dataIt != data_->end(); dataIt++) {
+	    if( (*dataIt)->GetType() == TypeSmearDiJet )  { // Select DiJet events
+	      lkh += (*dataIt)->chi2();
+	    }
+	  }     
+	  hParScans2D.back()->Fill(iPar,jPar,lkh);
+	}
+      }
+      // Reset parameters to original values
+      param_->GetPars()[i] = origPars[i];
+      param_->GetPars()[j] = origPars[j];
+    } // End of inner loop over parameters
+  } // End of outer loop over parameters
+
+
+  // ----- Plot histograms -----
+  TPostScript * const ps = new TPostScript((dir_+"/jsParameterScans.ps").c_str(),111);
+  TCanvas           * c1 = new TCanvas("c1","ParameterScans",0,0,600,600);
+
+  for(size_t i = 0; i < hParScans2D.size(); i++) {
+    drawPSPage(ps,c1,hParScans2D[i],"COLZ");
+  }
+
+  ps->Close();
+
+  TFile rootfile((dir_+"/jsResponse.root").c_str(),"UPDATE");
+  for(size_t i = 0; i < hParScans2D.size(); i++) {
+    rootfile.WriteTObject(hParScans2D[i]);
+  }
+
+
+  // ----- Clean up -----
+  for(size_t i = 0; i < hParScans2D.size(); i++) {
+    delete hParScans2D[i];
+  }
+  for(size_t i = 0; i < lines.size(); i++) {
+    delete lines[i];
+  }
+}  
+
+
+
+//! These are the distributions of the negative logarithm
+//! of the probability density of each event multiplied
+//! by the event weight. That are the summands each
+//! event adds to the negative log-likelihood of the fit.
+//! (For a \f$\chi^{2}\f$-fit these would be the pull
+//! distributions.)
+//!
+//! The plots are written to the files "jsResponse.root"
+//! and "jsLogP.ps".
+// --------------------------------------------------
+void ControlPlotsJetSmearing::plotLogP() const {
+  std::cout << "Creating -log(P) control plots\n";
+
+  // ----- Fill vectors of -log(P) -----
+  std::vector<double> logPstart;
+  std::vector<double> logPend;
+  std::vector<double> logPWstart;
+  std::vector<double> logPWend;
+
+  // Loop over data and fill -log(P) with fitted
+  // parameter values
+  for(DataIt dataIt = data_->begin(); dataIt != data_->end(); dataIt++) {
+    // Select DiJet events
+    if( (*dataIt)->GetType() == TypeSmearDiJet )  {
+      logPWend.push_back((*dataIt)->chi2());
+      logPend.push_back((*dataIt)->chi2()/(*dataIt)->GetWeight());
+    }
+  }
+
+  // Store fitted parameters
+  std::vector<double> fittedPar(param_->GetNumberOfParameters());
+  for(int i = 0; i < param_->GetNumberOfParameters(); i++) {
+    fittedPar[i] = param_->GetPars()[i];
+  }
+  // Copy start values into parameter array
+  std::vector<double> startParJet = bag_of<double>(config_->read<string>("jet start values",""));
+  std::vector<double> startParGlobal = bag_of<double>(config_->read<string>("global jet start values",""));
+  for(int i = 0; i < param_->GetNumberOfParameters(); i++) {
+    if( i < param_->GetNumberOfJetParameters() )
+      param_->GetPars()[i] = startParJet.at(i);
+    else
+      param_->GetPars()[i] = startParGlobal[i-param_->GetNumberOfJetParameters()];
+  }
+  // Loop over data and fill -log(P) with start
+  // parameter values
+  for(DataIt dataIt = data_->begin(); dataIt != data_->end(); dataIt++) {
+    // Select DiJet events
+    if( (*dataIt)->GetType() == TypeSmearDiJet )  {
+      logPWstart.push_back((*dataIt)->chi2());
+      logPstart.push_back((*dataIt)->chi2()/(*dataIt)->GetWeight());
+    }
+  }
+  // Copy back fitted values into parameter array
+  for(int i = 0; i < param_->GetNumberOfParameters(); i++) {
+    param_->GetPars()[i] = fittedPar.at(i);
+  }
+
+
+  // ----- Fill histograms of -log(P) -----
+  std::sort(logPstart.begin(),logPstart.end());
+  std::sort(logPend.begin(),logPend.end());
+  double max = logPstart.back() > logPend.back() ? logPstart.back() : logPend.back();
+  TH1F *hLogPstart = new TH1F("hLogPstart",";- ln(P)",100,0.,1.1*max);
+  hLogPstart->SetLineWidth(2);
+  hLogPstart->SetLineColor(4);
+  TH1F *hLogPend = static_cast<TH1F*>(hLogPstart->Clone("hLogPend"));
+  hLogPend->SetLineColor(2);
+
+  std::sort(logPWstart.begin(),logPWstart.end());
+  std::sort(logPWend.begin(),logPWend.end());
+  max = logPWstart.back() > logPWend.back() ? logPWstart.back() : logPWend.back();
+  TH1F *hLogPWstart = new TH1F("hLogPWstart",";- w #upoint ln(P)",100,0.,1.1*max);
+  hLogPWstart->SetLineWidth(2);
+  hLogPWstart->SetLineColor(4);
+  TH1F *hLogPWend = static_cast<TH1F*>(hLogPWstart->Clone("hLogPWend"));
+  hLogPWend->SetLineColor(2);
+
+  for(size_t i = 0; i < logPend.size(); i++) {
+    hLogPstart->Fill(logPstart[i]);
+    hLogPend->Fill(logPend[i]);
+    hLogPWstart->Fill(logPWstart[i]);
+    hLogPWend->Fill(logPWend[i]);
+  }
+  logPstart.clear();
+  logPend.clear();
+  logPWstart.clear();
+  logPWend.clear();
+
+  max = hLogPend->GetMaximum() > hLogPstart->GetMaximum() ?
+    hLogPend->GetMaximum() : hLogPstart->GetMaximum();
+  hLogPstart->GetYaxis()->SetRangeUser(5E-2,5.*max);
+  hLogPend->GetYaxis()->SetRangeUser(5E-2,5.*max);
+
+  max = hLogPWend->GetMaximum() > hLogPWstart->GetMaximum() ?
+    hLogPWend->GetMaximum() : hLogPWstart->GetMaximum();
+  hLogPWstart->SetMaximum(5.*max);
+  hLogPWend->SetMaximum(5.*max);
+
+
+  // ----- Plot histograms -----
+  TPostScript * const ps = new TPostScript((dir_+"/jsLogP.ps").c_str(),111);
+  TCanvas * c1 = new TCanvas("c1","LogP",0,0,600,600);
+
+  TLegend * leg = new TLegend(0.23,0.64,0.78,0.8);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextFont(42);
+  leg->AddEntry(hLogPstart,"Before fit","L");
+  leg->AddEntry(hLogPend,"After fit","L");
+  
+  ps->NewPage();
+  c1->cd()->SetLogy();
+  hLogPstart->Draw();
+  hLogPend->Draw("same");
+  leg->Draw("same");
+  c1->Draw();
+
+  ps->NewPage();
+  c1->cd()->SetLogy();
+  hLogPWstart->Draw();
+  hLogPWend->Draw("same");
+  leg->Draw("same");
+  c1->Draw();
+  ps->Close();
+
+  TFile rootfile((dir_+"/jsResponse.root").c_str(),"UPDATE");
+  rootfile.WriteTObject(hLogPstart);
+  rootfile.WriteTObject(hLogPend);
+  rootfile.WriteTObject(hLogPWstart);
+  rootfile.WriteTObject(hLogPWend);
+
+  // ----- Clean up -----
+  delete hLogPstart;
+  delete hLogPend;
+  delete hLogPWstart;
+  delete hLogPWend;
+  delete leg;
   delete c1;
   delete ps;
 }

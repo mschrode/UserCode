@@ -1,4 +1,4 @@
-//  $Id: Kalibri.h,v 1.3 2010/01/04 17:04:51 mschrode Exp $
+//  $Id: Kalibri.h,v 1.1 2010/01/21 16:46:05 mschrode Exp $
 
 //!  \mainpage
 //!
@@ -136,7 +136,7 @@ class Measurement;
 //!         LD_PRELOAD=./gprof-helper.so ./junk
 //!  \authors Christian Autermann, Hartmut Stadie, Matthias Schroeder
 //!  \date Wed Jul 18 13:54:50 CEST 2007
-//!  $Id: Kalibri.h,v 1.3 2010/01/04 17:04:51 mschrode Exp $
+//!  $Id: Kalibri.h,v 1.1 2010/01/21 16:46:05 mschrode Exp $
 // -----------------------------------------------------------------
 class Kalibri {
 public :
@@ -194,7 +194,6 @@ private:
   bool printParNDeriv_;     //!< Control whether to print derivatives in each iteration
   std::vector<int> residualScalingScheme_;    //!< Iteration scheme of scaling of residuals
   double outlierChi2Cut_;                     //!< Cut on outlier when no scaling is chosen
-  std::vector<int> globalJetPars_;            //!< List of global jet parameters
   std::vector<int> fixedJetPars_;             //!< List of fixed jet parameters
   std::vector<int> fixedGlobalJetPars_;       //!< List of fixed global jet parameters
 

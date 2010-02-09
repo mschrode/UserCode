@@ -1,5 +1,5 @@
 //
-// $Id: ControlPlotsJetSmearing.h,v 1.2 2010/01/21 16:48:45 mschrode Exp $
+// $Id: ControlPlotsJetSmearing.h,v 1.3 2010/01/26 17:49:22 mschrode Exp $
 //
 #ifndef JS_CONTROLPLOTS_JETSMEARING_H
 #define JS_CONTROLPLOTS_JETSMEARING_H
@@ -21,7 +21,7 @@ class TCanvas;
 //!  \brief Generates validation plots for jet-smearing method
 //!  \author Matthias Schroeder
 //!  \date Thu May  7 11:30:28 CEST 2009 
-//!  $Id: ControlPlotsJetSmearing.h,v 1.2 2010/01/21 16:48:45 mschrode Exp $
+//!  $Id: ControlPlotsJetSmearing.h,v 1.3 2010/01/26 17:49:22 mschrode Exp $
 // --------------------------------------------------
 class ControlPlotsJetSmearing {
  public:
@@ -31,6 +31,11 @@ class ControlPlotsJetSmearing {
   void plotDijets() const;
   void plotResponse() const;
   void plotParameters() const;
+  //! Plots the negative log-likelihood for different parameter values
+  void plotParameterScan() const;
+  //! Plots the distributions of the probability density of
+  //! each event before and after the fit
+  void plotLogP() const;
   void setBinningResp(int nbins, double min, double max) { respNBins_ = nbins; respMin_ = min; respMax_ = max;}
 
 
