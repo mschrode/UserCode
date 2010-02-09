@@ -22,7 +22,7 @@ EventWeightProcessor::EventWeightProcessor(const std::string& configfile, TParam
     else if( type == "pthat" ) type_ = 1;
     else type_ = -1;
 
-    lumi_ = weightConfig.read<double>("Lumi",0.);
+    double lumi = weightConfig.read<double>("Lumi",0.);
     
     // Weights per pthat bin
     if( type_ == 0 ) {
@@ -33,11 +33,11 @@ EventWeightProcessor::EventWeightProcessor(const std::string& configfile, TParam
 
       assert( xSection.size() == minPtHat_.size() );
       assert( nEvents.size() == minPtHat_.size() );
-      calculateWeightsForBins(xSection,nEvents,lumi_,refPtHatBin);
+      calculateWeightsForBins(xSection,nEvents,lumi,refPtHatBin);
       assert( weights_.size() == minPtHat_.size() );
       
       std::cout << "  Calculating weights ";
-      if( refPtHatBin < 0 ) std::cout << "for a luminosity of " << lumi_ << " pb-1:\n";
+      if( refPtHatBin < 0 ) std::cout << "for a luminosity of " << lumi << " pb-1:\n";
       else                  std::cout << "relative to pthat bin " << refPtHatBin << ":\n";
       for(size_t i = 0; i < minPtHat_.size(); i++) {
 	std::cout << "    " << i << ": " << minPtHat_.at(i) << " < pthat < ";
@@ -49,8 +49,12 @@ EventWeightProcessor::EventWeightProcessor(const std::string& configfile, TParam
     // Weights dependend on pthat
     else if( type_ == 1 ) {
       expo_ = weightConfig.read<double>("Exponent",1.);
-      std::cout << "  Weighting with pthat^(" << expo_ << ")" << std::endl;
-      std::cout << "  for a luminosity of " << lumi_ << " pb-1" << std::endl;
+      double xs = weightConfig.read<double>("XS",0.);
+      double num = weightConfig.read<double>("Number evts",0);
+      globalWeight_ = lumi*xs/num;
+      std::cout << "  Weighting events for a luminosity of " << lumi << " pb-1" << std::flush;
+      std::cout << " (xs = " << xs << ", N*pthat^(" << expo_ << ") = " << num << "):" << std::endl;
+      std::cout << "    weight = " << globalWeight_ << "*pthat^(" << expo_ << ")" << std::endl;
     }
     else {
       std::cerr << "ERROR: Unknown weighting type '" << type << "'" << std::endl;
@@ -96,7 +100,8 @@ int EventWeightProcessor::process(std::vector<Event*>& data) {
 	}
       }
       else if( type_ == 1 ) {
-	weight = 1E12*pow((*evt)->ptHat(),expo_);
+	weight = globalWeight_*pow((*evt)->ptHat(),expo_);
+	//	weight = 1E10*pow((*evt)->ptHat(),expo_);
       }
 
       (*evt)->setWeight( weight );

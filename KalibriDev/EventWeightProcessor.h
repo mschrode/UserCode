@@ -19,7 +19,7 @@
 //!
 //!  \author Matthias Schroeder
 //!  \date 2009/07/22
-//!  $Id: EventWeightProcessor.h,v 1.2 2010/01/21 16:48:53 mschrode Exp $
+//!  $Id: EventWeightProcessor.h,v 1.3 2010/01/29 20:53:14 mschrode Exp $
 // -----------------------------------------------------------------
 
 #ifndef EVENT_WEIGHT_PROCESSOR_H
@@ -50,9 +50,9 @@ class EventWeightProcessor : public EventProcessor
 
   bool weightEvents_;              //!< Apply weighting if true
   int type_;                       //!< Type of weighting method
-  double lumi_;                    //!< Reference luminosity
   std::vector<double> minPtHat_;   //!< Minima of \f$ \hat{p}_{T} \f$ bins (type 0)
   std::vector<double> weights_;    //!< Weights of \f$ \hat{p}_{T} \f$ bins (type 0)
+  double globalWeight_;            //!< \f$ L\sigma/N_{MC} \f$ (type 1)
   double expo_;                    //!< Exponent for pthat weighting (type 1)
 };
 #endif
