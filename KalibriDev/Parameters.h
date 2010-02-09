@@ -1,7 +1,7 @@
 //
 // Original Authors:  Christian Autermann, Hartmut Stadie
 //         Created:  Wed Jul 18 13:54:50 CEST 2007
-// $Id: Parameters.h,v 1.4 2010/01/21 16:49:18 mschrode Exp $
+// $Id: Parameters.h,v 1.5 2010/01/26 17:49:22 mschrode Exp $
 //
 #ifndef TParameters_h
 #define TParameters_h
@@ -19,6 +19,7 @@
 #include "ConfigFile.h"
 #include "Parametrization.h"
 #include "Function.h"
+#include "SmearFunction.h"
 
 
 
@@ -26,7 +27,7 @@
 //!         interface to response and error parametrizations
 //!  \author Christian Autermann
 //!  \date   Wed Jul 18 13:54:50 CEST 2007
-//!  $Id: Parameters.h,v 1.4 2010/01/21 16:49:18 mschrode Exp $
+//!  $Id: Parameters.h,v 1.5 2010/01/26 17:49:22 mschrode Exp $
 // -----------------------------------------------------------------
 class TParameters {  
 public :
@@ -49,6 +50,14 @@ public :
   int GetNumberOfJetParameters() const{return p->nJetPars()*eta_granularity_jet*phi_granularity_jet;}
   int GetNumberOfTrackParameters() const{return p->nTrackPars()*eta_granularity_track*phi_granularity_track;}
   int GetNumberOfGlobalJetParameters() const{return p->nGlobalJetPars();}
+  int GetNumberOfFixedParameters() const {
+    int n = 0;
+    for(std::vector<bool>::const_iterator it = isFixedPar_.begin();
+	it != isFixedPar_.end(); it++) {
+      if( *it ) n++;
+    }
+    return n;
+  }
 
   int GetNumberOfParameters() const{return GetNumberOfTowerParameters()+GetNumberOfJetParameters() + GetNumberOfTrackParameters()+GetNumberOfGlobalJetParameters();}
   int GetNumberOfTowerParametersPerBin() const {return p->nTowerPars();}
@@ -86,6 +95,28 @@ public :
   double* GetGlobalJetParErrorRef()  { 
     return parErrors_ + GetNumberOfTowerParameters() + GetNumberOfJetParameters() + GetNumberOfTrackParameters();
   }
+
+  double* GetTowerParGlobalCorrCoeffRef(int bin) { 
+    return parGCorr_ + bin*p->nTowerPars();
+  }
+  double* GetJetParGlobalCorrCoeffRef(int jetbin)  { 
+    return parGCorr_ + GetNumberOfTowerParameters()+jetbin*p->nJetPars();
+  }
+  double* GetTrackParGlobalCorrCoeffRef(int trackbin)  {
+    return parGCorr_ + GetNumberOfTowerParameters() + GetNumberOfJetParameters() +trackbin*p->nTrackPars();
+  }
+  double* GetGlobalJetParGlobalCorrCoeffRef()  { 
+    return parGCorr_ + GetNumberOfTowerParameters() + GetNumberOfJetParameters() + GetNumberOfTrackParameters();
+  }
+
+  bool isFixedPar(int i) const { 
+    assert( i >= 0 && i < GetNumberOfParameters() );
+    return isFixedPar_[i];
+  }
+  std::string parName(int i) const {
+    assert( i >= 0 && i < GetNumberOfParameters() );
+    return parNames_[i];
+  }
   
   void SetParameters(double *np) {
     std::memcpy(k,np,GetNumberOfParameters()*sizeof(double));
@@ -98,6 +129,10 @@ public :
   }  
   void SetCovCoeff(double *cov) {
     std::memcpy(parCov_,cov,GetNumberOfCovCoeffs()*sizeof(double));
+  }
+  void fixPar(int i) {
+    assert( i >= 0 && i < GetNumberOfParameters() );
+    isFixedPar_[i] = true;
   }
 
   void SetFitChi2(double chi2) { fitchi2 = chi2;}
@@ -314,6 +349,7 @@ public :
   Function jet_function(int etaid, int phiid);
   Function track_function(int etaid, int phiid);
   Function global_jet_function();
+  SmearFunction resolutionFitPDF(int etaid, int phiid);
 
   void readCalibrationCfi(const std::string& file);
   void readCalibrationTxt(const std::string& file);
@@ -335,8 +371,7 @@ private:
   int GetPhiBin(int phi_id, int phigranu) const;
   template<class T> std::string texTabularLine(const ConfigFile& config, const std::string& fieldname) const;
   std::vector<int> findCovIndices(int firstPar, int nPar) const;
-
-  
+  std::vector<bool> findParStatus(int firstPar, int nPar) const;
 
   //Towers in Eta-, Phi- direction (according to PTDR Vol I, p.201)
   unsigned const static eta_ntwr=82, phi_ntwr=72;
@@ -344,11 +379,13 @@ private:
   bool eta_symmetry;
   unsigned int eta_granularity, phi_granularity,eta_granularity_jet, phi_granularity_jet, eta_granularity_track, phi_granularity_track;
   std::vector<double> start_values, jet_start_values, track_start_values, global_jet_start_values;
+  std::vector<std::string> parNames_;
 
   //The parametrization functions:
   Parametrization* p;
 
   double * k; //!< all fit-parameters
+  std::vector<bool> isFixedPar_;
   double * parErrors_; //!< all fit-parameter errors
   double * parGCorr_; //!< Global correlation coefficients of parameters
   double * parCov_;

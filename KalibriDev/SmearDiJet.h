@@ -1,17 +1,17 @@
-// $Id: SmearDiJet.h,v 1.2 2010/01/21 16:49:25 mschrode Exp $
+// $Id: SmearDiJet.h,v 1.3 2010/01/29 20:54:22 mschrode Exp $
 
 #ifndef SmearDiJet_h
 #define SmearDiJet_h
 
 #include "SmearData.h"
-#include "Function.h"
+#include "SmearFunction.h"
 #include "Jet.h"
 
 
 //!  \brief Dijet data for jetsmearing method
 //!  \author Matthias Schroeder
 //!  \date Tue Jun  9 18:23:44 CEST 2009
-//!  $Id: SmearDiJet.h,v 1.2 2010/01/21 16:49:25 mschrode Exp $
+//!  $Id: SmearDiJet.h,v 1.3 2010/01/29 20:54:22 mschrode Exp $
 // --------------------------------------------------
 class SmearDiJet : public SmearData {
  public:
@@ -20,15 +20,15 @@ class SmearDiJet : public SmearData {
 	     Jet * jet3,
 	     double ptHat,
 	     double weight,
-	     const Function& respPDF,
-	     const Function& truthPDF,
+	     const SmearFunction& pdf,
+	     //	     const Function& truthPDF,
 	     double min,
 	     double max,
 	     double eps,
 	     int niter);
   ~SmearDiJet();
 
-  virtual void ChangeParAddress(double* oldpar, double* newpar);
+  //  virtual void ChangeParAddress(double* oldpar, double* newpar);
   virtual double chi2() const;
   virtual double chi2_fast(double * temp_derivative1, double * temp_derivative2, double const epsilon) const;
   virtual void printInitStats() const;
@@ -38,9 +38,9 @@ class SmearDiJet : public SmearData {
   const Jet * jet3() const { return jet3_; }
 
   double dijetPt() const { return 0.5 * (jet1()->pt() + jet2()->pt()); } //!< Get dijet pt \f$ \frac{1}{2} (p^{1}_{T} + p^{2}_{T}) \f$
-  double * getTruthPar() { return truthPDF_.firstPar(); }
-  double truthPDF(double t) const;
-  double truthPDFSigma(double t) const;
+/*   double * getTruthPar() { return truthPDF_.firstPar(); } */
+/*   double truthPDF(double t) const; */
+/*   double truthPDFSigma(double t) const; */
 
 
  private:
@@ -51,6 +51,6 @@ class SmearDiJet : public SmearData {
 
   Jet * jet2_; //!< Second jet
   Jet * jet3_; //!< Third jet
-  Function  truthPDF_;  //!< Truth pdf
+  //  Function  truthPDF_;  //!< Truth pdf
 };
 #endif

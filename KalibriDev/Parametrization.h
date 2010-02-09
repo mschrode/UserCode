@@ -1,5 +1,5 @@
 //
-//  $Id: Parametrization.h,v 1.6 2010/01/26 17:49:22 mschrode Exp $
+//  $Id: Parametrization.h,v 1.7 2010/01/29 20:57:14 mschrode Exp $
 //
 #ifndef CALIBCORE_PARAMETRIZATION_H
 #define CALIBCORE_PARAMETRIZATION_H
@@ -24,7 +24,7 @@ class TH1D;
 //!  to correct a tower or jet measurement.
 //!  \author Hartmut Stadie
 //!  \date Thu Apr 03 17:09:50 CEST 2008
-//!  $Id: Parametrization.h,v 1.6 2010/01/26 17:49:22 mschrode Exp $
+//!  $Id: Parametrization.h,v 1.7 2010/01/29 20:57:14 mschrode Exp $
 // -----------------------------------------------------------------
 class Parametrization 
 {
@@ -82,9 +82,6 @@ public:
   //!  \return The corrected Et of a jet
   // -----------------------------------------------------------------
   virtual double correctedJetEt(const Measurement *x,const double *par) const = 0;
-  virtual double correctedJetEtSigma(const Measurement *x,const double *par,const double *cov, const std::vector<int> &covIdx) const {
-    return correctedJetEt(x,par);
-  };
 
  
   //!  \brief Returns the expected signal of a track in the Calorimeter
@@ -117,8 +114,16 @@ public:
   //!  \return The corrected Et of a jet
   // -----------------------------------------------------------------
   virtual double correctedGlobalJetEt(const Measurement *x,const double *par) const { return x->pt;}
-  virtual double correctedGlobalJetEtSigma(const Measurement *x,const double *par,const double *cov, const std::vector<int> &covIdx) const {
-    return correctedGlobalJetEt(x,par);
+
+
+  virtual double resolution(double r, double pt, const double *rPar) const { return 0.; }
+  virtual double resolutionError(double r, double pt, const double *rPar, const double *cov, const std::vector<int> &covIdx) const {
+    return 0.;
+  };
+
+  virtual double spectrum(double pt, const double *sPar, const double *rPar) const { return 0.; }
+  virtual double spectrumError(double pt, const double *sPar, const double *rPar, const double *cov, const std::vector<int> &covIdx) const {
+    return 0.;
   }
 
 
@@ -1208,26 +1213,24 @@ class SmearCrystalBall : public Parametrization
   //! Constructor
   SmearCrystalBall(double tMin, double tMax, double rMin, double rMax, double ptDijetMin, double ptDijetMax, const std::vector<double>& rParScales);
 
-  ~SmearCrystalBall();
+  ~SmearCrystalBall() {};
 
   const char* name() const { return "SmearCrystalBall";}
 
-  virtual bool needsUpdate() const { return true; }
-
-  //! Update integral over dijet resolution \p ptDijetCutInt_
-  virtual void update(const double * par);
+  virtual bool needsUpdate() const { return false; }
 
   //! Returns 0
   double correctedTowerEt(const Measurement *x,const double *par) const { return 0.; }
+  double correctedJetEt(const Measurement *x,const double *par) const { return 0.; }
+  double correctedGlobalJetEt(const Measurement *x,const double *par) const { return 0.; }
 
   //! Returns probability density of response
-  double correctedJetEt(const Measurement *x,const double *par) const;
-  double correctedJetEtSigma(const Measurement *x,const double *par,const double *cov, const std::vector<int> &covIdx) const;
+  double resolution(double r, double pt, const double *rPar) const;
+  double resolutionError(double r, double pt, const double *rPar, const double *cov, const std::vector<int> &covIdx) const;
 
   //! Returns probability density of true pt multiplied by normalization
   //! of dijet probability (see also \p SmearDiJet::truthPDF(t)).
-  double correctedGlobalJetEt(const Measurement *x,const double *par) const;
-  double correctedGlobalJetEtSigma(const Measurement *x,const double *par,const double *cov, const std::vector<int> &covIdx) const;
+  double spectrum(double pt, const double *sPar, const double *rPar) const;
 
 
  private:
@@ -1238,7 +1241,94 @@ class SmearCrystalBall : public Parametrization
   const double ptDijetMin_;             //!< Minimum of pt dijet
   const double ptDijetMax_;             //!< Maximum of pt dijet
   const std::vector<double> respParScales_;     //!< Parameter scales
-  TH1D * ptDijetCutInt_;	        //!< Integral over dijet response for truth pdf for different t
+
+  double mean(const double *rPar) const {
+    return respParScales_[0]*rPar[0];
+  }
+  double sigma(const double *rPar) const {
+    return respParScales_[1]*rPar[1] > 0 ? respParScales_[1]*rPar[1] : 1E-3;
+  }
+  double alpha(const double *rPar) const {
+    return respParScales_[2]*rPar[2] > 0 ? respParScales_[2]*rPar[2] : 1E-3;
+  }
+  double n(const double *rPar) const {
+    double n = respParScales_[3]*rPar[3];
+    if( n <= 0. ) n = 1E-3;
+    if( n > 15 ) n = 15.;
+    return n;
+  }
+
+  //! Returns probability density (not normalised!) of truth
+  //! considering cuts on dijet pt
+  double truthPDF(double pt, const double *sPar, const double *rPar) const;
+
+  //! Returns the function value of a normalized crystal
+  //! ball function
+  double crystalBallFunc(double x, double mean, double sigma, double alpha, double n) const;
+  double crystalBallInt(double mean, double sigma, double alpha, double n, double min, double max) const;
+  double crystalBallNorm(double mean, double sigma, double alpha, double n) const;
+  double crystalBallDerivative(double x, double mean, double sigma, double alpha, double n, int i) const;
+
+  //! Print some initialization details
+  void print() const;
+};
+
+
+
+//! \brief Parametrization used for response function estimation
+//!        with a crystal ball function
+// ------------------------------------------------------------------------
+class SmearCrystalBallPt : public Parametrization
+{ 
+ public:
+  //! Constructor
+  SmearCrystalBallPt(double tMin, double tMax, double rMin, double rMax, double ptDijetMin, double ptDijetMax, const std::vector<double>& rParScales);
+
+  ~SmearCrystalBallPt() {};
+
+  const char* name() const { return "SmearCrystalBallPt";}
+
+  //! Returns 0
+  double correctedTowerEt(const Measurement *x,const double *par) const { return 0.; }
+
+  //! Returns probability density of response
+  double correctedJetEt(const Measurement *x,const double *par) const;
+  //  double correctedJetEtSigma(const Measurement *x,const double *par,const double *cov, const std::vector<int> &covIdx) const;
+
+  //! Returns probability density of true pt multiplied by normalization
+  //! of dijet probability (see also \p SmearDiJet::truthPDF(t)).
+  double correctedGlobalJetEt(const Measurement *x,const double *par) const;
+  //  double correctedGlobalJetEtSigma(const Measurement *x,const double *par,const double *cov, const std::vector<int> &covIdx) const;
+
+
+ private:
+  const double tMin_;                   //!< Minimum of non-zero range of truth pdf
+  const double tMax_;                   //!< Maximum of non-zero range of truth pdf
+  const double rMin_;                   //!< Minimum of non-zero range of response pdf
+  const double rMax_;                   //!< Maximum of non-zero range of response pdf
+  const double ptDijetMin_;             //!< Minimum of pt dijet
+  const double ptDijetMax_;             //!< Maximum of pt dijet
+  const std::vector<double> scale_;     //!< Parameter scales
+  mutable bool warningPrinted_;
+
+  //! Parameters of the crystal ball function
+  //! and the spectrum
+  double mean(const Measurement *x, const double *par) const { return scale_[0]*par[0]; }
+  double sigma(const Measurement *x, const double *par) const {
+    double a = scale_[1]*par[1];
+    double b = scale_[2]*par[2];
+    double c = scale_[3]*par[3];
+    return sqrt( a*a + b*b/x->pt + c*c/x->pt/x->pt );
+  }
+  double alpha(const Measurement *x, const double *par) const {
+    return scale_[4]*scale_[4]*par[4]*par[4];// + scale_[5]*scale_[5]*par[5]*par[5]/x->pt/x->pt;
+  }
+  double n(const Measurement *x, const double *par) const {
+    return scale_[5]*par[5]*scale_[5]*par[5];// - scale_[7]*par[7]*scale_[7]*par[7]*x->pt;
+  }
+  double m(double pt, const double *par) const {
+    return par[0] + par[1]*pt + par[2]/pt;
+  }
 
   //! Returns the function value of a normalized crystal
   //! ball function

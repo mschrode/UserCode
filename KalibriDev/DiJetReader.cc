@@ -1,6 +1,6 @@
 //
 //    first version: Hartmut Stadie 2008/12/12
-//    $Id: DiJetReader.cc,v 1.3 2010/01/21 16:48:46 mschrode Exp $
+//    $Id: DiJetReader.cc,v 1.4 2010/01/29 20:55:36 mschrode Exp $
 //   
 #include "DiJetReader.h"
 
@@ -15,6 +15,8 @@
 #include "NJetSel.h"
 #include "CorFactors.h"
 #include "CorFactorsFactory.h"
+#include "Function.h"
+#include "SmearFunction.h"
 
 #include "TVector2.h"
 #include "TRandom3.h"
@@ -435,8 +437,7 @@ Event* DiJetReader::createSmearEvent()
 					   jets[2],                    // Third jet
 					   nJet_->GenEvtScale,
 					   1.,                         // Weights from EventProcessor
-					   par_->jet_function(1,1),
-					   par_->global_jet_function(),   // Truth pdf
+					   par_->resolutionFitPDF(1,1),
 					   min_,                       // Integration minimum
 					   max_,                       // Integration maximum
 					   eps_,                       // Integration step length

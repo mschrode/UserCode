@@ -1,9 +1,10 @@
 //
-//  $Id: Parametrization.cc,v 1.2 2010/01/26 17:49:22 mschrode Exp $
+//  $Id: Parametrization.cc,v 1.3 2010/01/29 20:57:14 mschrode Exp $
 //
 #include "Parametrization.h"
 
 
+#include "TF1.h"
 #include "TH1D.h"
 #include "TMath.h"
 
@@ -398,58 +399,7 @@ SmearCrystalBall::SmearCrystalBall(double tMin, double tMax, double rMin, double
   assert( respParScales_.size() >= nJetPars() );
   
   print();
-  
-  // Integral over dijet resolution for truth pdf
-  ptDijetCutInt_ = new TH1D("norm","",400,tMin_,tMax_);
 }
-
-
-
-// ------------------------------------------------------------------------
-SmearCrystalBall::~SmearCrystalBall() { 
-  delete ptDijetCutInt_; 
-}
-
-
-
-//!  The truth pdf contains an integral over the dijet response
-//!  describing the cuts on ptdijet:
-//!  \f[
-//!   \int^{x_{1}}_{x_{0}}dx\,\frac{r(x/t)\cdot t}{\sqrt{2}}
-//!  \f]
-//!  The values of this integral for different truth \p t are
-//!  stored in the histogram \p ptDijetCutInt_.
-//!
-//!  Calling this function recalculates the integrals using the current
-//!  parameter values for the response function \p r. The integrals
-//!  are calculated numerically by summing over 400 bins between
-//!  \p ptDijetMin_ and \p ptDijetMax_.
-//!  \sa correctedGlobalJetEt()
-// ------------------------------------------------------------------------
-void SmearCrystalBall::update(const double * par) {
-  std::cout << "'" << name() << "': Updating ptDijet cut integral... ";
-
-  ptDijetCutInt_->Reset();
-  for(int bin = 1; bin < ptDijetCutInt_->GetNbinsX(); bin++) {
-    Measurement x;
-    x.pt = ptDijetCutInt_->GetBinCenter(bin);
-    double integral = 0.;
-    int nSteps = 400;
-    double dPtDijet = (ptDijetMax_ - ptDijetMin_) / nSteps;
-    for(int i = 0; i < nSteps; i++) {
-      double ptDijet = ptDijetMin_ + i*dPtDijet;
-      x.E = ptDijet / x.pt;
-      double prob = correctedJetEt(&x,par);
-      prob *= x.pt;
-      integral += prob;
-    }
-    integral /= sqrt(2.);
-    integral *= dPtDijet;
-    ptDijetCutInt_->SetBinContent(bin,integral);
-  }
-  std::cout << "ok\n";
-}
-
 
 
 //! The response pdf parametrization is a crystall ball function
@@ -463,52 +413,16 @@ void SmearCrystalBall::update(const double * par) {
 //! \param par Pointer to parameters (parameters are multiplied by the corresponding scale)
 //! \return Probability density of response
 // ------------------------------------------------------------------------
-double SmearCrystalBall::correctedJetEt(const Measurement *x,const double *par) const {
-  double p = 0.;
-
-  //if( x->E > rMin_ && x->E < rMax_ ) {
-    double mean = respParScales_[0]*par[0];
-    double sigma = respParScales_[1]*par[1];
-    double alpha = respParScales_[2]*par[2];
-    double n = respParScales_[3]*par[3];
-
-    if( sigma <= 0. ) sigma = 1E-5;
-    if( alpha <= 0. ) alpha = 1E-5;
-    if( n <= 0. ) n = 1. + 1E-5;
-    
-    //if( n <= alpha*alpha ) n = alpha*alpha + 1E-5;
-    
-//     double norm = 0.;
-//     int nSteps = 100;
-//     double deltaResp = (rMax_-rMin_)/nSteps;
-//     for(int i = 0; i < nSteps; i++) {
-//       norm += crystallBallFunc(rMin_+deltaResp*i,mean,sigma,alpha,n);
-//     }
-
-//     if( norm > 0 ) p = crystallBallFunc(x->E,mean,sigma,alpha,n)/norm/deltaResp;
-
-    p = crystalBallFunc(x->E,mean,sigma,alpha,n);
-    //}
-
-  return p;
+double SmearCrystalBall::resolution(double r, double pt, const double *rPar) const {
+  return crystalBallFunc(r,mean(rPar),sigma(rPar),alpha(rPar),n(rPar));
 }
 
-double SmearCrystalBall::correctedJetEtSigma(const Measurement *x,const double *par,const double *cov, const std::vector<int> &covIdx) const {
-  // Scale parameter values
-  double mean = respParScales_[0]*par[0];
-  double sigma = respParScales_[1]*par[1];
-  double alpha = respParScales_[2]*par[2];
-  double n = respParScales_[3]*par[3];
 
-  // Check parameter limits
-  if( sigma <= 0 ) sigma = 1E-5;
-  if( alpha <= 0 ) alpha = 1E-5;
-  if( n <= 1 ) n = 1. + 1E-5;
-
+double SmearCrystalBall::resolutionError(double r, double pt, const double *rPar, const double *cov, const std::vector<int> &covIdx) const {
   // Store derivatives
   std::vector<double> df(nJetPars());
   for(size_t i = 0; i < nJetPars(); i++) {
-    df[i] = crystalBallDerivative(x->E,mean,sigma,alpha,n,i);
+    df[i] = crystalBallDerivative(r,mean(rPar),sigma(rPar),alpha(rPar),n(rPar),i);
   }
 
   // Calculate variance
@@ -536,53 +450,293 @@ double SmearCrystalBall::correctedJetEtSigma(const Measurement *x,const double *
 //!  \param par Pointer to parameters (parameters are multiplied by the corresponding scale)
 //!  \return Probability density of truth times normalization of dijet probability
 // ------------------------------------------------------------------------
-double SmearCrystalBall::correctedGlobalJetEt(const Measurement *x,const double *par) const {
+double SmearCrystalBall::spectrum(double pt, const double *sPar, const double *rPar) const {
   // Norm of probability of dijet event configuration
   double norm = 0.;
 
-  double expo = 3. - par[0];
-   if( expo ) {
-    norm = (pow(tMax_,expo) - pow(tMin_,expo))/expo;
-  } else {
-    norm = log(tMax_/tMin_);
-  }
+//   double expo = 3. - sPar[0];
+//    if( expo ) {
+//     norm = (pow(tMax_,expo) - pow(tMin_,expo))/expo;
+//   } else {
+//     norm = log(tMax_/tMin_);
+//   }
   
+  int nSteps = 100;
+  double dt = (tMax_-tMin_)/nSteps;
+  for(int i = 0; i < nSteps; i++) {
+    double t = tMin_ + (i+0.5)*dt;
+    norm += t*t*truthPDF(t,sPar,rPar);
+  }
+
   double p = 0.;
   if( norm ) {
-    p = truthPDF(x->pt,par[0]);
+    p = truthPDF(pt,sPar,rPar);
+    p /= norm;
+  }
+
+  return p;
+}
+
+
+//!  The probability density of \p pt if cuts
+//!  \f$ \texttt{ptDijetMin\_} < p^{\textrm{dijet}}_{T} < \texttt{ptDijetMax\_} \f$
+//!  are applied:
+//!  \f[ t^{-n} \int^{\texttt{ptDijetMax\_}}_{\texttt{ptDijetMin\_}}
+//!      dx\,\frac{r(x/t) \cdot t}{\sqrt{2}} \f]
+// ------------------------------------------------------------------------
+double  SmearCrystalBall::truthPDF(double pt, const double *sPar, const double *rPar) const {
+  double prob = 0.;
+  if( tMin_ < pt && pt < tMax_ ) {
+    prob = crystalBallInt(mean(rPar),sigma(rPar),alpha(rPar),n(rPar),ptDijetMin_/pt,ptDijetMax_/pt)
+      /sqrt(2.)/pow(pt,sPar[0]);
+  }
+  
+  return prob;
+}
+
+
+// ------------------------------------------------------------------------
+double SmearCrystalBall::crystalBallFunc(double x, double mean, double sigma, double alpha, double n) const {
+  double f = 0.;
+
+  if( x > rMin_ && x < rMax_ ) {
+    double u = (x - mean)/sigma;
+    double A = pow(n/alpha,n)*exp(-0.5*alpha*alpha);
+    double B = n/alpha - alpha;
+
+    if( u > -alpha ) {             // Gaussian part
+      f = exp(-0.5*u*u);
+    } else {                       // Powerlaw part
+      f =  A*pow(B-u,-n);
+    }
+    f *= crystalBallNorm(mean,sigma,alpha,n);
+  }
+
+  return f;
+}
+
+
+// ------------------------------------------------------------------------
+double SmearCrystalBall::crystalBallInt(double mean, double sigma, double alpha, double n, double min, double max) const {
+  double A = pow(n/alpha,n)*exp(-0.5*alpha*alpha);
+  double B = n/alpha - alpha;
+  double m = n - 1.;
+  double c = mean - alpha*sigma;
+
+  double in = 0.;
+  if( min > c ) {
+    // Integral from Gaussian part
+    in = sigma*sqrt(M_PI/2.)*( erf((mean-min)/sqrt(2)/sigma) - erf((mean-max)/sqrt(2)/sigma) );
+  } else if( max < c ) {
+    // Integral from powerlaw part
+    if( n == 1. ) {
+      in = A*sigma/pow(B,m)*log( (B+(mean-min)/sigma)/(B+(mean-max)/sigma) );
+    } else {
+      in = A*sigma/m*(1./pow(B+(mean-max)/sigma,m) - 1./pow(B+(mean-min)/sigma,m));
+    }
+  } else {
+    // Integral from both parts
+    in = sigma*sqrt(M_PI/2.)*( erf(alpha/sqrt(2)) - erf((mean-max)/sqrt(2)/sigma) );
+    if( n == 1. ) {
+      in += A*sigma/pow(B,m)*log( (B+(mean-min)/sigma)/(B+alpha) );
+    } else {
+      in += A*sigma/m*(1./pow(B+alpha,m) - 1./pow(B+(mean-min)/sigma,m));
+    }
+  }
+
+  return in;
+}
+
+
+// ------------------------------------------------------------------------
+double SmearCrystalBall::crystalBallNorm(double mean, double sigma, double alpha, double n) const {
+  double norm = crystalBallInt(mean,sigma,alpha,n,rMin_,rMax_);
+  return norm > 0 ? 1./norm : 0.;
+}
+
+
+
+double SmearCrystalBall::crystalBallDerivative(double x, double mean, double sigma, double alpha, double n, int i) const {
+  double d = 0.;
+
+  double u = (x - mean)/sigma;
+  double beta = (rMax_ - mean)/sigma;
+  double B = n/alpha - alpha;
+  double m = n - 1.;
+  double c = rMin_-1.;
+  double s = n*sigma;
+  double k = s - alpha*c - alpha*alpha*sigma;
+  double ea = exp(-0.5*alpha*alpha);
+
+  // df/dmu
+  if( i == 0 ) {
+    d = 0.;
+  }
+  // df/dsigma
+  else if( i == 1 ) {
+    if( u > -alpha ) {
+      d = u*u/sigma;
+    } else {
+      d = -n*u/sigma/(B-u);
+    }
+    d -= (-beta*exp(-0.5*beta*beta)
+      + ea/(m*alpha*pow(k,n))
+      *((alpha*alpha-n)*pow(s,n)+n*n*(n-alpha*alpha)*sigma*pow(k,m)
+	+n*pow(k,n)-n*k/sigma*pow(s,n)-(s*pow(k,n)-pow(s,n)*k)*n*(n-alpha*alpha)/k)
+      +sqrt(M_PI/2.)*(erf(alpha/sqrt(2.))+erf(beta/sqrt(2.))))
+      * crystalBallNorm(mean,sigma,alpha,n);
+  }
+  // df/alpha
+  else if( i == 2 ) {
+    if( u > -alpha ) {
+      d = 0.;
+    } else {
+      d = -(alpha*alpha+n)*(u+alpha)/(alpha*alpha-n+alpha*u);
+    }
+    d -= (-ea*(n+alpha*alpha)*pow(s/k,n)/(m*alpha*alpha)
+	  *(c*alpha+sigma*alpha*alpha-sigma*(1.-pow(k/s,n))))
+      * crystalBallNorm(mean,sigma,alpha,n);
+  }
+  // df/n
+  else if( i == 3 ) {
+    if( u > -alpha ) {
+      d = 0.;
+    } else {
+      d = (1.+log(n/alpha)) - (log(B-u)+n/alpha/(B-u));
+    }
+    d -= (ea/m/m/alpha/pow(k,n)
+	  *pow(s,n)*(c*alpha*(n-2.)+sigma*(1.+alpha*alpha*(n-2.))
+		     -sigma*pow(k/s,n)-m*k*log(s)+m*k*log(k)))
+      * crystalBallNorm(mean,sigma,alpha,n);
+  }
+  d *= crystalBallFunc(x,mean,sigma,alpha,n);
+
+  return d;
+}
+
+
+// ------------------------------------------------------------------------
+void SmearCrystalBall::print() const {
+  std::cout << "Parametrization class '" << name() << "'\n";
+  std::cout << "  Probability density of ptTrue spectrum:\n";
+  std::cout << "    Powerlaw\n";
+  std::cout << "    " << tMin_ << " < ptTrue < " << tMax_ << " GeV\n";
+  std::cout << "    " << ptDijetMin_ << " < ptDijet < " << ptDijetMax_ << " GeV\n";
+  std::cout << "  Probability density of response:\n";
+  std::cout << "    Non-zero for " << rMin_ << " < R < " << rMax_ << "\n";
+  std::cout << std::endl;
+}
+
+
+
+
+// ------------------------------------------------------------------------
+SmearCrystalBallPt::SmearCrystalBallPt(double tMin, double tMax, double rMin, double rMax, double ptDijetMin, double ptDijetMax, const std::vector<double>& rParScales)
+  : Parametrization(0,6,0,3),
+    tMin_(tMin),
+    tMax_(tMax),
+    rMin_(rMin),
+    rMax_(rMax),
+    ptDijetMin_(ptDijetMin),
+    ptDijetMax_(ptDijetMax),
+    scale_(rParScales),
+    warningPrinted_(false) {
+  assert( 0.0 <= tMin_ && tMin_ < tMax_ );
+  assert( 0.0 <= rMin_ && rMin_ < rMax_ );
+  assert( 0.0 <= ptDijetMin_ && ptDijetMin_ < ptDijetMax_ );
+  assert( scale_.size() >= nJetPars() );
+  
+  print();
+}
+
+
+
+//! The response pdf parametrization is a crystall ball function
+//! with the parameters
+//! - 0: mean response
+//! - 1: sigma
+//! - 2: alpha
+//! - 3: n
+//! The pdf is 0 for \f$ R < rMin\_ \f$ and \f$ R > rMax\_ \f$.
+//! \param x   Measurement::E is the response, Measurement::pt the true pt
+//! \param par Pointer to parameters (parameters are multiplied by the corresponding scale)
+//! \return Probability density of response
+// ------------------------------------------------------------------------
+double SmearCrystalBallPt::correctedJetEt(const Measurement *x, const double *par) const {
+  double rMean = mean(x,par);
+  double rSigma = sigma(x,par);
+  double rAlpha = alpha(x,par);
+  double rN = n(x,par);
+
+  if( rSigma <= 0. ) {
+    if( !warningPrinted_ ) {
+      std::cerr << "WARNING: sigma < 0\n";
+      warningPrinted_ = true;
+    }
+    rSigma = 1E-5;
+  }
+  if( rAlpha <= 0. ) {
+    if( !warningPrinted_ ) {
+      std::cerr << "WARNING: alpha < 0\n";
+      warningPrinted_ = true;
+    }
+    rAlpha = 1E-5;
+  }
+  if( rN <= 0. ) {
+    if( !warningPrinted_ ) {
+      std::cerr << "WARNING: n < 0\n";
+      warningPrinted_ = true;
+    }
+    rN = 1. + 1E-5;
+  }
+    
+  return crystalBallFunc(x->E,rMean,rSigma,rAlpha,rN);
+}
+
+
+
+//!  \param x   \p Measurement::pt is truth for which the 
+//!             probability density is returned
+//!  \param par Pointer to parameters (parameters are multiplied by the corresponding scale)
+//!  \return Probability density of truth times normalization of dijet probability
+// ------------------------------------------------------------------------
+double SmearCrystalBallPt::correctedGlobalJetEt(const Measurement *x,const double *par) const {
+  // Norm of probability of dijet event configuration
+  double norm = 0.;
+
+//   double expo = 3. - m(x,par);
+//    if( expo ) {
+//     norm = (pow(tMax_,expo) - pow(tMin_,expo))/expo;
+//   } else {
+//     norm = log(tMax_/tMin_);
+//   }
+  
+//   TF1 *f = new TF1("f","x^(x[0]+[1]*x+[2]/x)",tMin_,tMax_);
+//   for(unsigned int i = 0; i < nGlobalJetPars(); i++) {
+//     f->SetParameter(i,par[i]);
+//   }
+//   norm = f->Integral(tMin_,tMax_);
+//  delete f;
+
+  int N = 200;
+  double dPt = (tMax_-tMin_)/N;
+  for(int i = 0; i < N; i++) {
+    double pt = tMin_+(i+0.5)*dPt;
+    norm += truthPDF(pt,m(pt,par));
+  }
+  double p = 0.;
+  if( norm ) {
+    p = truthPDF(x->pt,m(x->pt,par));
     p /= norm;
   }
   
   return p;
 }
 
-// ------------------------------------------------------------------------
-double SmearCrystalBall::correctedGlobalJetEtSigma(const Measurement *x,const double *par,const double *cov, const std::vector<int> &covIdx) const {
-  double var = 0.;
-  if( tMin_ < x->pt && x->pt < tMax_ ) {
-    double n = par[0];
-    double norm = 0.;
-    double dnorm = 0.;
-    if( n == 1. ) {
-      norm = log(tMax_/tMin_);
-      dnorm = 0.;
-    } else {
-      norm = (pow(tMax_,1.-n)-pow(tMin_,1.-n))/(1.-n);
-      dnorm = norm/(1.-n) + (pow(tMax_,-n)-pow(tMin_,-n));
-    }
-    
-    double df = -1./norm/pow(x->pt,n)*( n/x->pt + dnorm/norm );
-    var = df*df*cov[covIdx[0]];
-  }
-
-  // Return standard deviation
-  return sqrt(var);
-}
-
 
 
 // ------------------------------------------------------------------------
-double SmearCrystalBall::crystalBallFunc(double x, double mean, double sigma, double alpha, double n) const {
+double SmearCrystalBallPt::crystalBallFunc(double x, double mean, double sigma, double alpha, double n) const {
   double f = 0.;
 
   if( x > rMin_ && x < rMax_ ) {
@@ -602,7 +756,7 @@ double SmearCrystalBall::crystalBallFunc(double x, double mean, double sigma, do
 
 
 // ------------------------------------------------------------------------
-double SmearCrystalBall::crystalBallNorm(double mean, double sigma, double alpha, double n) const {
+double SmearCrystalBallPt::crystalBallNorm(double mean, double sigma, double alpha, double n) const {
   double A = pow(n/alpha,n)*exp(-0.5*alpha*alpha);
   double B = n/alpha - alpha;
   double m = n - 1.;
@@ -621,7 +775,7 @@ double SmearCrystalBall::crystalBallNorm(double mean, double sigma, double alpha
 
 
 
-double SmearCrystalBall::crystalBallDerivative(double x, double mean, double sigma, double alpha, double n, int i) const {
+double SmearCrystalBallPt::crystalBallDerivative(double x, double mean, double sigma, double alpha, double n, int i) const {
   double d = 0.;
 
   double u = (x - mean)/sigma;
@@ -687,10 +841,10 @@ double SmearCrystalBall::crystalBallDerivative(double x, double mean, double sig
 //!  \f[ t^{-n} \int^{\texttt{ptDijetMax\_}}_{\texttt{ptDijetMin\_}}
 //!      dx\,\frac{r(x/t) \cdot t}{\sqrt{2}} \f]
 // ------------------------------------------------------------------------
-double  SmearCrystalBall::truthPDF(double pt, double n) const {
+double  SmearCrystalBallPt::truthPDF(double pt, double m) const {
   double prob = 0.;
   if( tMin_ < pt && pt < tMax_ ) {
-    prob = 1. / pow( pt, n );
+    prob = 1. / pow( pt, m );
   }
   
   return prob;
@@ -699,7 +853,7 @@ double  SmearCrystalBall::truthPDF(double pt, double n) const {
 
 
 // ------------------------------------------------------------------------
-void SmearCrystalBall::print() const {
+void SmearCrystalBallPt::print() const {
   std::cout << "Parametrization class '" << name() << "'\n";
   std::cout << "  Probability density of ptTrue spectrum:\n";
   std::cout << "    Powerlaw\n";

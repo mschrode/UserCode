@@ -1,4 +1,4 @@
-// $Id: SmearPhotonJet.cc,v 1.4 2009/08/07 12:20:22 mschrode Exp $
+// $Id: SmearPhotonJet.cc,v 1.2 2010/01/21 16:49:26 mschrode Exp $
 
 #include "SmearPhotonJet.h"
 
@@ -43,28 +43,24 @@ double SmearPhotonJet::chi2_fast(double * temp_derivative1,
 			     double const epsilon) const {
   double f = chi2();
 
-  int      idx;
-  double * par;
   double   oldpar;
   double   temp1;
   double   temp2;
 
   // Vary parameters of response pdf
-  idx = respPDF_.parIndex();
-  par = respPDF_.firstPar();
-  for(int i = 0; i < respPDF_.nPars(); i++) {
-    oldpar = par[i];
+  for(int i = 0; i < pdf_.nRespPars(); i++) {
+    oldpar = pdf_.respPar()[i];
 
-    par[i] += epsilon;
-    temp1   = chi2();
+    pdf_.respPar()[i] += epsilon;
+    temp1 = chi2();
 
-    par[i] -= 2.*epsilon;
-    temp2   = chi2();
+    pdf_.respPar()[i] -= 2.*epsilon;
+    temp2 = chi2();
 
-    par[i]  = oldpar;
+    pdf_.respPar()[i] = oldpar;
 
-    temp_derivative1[idx+i] += temp1 - temp2;
-    temp_derivative2[idx+i] += temp1 + temp2 - 2*f;
+    temp_derivative1[pdf_.respParIdx()+i] += temp1 - temp2;
+    temp_derivative2[pdf_.respParIdx()+i] += temp1 + temp2 - 2*f;
   }
 
   return f;
