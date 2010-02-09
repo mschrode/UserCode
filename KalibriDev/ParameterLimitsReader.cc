@@ -5,7 +5,7 @@
 //!
 //!  \author Hartmut Stadie
 //!  \date  2008/12/12
-//!  $Id: ParameterLimitsReader.cc,v 1.10 2010/01/14 13:12:56 mschrode Exp $
+//!  $Id: ParameterLimitsReader.cc,v 1.2 2010/01/21 16:49:15 mschrode Exp $
 //!   
 #include "ParameterLimitsReader.h"
 
@@ -55,12 +55,13 @@ ParameterLimitsReader::ParameterLimitsReader(const std::string& configfile, TPar
 	} // End of loop over eta and phi bins
       } // End of loop over parameters in one bin
     }
-    // For SmearTwoGauss
+    // For Crystal Ball Function
     else if( parclass == "SmearParametrizationCrystalBall" ) {
-      // Loop over parameters in one bin
+      // Loop over jet parameters in one bin
       for(int i = 1; i < par_->GetNumberOfJetParametersPerBin(); i++) {
 	double min = 1E-5;   // Parameters have to be positive
 	double max = 10000.;
+	if( i == 3 ) max = 15.;
 
 	// Loop over eta and phi bins
 	for(int j = par_->GetNumberOfTowerParameters() + i; 
@@ -70,7 +71,43 @@ ParameterLimitsReader::ParameterLimitsReader(const std::string& configfile, TPar
 	    par_limits.push_back(ParameterLimit(j,min,max,limits.at(0)));
 	} // End of loop over eta and phi bins
       } // End of loop over parameters in one bin
+      // Loop over global parameters
+      for(int i = 0; i < par_->GetNumberOfGlobalJetParameters(); i++) {
+	double min = 1E-5;   // Parameters have to be positive
+	double max = 10000.;
+	int idxOffset = par_->GetNumberOfTowerParameters() 
+	  + par_->GetNumberOfJetParameters()
+	  + par_->GetNumberOfTrackParameters()
+	  + i;
+	par_limits.push_back(ParameterLimit(idxOffset,min,max,limits.at(0)));
+      }	
     }
+//     else if( parclass == "SmearParametrizationCrystalBallPt" ) {
+//       // Loop over jet parameters in one bin
+//       for(int i = 1; i < par_->GetNumberOfJetParametersPerBin(); i++) {
+// 	if( i == 5 || i == 7 ) {
+// 	  double min = 1E-5;
+// 	  double max = 10000.;
+// 	  // Loop over eta and phi bins
+// 	  for(int j = par_->GetNumberOfTowerParameters() + i; 
+// 	      j <  par_->GetNumberOfParameters(); 
+// 	      j += par_->GetNumberOfJetParametersPerBin()) {
+// 	    if( j < par_->GetNumberOfParameters()-1 )
+// 	      par_limits.push_back(ParameterLimit(j,min,max,limits.at(0)));
+// 	  }
+// 	} // End of loop over eta and phi bins
+//       } // End of loop over parameters in one bin
+//       // Loop over global parameters
+//       for(int i = 1; i < par_->GetNumberOfGlobalJetParameters(); i++) {
+// 	double min = 1E-5;   // Parameters have to be positive
+// 	double max = 10000.;
+// 	int idxOffset = par_->GetNumberOfTowerParameters() 
+// 	  + par_->GetNumberOfJetParameters()
+// 	  + par_->GetNumberOfTrackParameters()
+// 	  + i;
+// 	par_limits.push_back(ParameterLimit(idxOffset,min,max,limits.at(0)));
+//       }	
+//     }
   }
   // Catch wrong syntax in config file
   else if(limits.size() > 1) {
