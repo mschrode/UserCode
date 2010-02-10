@@ -5,7 +5,7 @@
 //!
 //!  \author Hartmut Stadie
 //!  \date  2008/12/12
-//!  $Id: ParameterLimitsReader.cc,v 1.2 2010/01/21 16:49:15 mschrode Exp $
+//!  $Id: ParameterLimitsReader.cc,v 1.3 2010/02/09 10:17:08 mschrode Exp $
 //!   
 #include "ParameterLimitsReader.h"
 
@@ -61,7 +61,7 @@ ParameterLimitsReader::ParameterLimitsReader(const std::string& configfile, TPar
       for(int i = 1; i < par_->GetNumberOfJetParametersPerBin(); i++) {
 	double min = 1E-5;   // Parameters have to be positive
 	double max = 10000.;
-	if( i == 3 ) max = 15.;
+	//if( i == 3 ) max = 15.;
 
 	// Loop over eta and phi bins
 	for(int j = par_->GetNumberOfTowerParameters() + i; 
