@@ -1,4 +1,4 @@
-// $Id: ControlPlotsJetSmearing.cc,v 1.11 2010/01/29 20:57:14 mschrode Exp $
+// $Id: ControlPlotsJetSmearing.cc,v 1.12 2010/02/09 10:19:52 mschrode Exp $
 
 #include "ControlPlotsJetSmearing.h"
 
@@ -12,6 +12,7 @@
 #include "TFile.h"
 #include "TLegend.h"
 #include "TLine.h"
+#include "TPad.h"
 #include "TPaveText.h"
 #include "TPostScript.h"
 #include "TROOT.h"
@@ -25,6 +26,8 @@
 #include "SmearDiJet.h"
 #include "SmearPhotonJet.h"
 #include "Jet.h"
+
+
 
 //!  \brief Constructor
 //!
@@ -48,6 +51,22 @@ ControlPlotsJetSmearing::ControlPlotsJetSmearing(const std::string& configfile, 
   TFile rootfile((dir_+"/jsResponse.root").c_str(),"RECREATE");
   rootfile.Close();
   setGStyle();
+}
+
+
+
+// --------------------------------------------------
+void ControlPlotsJetSmearing::makePlots() const {
+  if( config_->read<bool>("create dijet plots",false) )
+    plotDijets();
+  if( config_->read<bool>("create logP plots",false) )
+    plotLogP();
+  if( config_->read<bool>("create parameter error plots",false) )
+    plotParameters();
+  if( config_->read<bool>("create parameter scan plots",false) )
+    plotParameterScan();
+  if( config_->read<bool>("create response plots",false) )
+    plotResponse();
 }
 
 
@@ -449,6 +468,7 @@ void ControlPlotsJetSmearing::plotResponse() const
     hRespFitErrStat[ptBin]->Draw("E3 same");
     hRespMeas[ptBin]->Draw("same");
     hRespFit[ptBin]->Draw("Lsame");
+    gPad->RedrawAxis();
     legPtRangeAndCenters[ptBin]->Draw("same");
     c1->SetLogy();
     c1->Draw();
@@ -458,6 +478,7 @@ void ControlPlotsJetSmearing::plotResponse() const
     hRespMeas[ptBin]->Draw();
     hRespFit[ptBin]->Draw("Lsame");
     hRespFitStart[ptBin]->Draw("Lsame");
+    gPad->RedrawAxis();
     c1->SetLogy();
     legPtRangeAndCenters[ptBin]->Draw("same");
     legFitStart->Draw("same");
@@ -472,6 +493,7 @@ void ControlPlotsJetSmearing::plotResponse() const
       //hRespFitSum[ptBin]->Draw("same");
     }
     hRespFit[ptBin]->Draw("Lsame");
+    gPad->RedrawAxis();
     legPtRangeAndCenters[ptBin]->Draw("same");
     c1->SetLogy();
     c1->Draw();
@@ -512,6 +534,7 @@ void ControlPlotsJetSmearing::plotResponse() const
   //hTruthPDFErrStat->Draw("E3same");
   //hPtGen->Draw("same");
   hTruthPDF->Draw("Lsame");
+  gPad->RedrawAxis();
   legPtRange[0]->Draw("same");
   c1->SetLogy();
   c1->Draw();
@@ -979,7 +1002,9 @@ void ControlPlotsJetSmearing::plotParameters() const {
 
 
 //! For each pair (i,j) of free parameters in the fit the
-//! likelihood is plotted in the (i,j) plane.
+//! likelihood is plotted in the (i,j) plane. The parameters
+//! are varied in 3 steps of 2*sigma (error from the fit)
+//! below and above the fitted parameter value.
 //!
 //! The plots are written to the files "jsResponse.root"
 //! and "jsParameterScans.ps".
@@ -988,8 +1013,9 @@ void ControlPlotsJetSmearing::plotParameterScan() const {
   std::cout << "Creating parameter scan control plots\n";
 
   // ----- Set up quantities -----
-  int n = 3;
+  int n = 5;
   int nSteps = 2*n+1;
+  double nSigma = 2;
   int nPar = param_->GetNumberOfParameters();
   std::vector<TH2D*> hParScans2D;
   std::vector<TLine*> lines;
@@ -1003,12 +1029,13 @@ void ControlPlotsJetSmearing::plotParameterScan() const {
   // Outer loop over parameters
   for(int i = 0; i < nPar; i++) {
     if( param_->isFixedPar(i) ) continue;
-    double idVal = param_->GetErrors()[i];
-    if( idVal == 0 ) idVal = 0.1;
+    double idVal = nSigma*param_->GetErrors()[i];
+    if( idVal == 0 ) idVal = 1.;
+			
     // Inner loop over parameters
     for(int j = 0; j < i; j++) {
       if( param_->isFixedPar(j) ) continue;
-      double jdVal = param_->GetErrors()[j];
+      double jdVal = nSigma*param_->GetErrors()[j];
       if( jdVal == 0 ) jdVal = 0.1;
       // Create histogram of likelihood from i vs j
       TString name = "hParScan2D";
@@ -1047,10 +1074,74 @@ void ControlPlotsJetSmearing::plotParameterScan() const {
   } // End of outer loop over parameters
 
 
+  // Project out 1D parameter scans
+  std::vector<TH1D*> hParScansTmp(nPar);
+  int parScan2Didx = -1;
+  int parScan1Didx = -1;
+
+  // Create histograms of likelihood from i
+  for(int i = 0; i < nPar; i++) {
+    hParScansTmp[i] = 0;
+    if( param_->isFixedPar(i) ) continue;
+
+    // Inner loop over parameters
+    for(int j = 0; j < i; j++) {
+      if( param_->isFixedPar(j) ) continue;
+      parScan2Didx++;
+      const TH2D *h2 = hParScans2D[parScan2Didx];
+
+      // Does 1D hist for parameter j exist?
+      if( hParScansTmp[j] == 0 ) {
+	TString name = "hParScan";
+	name += ++parScan1Didx;
+	TString title = ";";
+	title += h2->GetYaxis()->GetTitle();
+	title += ";- ln(L)";
+	TH1D *h = new TH1D(name,title,
+			   h2->GetNbinsY(),
+			   h2->GetYaxis()->GetXmin(),
+			   h2->GetYaxis()->GetXmax());
+	// Copy y bin content in the central x bin
+	for(int yBin = 1; yBin <= h2->GetNbinsY(); yBin++) {
+	  h->SetBinContent(yBin,h2->GetBinContent(h2->GetBin(n+1,yBin)));
+	}
+	hParScansTmp[j] = h;
+      }
+      // Does 1D hist for parameter i exist?
+      if( hParScansTmp[i] == 0 ) {
+	TString name = "hParScan";
+	name += ++parScan1Didx;
+	TString title = ";";
+	title += h2->GetXaxis()->GetTitle();
+	title += ";- ln(L)";
+	TH1D *h = new TH1D(name,title,
+			   h2->GetNbinsX(),
+			   h2->GetXaxis()->GetXmin(),
+			   h2->GetXaxis()->GetXmax());
+	// Copy x bin content in the central y bin
+	for(int xBin = 1; xBin <= h2->GetNbinsX(); xBin++) {
+	  h->SetBinContent(xBin,h2->GetBinContent(h2->GetBin(xBin,n+1)));
+	}
+	hParScansTmp[i] = h;
+      }
+    }
+  }
+  std::vector<TH1D*> hParScans;
+  for(int i = 0; i < nPar; i++) {
+    if( param_->isFixedPar(i) ) continue;
+    hParScans.push_back(hParScansTmp[i]);
+  }
+  hParScansTmp.clear();
+
+
   // ----- Plot histograms -----
   TPostScript * const ps = new TPostScript((dir_+"/jsParameterScans.ps").c_str(),111);
   TCanvas           * c1 = new TCanvas("c1","ParameterScans",0,0,600,600);
 
+  for(size_t i = 0; i < hParScans.size(); i++) {
+    hParScans[i]->SetMarkerStyle(20);
+    drawPSPage(ps,c1,hParScans[i],"P");
+  }
   for(size_t i = 0; i < hParScans2D.size(); i++) {
     drawPSPage(ps,c1,hParScans2D[i],"COLZ");
   }
@@ -1058,6 +1149,9 @@ void ControlPlotsJetSmearing::plotParameterScan() const {
   ps->Close();
 
   TFile rootfile((dir_+"/jsResponse.root").c_str(),"UPDATE");
+  for(size_t i = 0; i < hParScans.size(); i++) {
+    rootfile.WriteTObject(hParScans[i]);
+  }
   for(size_t i = 0; i < hParScans2D.size(); i++) {
     rootfile.WriteTObject(hParScans2D[i]);
   }
@@ -1066,6 +1160,9 @@ void ControlPlotsJetSmearing::plotParameterScan() const {
   // ----- Clean up -----
   for(size_t i = 0; i < hParScans2D.size(); i++) {
     delete hParScans2D[i];
+  }
+  for(size_t i = 0; i < hParScans.size(); i++) {
+    delete hParScans[i];
   }
   for(size_t i = 0; i < lines.size(); i++) {
     delete lines[i];
@@ -1188,6 +1285,7 @@ void ControlPlotsJetSmearing::plotLogP() const {
   c1->cd()->SetLogy();
   hLogPstart->Draw();
   hLogPend->Draw("same");
+  gPad->RedrawAxis();
   leg->Draw("same");
   c1->Draw();
 
@@ -1195,6 +1293,7 @@ void ControlPlotsJetSmearing::plotLogP() const {
   c1->cd()->SetLogy();
   hLogPWstart->Draw();
   hLogPWend->Draw("same");
+  gPad->RedrawAxis();
   leg->Draw("same");
   c1->Draw();
   ps->Close();
@@ -1259,6 +1358,7 @@ void ControlPlotsJetSmearing::drawPSPage(TPostScript * ps, TCanvas * can, std::v
     if( i == 0 ) objs.at(i)->Draw(option.c_str());
     else         objs.at(i)->Draw((option.append("same")).c_str());
   }
+  gPad->RedrawAxis();
   std::string hist = objs.at(0)->ClassName();
   if( hist.compare("TH1F") == 0 ) {
     if( log ) can->SetLogy(1);

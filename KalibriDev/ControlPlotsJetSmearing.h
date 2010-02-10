@@ -1,5 +1,5 @@
 //
-// $Id: ControlPlotsJetSmearing.h,v 1.3 2010/01/26 17:49:22 mschrode Exp $
+// $Id: ControlPlotsJetSmearing.h,v 1.4 2010/02/09 10:19:52 mschrode Exp $
 //
 #ifndef JS_CONTROLPLOTS_JETSMEARING_H
 #define JS_CONTROLPLOTS_JETSMEARING_H
@@ -21,21 +21,14 @@ class TCanvas;
 //!  \brief Generates validation plots for jet-smearing method
 //!  \author Matthias Schroeder
 //!  \date Thu May  7 11:30:28 CEST 2009 
-//!  $Id: ControlPlotsJetSmearing.h,v 1.3 2010/01/26 17:49:22 mschrode Exp $
+//!  $Id: ControlPlotsJetSmearing.h,v 1.4 2010/02/09 10:19:52 mschrode Exp $
 // --------------------------------------------------
 class ControlPlotsJetSmearing {
  public:
   ControlPlotsJetSmearing(const std::string& configfile,const std::vector<Event*> * data, TParameters * param);
   ~ControlPlotsJetSmearing() {};
-  
-  void plotDijets() const;
-  void plotResponse() const;
-  void plotParameters() const;
-  //! Plots the negative log-likelihood for different parameter values
-  void plotParameterScan() const;
-  //! Plots the distributions of the probability density of
-  //! each event before and after the fit
-  void plotLogP() const;
+
+  void makePlots() const;
   void setBinningResp(int nbins, double min, double max) { respNBins_ = nbins; respMin_ = min; respMax_ = max;}
 
 
@@ -50,6 +43,15 @@ class ControlPlotsJetSmearing {
   double       respMin_;               //!< Minimum of response control plots \p plotResponse()
   double       respMax_;               //!< Maximum of response control plots \p plotResponse()
   std::string  dir_;                   //!< Directory in which the control plots are written
+
+  void plotDijets() const;
+  void plotResponse() const;
+  void plotParameters() const;
+  //! Plots the negative log-likelihood for different parameter values
+  void plotParameterScan() const;
+  //! Plots the distributions of the probability density of
+  //! each event before and after the fit
+  void plotLogP() const;
 
   void drawPSPage(TPostScript * ps, TCanvas * can, TObject * obj, std::string option = "", bool log = false) const;
   void drawPSPage(TPostScript * ps, TCanvas * can, std::vector<TObject*> objs, std::string option = "", bool log = false) const;

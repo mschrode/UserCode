@@ -1,4 +1,4 @@
-//  $Id: Kalibri.cc,v 1.3 2010/01/29 20:57:14 mschrode Exp $
+//  $Id: Kalibri.cc,v 1.4 2010/02/09 10:19:52 mschrode Exp $
 
 #include "Kalibri.h"
 
@@ -422,11 +422,7 @@ void Kalibri::done()
       delete plots;
     } else if( mode == 1 ) {  // Control plots for jetsmearing
       ControlPlotsJetSmearing * plotsjs = new ControlPlotsJetSmearing(configFile_,&data_,par_);
-      plotsjs->plotResponse();
-      plotsjs->plotParameters();
-      plotsjs->plotDijets();
-      plotsjs->plotLogP();
-      plotsjs->plotParameterScan();
+      plotsjs->makePlots();
       delete plotsjs;
     }
   }
