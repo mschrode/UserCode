@@ -1,5 +1,5 @@
 //
-//  $Id: Parametrization.cc,v 1.3 2010/01/29 20:57:14 mschrode Exp $
+//  $Id: Parametrization.cc,v 1.4 2010/02/09 10:19:23 mschrode Exp $
 //
 #include "Parametrization.h"
 
@@ -467,6 +467,7 @@ double SmearCrystalBall::spectrum(double pt, const double *sPar, const double *r
     double t = tMin_ + (i+0.5)*dt;
     norm += t*t*truthPDF(t,sPar,rPar);
   }
+  norm *= dt;
 
   double p = 0.;
   if( norm ) {

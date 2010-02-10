@@ -1,5 +1,5 @@
 //
-//  $Id: Parametrization.h,v 1.7 2010/01/29 20:57:14 mschrode Exp $
+//  $Id: Parametrization.h,v 1.8 2010/02/09 10:19:23 mschrode Exp $
 //
 #ifndef CALIBCORE_PARAMETRIZATION_H
 #define CALIBCORE_PARAMETRIZATION_H
@@ -24,7 +24,7 @@ class TH1D;
 //!  to correct a tower or jet measurement.
 //!  \author Hartmut Stadie
 //!  \date Thu Apr 03 17:09:50 CEST 2008
-//!  $Id: Parametrization.h,v 1.7 2010/01/29 20:57:14 mschrode Exp $
+//!  $Id: Parametrization.h,v 1.8 2010/02/09 10:19:23 mschrode Exp $
 // -----------------------------------------------------------------
 class Parametrization 
 {
@@ -1253,8 +1253,8 @@ class SmearCrystalBall : public Parametrization
   }
   double n(const double *rPar) const {
     double n = respParScales_[3]*rPar[3];
-    if( n <= 0. ) n = 1E-3;
-    if( n > 15 ) n = 15.;
+/*     if( n <= 0. ) n = 1E-3; */
+/*     if( n > 15 ) n = 15.; */
     return n;
   }
 
