@@ -1,4 +1,4 @@
-// $Id: ControlPlotsJetSmearing.cc,v 1.12 2010/02/09 10:19:52 mschrode Exp $
+// $Id: ControlPlotsJetSmearing.cc,v 1.13 2010/02/10 13:52:02 mschrode Exp $
 
 #include "ControlPlotsJetSmearing.h"
 
@@ -129,7 +129,7 @@ void ControlPlotsJetSmearing::plotResponse() const
     hRespMeasAbs[ptBin]->SetLineWidth(2);
 
     name = "hRespMeas_" + toString(ptBin);
-    hRespMeas[ptBin] = new TH1F(name.c_str(),";R = p^{jet}_{T} / p^{gen}_{T};1 / (N  dN / dR",
+    hRespMeas[ptBin] = new TH1F(name.c_str(),";R = p^{jet}_{T} / p^{gen}_{T};1 / N  dN / dR",
 				respNBins_,respMin_,respMax_);
     hRespMeas[ptBin]->Sumw2();
     hRespMeas[ptBin]->SetLineWidth(2);
@@ -1020,6 +1020,14 @@ void ControlPlotsJetSmearing::plotParameterScan() const {
   std::vector<TH2D*> hParScans2D;
   std::vector<TLine*> lines;
 
+  // Store likelihood for original parameter values
+  double offset = 0.;
+  for(DataIt dataIt = data_->begin(); dataIt != data_->end(); dataIt++) {
+    if( (*dataIt)->GetType() == TypeSmearDiJet )  { // Select DiJet events
+      offset += (*dataIt)->chi2();
+    }
+  }     
+
   // ----- Vary parameters and calculate likelihood -----
   // Store original parameter values
   std::vector<double> origPars(nPar);
@@ -1030,7 +1038,7 @@ void ControlPlotsJetSmearing::plotParameterScan() const {
   for(int i = 0; i < nPar; i++) {
     if( param_->isFixedPar(i) ) continue;
     double idVal = nSigma*param_->GetErrors()[i];
-    if( idVal == 0 ) idVal = 1.;
+    if( idVal == 0 ) idVal = 0.1;
 			
     // Inner loop over parameters
     for(int j = 0; j < i; j++) {
@@ -1040,7 +1048,7 @@ void ControlPlotsJetSmearing::plotParameterScan() const {
       // Create histogram of likelihood from i vs j
       TString name = "hParScan2D";
       name += hParScans2D.size();
-      TString title = "- ln(L);Parameter ";
+      TString title = "- #Deltaln(L);Parameter ";
       title += i;
       if( param_->parName(i) != "" ) title += " (" + param_->parName(i) + ")";
       title += ";Parameter ";
@@ -1057,14 +1065,17 @@ void ControlPlotsJetSmearing::plotParameterScan() const {
 	for(int js = 0; js < nSteps; js++) {
 	  double jPar = origPars[j] + (js-n)*jdVal; 
 	  param_->GetPars()[j] = jPar;
-	  // Store likelihood for varied parameters
-	  double lkh = 0.;
-	  for(DataIt dataIt = data_->begin(); dataIt != data_->end(); dataIt++) {
-	    if( (*dataIt)->GetType() == TypeSmearDiJet )  { // Select DiJet events
-	      lkh += (*dataIt)->chi2();
-	    }
-	  }     
-	  hParScans2D.back()->Fill(iPar,jPar,lkh);
+	  double deltaLkh = 0.;
+	  // Calculate likelihood for varied parameters
+	  if( is != n || js != n ) {
+	    for(DataIt dataIt = data_->begin(); dataIt != data_->end(); dataIt++) {
+	      if( (*dataIt)->GetType() == TypeSmearDiJet )  { // Select DiJet events
+		deltaLkh += (*dataIt)->chi2();
+	      }
+	    }    
+	    deltaLkh -= offset;
+	  } 
+	  hParScans2D.back()->Fill(iPar,jPar,deltaLkh);
 	}
       }
       // Reset parameters to original values
@@ -1072,7 +1083,6 @@ void ControlPlotsJetSmearing::plotParameterScan() const {
       param_->GetPars()[j] = origPars[j];
     } // End of inner loop over parameters
   } // End of outer loop over parameters
-
 
   // Project out 1D parameter scans
   std::vector<TH1D*> hParScansTmp(nPar);
@@ -1096,7 +1106,7 @@ void ControlPlotsJetSmearing::plotParameterScan() const {
 	name += ++parScan1Didx;
 	TString title = ";";
 	title += h2->GetYaxis()->GetTitle();
-	title += ";- ln(L)";
+	title += ";- #Deltaln(L)";
 	TH1D *h = new TH1D(name,title,
 			   h2->GetNbinsY(),
 			   h2->GetYaxis()->GetXmin(),
@@ -1113,7 +1123,7 @@ void ControlPlotsJetSmearing::plotParameterScan() const {
 	name += ++parScan1Didx;
 	TString title = ";";
 	title += h2->GetXaxis()->GetTitle();
-	title += ";- ln(L)";
+	title += ";- #Deltaln(L)";
 	TH1D *h = new TH1D(name,title,
 			   h2->GetNbinsX(),
 			   h2->GetXaxis()->GetXmin(),
