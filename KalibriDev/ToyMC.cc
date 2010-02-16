@@ -1,4 +1,4 @@
-// $Id: ToyMC.cc,v 1.41 2010/01/08 18:14:36 mschrode Exp $
+// $Id: ToyMC.cc,v 1.3 2010/01/21 16:49:31 mschrode Exp $
 
 #include "ToyMC.h"
 
@@ -171,6 +171,9 @@ void ToyMC::calculateSmearFactor(const TLorentzVector* jet, double E) {
     do {
       smear = histResp_->GetRandom();
     } while ( smear < 0.5 || smear > 1.2 );
+  }
+  else if( resolutionModel_ == Box ) {
+    smear = random_->Uniform(parReso_[0],parReso_[1]);
   }
 
   smearFactor_ *= smear;
@@ -656,10 +659,10 @@ int ToyMC::generatePhotonJetTree(TTree* CalibTree, int nevents)
     mcalphi  = 0;
     mcalsum  = 0;
 
-    if( !smearTowersIndividually_ ) {
-      jscalel2  = 1. / smearFactor_;
-      jscalel23 = jscalel2;
-    }
+//     if( !smearTowersIndividually_ ) {
+//       jscalel2  = 1. / smearFactor_;
+//       jscalel23 = jscalel2;
+//     }
 
     // Fill tree
     CalibTree->Fill();
@@ -964,10 +967,10 @@ int ToyMC::generateDiJetTree(TTree* CalibTree, int nevents)
       jetgenet[i]     = genjet[i].Pt();
       jetgene[i]      = genjet[i].E();
 
-      if( !smearTowersIndividually_ ) {
-	jscalel2[i]  = 1. / smearFactor_;
-	jscalel23[i] = jscalel2[i];
-      }
+//       if( !smearTowersIndividually_ ) {
+// 	jscalel2[i]  = 1. / smearFactor_;
+// 	jscalel23[i] = jscalel2[i];
+//       }
 
       genJetColPt[i]  = genjet[i].Pt();
       genJetColPhi[i] = genjet[i].Phi();
@@ -1448,10 +1451,13 @@ void ToyMC::init(const ConfigFile* config) {
     double norm = histResp_->Integral("width");
     histResp_->Scale(1./norm);
     delete f;
-   } else {
-     std::cerr << "unknown ToyMC resolution model: " << resolution << '\n';
-     exit(1);
-   }
+  } else if( resolution == "Box" ) {
+    resolutionModel_ = Box;
+    assert( parReso_.size() >= 2 );
+  } else {
+    std::cerr << "unknown ToyMC resolution model: " << resolution << '\n';
+    exit(1);
+  }
 
   // Calculate smear factor for each tower or each jet
   smearTowersIndividually_ = config->read<bool>("ToyMC smear towers individually",false);
@@ -1528,6 +1534,8 @@ void ToyMC::print() const {
     std::cout << "'GaussUniform'";
   else if( resolutionModel_ == TwoGauss )
     std::cout << "'TwoGauss'";
+  else if( resolutionModel_ == Box )
+    std::cout << "'Box'";
 
   std::cout << " with parameters ";
   for(unsigned int i = 0; i < parReso_.size(); i++)

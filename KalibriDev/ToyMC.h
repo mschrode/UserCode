@@ -15,7 +15,7 @@ class ConfigFile;
 //!
 //!  \author Hartmut Stadie
 //!  \date   Mon Jun 30 11:00:00 CEST 2008
-//!  $Id: ToyMC.h,v 1.25 2010/01/08 18:14:36 mschrode Exp $
+//!  $Id: ToyMC.h,v 1.3 2010/01/21 16:49:32 mschrode Exp $
 // ----------------------------------------------------------------  
 class ToyMC {
 
@@ -43,7 +43,7 @@ class ToyMC {
   //!      The appropriate parametrizations are
   //!      - SmearParametrizationStepGauss
   // ----------------------------------------------------------------  
-  enum ResolutionModel { Gauss, Landau, GaussUniform, TwoGauss, Dirac };
+  enum ResolutionModel { Gauss, Landau, GaussUniform, TwoGauss, Dirac, Box };
 
 
   //!  \brief Response for generation
