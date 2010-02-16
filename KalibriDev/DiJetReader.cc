@@ -1,6 +1,6 @@
 //
 //    first version: Hartmut Stadie 2008/12/12
-//    $Id: DiJetReader.cc,v 1.4 2010/01/29 20:55:36 mschrode Exp $
+//    $Id: DiJetReader.cc,v 1.5 2010/02/09 10:19:23 mschrode Exp $
 //   
 #include "DiJetReader.h"
 
@@ -49,7 +49,7 @@ DiJetReader::DiJetReader(const std::string& configfile, TParameters* p)
   prescale_ = config_->read<int>("Di-Jet prescale",1);
 
   // Cuts
-  minJetEt_          = config_->read<double>("Et cut on jet",0.0);
+  minJetEt_          = config_->read<double>("Et min cut on jet",0.0);
   minDijetEt_        = config_->read<double>("Et min cut on dijet",0.0); 
   maxDijetEt_        = config_->read<double>("Et max cut on dijet",100.0); 
   max3rdJetEt_       = config_->read<double>("Et cut on n+1 Jet",10.0);
@@ -442,7 +442,6 @@ Event* DiJetReader::createSmearEvent()
 					   max_,                       // Integration maximum
 					   eps_,                       // Integration step length
 					   maxNIter_);                 // Integration n iterations
-
   // Delete other jets
   for(std::vector<Jet*>::iterator jetIt = jets.begin()+3;
       jetIt != jets.end(); jetIt++) {
@@ -689,7 +688,10 @@ std::vector<Jet*> DiJetReader::readCaloJets(int nJets) const {
   if( maxNJets < 0 ) maxNJets = nJet_->NobjJet;
   std::vector<Jet*> caloJets(maxNJets);
   for(int j = 0; j < maxNJets; j++) {
-    double dphi         = TVector2::Phi_mpi_pi( nJet_->JetPhi[j] - nJet_->GenJetPhi[j] );
+    double dphi = nJet_->JetPhi[j] - nJet_->GenJetPhi[j];
+    if( std::abs(dphi) > 1E-5 && std::abs(dphi) < 1E10 ) {
+      dphi = TVector2::Phi_mpi_pi( dphi );
+    }
     double deta         = nJet_->JetEta[j] - nJet_->GenJetEta[j];
     double drJetGenjet  = sqrt( deta*deta + dphi*dphi );
     double min_tower_dr = 10.;
@@ -697,7 +699,6 @@ std::vector<Jet*> DiJetReader::readCaloJets(int nJets) const {
     double had          = 0;
     double out          = 0;
     int    closestTower = 0; 
-
     // Loop over towers
     for (int n=0; n<nJet_->NobjTow; ++n) {
       if (nJet_->Tow_jetidx[n]!=(int)j) continue;//look for j-jet's towers
@@ -712,7 +713,6 @@ std::vector<Jet*> DiJetReader::readCaloJets(int nJets) const {
 	closestTower = n;
       }
     } // End of loop over towers
-
 
     // Projection factor E --> Et
     // The following is not quite correct, as this factor is different for all towers

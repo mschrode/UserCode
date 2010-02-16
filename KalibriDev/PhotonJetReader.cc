@@ -1,5 +1,5 @@
 //
-//  $Id: PhotonJetReader.cc,v 1.27 2009/11/27 15:28:12 stadie Exp $
+//  $Id: PhotonJetReader.cc,v 1.2 2010/01/21 16:49:20 mschrode Exp $
 //
 #include "PhotonJetReader.h"
 
@@ -15,6 +15,7 @@
 #include "CorFactors.h"
 #include "CorFactorsFactory.h"
 
+#include <cmath>
 #include <iostream>
 #include <cstdlib>
 
@@ -29,9 +30,11 @@ PhotonJetReader::PhotonJetReader(const std::string& configfile, TParameters* p) 
   if(nGammaJetEvents_ == 0) return;
 
   // Cuts
-  minJetEt_           = config_->read<double>("Et cut on jet",0.0); 
-  minGammaEt_         = config_->read<double>("Et cut on gamma",0.0);
-  maxRel2ndJetEt_     = config_->read<double>("Relative Rest Jet Cut",0.2);
+  minJetEt_           = config_->read<double>("Et min cut on jet",0.0); 
+  maxJetEt_           = config_->read<double>("Et max cut on jet",0.0); 
+  minGammaEt_         = config_->read<double>("Et min cut on gamma",0.0);
+  maxGammaEt_         = config_->read<double>("Et max cut on gamma",0.0);
+  maxRel2ndJetEt_     = config_->read<double>("Relative n+1 Jet Et Cut",0.1);
   minGenJetEt_        = config_->read<double>("Et genJet min",0.0);
   maxGenJetEt_        = config_->read<double>("Et genJet max",10000.0);
   maxDeltaR_          = config_->read<double>("DeltaR cut on jet matching",0.25);
@@ -40,7 +43,9 @@ PhotonJetReader::PhotonJetReader(const std::string& configfile, TParameters* p) 
   maxJetHadFraction_  = config_->read<double>("Max had fraction",0.95);
   // Counter for cutflow
   nMinJetEt_          = 0;
+  nMaxJetEt_          = 0;
   nMinGammaEt_        = 0;
+  nMaxGammaEt_        = 0;
   nMaxRel2ndJetEt_    = 0;
   nMinGenJetEt_       = 0;    
   nMaxGenJetEt_       = 0;     
@@ -57,28 +62,7 @@ PhotonJetReader::PhotonJetReader(const std::string& configfile, TParameters* p) 
   }
 
   // Input files
-  std::string default_tree_name = config_->read<std::string>("Default Tree Name","CalibTree");
-  std::string treename_gammajet = config_->read<std::string>("Gamma-Jet tree", default_tree_name);
-  TTree* tchain_gammajet;
-  std::vector<std::string> input_gammajet = 
-    bag_of_string(config_->read<std::string>( "Gamma-Jet input file", "input/gammajet.root" ));
-  if(input_gammajet[0] == "toy") {
-    std::cout << "generating " << nGammaJetEvents_ << " Gamma-Jet events\n";
-    ToyMC* mc = new ToyMC();
-    mc->init(configfile);
-    mc->print();
-    tchain_gammajet = new TTree(treename_gammajet.c_str(),"Gamma Jet events");
-    mc->generatePhotonJetTree(tchain_gammajet,nGammaJetEvents_);
-    delete mc;
-  } else {
-    TChain* chain = new TChain(treename_gammajet.c_str());
-    for (bag_of_string::const_iterator it = input_gammajet.begin(); it!=input_gammajet.end(); ++it){
-      std::cout << "...opening root-file " << (*it) << " for Gamma-Jet analysis." << std::endl;
-      chain->Add( it->c_str() );
-    }
-    tchain_gammajet = chain;
-  }
-  gammaJet_->Init( tchain_gammajet );
+  gammaJet_->Init(createTree("gammaJet"));
 }
 
 PhotonJetReader::~PhotonJetReader()
@@ -91,7 +75,9 @@ int PhotonJetReader::readEvents(std::vector<Event*>& data)
 
   // Reset counters of rejected events
   nMinJetEt_          = 0;
+  nMaxJetEt_          = 0;
   nMinGammaEt_        = 0;
+  nMaxGammaEt_        = 0;
   nMaxRel2ndJetEt_    = 0;
   nMinGenJetEt_       = 0;    
   nMaxGenJetEt_       = 0;     
@@ -106,17 +92,22 @@ int PhotonJetReader::readEvents(std::vector<Event*>& data)
 
   // Some informative output for the interested calibrator
   // Check of correct data class
-  std::cout << "\nGammaJetReader: Reading events of type ";
+  std::cout << "Reading events of type ";
   if((dataClass_ == 1)  || (dataClass_ == 2)) {
     std::cout << "'JetTruthEvent'";
   } else if(dataClass_ == 5) {
     std::cout << "'SmearData'";
+    if( !correctToL3_ && !correctL2L3_ ) {
+      std::cerr << "WARNING: Jets are not corrected! Aborting\n";
+      exit(9);
+    }
   } else {
     std::cerr << "Unknown data class " << dataClass_ << '\n';
     exit(9);
   }
   std::cout << " (data class " << dataClass_ << "):\n";
 
+  // Read events
   for (int i=0;i<nevent;i++) {
     nReadEvts++;
 
@@ -130,7 +121,25 @@ int PhotonJetReader::readEvents(std::vector<Event*>& data)
  
     // Trivial cuts
     bool goodEvent = true;
-    if( gammaJet_->JetGenEt < minGenJetEt_ ) {
+    if( gammaJet_->PhotonEt < minGammaEt_ ) {
+      nMinGammaEt_++;
+      goodEvent = false;
+    } else if( gammaJet_->PhotonEt > maxGammaEt_ ) {
+      nMaxGammaEt_++;
+      goodEvent = false;
+    } else if( gammaJet_->JetCalEt < minJetEt_ ) {
+      nMinJetEt_++;
+      goodEvent = false;
+    } else if( gammaJet_->JetCalEt > maxJetEt_ ) {
+      nMaxJetEt_++;
+      goodEvent = false;
+    } else if( gammaJet_->NonLeadingJetPt / gammaJet_->PhotonPt > maxRel2ndJetEt_) {
+      nMaxRel2ndJetEt_++;
+      goodEvent = false;
+    } else if( std::abs(gammaJet_->JetCalEta) > maxJetEta_ ) {
+      nMaxJetEta_++;
+      goodEvent = false;
+    } else if( gammaJet_->JetGenEt < minGenJetEt_ ) {
       nMinGenJetEt_++;
       goodEvent = false;
     } else if( gammaJet_->JetGenEt > maxGenJetEt_ ) {
@@ -141,25 +150,13 @@ int PhotonJetReader::readEvents(std::vector<Event*>& data)
 	       > pow(maxDeltaR_,2) ) {
       nMaxDeltaR_++;
       goodEvent = false;
-    } else if( gammaJet_->PhotonEt < minGammaEt_ ) {
-      nMinGammaEt_++;
-      goodEvent = false;
-    } else if( gammaJet_->JetCalEt < minJetEt_ ) {
-      nMinJetEt_++;
-      goodEvent = false;
-    } else if( gammaJet_->NonLeadingJetPt / gammaJet_->PhotonPt > maxRel2ndJetEt_) {
-      nMaxRel2ndJetEt_++;
-      goodEvent = false;
-    } else if( fabs(gammaJet_->JetCalEta) > maxJetEta_ ) {
-      nMaxJetEta_++;
-      goodEvent = false;
     }
 
     if( goodEvent ) {
       
-      Event*                                     ev = 0;
+      Event*                                  ev = 0;
       if(dataClass_ == 1 || dataClass_ == 2)  ev = createJetTruthEvent();
-      else if(dataClass_ == 5)                    ev = createSmearEvent();
+      else if(dataClass_ == 5)                ev = createSmearEvent();
       
       if(ev) {
 	data.push_back(ev); 
@@ -172,20 +169,24 @@ int PhotonJetReader::readEvents(std::vector<Event*>& data)
 
   // Print cut flow
   std::cout << "Read " << nReadEvts << " gamma-jet events:\n";
+  std::cout << "  " << (nReadEvts-=nMinGammaEt_) << std::flush;
+  std::cout << " gamma-jet events photon Et > " << minGammaEt_ << "\n";
+  std::cout << "  " << (nReadEvts-=nMaxGammaEt_) << std::flush;
+  std::cout << " gamma-jet events photon Et < " << maxGammaEt_ << "\n";
+  std::cout << "  " << (nReadEvts-=nMinJetEt_) << std::flush;
+  std::cout << " gamma-jet events jet Et > " << minJetEt_ << "\n";
+  std::cout << "  " << (nReadEvts-=nMaxJetEt_) << std::flush;
+  std::cout << " gamma-jet events jet Et < " << maxJetEt_ << "\n";
+  std::cout << "  " << (nReadEvts-=nMaxRel2ndJetEt_) << std::flush;
+  std::cout << " gamma-jet events (non-leading jet Et) / (photon Et) > " << maxRel2ndJetEt_ << "\n";
+  std::cout << "  " << (nReadEvts-=nMaxJetEta_) << std::flush;
+  std::cout << " gamma-jet events with |eta| < " << maxJetEta_ << "\n";
   std::cout << "  " << (nReadEvts-=nMinGenJetEt_) << std::flush;
   std::cout << " gamma-jet events with ptgen > " << minGenJetEt_ << "\n";
   std::cout << "  " << (nReadEvts-=nMaxGenJetEt_) << std::flush;
   std::cout << " gamma-jet events with ptgen < " << maxGenJetEt_ << "\n";
   std::cout << "  " << (nReadEvts-=nMaxDeltaR_) << std::flush;
   std::cout << " gamma-jet events with DeltaR < " << maxDeltaR_ << "\n";
-  std::cout << "  " << (nReadEvts-=nMinGammaEt_) << std::flush;
-  std::cout << " gamma-jet events photon Et > " << minGammaEt_ << "\n";
-  std::cout << "  " << (nReadEvts-=nMinJetEt_) << std::flush;
-  std::cout << " gamma-jet events jet Et > " << minJetEt_ << "\n";
-  std::cout << "  " << (nReadEvts-=nMaxRel2ndJetEt_) << std::flush;
-  std::cout << " gamma-jet events (non-leading jet Et) / (photon Et) > " << maxRel2ndJetEt_ << "\n";
-  std::cout << "  " << (nReadEvts-=nMaxJetEta_) << std::flush;
-  std::cout << " gamma-jet events with |eta| < " << maxJetEta_ << "\n";
   std::cout << "  " << (nReadEvts-=nMinJetHadFraction_) << std::flush;
   std::cout << " gamma-jet events with hadronic fraction > " << minJetHadFraction_ << "\n";
   std::cout << "  " << (nReadEvts-=nMaxJetHadFraction_) << std::flush;
@@ -289,11 +290,7 @@ Event* PhotonJetReader::createJetTruthEvent()
 // ----------------------------------------------------------------   
 Event* PhotonJetReader::createSmearEvent()
 {
-  std::cerr << "PhotonJetReader::createSmearEvent: needs to get fixed. Construction of Jet object wrong\n";
-  exit(9);
-  /*
   //Find the jets eta & phi index using the nearest tower to jet axis:
-  int    jet_index    = -1;
   double min_tower_dr = 10.;
   double em           = 0;
   double had          = 0;
@@ -306,47 +303,50 @@ Event* PhotonJetReader::createSmearEvent()
   LGenJet.SetPtEtaPhiE(gammaJet_->JetGenPt,gammaJet_->JetGenEta,gammaJet_->JetGenPhi,gammaJet_->JetGenE);
 
   for (int n=0; n<gammaJet_->NobjTowCal; ++n) {
-  em  += gammaJet_->TowEm[n];
-  had += gammaJet_->TowHad[n];
-  out += gammaJet_->TowOE[n];
-  TLorentzVector LTower(0,0,0,0);
-  LTower.SetPtEtaPhiE(gammaJet_->TowEt[n],gammaJet_->TowEta[n],gammaJet_->TowPhi[n],gammaJet_->TowE[n]);
-  double dr = LTower.DeltaR(LJet);
-  if (dr<min_tower_dr) {
-  min_tower_dr = dr;
-  closestTower = n;
-  }
+    em  += gammaJet_->TowEm[n];
+    had += gammaJet_->TowHad[n];
+    out += gammaJet_->TowOE[n];
+    TLorentzVector LTower(0,0,0,0);
+    LTower.SetPtEtaPhiE(gammaJet_->TowEt[n],gammaJet_->TowEta[n],gammaJet_->TowPhi[n],gammaJet_->TowE[n]);
+    double dr = LTower.DeltaR(LJet);
+    if (dr<min_tower_dr) {
+      min_tower_dr = dr;
+      closestTower = n;
+    }
   }
 
-  if (jet_index<0) { 
-  std::cerr << "WARNING: jet_index = " << jet_index << std::endl; 
-  return 0; 
+  // Cuts on hadronic fraction 
+  if(had/(had + em) < minJetHadFraction_) {
+    nMinJetHadFraction_++;
+    return 0;
+  } else if(had/(had + em) > maxJetHadFraction_) { 
+    nMaxJetHadFraction_++;
+    return 0;
   }
-  if(had/(had + em) < minJetHadFraction_) { return 0;}
-  if(had/(had + em) > maxJetHadFraction_) { return 0;}
 
   // Set up measurement
-  Jet * jet      = new Jet;
-  jet->pt         = gammaJet_->JetCorrL2 * gammaJet_->JetCorrL3 * gammaJet_->JetCalEt;
-  jet->eta        = gammaJet_->JetCalEta;
-  jet->phi        = gammaJet_->JetCalPhi;
-  jet->E          = gammaJet_->JetCalE;
-  jet->genPt      = gammaJet_->JetGenPt;
-  jet->dR         = LJet.DeltaR(LGenJet);
-  jet->corFactors = createCorFactors(0);
-  //the following is not quite correct, as this factor is different for all towers. These values should be in the n-tupel as well
-  double factor    = gammaJet_->JetCalEt /  gammaJet_->JetCalE;
-  jet->HadF       = had * factor;
-  jet->EMF        = em * factor;
-  jet->OutF       = out * factor;
+  double projFac   = gammaJet_->JetCalEt /  gammaJet_->JetCalE;
+  Jet *jet = new Jet(gammaJet_->JetCalEt,
+			  em * projFac,
+			  had * projFac,
+			  out * projFac,
+			  gammaJet_->JetCalE,
+			  gammaJet_->JetCalEta,
+			  gammaJet_->JetCalPhi,
+			  0.,
+			  Jet::uds,
+			  gammaJet_->JetGenPt,
+			  LJet.DeltaR(LGenJet),
+			  createCorFactors(0),
+			  par_->jet_function(gammaJet_->TowId_eta[closestTower],
+					     gammaJet_->TowId_phi[closestTower]),
+			  jet_error_param,
+			  par_->global_jet_function());
 
-  SmearPhotonJet * pje = new SmearPhotonJet(jet,gammaJet_->PhotonEt,1.,
-  par_->jet_function(gammaJet_->TowId_eta[closestTower],
-  gammaJet_->TowId_phi[closestTower]));
-
-  return pje;
-  */
+  // Create smear event
+  return new SmearPhotonJet(jet,gammaJet_->PhotonEt,1.,1.,par_->resolutionFitPDF(1,1));
 }
+
 
 CorFactors* PhotonJetReader::createCorFactors(int jetid) const
 {

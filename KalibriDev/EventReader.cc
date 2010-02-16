@@ -1,5 +1,5 @@
 //
-// $Id: EventReader.cc,v 1.2 2010/01/21 16:48:50 mschrode Exp $
+// $Id: EventReader.cc,v 1.3 2010/01/29 20:55:36 mschrode Exp $
 //
 #include "EventReader.h"
 
@@ -106,6 +106,11 @@ TTree * EventReader::createTree(const std::string &dataType) const {
     treeName = config_->read<string>("Di-Jet tree","CalibTree");
     inputFileNames = bag_of_string(config_->read<std::string>("Di-Jet input file","input/dijet.root"));  
     nEvts = config_->read<int>("use Di-Jet events",-1);
+  } else if( dataType == "gammaJet" ) {
+    readerName = "GammaJetReader";
+    treeName = config_->read<string>("Gamma-Jet tree","CalibTree");
+    inputFileNames = bag_of_string(config_->read<std::string>("Gamma-Jet input file","input/gammajet.root"));  
+    nEvts = config_->read<int>("use Gamma-Jet events",-1);
   }
 
   int inputMode = -1;
