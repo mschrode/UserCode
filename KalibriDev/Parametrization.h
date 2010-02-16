@@ -1,5 +1,5 @@
 //
-//  $Id: Parametrization.h,v 1.8 2010/02/09 10:19:23 mschrode Exp $
+//  $Id: Parametrization.h,v 1.9 2010/02/10 13:51:23 mschrode Exp $
 //
 #ifndef CALIBCORE_PARAMETRIZATION_H
 #define CALIBCORE_PARAMETRIZATION_H
@@ -24,7 +24,7 @@ class TH1D;
 //!  to correct a tower or jet measurement.
 //!  \author Hartmut Stadie
 //!  \date Thu Apr 03 17:09:50 CEST 2008
-//!  $Id: Parametrization.h,v 1.8 2010/02/09 10:19:23 mschrode Exp $
+//!  $Id: Parametrization.h,v 1.9 2010/02/10 13:51:23 mschrode Exp $
 // -----------------------------------------------------------------
 class Parametrization 
 {
@@ -115,16 +115,14 @@ public:
   // -----------------------------------------------------------------
   virtual double correctedGlobalJetEt(const Measurement *x,const double *par) const { return x->pt;}
 
-
-  virtual double resolution(double r, double pt, const double *rPar) const { return 0.; }
-  virtual double resolutionError(double r, double pt, const double *rPar, const double *cov, const std::vector<int> &covIdx) const {
-    return 0.;
-  };
-
-  virtual double spectrum(double pt, const double *sPar, const double *rPar) const { return 0.; }
-  virtual double spectrumError(double pt, const double *sPar, const double *rPar, const double *cov, const std::vector<int> &covIdx) const {
-    return 0.;
-  }
+  //! Returns probability density of measured jet pt given a true jet pt
+  virtual double pdfPtMeas(double ptMeas, double ptTrue, const double *par) const { return 0.; }
+  //! Returns probability density of true jet pt
+  virtual double pdfPtTrue(double ptTrue, const double *par) const { return 0.; }
+  virtual double pdfPtTrueError(double ptTrue, const double *par, const double *cov, const std::vector<int> &covIdx) const { return 0.; }
+  //! Returns probability density of response given a true jet pt
+  virtual double pdfResponse(double r, double ptTrue, const double *par) const { return 0.; }
+  virtual double pdfResponseError(double r, double ptTrue, const double *par, const double *cov, const std::vector<int> &covIdx) const { return 0.; }
 
 
   //!  \brief Get the name of the parametrization class
@@ -1253,7 +1251,7 @@ class SmearCrystalBall : public Parametrization
   }
   double n(const double *rPar) const {
     double n = respParScales_[3]*rPar[3];
-/*     if( n <= 0. ) n = 1E-3; */
+    if( n <= 0. ) n = 1E-3;
 /*     if( n > 15 ) n = 15.; */
     return n;
   }
@@ -1340,6 +1338,59 @@ class SmearCrystalBallPt : public Parametrization
   //! considering cuts on dijet pt
   double truthPDF(double pt, double n) const;
 
+  //! Print some initialization details
+  void print() const;
+};
+
+
+
+//! \brief Parametrization used for response function estimation
+//!        with a Gaussian function
+// ------------------------------------------------------------------------
+class SmearGauss : public Parametrization
+{ 
+ public:
+  //! Constructor
+  SmearGauss(double tMin, double tMax, double rMin, double rMax, double ptDijetMin, double ptDijetMax, const std::vector<double>& rParScales);
+
+  ~SmearGauss() {};
+
+  const char* name() const { return "SmearGauss";}
+
+  virtual bool needsUpdate() const { return false; }
+
+  //! Returns 0
+  double correctedTowerEt(const Measurement *x,const double *par) const { return 0.; }
+  double correctedJetEt(const Measurement *x,const double *par) const { return 0.; }
+  double correctedGlobalJetEt(const Measurement *x,const double *par) const { return 0.; }
+
+  double pdfPtMeas(double ptMeas, double ptTrue, const double *par) const;
+  double pdfPtTrue(double ptTrue, const double *par) const;
+  double pdfResponse(double r, double ptTrue, const double *par) const;
+
+
+ private:
+  const double tMin_;                   //!< Minimum of non-zero range of truth pdf
+  const double tMax_;                   //!< Maximum of non-zero range of truth pdf
+  const double rMin_;                   //!< Minimum of non-zero range of response pdf
+  const double rMax_;                   //!< Maximum of non-zero range of response pdf
+  const double ptDijetMin_;             //!< Minimum of pt dijet
+  const double ptDijetMax_;             //!< Maximum of pt dijet
+  const std::vector<double> respParScales_;     //!< Parameter scales
+
+  double sigma(double ptTrue, const double *par) const {
+    double a[3];
+    for(int i = 0; i < 3; i++) {
+      a[i] = respParScales_[i]*par[i];
+      if( a[i] <= 0. ) a[i] = 1E-5;
+    }
+    return sqrt( a[0]*a[0] + a[1]*a[1]*ptTrue + a[2]*a[2]*ptTrue*ptTrue );
+  }
+
+  double exponent(const double *par) const {
+    return respParScales_[3]*par[3];
+  }
+ 
   //! Print some initialization details
   void print() const;
 };

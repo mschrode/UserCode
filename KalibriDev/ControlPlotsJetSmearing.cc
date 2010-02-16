@@ -1,4 +1,4 @@
-// $Id: ControlPlotsJetSmearing.cc,v 1.13 2010/02/10 13:52:02 mschrode Exp $
+// $Id: ControlPlotsJetSmearing.cc,v 1.14 2010/02/11 14:29:38 mschrode Exp $
 
 #include "ControlPlotsJetSmearing.h"
 
@@ -86,19 +86,25 @@ void ControlPlotsJetSmearing::plotResponse() const
   double rMax = config_->read<double>("Response pdf max",2.);
 
   // Create pt binning for response function evaluation
-  std::vector<double> ptBinEdges(2,0.);
   std::string binning = config_->read<std::string>("plots pt binning","");
+
+  std::string binningVar = "ptGen";
+  if( binning.find("ptDijet") != std::string::npos ) binningVar = "ptDijet";
+
+  std::vector<double> ptBinEdges(2,0.);
   if( binning.find("binning") != std::string::npos ) {
     ptBinEdges.clear();
     ptBinEdges = bag_of<double>(config_->read<std::string>("plots pt bin edges","100 500"));
-  } else if( binning.find("ptGen cuts") != std::string::npos ) {
-    ptBinEdges.clear();
-    ptBinEdges.push_back(config_->read<double>("Et genJet min",100));
-    ptBinEdges.push_back(config_->read<double>("Et genJet max",500));
-  } else if( binning.find("ptDijet cuts") != std::string::npos ) {
-    ptBinEdges.clear();
-    ptBinEdges.push_back(config_->read<double>("Et min cut on dijet",100));
-    ptBinEdges.push_back(config_->read<double>("Et max cut on dijet",500));
+  } else if( binning.find("cuts") != std::string::npos ) {
+    if( binningVar == "ptGen" ) {
+      ptBinEdges.clear();
+      ptBinEdges.push_back(config_->read<double>("Et genJet min",100));
+      ptBinEdges.push_back(config_->read<double>("Et genJet max",500));
+    } else if( binningVar == "ptDijet" ) {
+      ptBinEdges.clear();
+      ptBinEdges.push_back(config_->read<double>("Et min cut on dijet",100));
+      ptBinEdges.push_back(config_->read<double>("Et max cut on dijet",500));
+    }
   }
   int nPtBins = static_cast<int>(ptBinEdges.size()-1);
   std::vector<double> ptBinCenters(nPtBins);
@@ -115,6 +121,7 @@ void ControlPlotsJetSmearing::plotResponse() const
   std::vector<TH1F*> hRespFitGaus(nPtBins);   // Gauss part of the response pdf
   std::vector<TH1F*> hRespFitSum(nPtBins);    // Sum of step and Gauss part
   std::vector<TH1F*> hRatio(nPtBins);
+  std::vector<TH1F*> hPtGenAbsBins(nPtBins);
   TH1F * hTruthPDF = 0;      // Truth pdf
   TH1F * hTruthPDFErrStat = 0;      // Truth pdf
   TH1F * hPtGenAbs = 0;         // PtGen spectrum
@@ -169,6 +176,12 @@ void ControlPlotsJetSmearing::plotResponse() const
     hRatio[ptBin] = new TH1F(name.c_str(),";Prediction / truth",
 				  respNBins_,respMin_,respMax_);
     hRatio[ptBin]->SetLineWidth(2);
+
+    name = "hPtGenAbs_" + toString(ptBin);
+    hPtGenAbsBins[ptBin] = new TH1F(name.c_str(),";p^{gen}_{T} (GeV);dN / dp^{gen}_{T}  1 / (GeV)"
+				    ,25,0.8*ptBinEdges[ptBin],1.1*ptBinEdges[ptBin+1]);
+    hPtGenAbsBins[ptBin]->GetXaxis()->SetNdivisions(505);
+    hPtGenAbsBins[ptBin]->SetLineWidth(2);
   }
 
   hPtGenAbs = new TH1F("hPtGenAbs",";p^{gen}_{T} (GeV);dN / dp^{gen}_{T}  1 / (GeV)"
@@ -218,14 +231,37 @@ void ControlPlotsJetSmearing::plotResponse() const
 	hPtGen->Fill( jet->genPt(), dijet->GetWeight() );
 
 	for(int i = 0; i < nPtBins; i++) {
-	  if( ptBinEdges[i] <= jet->genPt() && jet->genPt() < ptBinEdges[i+1] ) {
+	  double var = 0.;
+	  if( binningVar == "ptGen" ) var = jet->genPt();
+	  else if( binningVar == "ptDijet" ) var = dijet->dijetPt();
+	  if( ptBinEdges[i] <= var && var < ptBinEdges[i+1] ) {
 	    hRespMeasAbs[i]->Fill( jet->pt() / jet->genPt(), dijet->GetWeight() );
 	    hRespMeas[i]->Fill( jet->pt() / jet->genPt(), dijet->GetWeight() );
+	    hPtGenAbsBins[i]->Fill( jet->genPt(), dijet->GetWeight() );
 	    continue;
 	  }
 	}
       }
       hPtDijet->Fill( dijet->dijetPt(), dijet->GetWeight() );
+    } else if( (*datait)->GetType() == TypeSmearPhotonJet )  {  // Select GammaJet events
+      SmearPhotonJet * gammaJet = static_cast<SmearPhotonJet*>(*datait);  
+
+      hPtHat->Fill( gammaJet->ptHat(), gammaJet->GetWeight() );
+      const Jet * jet = gammaJet->jet();
+
+      hPtGenAbs->Fill( jet->genPt(), gammaJet->GetWeight() );
+      //hPtGen->Fill( jet->genPt(), gammaJet->GetWeight() );
+
+      for(int i = 0; i < nPtBins; i++) {
+	double var = 0.;
+	if( binningVar == "ptGen" ) var = jet->genPt();
+	if( ptBinEdges[i] <= var && var < ptBinEdges[i+1] ) {
+	  hRespMeasAbs[i]->Fill( jet->pt() / jet->genPt(), gammaJet->GetWeight() );
+	  hRespMeas[i]->Fill( jet->pt() / jet->genPt(), gammaJet->GetWeight() );
+	  hPtGenAbsBins[i]->Fill( jet->genPt(), gammaJet->GetWeight() );
+	  continue;
+	}
+      }
     }
   } // End of loop over data
   for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
@@ -245,9 +281,7 @@ void ControlPlotsJetSmearing::plotResponse() const
 
   std::vector<double> scale = bag_of<double>(config_->read<string>("jet parameter scales",""));
   std::vector<double> startParJet = bag_of<double>(config_->read<string>("jet start values",""));
-  std::vector<double> startParGlobal = bag_of<double>(config_->read<string>("global jet start values",""));
   std::vector<double> auxPar = bag_of<double>(config_->read<string>("mean response parameters","1 0"));
-
   SmearData * smearData = dynamic_cast<SmearData*>(data_->front());
   if( smearData ) {
     // Loop over ptBins
@@ -255,10 +289,11 @@ void ControlPlotsJetSmearing::plotResponse() const
       // Interpolated response function
       for(int bin = 1; bin <= hRespFit[ptBin]->GetNbinsX(); bin++) {
 	double r = hRespFit[ptBin]->GetBinCenter(bin);
-	double val = smearData->respPDF(r,ptBinCenters[ptBin]);
+	double pt = hPtGenAbsBins[ptBin]->GetMean();
+	double val = smearData->pdfResp(r,pt);
 	hRespFit[ptBin]->SetBinContent(bin,val);
 	hRespFitErrStat[ptBin]->SetBinContent(bin,val);
-	hRespFitErrStat[ptBin]->SetBinError(bin,smearData->respPDFError(r,ptBinCenters[ptBin]));
+	hRespFitErrStat[ptBin]->SetBinError(bin,smearData->pdfRespError(r,pt));
 
 //   	if( ptBin == 0 ) {
 //   	  std::cout << r << ":  " << smearData->respPDF(r,ptBinCenters[ptBin]) << " +/- " << smearData->respPDFError(r,ptBinCenters[ptBin]) << std::endl;
@@ -285,15 +320,13 @@ void ControlPlotsJetSmearing::plotResponse() const
       // Interpolated fit function with start values
       // Copy start values into parameter array
       for(int i = 0; i < param_->GetNumberOfParameters(); i++) {
-	if( i < param_->GetNumberOfJetParameters() )
-	  param_->GetPars()[i] = startParJet.at(i);
-	else
-	  param_->GetPars()[i] = startParGlobal[i-param_->GetNumberOfJetParameters()];
+	param_->GetPars()[i] = startParJet.at(i);
       }
       // Plot response function
       for(int bin = 1; bin <= hRespFitStart[ptBin]->GetNbinsX(); bin++) {
+	double pt = hPtGenAbsBins[ptBin]->GetMean();
 	double r = hRespFitStart[ptBin]->GetBinCenter(bin);
-	hRespFitStart[ptBin]->SetBinContent(bin,smearData->respPDF(r,ptBinCenters[ptBin]));
+	hRespFitStart[ptBin]->SetBinContent(bin,smearData->pdfResp(r,pt));
       }
       // Copy back fitted values into parameter array
       for(int i = 0; i < param_->GetNumberOfParameters(); i++) {
@@ -301,67 +334,67 @@ void ControlPlotsJetSmearing::plotResponse() const
       }
 
       // In case of interpolated step + gauss parametrization
-      if( param == "SmearParametrizationStepGaussInter" ) {
-	// Step part of fit function
-	for(int bin = 1; bin <= hRespFitStep[ptBin]->GetNbinsX(); bin++) {
-	  double val  = scale.at(bin+1)*(smearData->respPar(bin+1));
-	  hRespFitStep[ptBin]->SetBinContent(bin,val);
-	}
-	normHist(hRespFitStep[ptBin],"width");
-	hRespFitStep[ptBin]->Scale(1. - scale.at(0)*(smearData->respPar(0)));
+      //      if( param == "SmearParametrizationStepGaussInter" ) {
+// 	// Step part of fit function
+// 	for(int bin = 1; bin <= hRespFitStep[ptBin]->GetNbinsX(); bin++) {
+// 	  double val  = scale.at(bin+1)*(smearData->respPar(bin+1));
+// 	  hRespFitStep[ptBin]->SetBinContent(bin,val);
+// 	}
+// 	normHist(hRespFitStep[ptBin],"width");
+// 	hRespFitStep[ptBin]->Scale(1. - scale.at(0)*(smearData->respPar(0)));
 	
-	// Gauss part of fit function
-	for(int bin = 1; bin <= hRespFitGaus[ptBin]->GetNbinsX(); bin++) {
-	  // Mean
-	  double mu = auxPar.at(0);
-	  // Width
-// 	  double a1 = scale.at(1)*(smearData->respPar()[1]);
-// 	  double a2 = scale.at(2)*(smearData->respPar()[2]);
-// 	  double a3 = scale.at(3)*(smearData->respPar()[3]);
-// 	  double sigma = sqrt( a1*a1/ptBinCenters[ptBin]/ptBinCenters[ptBin]
-// 			       + a2*a2/ptBinCenters[ptBin] + a3*a3 );
-	  double sigma = scale[1]*(smearData->respPar(1));
-	  // pdf
-	  double c     = scale.at(0)*(smearData->respPar(0));
-	  double r     = hRespFitGaus[ptBin]->GetBinCenter(bin);
-	  double val   = c * exp( -pow((mu-r)/sigma,2) / 2. ) / sqrt(2.*M_PI) / sigma;
-	  hRespFitGaus[ptBin]->SetBinContent(bin,val);
-	}
+// 	// Gauss part of fit function
+// 	for(int bin = 1; bin <= hRespFitGaus[ptBin]->GetNbinsX(); bin++) {
+// 	  // Mean
+// 	  double mu = auxPar.at(0);
+// 	  // Width
+// // 	  double a1 = scale.at(1)*(smearData->respPar()[1]);
+// // 	  double a2 = scale.at(2)*(smearData->respPar()[2]);
+// // 	  double a3 = scale.at(3)*(smearData->respPar()[3]);
+// // 	  double sigma = sqrt( a1*a1/ptBinCenters[ptBin]/ptBinCenters[ptBin]
+// // 			       + a2*a2/ptBinCenters[ptBin] + a3*a3 );
+// 	  double sigma = scale[1]*(smearData->respPar(1));
+// 	  // pdf
+// 	  double c     = scale.at(0)*(smearData->respPar(0));
+// 	  double r     = hRespFitGaus[ptBin]->GetBinCenter(bin);
+// 	  double val   = c * exp( -pow((mu-r)/sigma,2) / 2. ) / sqrt(2.*M_PI) / sigma;
+// 	  hRespFitGaus[ptBin]->SetBinContent(bin,val);
+// 	}
       
-	// Sum
-	for(int binGaus = 1; binGaus <= hRespFitGaus[ptBin]->GetNbinsX(); binGaus++) {
-	  int binStep = hRespFitStep[ptBin]->FindBin(hRespFitGaus[ptBin]->GetBinCenter(binGaus));
-	  double val = hRespFitStep[ptBin]->GetBinContent(binStep)
-	    + hRespFitGaus[ptBin]->GetBinContent(binGaus);
-	  hRespFitSum[ptBin]->SetBinContent(binGaus,val);
-	}
-      } else if( param == "SmearParametrizationCrystalBall"
-		 ||  param == "SmearParametrizationCrystalBallPt"
-		 ||  param == "SmearParametrizationGauss") {
-      } else {
-	std::cout << "WARNING: No controlplots implemented for parametrization '" << param << "'\n";
-      }
+// 	// Sum
+// 	for(int binGaus = 1; binGaus <= hRespFitGaus[ptBin]->GetNbinsX(); binGaus++) {
+// 	  int binStep = hRespFitStep[ptBin]->FindBin(hRespFitGaus[ptBin]->GetBinCenter(binGaus));
+// 	  double val = hRespFitStep[ptBin]->GetBinContent(binStep)
+// 	    + hRespFitGaus[ptBin]->GetBinContent(binGaus);
+// 	  hRespFitSum[ptBin]->SetBinContent(binGaus,val);
+// 	}
+//       } else if( param == "SmearParametrizationCrystalBall"
+// 		 ||  param == "SmearParametrizationCrystalBallPt"
+// 		 ||  param == "SmearParametrizationGauss") {
+//       } else {
+// 	std::cout << "WARNING: No controlplots implemented for parametrization '" << param << "'\n";
+//       }
     } // End of loop over ptBins
   } // End if( smearData )
 
 
   // --- Fill histograms of fitted truth spectrum -----------
 
-  // Fill histogram of assumed truth pdf
-  DataIt datait = data_->begin();
-  while( (*datait)->GetType() != TypeSmearDiJet  &&  datait != data_->end() ) datait++;
-  if( datait != data_->end() ) {
-    SmearDiJet * dijet = static_cast<SmearDiJet*>(*datait);  
-
-    for(int bin = 1; bin <= hTruthPDF->GetNbinsX(); bin++) {
-      double t = hTruthPDF->GetBinCenter(bin);
-      hTruthPDF->SetBinContent(bin,dijet->truthPDF(t));
-    }
-    normHist(hTruthPDF,"width");
-    for(int bin = 1; bin <= hTruthPDF->GetNbinsX(); bin++) {
-      hTruthPDFErrStat->SetBinContent(bin,hTruthPDF->GetBinContent(bin));
-      double t = hTruthPDFErrStat->GetBinCenter(bin);
-      hTruthPDFErrStat->SetBinError(bin,dijet->truthPDFError(t));
+  // Fill histogram of assumed dijet truth pdf
+  for(DataIt datait = data_->begin(); datait != data_->end(); datait++) {
+    if( (*datait)->GetType() == TypeSmearDiJet ) {
+      SmearDiJet * dijet = static_cast<SmearDiJet*>(*datait);  
+      
+      for(int bin = 1; bin <= hTruthPDF->GetNbinsX(); bin++) {
+	double t = hTruthPDF->GetBinCenter(bin);
+	hTruthPDF->SetBinContent(bin,dijet->pdfPtTrue(t));
+      }
+      for(int bin = 1; bin <= hTruthPDF->GetNbinsX(); bin++) {
+	hTruthPDFErrStat->SetBinContent(bin,hTruthPDF->GetBinContent(bin));
+	double t = hTruthPDFErrStat->GetBinCenter(bin);
+	hTruthPDFErrStat->SetBinError(bin,dijet->pdfPtTrueError(t));
+      }
+      break;
     }
   }
 
@@ -384,20 +417,13 @@ void ControlPlotsJetSmearing::plotResponse() const
   
 
   // --- Set y-axis ranges ----------------------------------
-  double yMin = 10000.;
-  double yMax = 0.;
   for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
     double min = 0.;
     double max = 0.;
     findYRange(hRespMeas[ptBin],min,max);
     min *= 0.5;
     max *= 80.;
-    if( min < yMin ) yMin = min;
-    if( max > yMax ) yMax = max;
-    if( yMin < 8E-5 ) yMin = 8E-5;
-  }
-  for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
-    hRespMeas[ptBin]->GetYaxis()->SetRangeUser(yMin,yMax);
+    hRespMeas[ptBin]->GetYaxis()->SetRangeUser(min,max);
     setYRange(hRespMeasAbs[ptBin],0.5,50.);
   }
   setYRange(hPtDijet, 0.5, 100.);
@@ -420,10 +446,9 @@ void ControlPlotsJetSmearing::plotResponse() const
     legPtRangeAndCenters[ptBin]->SetFillColor(0);
     legPtRangeAndCenters[ptBin]->SetTextFont(42);
 
-    std::string binVar = config_->read<std::string>("plots pt binning","");
-    if( binVar.find("ptDijet") != std::string::npos ) binVar = "p^{dijet}_{T}";
-    else if( binVar.find("ptGen") != std::string::npos ) binVar = "p^{gen}_{T}";
-    else binVar = "p^{gen}_{T}";
+    std::string binVar;
+    if( binningVar == "ptDijet" ) binVar = "p^{dijet}_{T}";
+    else if( binningVar == "ptGen" ) binVar = "p^{gen}_{T}";
 
     std::string label = toString(ptBinEdges[ptBin])
       + " < " + binVar + " < "
@@ -431,7 +456,7 @@ void ControlPlotsJetSmearing::plotResponse() const
       + " GeV";
     legPtRange[ptBin]->AddEntry(hRespMeas[ptBin],label.c_str(),"L");
     legPtRangeAndCenters[ptBin]->AddEntry(hRespMeas[ptBin],label.c_str(),"L");
-    label = "p_{T} = " + toString(ptBinCenters[ptBin]) + " GeV";
+    label = "p_{T} = " + toString(hPtGenAbsBins[ptBin]->GetMean()) + " GeV";
     legPtRangeAndCenters[ptBin]->AddEntry(hRespFit[ptBin],label.c_str(),"L");
   }
 
@@ -586,6 +611,7 @@ void ControlPlotsJetSmearing::plotResponse() const
     delete hRespFitSum[ptBin];
     delete legPtRangeAndCenters[ptBin];
     delete hRatio[ptBin];
+    delete hPtGenAbsBins[ptBin];
   }
   delete legFitStart;
   delete hPtGenAbs;
@@ -938,17 +964,13 @@ void ControlPlotsJetSmearing::plotParameters() const {
 
   // ----- Fill histograms -----
   for(int i = 0; i < nPar; i++) {
-    double s = 1.;
-    if( i < param_->GetNumberOfJetParameters() ) {
-      s = scale[i];
-    }
     int bin = 1+i;
 
     hPars->SetBinContent(bin,param_->GetPars()[i]);
     hPars->SetBinError(bin,param_->GetErrors()[i]);
 
-    hAbsPars->SetBinContent(bin,s*param_->GetPars()[i]);
-    hAbsPars->SetBinError(bin,s*param_->GetErrors()[i]);
+    hAbsPars->SetBinContent(bin,scale[i]*param_->GetPars()[i]);
+    hAbsPars->SetBinError(bin,scale[i]*param_->GetErrors()[i]);
   
     hRelParErrors->SetBinContent(bin,param_->GetErrors()[i]/param_->GetPars()[i]);
 

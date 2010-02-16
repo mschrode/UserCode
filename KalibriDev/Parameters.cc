@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.5 2010/01/29 20:57:14 mschrode Exp $
+// $Id: Parameters.cc,v 1.6 2010/02/09 10:19:23 mschrode Exp $
 
 #include <fstream>
 #include <cassert>
@@ -85,6 +85,15 @@ Parametrization* TParameters::CreateParametrization(const std::string& name, con
     double ptDijetMax = config.read<double>("Et max cut on dijet",1.);
     std::vector<double> scale = bag_of<double>(config.read<string>("jet parameter scales",""));
     return new SmearCrystalBallPt(tMin,tMax,rMin,rMax,ptDijetMin,ptDijetMax,scale);
+  } else if(name == "SmearGauss") {
+    double rMin       = config.read<double>("Response pdf min",0.);
+    double rMax       = config.read<double>("Response pdf max",1.8);
+    double tMin       = config.read<double>("DiJet integration min",0.);
+    double tMax       = config.read<double>("DiJet integration max",1.);
+    double ptDijetMin = config.read<double>("Et min cut on dijet",0.);
+    double ptDijetMax = config.read<double>("Et max cut on dijet",1.);
+    std::vector<double> scale = bag_of<double>(config.read<string>("jet parameter scales",""));
+    return new SmearGauss(tMin,tMax,rMin,rMax,ptDijetMin,ptDijetMax,scale);
   } else if(name == "GroomParametrization") {
     return new GroomParametrization();
   } else if(name == "EtaEtaParametrization") {
@@ -137,6 +146,8 @@ TParameters* TParameters::CreateParameters(const std::string& configfile)
     parclass = "SmearCrystalBall";
   } else if(parclass == "SmearParametrizationCrystalBallPt") {
     parclass = "SmearCrystalBallPt";
+  } else if(parclass == "SmearParametrizationGauss") {
+    parclass = "SmearGauss";
   }
 
   Parametrization *param = CreateParametrization(parclass,config);
@@ -335,7 +346,7 @@ void TParameters::Init(const ConfigFile& config)
     parNames_[1] = "#sigma";
     parNames_[2] = "#alpha";
     parNames_[3] = "n";
-    parNames_[4] = "m";
+    //    parNames_[4] = "m";
   }
 }
 
@@ -1636,15 +1647,14 @@ SmearFunction TParameters::resolutionFitPDF(int etaid, int phiid) {
     exit(-2);  
   }
   int jetIdx = id * GetNumberOfJetParametersPerBin() + GetNumberOfTowerParameters();
-  int gIdx = GetNumberOfTowerParameters()+GetNumberOfJetParameters()+GetNumberOfTrackParameters();
-  return SmearFunction(&Parametrization::resolution,&Parametrization::resolutionError,
+  return SmearFunction(&Parametrization::pdfPtMeas,
+		       &Parametrization::pdfPtTrue,
+		       &Parametrization::pdfPtTrueError,
+		       &Parametrization::pdfResponse,
+		       &Parametrization::pdfResponseError,
 		       jetIdx,GetNumberOfJetParametersPerBin(),GetJetParRef(id),
-		       findCovIndices(jetIdx,GetNumberOfJetParameters()),
 		       findParStatus(jetIdx,GetNumberOfJetParameters()),
-		       &Parametrization::spectrum,&Parametrization::spectrumError,
-		       gIdx,GetNumberOfGlobalJetParameters(),GetGlobalJetParRef(),
-		       findCovIndices(gIdx,GetNumberOfGlobalJetParameters()),
-		       findParStatus(gIdx,GetNumberOfGlobalJetParameters()),
+		       findCovIndices(jetIdx,GetNumberOfJetParameters()),
 		       GetCovCoeff(),p);
 }
 

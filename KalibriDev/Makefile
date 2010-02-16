@@ -63,7 +63,7 @@ SmearData.o: SmearData.cc SmearData.h CalibData.h SmearFunction.h
 SmearDiJet.o: SmearDiJet.cc SmearDiJet.h SmearFunction.h Jet.h SmearData.h
 	$(C) $(CFLAGS) -c SmearDiJet.cc
 
-SmearPhotonJet.o: SmearPhotonJet.cc SmearPhotonJet.h SmearData.h SmearFunction.h
+SmearPhotonJet.o: SmearPhotonJet.cc SmearPhotonJet.h Jet.h SmearData.h SmearFunction.h
 	$(C) $(CFLAGS) -c SmearPhotonJet.cc
 
 Parametrization.o: Parametrization.h Parametrization.cc

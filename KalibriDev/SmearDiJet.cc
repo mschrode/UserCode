@@ -1,4 +1,4 @@
-// $Id: SmearDiJet.cc,v 1.3 2010/01/29 20:54:22 mschrode Exp $
+// $Id: SmearDiJet.cc,v 1.4 2010/02/09 10:19:23 mschrode Exp $
 
 #include "SmearDiJet.h"
 
@@ -22,7 +22,6 @@ SmearDiJet::SmearDiJet(Jet * jet1,
 		       double ptHat,
 		       double weight,
 		       const SmearFunction& pdf,
-		       //const Function& truthPDF,
 		       double min,
 		       double max,
 		       double eps,
@@ -34,8 +33,6 @@ SmearDiJet::SmearDiJet(Jet * jet1,
     kMax_(max),
     jet2_(jet2),
     jet3_(jet3) {};
-//truthPDF_(truthPDF) { };
-
 
 
 // --------------------------------------------------
@@ -86,9 +83,9 @@ double SmearDiJet::chi2() const
       
       // Calculate probability only at new nodes
       if(nIter == 0 || i % 3 != 0) {
-	double p0 = respPDF( jet1()->pt() / t, t );
-	double p1 = respPDF( jet2()->pt() / t, t );
-	pp.push_back(p0 * p1 * truthPDF(t)); // Store product of pdfs and normalization
+	double p0 = pdfPtMeas(jet1()->pt(),t);
+	double p1 = pdfPtMeas(jet2()->pt(),t);
+	pp.push_back(p0 * p1 * pdfPtTrue(t)); // Store product of pdfs and normalization
       } else {
 	pp.push_back(pp_old.at(i/3));       // Store product of pdfs previously calcluated
       }
@@ -151,75 +148,33 @@ double SmearDiJet::chi2_fast(double * temp_derivative1,
   double temp2;
 
   // Vary parameters of response pdf
-  for(int i = 0; i < pdf_.nRespPars(); i++) {
-    if( !pdf_.isFixedRespPar(i) ) {
-      oldpar = pdf_.respPar()[i];
+  for(int i = 0; i < pdf_.nPars(); i++) {
+    if( !pdf_.isFixedPar(i) ) {
+      oldpar = pdf_.par()[i];
       
-      pdf_.respPar()[i] += epsilon;
+      pdf_.par()[i] += epsilon;
       temp1 = chi2();
       
       //     std::cout << std::setprecision(10) << i << ": " << oldpar << " -- > " << f << std::endl;
       //     std::cout << "   " << pdf_.respPar()[i] << " -- > " << temp1 << std::endl;
       
-      pdf_.respPar()[i] -= 2.*epsilon;
+      pdf_.par()[i] -= 2.*epsilon;
       temp2 = chi2();
       
       //     std::cout << "   " << pdf_.respPar()[i] << " -- > " << temp1 << std::endl;
       
       
-      pdf_.respPar()[i] = oldpar;
+      pdf_.par()[i] = oldpar;
       
       //     std::cout << i << ": " << pdf_.respParIdx()+i << " += " << temp1 - temp2 << std::endl;
       
-      temp_derivative1[pdf_.respParIdx()+i] += temp1 - temp2;
-      temp_derivative2[pdf_.respParIdx()+i] += temp1 + temp2 - 2*f;
-    }
-  }
-
-  // Vary parameters of truth pdf
-  for(int i = 0; i < pdf_.nTruthPars(); i++) {
-    if( !pdf_.isFixedTruthPar(i) ) {
-      oldpar = pdf_.truthPar()[i];
-
-      pdf_.truthPar()[i] += epsilon;
-      temp1 = chi2();
-      
-      pdf_.truthPar()[i] -= 2.*epsilon;
-      temp2 = chi2();
-      
-      pdf_.truthPar()[i] = oldpar;
-      
-      temp_derivative1[pdf_.truthParIdx()+i] += temp1 - temp2;
-      temp_derivative2[pdf_.truthParIdx()+i] += temp1 + temp2 - 2*f;
+      temp_derivative1[pdf_.parIdx()+i] += temp1 - temp2;
+      temp_derivative2[pdf_.parIdx()+i] += temp1 + temp2 - 2*f;
     }
   }
 
   return f;
 }
-
-
-
-// //!  \brief Truth pdf
-// //!  \note The probability is not normalized to unity but in such
-// //!        a way that the negative log-likelihood as returned by
-// //!        chi2() is properly normalized.
-// //!  \param t Truth, pt in GeV
-// //!  \return The probability density of the truth \p t,
-// //!          normalized such that the negative log-likelihood
-// //!          is normalized
-// // --------------------------------------------------
-// double SmearDiJet::truthPDF(double t) const {
-//   tmpMeas_.E = 0.;
-//   tmpMeas_.pt = t;
-//   return truthPDF_(&tmpMeas_);
-// }
-
-// // --------------------------------------------------
-// double SmearDiJet::truthPDFSigma(double t) const {
-//   tmpMeas_.E = 0.;
-//   tmpMeas_.pt = t;
-//   return truthPDF_.sigma(&tmpMeas_);
-// }
 
 
 //!  \brief Print event parameters

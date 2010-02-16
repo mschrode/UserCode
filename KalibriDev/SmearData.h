@@ -1,4 +1,4 @@
-// $Id: SmearData.h,v 1.4 2010/01/29 20:54:22 mschrode Exp $
+// $Id: SmearData.h,v 1.5 2010/02/09 10:19:23 mschrode Exp $
 
 #ifndef SmearData_h
 #define SmearData_h
@@ -10,7 +10,7 @@
 //!  \brief Abstract base class for jetsmearing method
 //!  \author Matthias Schroeder
 //!  \date Tue Jun  9 15:24:49 CEST 2009
-//!  $Id: SmearData.h,v 1.4 2010/01/29 20:54:22 mschrode Exp $
+//!  $Id: SmearData.h,v 1.5 2010/02/09 10:19:23 mschrode Exp $
 // --------------------------------------------------
 class SmearData : public Event {
  public:
@@ -30,11 +30,12 @@ class SmearData : public Event {
   virtual DataType GetType() const { return kType_; }
   virtual double GetWeight() const { return weight_; }
 
-  double respPar(int i) { return pdf_.respPar(i); }
-  double respPDF(double r, double pt) const { return pdf_.respPDF(r,pt); }
-  double respPDFError(double r, double pt) const { return pdf_.respError(r,pt); }
-  double truthPDF(double pt) const { return pdf_.truthPDF(pt); }
-  double truthPDFError(double pt) const { return pdf_.truthError(pt); }
+  double par(int i) { return pdf_.par(i); }
+  double pdfPtMeas(double ptMeas, double ptTrue) const { return pdf_.pdfPtMeas(ptMeas,ptTrue); }
+  double pdfPtTrue(double ptTrue) const { return pdf_.pdfPtTrue(ptTrue); }
+  double pdfPtTrueError(double ptTrue) const { return pdf_.pdfPtTrueError(ptTrue); }
+  double pdfResp(double r, double ptTrue) const { return pdf_.pdfResp(r,ptTrue); }
+  double pdfRespError(double r, double ptTrue) const { return pdf_.pdfRespError(r,ptTrue); }
 
   virtual void setWeight(double w) { weight_ = w; } 
 

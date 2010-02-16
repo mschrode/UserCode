@@ -1,4 +1,4 @@
-// $Id: SmearPhotonJet.cc,v 1.2 2010/01/21 16:49:26 mschrode Exp $
+// $Id: SmearPhotonJet.cc,v 1.3 2010/02/09 10:19:23 mschrode Exp $
 
 #include "SmearPhotonJet.h"
 
@@ -8,8 +8,8 @@
 //!  \return The negative log-likelihood of this event
 // --------------------------------------------------
 double SmearPhotonJet::chi2() const {
-  double respPD = respPDF( GetMess()->pt / GetTruth(), GetTruth() );
-  return -1. * GetWeight() * log( respPD / GetTruth() ); // Need to divide by truth to have probability (!= density)
+  double pdf = pdfPtMeas(GetMess()->pt,GetTruth());
+  return -1. * GetWeight() * log(pdf/GetTruth()); // Need to divide by truth to have probability (!= density)
 }
 
 
@@ -48,19 +48,19 @@ double SmearPhotonJet::chi2_fast(double * temp_derivative1,
   double   temp2;
 
   // Vary parameters of response pdf
-  for(int i = 0; i < pdf_.nRespPars(); i++) {
-    oldpar = pdf_.respPar()[i];
+  for(int i = 0; i < pdf_.nPars(); i++) {
+    oldpar = pdf_.par()[i];
 
-    pdf_.respPar()[i] += epsilon;
+    pdf_.par()[i] += epsilon;
     temp1 = chi2();
 
-    pdf_.respPar()[i] -= 2.*epsilon;
+    pdf_.par()[i] -= 2.*epsilon;
     temp2 = chi2();
 
-    pdf_.respPar()[i] = oldpar;
+    pdf_.par()[i] = oldpar;
 
-    temp_derivative1[pdf_.respParIdx()+i] += temp1 - temp2;
-    temp_derivative2[pdf_.respParIdx()+i] += temp1 + temp2 - 2*f;
+    temp_derivative1[pdf_.parIdx()+i] += temp1 - temp2;
+    temp_derivative2[pdf_.parIdx()+i] += temp1 + temp2 - 2*f;
   }
 
   return f;

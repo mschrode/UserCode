@@ -1,4 +1,4 @@
-// $Id: SmearDiJet.h,v 1.3 2010/01/29 20:54:22 mschrode Exp $
+// $Id: SmearDiJet.h,v 1.4 2010/02/09 10:19:23 mschrode Exp $
 
 #ifndef SmearDiJet_h
 #define SmearDiJet_h
@@ -11,7 +11,7 @@
 //!  \brief Dijet data for jetsmearing method
 //!  \author Matthias Schroeder
 //!  \date Tue Jun  9 18:23:44 CEST 2009
-//!  $Id: SmearDiJet.h,v 1.3 2010/01/29 20:54:22 mschrode Exp $
+//!  $Id: SmearDiJet.h,v 1.4 2010/02/09 10:19:23 mschrode Exp $
 // --------------------------------------------------
 class SmearDiJet : public SmearData {
  public:
@@ -21,7 +21,6 @@ class SmearDiJet : public SmearData {
 	     double ptHat,
 	     double weight,
 	     const SmearFunction& pdf,
-	     //	     const Function& truthPDF,
 	     double min,
 	     double max,
 	     double eps,
@@ -37,10 +36,8 @@ class SmearDiJet : public SmearData {
   const Jet * jet2() const { return jet2_; }
   const Jet * jet3() const { return jet3_; }
 
-  double dijetPt() const { return 0.5 * (jet1()->pt() + jet2()->pt()); } //!< Get dijet pt \f$ \frac{1}{2} (p^{1}_{T} + p^{2}_{T}) \f$
-/*   double * getTruthPar() { return truthPDF_.firstPar(); } */
-/*   double truthPDF(double t) const; */
-/*   double truthPDFSigma(double t) const; */
+  //! Get dijet pt \f$ \frac{1}{2} (p^{1}_{T} + p^{2}_{T}) \f$
+  double dijetPt() const { return 0.5 * (jet1()->pt() + jet2()->pt()); } 
 
 
  private:
@@ -51,6 +48,5 @@ class SmearDiJet : public SmearData {
 
   Jet * jet2_; //!< Second jet
   Jet * jet3_; //!< Third jet
-  //  Function  truthPDF_;  //!< Truth pdf
 };
 #endif

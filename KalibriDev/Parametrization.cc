@@ -1,5 +1,5 @@
 //
-//  $Id: Parametrization.cc,v 1.4 2010/02/09 10:19:23 mschrode Exp $
+//  $Id: Parametrization.cc,v 1.5 2010/02/10 13:51:23 mschrode Exp $
 //
 #include "Parametrization.h"
 
@@ -454,13 +454,58 @@ double SmearCrystalBall::spectrum(double pt, const double *sPar, const double *r
   // Norm of probability of dijet event configuration
   double norm = 0.;
 
+  //  norm = (tMax_*tMax_*tMax_ - tMin_*tMin_*tMin_)/3./(tMax_-tMin_);
+
 //   double expo = 3. - sPar[0];
 //    if( expo ) {
 //     norm = (pow(tMax_,expo) - pow(tMin_,expo))/expo;
 //   } else {
 //     norm = log(tMax_/tMin_);
 //   }
+
+//   double h = tMax_ - tMin_;     // Integration interval
+//   double normOld = 1.;              // Value of integral from previous iteration
+//   int nIter = 0;               // Current iteration in interval splitting
+//   std::vector<double> pp;         // Product of current function values
+//   std::vector<double> ppOld;     // Product of function values from previous iteration
+
+//   // Iterate until precision or max. number iterations reached
+//   while(fabs((norm - normOld) / normOld) > 1E-5 && nIter < 4) {
+//     normOld = norm;
+//     norm = 0;
+//     ppOld = pp;
+//     pp.clear();
+//     h /= 3.;    // In each iteration, split h into 3 new intervals
+    
+//     // Loop over nodes xi i.e. interval borders
+//     for(int i = 0; i <= pow(3.,nIter+1); ++i){
+//       double t = tMin_ + i * h;  // Pt at node
+      
+//       // Calculate probability only at new nodes
+//       if( nIter == 0 || i % 3 != 0 ) {
+// 	pp.push_back(t*t*truthPDF(t,sPar,rPar));
+//       } else {
+// 	pp.push_back(ppOld.at(i/3));       // Store product of pdfs previously calcluated
+//       }
+//     }
+
+//     // Sum up weighted function values
+//     for(unsigned int i = 0; i < pp.size(); i++)	{
+//       double w = 1.;                       // Weight w from Simpson's rule
+//       if( i > 0 && i < (pp.size() - 1) ) { // w = 1 for x0 and last node
+// 	if( i % 3 == 0 ) {                 // w = 2 for x3, x6, ...
+// 	  w = 2.;
+// 	} else {
+// 	  w = 3.;
+// 	}
+//       }
+//       norm += w * (pp.at(i));              // Sum up weighted function values
+//     }
+//     norm *= (3. * h / 8.);                 // Apply overall normalization
+//     nIter++;
+//   }
   
+
   int nSteps = 100;
   double dt = (tMax_-tMin_)/nSteps;
   for(int i = 0; i < nSteps; i++) {
@@ -862,5 +907,64 @@ void SmearCrystalBallPt::print() const {
   std::cout << "    " << ptDijetMin_ << " < ptDijet < " << ptDijetMax_ << " GeV\n";
   std::cout << "  Probability density of response:\n";
   std::cout << "    Non-zero for " << rMin_ << " < R < " << rMax_ << "\n";
+  std::cout << std::endl;
+}
+
+
+// ------------------------------------------------------------------------
+SmearGauss::SmearGauss(double tMin, double tMax, double rMin, double rMax, double ptDijetMin, double ptDijetMax, const std::vector<double>& rParScales)
+  : Parametrization(0,4,0,0),
+    tMin_(tMin),
+    tMax_(tMax),
+    rMin_(rMin),
+    rMax_(rMax),
+    ptDijetMin_(ptDijetMin),
+    ptDijetMax_(ptDijetMax),
+    respParScales_(rParScales) {
+  assert( 0.0 <= tMin_ && tMin_ < tMax_ );
+  assert( 0.0 <= rMin_ && rMin_ < rMax_ );
+  assert( 0.0 <= ptDijetMin_ && ptDijetMin_ < ptDijetMax_ );
+  assert( respParScales_.size() >= nJetPars() );
+  
+  print();
+}
+
+
+// ------------------------------------------------------------------------
+double SmearGauss::pdfPtMeas(double ptMeas, double ptTrue, const double *par) const {
+  double s = sigma(ptTrue,par);
+  double u = (ptMeas - ptTrue)/s;
+  return exp(-0.5*u*u)/sqrt(2.*M_PI)/s;
+}
+
+
+// ------------------------------------------------------------------------
+double  SmearGauss::pdfPtTrue(double ptTrue, const double *par) const {
+  double pdf = 0.;
+  if( tMin_ < ptTrue && ptTrue < tMax_ ) {
+    double m = 1.-exponent(par);
+    double norm = ( m == 0. ? log(tMax_/tMin_) : (pow(tMax_,m)-pow(tMin_,m))/m );
+    pdf = 1./pow(ptTrue,exponent(par))/norm;
+  }
+  
+  return pdf;
+}
+
+
+// ------------------------------------------------------------------------
+double SmearGauss::pdfResponse(double r, double ptTrue, const double *par) const {
+  double s = sigma(ptTrue,par)/ptTrue;
+  double u = (r - 1.)/s;
+  return exp(-0.5*u*u)/sqrt(2.*M_PI)/s;
+}
+
+
+// ------------------------------------------------------------------------
+void SmearGauss::print() const {
+  std::cout << "Parametrization class '" << name() << "'\n";
+  std::cout << "  Probability density of ptTrue spectrum:\n";
+  std::cout << "    Powerlaw\n";
+  std::cout << "    " << tMin_ << " < ptTrue < " << tMax_ << " GeV\n";
+  std::cout << "    " << ptDijetMin_ << " < ptDijet < " << ptDijetMax_ << " GeV\n";
   std::cout << std::endl;
 }
