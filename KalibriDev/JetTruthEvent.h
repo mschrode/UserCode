@@ -2,7 +2,7 @@
 //    Class for all events with one jet and truth informatio
 //
 //    first version: Hartmut Stadie 2008/12/14
-//    $Id: JetTruthEvent.h,v 1.12 2009/11/24 16:52:59 stadie Exp $
+//    $Id: JetTruthEvent.h,v 1.2 2010/01/21 16:49:10 mschrode Exp $
 //   
 #ifndef JETTRUTHEVENT_H
 #define JETTRUTHEVENT_H
@@ -15,7 +15,9 @@
 class JetTruthEvent : public Event
 {
 public:
-  JetTruthEvent(Jet *j, double t, double w) : jet(j),truth(t),weight(w),chi2plots(1000.),flagged_bad(false) {}
+  JetTruthEvent(Jet *j, double t, double w, double ptHat = 0.) : jet(j),truth(t),weight(w),chi2plots(1000.),flagged_bad(false) {
+    ptHat_ = ptHat;
+}
   ~JetTruthEvent();
 
   //interface from Event
@@ -27,7 +29,7 @@ public:
   DataType GetType() const { return GammaJet;} 
   double GetWeight() const { return weight;}
   virtual void setWeight(double w) { weight = w; }
-  virtual double ptHat() const { return 0.; }                  //!< Dummy
+  virtual double ptHat() const { return ptHat_; }
 
   double chi2() const;
   double chi2_plots() const { return chi2plots; }

@@ -12,11 +12,13 @@ class SmearFunction {
   typedef double (Parametrization::*PdfPtTrueError)(double ptTrue, const double*, const double*, const std::vector<int>&) const;
   typedef double (Parametrization::*PdfResp)(double r, double ptTrue, const double*) const;
   typedef double (Parametrization::*PdfRespError)(double r, double ptTrue, const double*, const double*, const std::vector<int>&) const;
+  typedef double (Parametrization::*PdfDijetAsym)(double a, double ptTrue, const double*) const;
 
  public:
   SmearFunction(PdfPtMeas pdfPtMeas,
 		PdfPtTrue pdfPtTrue, PdfPtTrueError pdfPtTrueError,
 		PdfResp pdfResp, PdfRespError pdfRespError,
+		PdfDijetAsym pdfDijetAsym,
 		int parIdx, int nPars, double *firstPar, const std::vector<bool>& isFixedPar,
 		const std::vector<int>& covIdx, double *firstCov, const Parametrization *p)
     : pdfPtMeas_(pdfPtMeas),
@@ -24,6 +26,7 @@ class SmearFunction {
     pdfPtTrueError_(pdfPtTrueError),
     pdfResp_(pdfResp),
     pdfRespError_(pdfRespError),
+    pdfDijetAsym_(pdfDijetAsym),
     parIdx_(parIdx),
     nPars_(nPars),
     firstPar_(firstPar),
@@ -53,6 +56,9 @@ class SmearFunction {
     double pdfRespError(double r, double ptTrue) const {
       return (param_->*pdfRespError_)(r,ptTrue,firstPar_,firstCov_,covIdx_);
     }
+    double pdfDijetAsym(double a, double ptTrue) const {
+      return (param_->*pdfDijetAsym_)(a,ptTrue,firstPar_);
+    }
 
     void changeParBase(double* oldpar, double* newpar) {
       firstPar_ += newpar - oldpar;
@@ -67,6 +73,7 @@ class SmearFunction {
     const PdfPtTrueError pdfPtTrueError_;
     const PdfResp pdfResp_;
     const PdfRespError pdfRespError_;
+    const PdfDijetAsym pdfDijetAsym_;
 
     const int parIdx_;
     const int nPars_;

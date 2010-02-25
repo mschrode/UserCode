@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 
+class TF1;
 class TH1F;
 class TH2F;
 class TRandom;
@@ -15,7 +16,7 @@ class ConfigFile;
 //!
 //!  \author Hartmut Stadie
 //!  \date   Mon Jun 30 11:00:00 CEST 2008
-//!  $Id: ToyMC.h,v 1.3 2010/01/21 16:49:32 mschrode Exp $
+//!  $Id: ToyMC.h,v 1.4 2010/02/16 13:34:41 mschrode Exp $
 // ----------------------------------------------------------------  
 class ToyMC {
 
@@ -43,7 +44,7 @@ class ToyMC {
   //!      The appropriate parametrizations are
   //!      - SmearParametrizationStepGauss
   // ----------------------------------------------------------------  
-  enum ResolutionModel { Gauss, Landau, GaussUniform, TwoGauss, Dirac, Box };
+  enum ResolutionModel { Gauss, Landau, GaussUniform, TwoGauss, Dirac, Box, CrystalBall };
 
 
   //!  \brief Response for generation
@@ -109,7 +110,7 @@ class ToyMC {
 
   //!  \brief Truth pt spectrum
   // ----------------------------------------------------------------  
-  enum TruthSpectrum { Uniform, PowerLaw, PtEtaHistogram };
+  enum TruthSpectrum { Uniform, PowerLaw, PtEtaHistogram, Exponential };
 
 
   // Global variables
@@ -138,10 +139,11 @@ class ToyMC {
 
   ResponseModel responseModel_;        //!< Response models
   std::vector<double> parResp_;        //!< Parameters for Response
-  TH1F          * histResp_;           //!< For histogramed response
 
   ResolutionModel resolutionModel_;    //!< Resolution model
   std::vector<double> parReso_;        //!< Parameters for Respolution
+  TF1           * fRes_;              //!< For parameterized resolution / response
+  TH1F          * histRes_;           //!< For histogramed resolution / response
 
   double          smearFactor_;        //!< Combined smear factor from response and resolution
   bool            smearTowersIndividually_;  //!< If true, mSmearTowersIndividually is determined individually for each tower, else for each jet
@@ -153,6 +155,10 @@ class ToyMC {
 		  float& tout, float& temtrue, float& thadtrue, float& touttrue);  
   int  splitJet(const TLorentzVector* jet ,float* et,float* eta,float * phi, int* ieta,int* iphi);
   void calculateSmearFactor(const TLorentzVector* jet, double pt);
+  double getRandomCrystalBall(double pt, const std::vector<double> &par) const;
+
+  static double crystalBallFunc(double *x, double *par);
+
 
 
  public:

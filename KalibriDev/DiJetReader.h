@@ -28,7 +28,7 @@
 //!
 //!  \author Hartmut Stadie
 //!  \date 2008/12/12
-//!  $Id: DiJetReader.h,v 1.16 2010/01/12 19:24:48 mschrode Exp $
+//!  $Id: DiJetReader.h,v 1.2 2010/01/21 16:48:47 mschrode Exp $
 // ----------------------------------------------------------------   
 
 
@@ -56,6 +56,7 @@ class DiJetReader : public EventReader{
   int createJetTruthEvents(std::vector<Event*>& data);
   CorFactors* createCorFactors(int jetid) const;
   std::vector<Jet*> readCaloJets(int nJets) const;
+  std::vector<Jet*> readGenJetSortedJets(int nJets) const;
 
 
   std::auto_ptr<NJetSel> nJet_;                //!< Njet Selector

@@ -1,4 +1,4 @@
-// $Id: ToyMC.cc,v 1.3 2010/01/21 16:49:31 mschrode Exp $
+// $Id: ToyMC.cc,v 1.4 2010/02/16 13:34:41 mschrode Exp $
 
 #include "ToyMC.h"
 
@@ -24,8 +24,8 @@
 // -----------------------------------------------------------------
 ToyMC::ToyMC() : type_(1), minEta_(-2.5),maxEta_(2.5),minPt_(30), maxPt_(400),ptSpectrum_(Uniform),
 		 histPtEta_(0),chunks_(200),jetSpreadA_(0.5),jetSpreadB_(0),noOutOfCone_(true),
-		 maxPi0Frac_(0.5),maxEmf_(0.5),responseModel_(Constant),histResp_(0),
-		 resolutionModel_(Gauss), smearFactor_(1.), smearTowersIndividually_(true)
+		 maxPi0Frac_(0.5),maxEmf_(0.5),responseModel_(Constant), resolutionModel_(Gauss),
+		 fRes_(0), histRes_(0), smearFactor_(1.), smearTowersIndividually_(true)
 {
   pInput_ = new TLorentzVector();
   random_ = new TRandom3();
@@ -35,8 +35,9 @@ ToyMC::ToyMC() : type_(1), minEta_(-2.5),maxEta_(2.5),minPt_(30), maxPt_(400),pt
 ToyMC::~ToyMC() 
 {
   delete random_;
-  delete histResp_;
-  delete histPtEta_;
+  if( histRes_ ) delete histRes_;
+  if( fRes_ ) delete fRes_;
+  if( histPtEta_ ) delete histPtEta_;
   delete pInput_;
 }
 
@@ -62,9 +63,18 @@ void ToyMC::genInput() {
     eta = rand[1]*(maxEta_ - minEta_)+minEta_;
   } else if(ptSpectrum_ == PowerLaw) {
     pt  = minPt_ * pow(rand[0],-1.0/(parTruth_.at(0) - 1.0));
+    while( pt > maxPt_ ) {
+      random_->RndmArray(3,rand);
+      pt  = minPt_ * pow(rand[0],-1.0/(parTruth_.at(0) - 1.0));
+    }
     eta = rand[1]*(maxEta_ - minEta_)+minEta_;
   } else if(ptSpectrum_ == PtEtaHistogram) {
     histPtEta_->GetRandom2(eta, pt);
+  } else if(ptSpectrum_ == Exponential) {
+    do {
+      pt = minPt_ + random_->Exp(parTruth_[0]);
+    } while( pt > maxPt_ );
+    eta = rand[1]*(maxEta_ - minEta_)+minEta_;
   }
   pInput_->SetPtEtaPhiM(pt, eta, (rand[2]*2 * M_PI - M_PI), 0);
 }
@@ -155,8 +165,8 @@ void ToyMC::calculateSmearFactor(const TLorentzVector* jet, double E) {
   }
   else if ( (resolutionModel_ == Gauss) ) {
     do {
-      smear = random_->Gaus(1.0,sqrt(parReso_.at(0)*parReso_.at(0)/E/E +
-				     parReso_.at(1)*parReso_.at(1)/E   +
+      smear = random_->Gaus(1.0,sqrt(parReso_.at(0)*parReso_.at(0)/pt/pt +
+				     parReso_.at(1)*parReso_.at(1)/pt   +
 				     parReso_.at(2)*parReso_.at(2))      );
     } while((smear < 0) || (smear > 2));
   }
@@ -169,11 +179,14 @@ void ToyMC::calculateSmearFactor(const TLorentzVector* jet, double E) {
   }
   else if( resolutionModel_ == TwoGauss ) {
     do {
-      smear = histResp_->GetRandom();
+      smear = histRes_->GetRandom();
     } while ( smear < 0.5 || smear > 1.2 );
   }
   else if( resolutionModel_ == Box ) {
     smear = random_->Uniform(parReso_[0],parReso_[1]);
+  }
+  else if( resolutionModel_ == CrystalBall ) {
+    smear = getRandomCrystalBall(pt,parReso_);
   }
 
   smearFactor_ *= smear;
@@ -1358,13 +1371,16 @@ void ToyMC::init(const ConfigFile* config) {
   if(spectrum == "powerlaw") {
     ptSpectrum_ = PowerLaw; 
     assert( parTruth_.size() > 0 );
-  } else if(spectrum == "uniform") {
+   } else if(spectrum == "uniform") {
     ptSpectrum_ = Uniform;
   } else if(spectrum == "PtEtaHistogram") {
     ptSpectrum_ = PtEtaHistogram;
     TFile file("toymcPtEtaInput.root");
     histPtEta_ = (TH2F*) file.Get("genWPtEta");
     histPtEta_->SetDirectory(0);
+  } else if(spectrum == "exponential") {
+    ptSpectrum_ = Exponential; 
+    assert( parTruth_.size() > 0 );
   } else {
     std::cerr << "unknown ToyMC pt spectrum:" << spectrum << '\n';
     exit(1);
@@ -1442,18 +1458,22 @@ void ToyMC::init(const ConfigFile* config) {
     f->SetParameter(5,s1);
 
     // Fill response histogram according to f
-    histResp_ = new TH1F("hHistResp",";p^{jet}_{T} / p^{true}_{T};1/(Nw) dN / d(p^{jet}_{T} / p^{true}_{T})",			     1000,minResp,maxResp);
-    for(int bin = 1; bin <= histResp_->GetNbinsX(); bin++) {
-      double r = f->Eval(histResp_->GetBinCenter(bin));
-      histResp_->SetBinContent(bin,r);
+    histRes_ = new TH1F("hHistResp",";p^{jet}_{T} / p^{true}_{T};1/(Nw) dN / d(p^{jet}_{T} / p^{true}_{T})",			     1000,minResp,maxResp);
+    for(int bin = 1; bin <= histRes_->GetNbinsX(); bin++) {
+      double r = f->Eval(histRes_->GetBinCenter(bin));
+      histRes_->SetBinContent(bin,r);
     }
 
-    double norm = histResp_->Integral("width");
-    histResp_->Scale(1./norm);
+    double norm = histRes_->Integral("width");
+    histRes_->Scale(1./norm);
     delete f;
   } else if( resolution == "Box" ) {
     resolutionModel_ = Box;
     assert( parReso_.size() >= 2 );
+  } else if( resolution == "CrystalBall" ) {
+    resolutionModel_ = CrystalBall;
+    assert( parReso_.size() >= 5 );
+    fRes_ = new TF1("fCrystalBall",ToyMC::crystalBallFunc,0.,2.,3);
   } else {
     std::cerr << "unknown ToyMC resolution model: " << resolution << '\n';
     exit(1);
@@ -1497,6 +1517,8 @@ void ToyMC::print() const {
     std::cout << "PowerLaw: 1/pt^" << parTruth_.at(0) << std::endl;
   else if( ptSpectrum_ == PtEtaHistogram )
     std::cout << "PtEtaHistogram\n";
+  else if( ptSpectrum_ == Exponential )
+    std::cout << "Exponential\n";
 
   std::cout << "  response:     ";
   if( responseModel_ == Constant )
@@ -1536,6 +1558,9 @@ void ToyMC::print() const {
     std::cout << "'TwoGauss'";
   else if( resolutionModel_ == Box )
     std::cout << "'Box'";
+  else if( resolutionModel_ == CrystalBall )
+    std::cout << "'CrystalBall'";
+
 
   std::cout << " with parameters ";
   for(unsigned int i = 0; i < parReso_.size(); i++)
@@ -1762,4 +1787,33 @@ float ToyMC::etaBinEdge(int etaBin, bool lowerEdge) const {
     //something went wrong;
   default : return -1; break;
   }
+}
+
+
+double ToyMC::getRandomCrystalBall(double pt, const std::vector<double> &par) const {
+  double sigma = sqrt( par[0]*par[0]/pt/pt + par[1]*par[1]/pt + par[2]*par[2] );
+  fRes_->SetParameter(0,sigma);
+  fRes_->SetParameter(1,par[3]);
+  fRes_->SetParameter(2,par[4]);
+
+  return fRes_->GetRandom();
+}
+
+
+double ToyMC::crystalBallFunc(double *x, double *par) {
+  double sigma = par[0];
+  double alpha = par[1];
+  double u = (x[0] - 1.)/sigma;
+
+  double f = 0.;  
+  if( u > -alpha ) {             // Gaussian part
+    f = exp(-0.5*u*u);
+  } else {                       // Powerlaw part
+    double n = par[2];
+    double A = pow(n/alpha,n)*exp(-0.5*alpha*alpha);
+    double B = n/alpha - alpha;
+    f =  A*pow(B-u,-n);
+  }
+
+  return f;
 }
