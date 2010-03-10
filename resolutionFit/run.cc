@@ -1,3 +1,5 @@
+// $Id: $
+
 #include <cassert>
 #include <vector>
 
@@ -8,14 +10,14 @@
 
 int main() {
 
-  TString baseNameStdSel = "~/CMS/StandardSelection/gauss_StdSel_";
+  TString baseNameStdSel = "~/results/JetSmearing/Gauss/PtBins/StandardSelection/gauss_StdSel_";
 
   std::vector<TString> baseCutVars;
-  baseCutVars.push_back("~/CMS/Rel3rdPt/Rel3rdPt006/gauss_Rel3rdPt006_");
-  baseCutVars.push_back("~/CMS/Rel3rdPt/Rel3rdPt008/gauss_Rel3rdPt008_");
-  baseCutVars.push_back("~/CMS/StandardSelection/gauss_StdSel_");
-  baseCutVars.push_back("~/CMS/Rel3rdPt/Rel3rdPt012/gauss_Rel3rdPt012_");
-  baseCutVars.push_back("~/CMS/Rel3rdPt/Rel3rdPt020/gauss_Rel3rdPt020_");
+  baseCutVars.push_back("~/results/JetSmearing/Gauss/PtBins/Rel3rdPt/Rel3rdPt006/gauss_Rel3rdPt006_");
+  baseCutVars.push_back("~/results/JetSmearing/Gauss/PtBins/Rel3rdPt/Rel3rdPt008/gauss_Rel3rdPt008_");
+  baseCutVars.push_back("~/results/JetSmearing/Gauss/PtBins/StandardSelection/gauss_StdSel_");
+  baseCutVars.push_back("~/results/JetSmearing/Gauss/PtBins/Rel3rdPt/Rel3rdPt012/gauss_Rel3rdPt012_");
+  baseCutVars.push_back("~/results/JetSmearing/Gauss/PtBins/Rel3rdPt/Rel3rdPt020/gauss_Rel3rdPt020_");
   std::vector<double> ptCuts;
   ptCuts.push_back(0.06);
   ptCuts.push_back(0.08);
@@ -24,14 +26,17 @@ int main() {
   ptCuts.push_back(0.2);
 
   std::vector<TString> baseSystUp;
-  baseSystUp.push_back("~/CMS/SigmaUp50/gauss_sigmaUp50_");
-  baseSystUp.push_back("~/CMS/SpectrumUp50/gauss_spectrumUp50_");
+  //baseSystUp.push_back("~/results/JetSmearing/Gauss/PtBins/SigmaUp50/gauss_SigmaUp50_StdSel_");
+  baseSystUp.push_back("~/results/JetSmearing/Gauss/PtBins/SlopeUp50/gauss_SlopeUp50_StdSel_");
+  baseSystUp.push_back("~/results/JetSmearing/Gauss/PtBins/Unweighted/StandardSelection/gauss_Flat_StdSel_");
   std::vector<TString> baseSystDown;
-  baseSystDown.push_back("~/CMS/SigmaDown50/gauss_sigmaDown50_");
-  baseSystDown.push_back("~/CMS/SpectrumDown50/gauss_spectrumDown50_");
+  //baseSystDown.push_back("~/results/JetSmearing/Gauss/PtBins/SigmaDown50/gauss_SigmaDown50_StdSel_");
+  baseSystDown.push_back("~/results/JetSmearing/Gauss/PtBins/SlopeDown50/gauss_SlopeDown50_StdSel_");
+  baseSystDown.push_back("~/results/JetSmearing/Gauss/PtBins/Unweighted/StandardSelection/gauss_Flat_StdSel_");
   std::vector<TString> labelSyst;
-  labelSyst.push_back("#sigma #pm 50%");
+  //  labelSyst.push_back("#sigma #pm 50%");
   labelSyst.push_back("Spektrum #pm 50%");
+  labelSyst.push_back("MCStats");
 
   std::vector<double> ptBinEdges;
   ptBinEdges.push_back(100.);
@@ -48,7 +53,9 @@ int main() {
   std::vector<resolutionFit::PtBin*> ptBins;
   int start = 2; 
   int end  = 10;
+
   assert( ptBinEdges.size() >= (2+end-start) );
+  assert( baseSystUp.size() == baseSystDown.size() );
   for(int bin = start; bin <= end; bin++) {
     // File names for cut variations
     std::vector<TString> nameCutVars = baseCutVars;
