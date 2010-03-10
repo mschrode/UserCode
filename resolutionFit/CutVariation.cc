@@ -1,3 +1,5 @@
+// $Id: $
+
 #include "CutVariation.h"
 
 #include "KalibriFileParser.h"
@@ -67,7 +69,7 @@ namespace resolutionFit {
 
   TH1D *CutVariation::getFrame(const TString &name) const { 
     TH1D *hFrame = new TH1D(name,";p^{3}_{T,rel};#sigma / p_{T}",1000,0.,1.4*maxCutValue());
-    hFrame->GetYaxis()->SetRangeUser(0.7*relSigma(0),1.5*relSigma(nCutValues()-1));
+    hFrame->GetYaxis()->SetRangeUser(0.8*relSigma(0),1.2*relSigma(nCutValues()-1));
     return hFrame;
   }
 
