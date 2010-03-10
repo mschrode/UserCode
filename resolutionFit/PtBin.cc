@@ -1,3 +1,5 @@
+// $Id: $
+
 #include "PtBin.h"
 
 #include <iostream>
@@ -45,15 +47,23 @@ namespace resolutionFit {
     double refS = parserStdSel->value();
     // Calculate relative deviation after variation
     for(size_t i = 0; i < fileNamesSystUncertUp.size(); i++) {
-      KalibriFileParser *parser = new KalibriFileParser(fileNamesSystUncertUp[i],verbose_);
-      double dUp = parser->value() - refS;
-      dUp /= meanPt_;
-      delete parser;
-      parser = new KalibriFileParser(fileNamesSystUncertDown[i],verbose_);
-      double dDown = parser->value() - refS;
-      delete parser;
-      dDown /= meanPt_;
-      uncertSyst->addUncertainty(new Uncertainty(labelsSystUncertainties[i],dUp,dDown));
+      if( labelsSystUncertainties[i] == "MCStats" ) {
+	KalibriFileParser *parser = new KalibriFileParser(fileNamesSystUncertUp[i],verbose_);
+	double dUp = parser->statUncert() / meanPt_;
+	double dDown = -dUp;
+	delete parser;
+	uncertSyst->addUncertainty(new Uncertainty("MC Statistik",dUp,dDown));
+      } else {
+	KalibriFileParser *parser = new KalibriFileParser(fileNamesSystUncertUp[i],verbose_);
+	double dUp = parser->value() - refS;
+	dUp /= meanPt_;
+	delete parser;
+	parser = new KalibriFileParser(fileNamesSystUncertDown[i],verbose_);
+	double dDown = parser->value() - refS;
+	delete parser;
+	dDown /= meanPt_;
+	uncertSyst->addUncertainty(new Uncertainty(labelsSystUncertainties[i],dUp,dDown));
+      }
     }    
     // Sum up systematic and statistic uncertainty
     uncert_ = new Uncertainty("TotalUncertainty");
