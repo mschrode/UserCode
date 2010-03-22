@@ -1,5 +1,7 @@
 #include "FittedResolution.h"
 
+#include <cmath>
+
 #include "TCanvas.h"
 #include "TH1D.h"
 #include "TF1.h" 
@@ -43,7 +45,7 @@ namespace resolutionFit {
     fittedRes_->SetParameter(0,1.);
     fittedRes_->SetParameter(0,0.03);
     fittedRes_->SetLineColor(2);
-    gTot->Fit(fittedRes_,"0QR");
+    gTot->Fit(fittedRes_,"0R");
     delete gTot;
 
     // Set style
@@ -152,7 +154,7 @@ namespace resolutionFit {
       txt->Draw("same");
 
       TLegend *leg = util::LabelFactory::createLegend(2,0.9,util::LabelFactory::lineHeight(),util::LabelFactory::lineHeight());
-      leg->AddEntry(hResGen,"MC Wahrheit","L");
+      leg->AddEntry(hResGen,"MC-Wahrheit","L");
       char entry[100];
       sprintf(entry,"Fit #sigma/p_{T}, p_{T} = %.1f GeV",(*it)->meanPt());
       leg->AddEntry(hPdfRes,entry,"L");
@@ -203,8 +205,8 @@ namespace resolutionFit {
     TLegend *leg = util::LabelFactory::createLegend(5);
     leg->AddEntry(gStat,"Extrapoliertes #bar{#sigma} (p^{3}_{T,rel} #rightarrow 0)","P");
     leg->AddEntry(gStat,"Statistische Unsicherheit","L");
-    leg->AddEntry(gSyst,"Unsicherheit MC Stat. und Spektrum","F");
-    leg->AddEntry(trueRes_,"MC Wahrheit","L");
+    leg->AddEntry(gSyst,"Unsicherheit MC-Stat. und Spektrum","F");
+    leg->AddEntry(trueRes_,"MC-Wahrheit","L");
     leg->AddEntry(fittedRes_,"Fit #sigma(p_{T}) an #bar{#sigma}","L");
     leg->Draw("same");
 
@@ -257,7 +259,7 @@ namespace resolutionFit {
       txt->Draw("same");
 
       TLegend *leg = util::LabelFactory::createLegend(3,1.,0.09,0.06);
-      leg->AddEntry(hPtGen,"MC Wahrheit","L");
+      leg->AddEntry(hPtGen,"MC-Wahrheit","L");
       leg->AddEntry(hPdfPtTrue,"Spektrum f(p_{T})","L");
       char entry[100];
       sprintf(entry,"#frac{#sigma_{MC}(p_{T})}{p_{T}} = #frac{%.3f}{#sqrt{p_{T} / GeV}} #oplus %.3f",

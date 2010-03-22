@@ -1,4 +1,4 @@
-// $Id: PtBin.cc,v 1.2 2010/03/10 10:12:16 mschrode Exp $
+// $Id: PtBin.cc,v 1.3 2010/03/22 19:40:46 mschrode Exp $
 
 #include "PtBin.h"
 
@@ -56,10 +56,13 @@ namespace resolutionFit {
       } else {
 	KalibriFileParser *parser = new KalibriFileParser(fileNamesSystUncertUp[i],verbose_);
 	double dUp = parser->value() - refS;
+	std::cout << " Syst " << meanPt_ << std::flush;
+	std::cout << ":  +" << dUp << std::flush;
 	dUp /= meanPt_;
 	delete parser;
 	parser = new KalibriFileParser(fileNamesSystUncertDown[i],verbose_);
 	double dDown = parser->value() - refS;
+	std::cout << "  -" << dDown << std::endl;
 	delete parser;
 	dDown /= meanPt_;
 	uncertSyst->addUncertainty(new Uncertainty(labelsSystUncertainties[i],dUp,dDown));
@@ -91,6 +94,8 @@ namespace resolutionFit {
     PtBin::nPtBins++;
 
     if( verbose_ == 2 ) {
+      std::cout << "Is combined uncertainty: " << std::flush;
+      std::cout << ( uncert_->isCombined() ? "yes" : "no" ) << std::endl;
       std::cout << "Syst uncert at " << meanPt_ << " GeV: +" << std::flush;
       std::cout << uncertSystUp() << ", -" << uncertSystDown() << std::endl;
     }

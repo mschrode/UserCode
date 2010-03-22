@@ -1,3 +1,5 @@
+# $Id: $
+
 ROOTLIBS   = $(shell root-config --libs) -lMinuit
 ROOTCFLAGS = $(shell root-config --cflags)
 
@@ -25,7 +27,7 @@ KalibriFileParser.o: KalibriFileParser.h KalibriFileParser.cc
 PtBin.o: PtBin.h PtBin.cc Uncertainty.h CutVariation.h KalibriFileParser.h
 	g++ $(CFLAG) -c PtBin.cc
 
-Uncertainty.o: Uncertainty.h Uncertainty.cc Uncertainty.h
+Uncertainty.o: Uncertainty.h Uncertainty.cc
 	g++ $(CFLAG) -c Uncertainty.cc
 
 run.o: run.cc PtBin.h FittedResolution.h

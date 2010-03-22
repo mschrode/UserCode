@@ -1,3 +1,5 @@
+// $Id: $
+
 #include "KalibriFileParser.h"
 
 #include <iostream>
@@ -7,6 +9,15 @@
 #include "TH1D.h"
 
 namespace resolutionFit {
+
+  //! Parse the ROOT file of name \p fileName.
+  //!
+  //! The parameter \p verbose defines the level
+  //! of verbosity
+  //!  - 0: no output
+  //!  - 1: some useful information (default)
+  //!  - 2: a lot of information for debugging
+  // --------------------------------------------
   KalibriFileParser::KalibriFileParser(const TString &fileName, int verbose)
     : verbose_(verbose) {
     // Histograms to be read from file
@@ -26,6 +37,8 @@ namespace resolutionFit {
     setMeanPt();
   }
 
+
+  // --------------------------------------------
   KalibriFileParser::~KalibriFileParser() {
     for(std::map<TString,TH1F*>::iterator it = hists_.begin();
 	it != hists_.end(); it++) {
@@ -33,6 +46,19 @@ namespace resolutionFit {
     }
   }
 
+
+
+  //! The following histograms are accessible via
+  //! specification of \p name
+  //!  - 'hPtGen': ptGen spectrum
+  //!  - 'hPtDijet': ptDijet spectrum
+  //!  - 'hTruthPDF': ptTrue pdf assumed by the fit
+  //!  - 'hRespMeas_0': response distribution pt / ptGen
+  //!  - 'hRespFit_0': fitted resolution
+  //! The returned histogram is created newly with
+  //! the name \p newName; deletion has to be taken
+  //! care of by the calling instance!
+  // --------------------------------------------
   TH1F *KalibriFileParser::hist(const TString &name, const TString &newName) const {
     TH1F *h = 0;
     HistIt it = hists_.find(name);
@@ -66,7 +92,14 @@ namespace resolutionFit {
 
     return h;
   }
-  
+
+
+
+  //! This method does the actual file parsing i.e.
+  //! initializing the attributes such as \p value_
+  //! from the numbers stored in the file. It is
+  //! intended to be called only once by constructors.
+  // --------------------------------------------
   int KalibriFileParser::parse(const TString &fileName) {
     int ioError = 0;
     if( verbose_ == 2 ) std::cout << "Parsing file '" << fileName << "'" << std::endl;
@@ -126,6 +159,10 @@ namespace resolutionFit {
   }
 
 
+
+  //! This method intended to be called only once
+  //! by constructors after the execution of \p parse().
+  // --------------------------------------------
   void KalibriFileParser::setMeanPt() {
     if( verbose_ == 2 ) std::cout << "Setting mean pt values" << std::endl;
 
