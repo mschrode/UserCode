@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: CutVariation.cc,v 1.2 2010/03/10 10:11:49 mschrode Exp $
 
 #include "CutVariation.h"
 
@@ -18,7 +18,7 @@ namespace resolutionFit {
     for(int i = 0; i < nCutValues(); i++) {
       KalibriFileParser *parser = new KalibriFileParser(fileNames[i],verbose_);
       // Mean pt for all varied cuts (set only once)
-      if( i == 0 ) meanPt_ = parser->meanPtGen();//parser->meanPdfPtTrue();
+      if( i == 0 ) meanPt_ = parser->meanPdfPtTrue();
       // Create value at cut variation i
       double relSigma = parser->value()/meanPt_;
       Uncertainty *uncert = new Uncertainty("Statistical uncertainty",parser->statUncert()/meanPt_);

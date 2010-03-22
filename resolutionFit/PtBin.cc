@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: PtBin.cc,v 1.2 2010/03/10 10:12:16 mschrode Exp $
 
 #include "PtBin.h"
 
@@ -38,7 +38,7 @@ namespace resolutionFit {
     relSigma_ = cutVar_->extrapolatedRelSigma();
     minPt_ = minPt;
     maxPt_ = maxPt;
-    meanPt_ = parserStdSel->meanPtGen();
+    meanPt_ = parserStdSel->meanPdfPtTrue();
 
     // Sum up systematic uncertainties
     assert( fileNamesSystUncertDown.size() == fileNamesSystUncertUp.size() );
