@@ -15,7 +15,7 @@ class TH1D;
 namespace resolutionFit {
   class CutVariation {
   public:
-    CutVariation(const std::vector<TString> &fileNames, const std::vector<double> &cutValues, int verbose = 1);
+    CutVariation(const std::vector<TString> &fileNames, const std::vector<double> &cutValues, const TString &fileNameMCStatUncert, int verbose = 1);
     ~CutVariation();
 
     int nCutValues() const { return static_cast<int>(varPoints_.size()); }
@@ -57,6 +57,7 @@ namespace resolutionFit {
     const int verbose_;
 
     double meanPt_;    
+    double mcStatUncert_;
     std::vector<VariationPoint*> varPoints_;
     VariationPoint* extrapolatedPoint_;
     TGraphAsymmErrors *graph_;

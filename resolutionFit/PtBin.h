@@ -17,6 +17,7 @@ namespace resolutionFit {
   public:
     PtBin(const TString &fileNameStdSel,
 	  const std::vector<TString> &fileNamesCutVariation, const std::vector<double> &cutValues,
+	  const TString &fileNameMCStatUncert,
 	  const std::vector<TString> &fileNamesSystUncertUp,
 	  const std::vector<TString> &fileNamesSystUncertDown,
 	  const std::vector<TString> &labelsSystUncertainties, double minPt, double maxPt, int verbose = 1);

@@ -1,4 +1,4 @@
-// $Id: PtBin.cc,v 1.3 2010/03/22 19:40:46 mschrode Exp $
+// $Id: PtBin.cc,v 1.4 2010/03/22 19:45:08 mschrode Exp $
 
 #include "PtBin.h"
 
@@ -13,6 +13,7 @@ namespace resolutionFit {
 
   PtBin::PtBin(const TString &fileNameStdSel,
 	       const std::vector<TString> &fileNamesCutVariation, const std::vector<double> &cutValues,
+	       const TString &fileNameMCStatUncert,
 	       const std::vector<TString> &fileNamesSystUncertUp, 
 	       const std::vector<TString> &fileNamesSystUncertDown,
 	       const std::vector<TString> &labelsSystUncertainties, double minPt, double maxPt, int verbose)
@@ -28,7 +29,7 @@ namespace resolutionFit {
     }
 
     // Perform cut variation and extrapolation
-    cutVar_ = new CutVariation(fileNamesCutVariation,cutValues,verbose);
+    cutVar_ = new CutVariation(fileNamesCutVariation,cutValues,fileNameMCStatUncert,verbose);
     cutVar_->extrapolate();
 
     // Standard selection for reference
@@ -47,26 +48,32 @@ namespace resolutionFit {
     double refS = parserStdSel->value();
     // Calculate relative deviation after variation
     for(size_t i = 0; i < fileNamesSystUncertUp.size(); i++) {
-      if( labelsSystUncertainties[i] == "MCStats" ) {
-	KalibriFileParser *parser = new KalibriFileParser(fileNamesSystUncertUp[i],verbose_);
-	double dUp = parser->statUncert() / meanPt_;
-	double dDown = -dUp;
-	delete parser;
-	uncertSyst->addUncertainty(new Uncertainty("MC Statistik",dUp,dDown));
-      } else {
-	KalibriFileParser *parser = new KalibriFileParser(fileNamesSystUncertUp[i],verbose_);
-	double dUp = parser->value() - refS;
+      double dUp = 0.;
+      double dDown = 0.;
+      // Upward variation
+      KalibriFileParser *parser = new KalibriFileParser(fileNamesSystUncertUp[i],verbose_);
+      double dVar = parser->value() - refS;
+      delete parser;
+      if( verbose_ == 2 ) {
 	std::cout << " Syst " << meanPt_ << std::flush;
-	std::cout << ":  +" << dUp << std::flush;
-	dUp /= meanPt_;
-	delete parser;
-	parser = new KalibriFileParser(fileNamesSystUncertDown[i],verbose_);
-	double dDown = parser->value() - refS;
-	std::cout << "  -" << dDown << std::endl;
-	delete parser;
-	dDown /= meanPt_;
-	uncertSyst->addUncertainty(new Uncertainty(labelsSystUncertainties[i],dUp,dDown));
+	std::cout << ":  " << dVar << " (up)" << std::flush;
       }
+      dVar /= meanPt_;
+      if( dVar > 0 ) dUp += dVar;
+      else dDown += dVar;
+
+      // Downward variation
+      parser = new KalibriFileParser(fileNamesSystUncertDown[i],verbose_);
+      dVar = parser->value() - refS;
+      delete parser;
+      if( verbose_ == 2 ) {
+	std::cout << "  " << dDown << " (down)" << std::endl;
+      }
+      dVar /= meanPt_;
+      if( dVar > 0 ) dUp += dVar;
+      else dDown += dVar;
+
+      uncertSyst->addUncertainty(new Uncertainty(labelsSystUncertainties[i],dUp,dDown));
     }    
     // Sum up systematic and statistic uncertainty
     uncert_ = new Uncertainty("TotalUncertainty");

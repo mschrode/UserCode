@@ -1,8 +1,9 @@
-// $Id: CutVariation.cc,v 1.2 2010/03/10 10:11:49 mschrode Exp $
+// $Id: CutVariation.cc,v 1.3 2010/03/22 19:40:46 mschrode Exp $
 
 #include "CutVariation.h"
-
 #include "KalibriFileParser.h"
+
+#include <cmath>
 
 #include "TF1.h"
 #include "TGraphAsymmErrors.h"
@@ -11,19 +12,29 @@
 namespace resolutionFit {
   int CutVariation::nObjs = 0;
 
-  CutVariation::CutVariation(const std::vector<TString> &fileNames, const std::vector<double> &cutValues, int verbose)
+  CutVariation::CutVariation(const std::vector<TString> &fileNames, const std::vector<double> &cutValues, const TString &fileNameMCStatUncert, int verbose)
     : verbose_(verbose) {
+    // Read uncertainty from MC statistics
+    mcStatUncert_ = 0.;
+    if( fileNameMCStatUncert != "" ) {
+      KalibriFileParser *parser = new KalibriFileParser(fileNameMCStatUncert,verbose_);
+      mcStatUncert_ = parser->statUncert();
+      delete parser;
+    }
     // Read values from file
     varPoints_ = std::vector<VariationPoint*>(fileNames.size());
     for(int i = 0; i < nCutValues(); i++) {
       KalibriFileParser *parser = new KalibriFileParser(fileNames[i],verbose_);
       // Mean pt for all varied cuts (set only once)
-      if( i == 0 ) meanPt_ = parser->meanPdfPtTrue();
+      if( i == 0 ) {
+	meanPt_ = parser->meanPdfPtTrue();
+	mcStatUncert_ /= meanPt_;
+      }
       // Create value at cut variation i
       double relSigma = parser->value()/meanPt_;
       Uncertainty *uncert = new Uncertainty("Statistical uncertainty",parser->statUncert()/meanPt_);
-      varPoints_[i] = new VariationPoint(relSigma,uncert,cutValues[i]);
       delete parser;
+      varPoints_[i] = new VariationPoint(relSigma,uncert,cutValues[i]);
     }
     // Create graph of varied values
     createTGraph();
@@ -82,7 +93,10 @@ namespace resolutionFit {
       graph_->Fit(fit_,"0Q");
       // Replace extrapolated value with fit results
       delete extrapolatedPoint_;
-      Uncertainty *uncert = new Uncertainty("Extrapolation",fit_->GetParError(0));
+      double statUncert = fit_->GetParError(0);
+      // Add uncertainty from MC statistics
+      statUncert = sqrt( statUncert*statUncert + mcStatUncert_*mcStatUncert_ );
+      Uncertainty *uncert = new Uncertainty("Extrapolation",statUncert);
       extrapolatedPoint_ = new VariationPoint(fit_->GetParameter(0),uncert,0.);
     } else {
       std::cerr << "  WARNING: Less than 2 cut variations" << std::endl;
