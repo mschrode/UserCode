@@ -37,7 +37,7 @@ namespace resolutionFit {
 
     // Fit extrapolated resolution using
     // total uncertainty
-    TGraphAsymmErrors *gTot = getTGraphOfResolution("Total");
+    TGraphAsymmErrors *gStat = getTGraphOfResolution("Statistic");
     fittedRes_ = new TF1("FittedResolution::fittedRes_",
 			 "sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2])",
 			 xMin,xMax);
@@ -45,8 +45,8 @@ namespace resolutionFit {
     fittedRes_->SetParameter(0,1.);
     fittedRes_->SetParameter(0,0.03);
     fittedRes_->SetLineColor(2);
-    gTot->Fit(fittedRes_,"0R");
-    delete gTot;
+    gStat->Fit(fittedRes_,"0R");
+    delete gStat;
 
     // Set style
     util::StyleSettings::presentationNoTitle();
@@ -154,7 +154,7 @@ namespace resolutionFit {
       txt->Draw("same");
 
       TLegend *leg = util::LabelFactory::createLegend(2,0.9,util::LabelFactory::lineHeight(),util::LabelFactory::lineHeight());
-      leg->AddEntry(hResGen,"MC-Wahrheit","L");
+      leg->AddEntry(hResGen,"MC truth","L");
       char entry[100];
       sprintf(entry,"Fit #sigma/p_{T}, p_{T} = %.1f GeV",(*it)->meanPt());
       leg->AddEntry(hPdfRes,entry,"L");
@@ -203,11 +203,11 @@ namespace resolutionFit {
 
     // Add a legend
     TLegend *leg = util::LabelFactory::createLegend(5);
-    leg->AddEntry(gStat,"Extrapoliertes #bar{#sigma} (p^{3}_{T,rel} #rightarrow 0)","P");
-    leg->AddEntry(gStat,"Statistische Unsicherheit","L");
-    leg->AddEntry(gSyst,"Unsicherheit MC-Stat. und Spektrum","F");
-    leg->AddEntry(trueRes_,"MC-Wahrheit","L");
-    leg->AddEntry(fittedRes_,"Fit #sigma(p_{T}) an #bar{#sigma}","L");
+    leg->AddEntry(gStat,"Extrapolated #bar{#sigma} (p^{3}_{T,rel} #rightarrow 0)","P");
+    leg->AddEntry(gStat,"Statistical uncertainty","L");
+    leg->AddEntry(gSyst,"Uncertainty from spectrum","F");
+    leg->AddEntry(trueRes_,"MC truth","L");
+    leg->AddEntry(fittedRes_,"Fit #sigma(p_{T}) to #bar{#sigma}","L");
     leg->Draw("same");
 
     // Write canvas to file
@@ -259,8 +259,8 @@ namespace resolutionFit {
       txt->Draw("same");
 
       TLegend *leg = util::LabelFactory::createLegend(3,1.,0.09,0.06);
-      leg->AddEntry(hPtGen,"MC-Wahrheit","L");
-      leg->AddEntry(hPdfPtTrue,"Spektrum f(p_{T})","L");
+      leg->AddEntry(hPtGen,"MC truth","L");
+      leg->AddEntry(hPdfPtTrue,"Spectrum #tilde{f}(p_{T})","L");
       char entry[100];
       sprintf(entry,"#frac{#sigma_{MC}(p_{T})}{p_{T}} = #frac{%.3f}{#sqrt{p_{T} / GeV}} #oplus %.3f",
 	      trueRes_->GetParameter(1),trueRes_->GetParameter(2));
