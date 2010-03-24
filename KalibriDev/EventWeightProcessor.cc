@@ -1,5 +1,7 @@
 #include "EventWeightProcessor.h"
 
+#include "SmearDiJet.h"
+
 #include <cmath>
 
 //!  \param configfile Name of configuration file
@@ -101,7 +103,11 @@ int EventWeightProcessor::process(std::vector<Event*>& data) {
       }
       else if( type_ == 1 ) {
 	weight = globalWeight_*pow((*evt)->ptHat(),expo_);
-	//	weight = 1E10*pow((*evt)->ptHat(),expo_);
+	
+// 	// Hack
+// 	SmearDiJet *dijet = dynamic_cast<SmearDiJet*>(*evt);  
+// 	weight *= pow((dijet->dijetPt() - 40.),4.5);
+// 	weight *= 1E-6;
       }
 
       (*evt)->setWeight( weight );

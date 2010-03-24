@@ -1,4 +1,4 @@
-// $Id: ControlPlotsJetSmearing.cc,v 1.15 2010/02/16 13:33:16 mschrode Exp $
+// $Id: ControlPlotsJetSmearing.cc,v 1.16 2010/02/25 15:28:18 mschrode Exp $
 
 #include "ControlPlotsJetSmearing.h"
 
@@ -40,14 +40,14 @@
 //!  \param data The data
 //!  \param param The parametrization
 // --------------------------------------------------
-ControlPlotsJetSmearing::ControlPlotsJetSmearing(const std::string& configfile, const std::vector<Event*> * data, TParameters * param)
+ControlPlotsJetSmearing::ControlPlotsJetSmearing(const std::string& configfile, const std::vector<Event*> * data, TParameters * param, const std::string &outDir)
   : data_(data),
     config_(new ConfigFile(configfile.c_str())),
     param_(param),
     respNBins_(60),
     respMin_(0.),
     respMax_(3.),
-    dir_("./controlPlots")
+    dir_(outDir)
 {
   // Override possible existing root file
   TFile rootfile((dir_+"/jsResponse.root").c_str(),"RECREATE");
@@ -142,6 +142,7 @@ void ControlPlotsJetSmearing::plotResponse() const
   TH1F * hTruthPDFErrStat = 0;      // Truth pdf
   TH1F * hPtGenAbs = 0;         // PtGen spectrum
   TH1F * hPtGen = 0;         // PtGen spectrum
+  TH1F * hPtGenJet1 = 0;         // PtGen spectrum
   TH1F * hPtHat = 0;         // PtHat spectrum
   TH1F * hPtDijet = 0;       // Dijet spectrum
 
@@ -243,13 +244,16 @@ void ControlPlotsJetSmearing::plotResponse() const
   }
 
   hPtGenAbs = new TH1F("hPtGenAbs",";p^{gen}_{T} (GeV);dN / dp^{gen}_{T}  1 / (GeV)",
-		       100,ptBinEdges.front(),ptBinEdges.back());
+		       40,ptBinEdges.front(),ptBinEdges.back());
   hPtGenAbs->GetXaxis()->SetNdivisions(505);
   hPtGenAbs->SetLineWidth(2);
 
   hPtGen = static_cast<TH1F*>(hPtGenAbs->Clone("hPtGen"));
   hPtGen->SetTitle(";p^{gen}_{T} (GeV);1 / N  dN / dp^{gen}_{T}  1 / (GeV)");
   hPtGen->Sumw2();
+
+  hPtGenJet1 = static_cast<TH1F*>(hPtGen->Clone("hPtGenJet1"));
+  hPtGenJet1->SetTitle(";Jet 1 p^{gen}_{T} (GeV);1 / N  dN / dp^{gen}_{T}  1 / (GeV)");
   
   hPtHat = static_cast<TH1F*>(hPtGen->Clone("hPtHat"));
   hPtHat->SetTitle(";#hat{p}_{T} (GeV);1 / N  dN / d#hat{p}_{T}  1 / (GeV)");
@@ -291,6 +295,7 @@ void ControlPlotsJetSmearing::plotResponse() const
 
 	hPtGenAbs->Fill( jet->genPt(), dijet->GetWeight() );
 	hPtGen->Fill( jet->genPt(), dijet->GetWeight() );
+	if( i == 0 ) hPtGenJet1->Fill( jet->genPt(), dijet->GetWeight() );
 
 	for(int bin = 0; bin < nPtBins; bin++) {
 	  double var = 0.;
@@ -338,6 +343,7 @@ void ControlPlotsJetSmearing::plotResponse() const
     normHist(hPtAsym[ptBin],"width");
   }
   normHist(hPtGen,tMin,tMax,"width");
+  normHist(hPtGenJet1,tMin,tMax,"width");
   normHist(hPtHat,tMin,tMax,"width");
   normHist(hPtDijet,tMin,tMax,"width");
 
@@ -498,37 +504,41 @@ void ControlPlotsJetSmearing::plotResponse() const
 
   // --- Set y-axis ranges ----------------------------------
   for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
+    double minFac = 0.;
+    double maxFac = 1.6;
+    
     double min = 0.;
     double max = 0.;
     findYRange(hRespMeas[ptBin],min,max);
-    min *= 0.5;
-    max *= 80.;
+    min *= minFac;
+    max *= maxFac;
     hRespMeas[ptBin]->GetYaxis()->SetRangeUser(min,max);
 
     findYRange(hRespMCPtHat[ptBin],min,max);
-    min *= 0.5;
-    max *= 80.;
+    min *= minFac;
+    max *= maxFac;
     hRespMCPtHat[ptBin]->GetYaxis()->SetRangeUser(min,max);
 
     findYRange(hAbsResp[ptBin],min,max);
-    min *= 0.5;
-    max *= 80.;
+    min *= minFac;
+    max *= maxFac;
     hAbsResp[ptBin]->GetYaxis()->SetRangeUser(min,max);
 
     findYRange(hPtAsym[ptBin],min,max);
-    min *= 0.5;
-    max *= 80.;
+    min *= minFac;
+    max *= maxFac;
     hPtAsym[ptBin]->GetYaxis()->SetRangeUser(min,max);
 
     findYRange(hPtGenAsym[ptBin],min,max);
-    min *= 0.5;
-    max *= 80.;
+    min *= minFac;
+    max *= maxFac;
     hPtGenAsym[ptBin]->GetYaxis()->SetRangeUser(min,max);
 
     setYRange(hRespMeasAbs[ptBin],0.5,50.);
   }
   setYRange(hPtDijet, 0.5, 100.);
   setYRange(hPtGen, 0.5, 100.);
+  setYRange(hPtGenJet1, 0.5, 100.);
   setYRange(hPtHat, 0.5, 100.);
 
 
@@ -571,15 +581,16 @@ void ControlPlotsJetSmearing::plotResponse() const
   legFitStart->SetTextFont(42);
   legFitStart->AddEntry(hRespFitStart[0],"At start","L");
   legFitStart->AddEntry(hRespFit[0],"After fit","L");
-
+  
+  int logy = 0;
   for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
     // Measured and fitted response
-    ps->NewPage();
-    c1->cd();
-    hRespMeasAbs[ptBin]->Draw();
-    legPtRange[ptBin]->Draw("same");
-    c1->SetLogy();
-    c1->Draw();
+//     ps->NewPage();
+//     c1->cd();
+//     hRespMeasAbs[ptBin]->Draw();
+//     legPtRange[ptBin]->Draw("same");
+//     c1->SetLogy();
+//     c1->Draw();
 
 //     ps->NewPage();
 //     c1->cd();
@@ -596,7 +607,7 @@ void ControlPlotsJetSmearing::plotResponse() const
     hRespFit[ptBin]->Draw("Lsame");
     gPad->RedrawAxis();
     legPtRangeAndCenters[ptBin]->Draw("same");
-    c1->SetLogy();
+    c1->SetLogy(logy);
     c1->Draw();
 
     ps->NewPage();
@@ -605,7 +616,7 @@ void ControlPlotsJetSmearing::plotResponse() const
     hRespFit[ptBin]->Draw("Lsame");
     hRespFitStart[ptBin]->Draw("Lsame");
     gPad->RedrawAxis();
-    c1->SetLogy();
+    c1->SetLogy(logy);
     legPtRangeAndCenters[ptBin]->Draw("same");
     legFitStart->Draw("same");
     c1->Draw();
@@ -621,7 +632,7 @@ void ControlPlotsJetSmearing::plotResponse() const
     hRespFit[ptBin]->Draw("Lsame");
     gPad->RedrawAxis();
     legPtRangeAndCenters[ptBin]->Draw("same");
-    c1->SetLogy();
+    c1->SetLogy(logy);
     c1->Draw();
 
     ps->NewPage();
@@ -630,23 +641,23 @@ void ControlPlotsJetSmearing::plotResponse() const
     hRespFit[ptBin]->Draw("Lsame");
     gPad->RedrawAxis();
     legPtRangeAndCenters[ptBin]->Draw("same");
-    c1->SetLogy();
+    c1->SetLogy(logy);
     c1->Draw();
 
-    ps->NewPage();
-    c1->cd();
-    hAbsResp[ptBin]->Draw();
-    //    hAbsRespFit[ptBin]->Draw("Lsame");
-    gPad->RedrawAxis();
-    legPtRangeAndCenters[ptBin]->Draw("same");
-    c1->SetLogy();
-    c1->Draw();
+//     ps->NewPage();
+//     c1->cd();
+//     hAbsResp[ptBin]->Draw();
+//     //    hAbsRespFit[ptBin]->Draw("Lsame");
+//     gPad->RedrawAxis();
+//     legPtRangeAndCenters[ptBin]->Draw("same");
+//     c1->SetLogy();
+//     c1->Draw();
 
     ps->NewPage();
     c1->cd();
     hPtGenAsym[ptBin]->Draw();
     legPtRange[ptBin]->Draw("same");
-    c1->SetLogy();
+    c1->SetLogy(logy);
     c1->Draw();
 
     ps->NewPage();
@@ -655,7 +666,7 @@ void ControlPlotsJetSmearing::plotResponse() const
     hFitPtAsym[ptBin]->Draw("Lsame");
     legPtRangeAndCenters[ptBin]->Draw("same");
     gPad->RedrawAxis();
-    c1->SetLogy();
+    c1->SetLogy(logy);
     c1->Draw();
 
 //     ps->NewPage();
@@ -699,6 +710,22 @@ void ControlPlotsJetSmearing::plotResponse() const
   c1->SetLogy();
   c1->Draw();
 
+  ps->NewPage();
+  c1->cd();
+  double tmpMin = 0.;
+  double tmpMax = 0.;
+  findYRange(hPtGen,tmpMin,tmpMax);
+  tmpMax *= 1.4;
+  hPtGen->GetYaxis()->SetRangeUser(0.,tmpMax);
+  hPtGen->Draw();
+  hTruthPDF->Draw("same");
+  gPad->RedrawAxis();
+  legPtRange[0]->Draw("same");
+  c1->SetLogy(0);
+  c1->SetLogx(0);
+  c1->Draw();
+  c1->SetLogx(0);
+
   std::vector<TObject*> objs;
   objs.clear();
   objs.push_back(hPtHat);
@@ -732,6 +759,7 @@ void ControlPlotsJetSmearing::plotResponse() const
   }
   rootfile.WriteTObject(hPtGenAbs);
   rootfile.WriteTObject(hPtGen);
+  rootfile.WriteTObject(hPtGenJet1);
   rootfile.WriteTObject(hPtHat);
   rootfile.WriteTObject(hPtDijet);
   rootfile.WriteTObject(hTruthPDF);
@@ -763,6 +791,7 @@ void ControlPlotsJetSmearing::plotResponse() const
   delete legFitStart;
   delete hPtGenAbs;
   delete hPtGen;
+  delete hPtGenJet1;
   delete hPtHat;
   delete hPtDijet;
   delete hTruthPDF;
@@ -1213,7 +1242,7 @@ void ControlPlotsJetSmearing::plotParameterScan() const {
     for(int j = 0; j < i; j++) {
       if( param_->isFixedPar(j) ) continue;
       double jdVal = nSigma*param_->GetErrors()[j];
-      if( jdVal == 0 ) jdVal = 0.1;
+      if( jdVal == 0 ) jdVal = 0.046;
       // Create histogram of likelihood from i vs j
       TString name = "hParScan2D";
       name += hParScans2D.size();
@@ -1319,10 +1348,10 @@ void ControlPlotsJetSmearing::plotParameterScan() const {
 
   for(size_t i = 0; i < hParScans.size(); i++) {
     hParScans[i]->SetMarkerStyle(20);
-    drawPSPage(ps,c1,hParScans[i],"P");
+    drawPSPage(ps,c1,hParScans[i],"P",true);
   }
   for(size_t i = 0; i < hParScans2D.size(); i++) {
-    drawPSPage(ps,c1,hParScans2D[i],"COLZ");
+    drawPSPage(ps,c1,hParScans2D[i],"COLZ",true);
   }
 
   ps->Close();

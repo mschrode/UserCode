@@ -1,5 +1,5 @@
 //
-// $Id: ControlPlotsJetSmearing.h,v 1.5 2010/02/10 13:52:02 mschrode Exp $
+// $Id: ControlPlotsJetSmearing.h,v 1.6 2010/02/25 15:28:18 mschrode Exp $
 //
 #ifndef JS_CONTROLPLOTS_JETSMEARING_H
 #define JS_CONTROLPLOTS_JETSMEARING_H
@@ -22,11 +22,11 @@ class TRandom3;
 //!  \brief Generates validation plots for jet-smearing method
 //!  \author Matthias Schroeder
 //!  \date Thu May  7 11:30:28 CEST 2009 
-//!  $Id: ControlPlotsJetSmearing.h,v 1.5 2010/02/10 13:52:02 mschrode Exp $
+//!  $Id: ControlPlotsJetSmearing.h,v 1.6 2010/02/25 15:28:18 mschrode Exp $
 // --------------------------------------------------
 class ControlPlotsJetSmearing {
  public:
-  ControlPlotsJetSmearing(const std::string& configfile,const std::vector<Event*> * data, TParameters * param);
+  ControlPlotsJetSmearing(const std::string& configfile,const std::vector<Event*> * data, TParameters * param, const std::string &outDir = "./controlPlots");
   ~ControlPlotsJetSmearing();
 
   void makePlots() const;

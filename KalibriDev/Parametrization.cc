@@ -1,11 +1,12 @@
 //
-//  $Id: Parametrization.cc,v 1.6 2010/02/16 13:33:16 mschrode Exp $
+//  $Id: Parametrization.cc,v 1.7 2010/02/25 15:28:19 mschrode Exp $
 //
 #include "Parametrization.h"
 
 
 #include "TF1.h"
-#include "TH1D.h"
+#include "TFile.h"
+#include "TH1F.h"
 #include "TMath.h"
 
 
@@ -45,7 +46,7 @@ SmearStepGaussInter::SmearStepGaussInter(double tMin, double tMax, double rMin, 
   print();
   
   // Integral over dijet resolution for truth pdf
-  ptDijetCutInt_ = new TH1D("norm","",100,tMin_,tMax_);
+  ptDijetCutInt_ = new TH1F("norm","",100,tMin_,tMax_);
 }
 
 
@@ -395,7 +396,7 @@ SmearCrystalBall::SmearCrystalBall(double tMin, double tMax, double ptDijetMin, 
   assert( 0.0 <= ptDijetMin_ && ptDijetMin_ < ptDijetMax_ );
   assert( scale_.size() >= nJetPars() );
 
-  hPdfPtTrue_ = new TH1D("hPdfPtTrue_","",1000,tMin,tMax);
+  hPdfPtTrue_ = new TH1F("hPdfPtTrue_","",1000,tMin,tMax);
   //Fill values of unnormalised truth pdf
   double *parSpec = new double[9];
   parSpec[0] = 0.;
@@ -413,7 +414,7 @@ SmearCrystalBall::SmearCrystalBall(double tMin, double tMax, double ptDijetMin, 
   parSigma[1] = 1.19;
   parSigma[2] = 0.03;
   double alpha = 2.;
-  double n = 4.;
+  double n = 4.411;
   for(int bin = 1; bin <= hPdfPtTrue_->GetNbinsX(); bin++) {
     double ptTrue = hPdfPtTrue_->GetBinCenter(bin);
     hPdfPtTrue_->SetBinContent(bin,pdfPtTrueNotNorm(ptTrue,parSpec,parSigma,alpha,n));
@@ -462,6 +463,41 @@ double SmearCrystalBall::pdfPtTrue(double ptTrue, const double *par) const {
 // ------------------------------------------------------------------------
 double SmearCrystalBall::pdfResponse(double r, double ptTrue, const double *par) const {
   return crystalBallFunc(r,1.,sigma(par)/ptTrue,alpha(par),n(par));
+}
+
+
+// ------------------------------------------------------------------------
+double SmearCrystalBall::pdfResponseError(double r, double ptTrue, const double *par, const double *cov, const std::vector<int> &covIdx) const {
+  // Store derivatives
+  std::vector<double> df(nJetPars());
+  for(size_t i = 0; i < nJetPars(); i++) {
+    df[i] = crystalBallDerivative(r,1.,sigma(par)/ptTrue,alpha(par),n(par),i);
+  }
+
+  // Calculate variance
+  double var = 0.;
+  for(int i = 0; i < static_cast<int>(nJetPars()); i++) { // Outer loop over parameters
+    for(int j = 0; j < i+1; j++) { // Inner loop over parameters
+      int idx = (i*i + i)/2 + j; // Index of (i,j) in covariance vector
+      if( cov[idx] ) {
+	if( i == j ) { // Diagonal terms
+	  var += df[i]*df[i]*scale_[i]*scale_[i]*cov[idx];
+	} else { // Off-diagonal terms
+	  var += 2*df[i]*df[j]*scale_[i]*scale_[j]*cov[idx];
+	}
+      }
+    } // End of inner loop over parameters
+  } // End of outer loop over parameters
+  // Return standard deviation
+  return sqrt(var);
+}
+
+
+// ------------------------------------------------------------------------
+double SmearCrystalBall::pdfDijetAsym(double a, double ptTrue, const double *par) const {
+  double s = sigma(par)/ptTrue/sqrt(2.);
+  double u = a/s;
+  return exp(-0.5*u*u)/sqrt(2.*M_PI)/s;
 }
 
 
@@ -531,6 +567,69 @@ double SmearCrystalBall::crystalBallInt(double mean, double sigma, double alpha,
 }
 
 
+double SmearCrystalBall::crystalBallDerivative(double x, double mean, double sigma, double alpha, double n, int i) const {
+  double d = 0.;
+
+  // TODO: rewrite derivative for rMin = 0 and rMax --> infty
+  double rMin = 0.;
+  double rMax = 2.;
+
+  double u = (x - mean)/sigma;
+  double beta = (rMax - mean)/sigma;
+  double B = n/alpha - alpha;
+  double m = n - 1.;
+  double c = rMin-1.;
+  double s = n*sigma;
+  double k = s - alpha*c - alpha*alpha*sigma;
+  double ea = exp(-0.5*alpha*alpha);
+
+  // df/dmu
+  if( i == 0 ) {
+    d = 0.;
+  }
+  // df/dsigma
+  else if( i == 1 ) {
+    if( u > -alpha ) {
+      d = u*u/sigma;
+    } else {
+      d = -n*u/sigma/(B-u);
+    }
+    d -= (-beta*exp(-0.5*beta*beta)
+      + ea/(m*alpha*pow(k,n))
+      *((alpha*alpha-n)*pow(s,n)+n*n*(n-alpha*alpha)*sigma*pow(k,m)
+	+n*pow(k,n)-n*k/sigma*pow(s,n)-(s*pow(k,n)-pow(s,n)*k)*n*(n-alpha*alpha)/k)
+      +sqrt(M_PI/2.)*(erf(alpha/sqrt(2.))+erf(beta/sqrt(2.))))
+      * crystalBallNorm(mean,sigma,alpha,n);
+  }
+  // df/alpha
+  else if( i == 2 ) {
+    if( u > -alpha ) {
+      d = 0.;
+    } else {
+      d = -(alpha*alpha+n)*(u+alpha)/(alpha*alpha-n+alpha*u);
+    }
+    d -= (-ea*(n+alpha*alpha)*pow(s/k,n)/(m*alpha*alpha)
+	  *(c*alpha+sigma*alpha*alpha-sigma*(1.-pow(k/s,n))))
+      * crystalBallNorm(mean,sigma,alpha,n);
+  }
+  // df/n
+  else if( i == 3 ) {
+    if( u > -alpha ) {
+      d = 0.;
+    } else {
+      d = (1.+log(n/alpha)) - (log(B-u)+n/alpha/(B-u));
+    }
+    d -= (ea/m/m/alpha/pow(k,n)
+	  *pow(s,n)*(c*alpha*(n-2.)+sigma*(1.+alpha*alpha*(n-2.))
+		     -sigma*pow(k/s,n)-m*k*log(s)+m*k*log(k)))
+      * crystalBallNorm(mean,sigma,alpha,n);
+  }
+  d *= crystalBallFunc(x,mean,sigma,alpha,n);
+
+  return d;
+}
+
+
 double  SmearCrystalBall::pdfPtTrueNotNorm(double ptTrue, const double *parSpec, const double *parSigma, double alpha, double n) const {
   double pdf = 0.;
 
@@ -560,7 +659,7 @@ double  SmearCrystalBall::pdfPtTrueNotNorm(double ptTrue, const double *parSpec,
 //   c *= dz/2./sqrt(M_PI) *4./pow((1.+erf(ptTrue/sqrt(2.)/s)),2.);
 
   // Convolution with cuts on ptdijet assuming Crystal Ball response
-  double s = sqrt( parSigma[9]*parSigma[9] + parSigma[10]*parSigma[10]*ptTrue + parSigma[11]*parSigma[11]*ptTrue*ptTrue );
+  double s = sqrt( parSigma[0]*parSigma[0] + parSigma[1]*parSigma[1]*ptTrue + parSigma[2]*parSigma[2]*ptTrue*ptTrue );
   int nSteps = hPdfPtTrue_->GetNbinsX();
   double dz = 2.*ptDijetMax_/nSteps;
   double c = 0.;
@@ -569,6 +668,17 @@ double  SmearCrystalBall::pdfPtTrueNotNorm(double ptTrue, const double *parSpec,
     c += crystalBallFunc(z,ptTrue,s,alpha,n)*crystalBallInt(ptTrue,s,alpha,n,2.*ptDijetMin_-z,2.*ptDijetMax_-z);
   }
   c *= dz;
+
+//   // Convolution with cuts on pt of 1. jet assuming Crystal Ball response
+//   double s = sqrt( parSigma[0]*parSigma[0] + parSigma[1]*parSigma[1]*ptTrue + parSigma[2]*parSigma[2]*ptTrue*ptTrue );
+//   int nSteps = hPdfPtTrue_->GetNbinsX();
+//   double dz = (ptDijetMax_-ptDijetMin_)/nSteps;
+//   double c = 0.;
+//   for(int i = 0; i < nSteps; i++) {
+//     double z = (0.5+i)*dz;
+//     c += crystalBallFunc(z,ptTrue,s,alpha,n)*crystalBallInt(ptTrue,s,alpha,n,ptDijetMin_,ptDijetMax_);
+//   }
+//   c *= dz;
   
   return c*pdf;
 }
@@ -683,76 +793,94 @@ void SmearCrystalBallPt::print() const {
 
 // ------------------------------------------------------------------------
 SmearGauss::SmearGauss(double tMin, double tMax, double ptDijetMin, double ptDijetMax, const std::vector<double>& rParScales)
-  : Parametrization(0,9,0,0),
+  : Parametrization(0,4,0,0),
     tMin_(tMin),
     tMax_(tMax),
     ptDijetMin_(ptDijetMin),
     ptDijetMax_(ptDijetMax),
-    scale_(rParScales) {
+    scale_(rParScales),
+    hPdfPtTrue_(0) {
   assert( 0.0 <= tMin_ && tMin_ < tMax_ );
   assert( 0.0 <= ptDijetMin_ && ptDijetMin_ < ptDijetMax_ );
   assert( scale_.size() >= nJetPars() );
 
-  hPdfPtTrue_ = new TH1D("hPdfPtTrue_","",10000,tMin,tMax);
-  // Fill values of unnormalised truth pdf
-//   double *truePar = new double[nJetPars()];
-//   truePar[0] = 0.;
-//   truePar[1] = 1.33;
-//   truePar[2] = 5.55;
-//   truePar[3] = 5.01;
-//   truePar[4] = 2.77;
-//   truePar[5] = 8.63;
-//   truePar[6] = 1.37;
-//   truePar[7] = 1.188;
-//   truePar[8] = 7.59;
-//   for(int bin = 1; bin <= hPdfPtTrue_->GetNbinsX(); bin++) {
-//     double ptTrue = hPdfPtTrue_->GetBinCenter(bin);
-//     hPdfPtTrue_->SetBinContent(bin,pdfPtTrueNotNorm(ptTrue,truePar));
-//   }
-//   // Normalise values of truth pdf
-//   hPdfPtTrue_->Scale(1./hPdfPtTrue_->Integral("width"));
-//   delete [] truePar;
-  
+  hPdfPtTrue_ = new TH1F("hPdfPtTrue_","",10000,tMin,tMax);
+  //Fill values of unnormalised truth pdf
+  double *truePar = new double[nJetPars()];
+  // Sigma parameters
+  truePar[0] = 4.;
+  truePar[1] = 1.2;
+  truePar[2] = 0.05;
+  // Spectrum parameters
+  truePar[3] = 80.;
+  for(int bin = 1; bin <= hPdfPtTrue_->GetNbinsX(); bin++) {
+    double ptTrue = hPdfPtTrue_->GetBinCenter(bin);
+    hPdfPtTrue_->SetBinContent(bin,pdfPtTrueNotNorm(ptTrue,truePar));
+  }
+  // Normalise values of truth pdf
+  hPdfPtTrue_->Scale(1./hPdfPtTrue_->Integral("width"));
+  delete [] truePar;
+
+// //   TFile file("~/UserCode/mschrode/resolutionFit/jsResponse.root","READ");
+// //   file.GetObject("hPtGen",hPdfPtTrue_);
+// //   if( !hPdfPtTrue_ ) {
+// //     std::cerr << "ERROR: No histogram found in file '" << file.GetName() << "'\n";
+// //     exit(1);
+// //   } else {
+// //     hPdfPtTrue_->SetDirectory(0);
+// //     hPdfPtTrue_->SetName("hPdfPtTrue");
+// //     int binMin = hPdfPtTrue_->FindBin(tMin_);
+// //     int binMax = hPdfPtTrue_->FindBin(tMax_);
+// //     std::cout << "Integal: " << hPdfPtTrue_->Integral(binMin,binMax,"width") << std::endl;
+// //   }
+// //   file.Close();
+
   print();
 }
 
 
-SmearGauss::~SmearGauss() { delete hPdfPtTrue_; }
+SmearGauss::~SmearGauss() { if( hPdfPtTrue_ ) delete hPdfPtTrue_; }
 
 
 // ------------------------------------------------------------------------
 double SmearGauss::pdfPtMeas(double ptMeas, double ptTrue, const double *par) const {
   double s = sigma(ptTrue,par);
   double u = (ptMeas - ptTrue)/s;
-  double cut = (1.+erf(ptTrue/sqrt(2.)/s))/2.;
-  return exp(-0.5*u*u)/sqrt(2.*M_PI)/s/cut;
+  double norm = sqrt(M_PI/2.)*s*sqrt(( erf((ptDijetMax_-ptTrue)/sqrt(2.)/s) - erf((ptDijetMin_-ptTrue)/sqrt(2.)/s) ));
+  // This should be caught more cleverly
+  if( norm < 1E-10 ) norm = 1E-10;
+
+  return exp(-0.5*u*u)/norm;
 }
 
 
 // ------------------------------------------------------------------------
 double  SmearGauss::pdfPtTrue(double ptTrue, const double *par) const {
-  double pdf = 0.;
-  if( tMin_ < ptTrue && ptTrue < tMax_ ) {
-//     double m = 1.-exponent(par);
-//     double norm = ( m == 0. ? log(tMax_/tMin_) : (pow(tMax_,m)-pow(tMin_,m))/m );
-//     pdf = 1./pow(ptTrue,exponent(par))/norm;
+//   double pdf = 0.;
+//   if( tMin_ < ptTrue && ptTrue < tMax_ ) {
+// //     double m = 1.-exponent(par);
+// //     double norm = ( m == 0. ? log(tMax_/tMin_) : (pow(tMax_,m)-pow(tMin_,m))/m );
+// //     pdf = 1./pow(ptTrue,exponent(par))/norm;
 
+//     // ToyMC parametrization of spectrum
 //     double tau = exponent(par);
 //     double norm = tau*(exp(-tMin_/tau)-exp(-tMax_/tau));
 //     pdf = exp(-ptTrue/tau)/norm;
 
-    double norm = exp(-specPar(par,0))*(exp(-specPar(par,1)*tMin_)-exp(-specPar(par,1)*tMax_))/specPar(par,1);
-    norm += exp(-specPar(par,2))*(exp(-specPar(par,3)*tMin_)-exp(-specPar(par,3)*tMax_))/specPar(par,3);
-    norm += exp(-specPar(par,4))*(exp(-specPar(par,5)*tMin_)-exp(-specPar(par,5)*tMax_))/specPar(par,5);
+// //     double norm = exp(-specPar(par,0))*(exp(-specPar(par,1)*tMin_)-exp(-specPar(par,1)*tMax_))/specPar(par,1);
+// //     norm += exp(-specPar(par,2))*(exp(-specPar(par,3)*tMin_)-exp(-specPar(par,3)*tMax_))/specPar(par,3);
+// //     norm += exp(-specPar(par,4))*(exp(-specPar(par,5)*tMin_)-exp(-specPar(par,5)*tMax_))/specPar(par,5);
 
-    pdf = exp(-specPar(par,0)-specPar(par,1)*ptTrue);
-    pdf += exp(-specPar(par,2)-specPar(par,3)*ptTrue);
-    pdf += exp(-specPar(par,4)-specPar(par,5)*ptTrue);
-    pdf /= norm;
-  }
-  return pdf;
+// //     pdf = exp(-specPar(par,0)-specPar(par,1)*ptTrue);
+// //     pdf += exp(-specPar(par,2)-specPar(par,3)*ptTrue);
+// //     pdf += exp(-specPar(par,4)-specPar(par,5)*ptTrue);
+// //     pdf /= norm;
+
+// //    pdf = 1./(tMax_-tMin_);
+//   }
+//   return pdf;
   
-  //  return hPdfPtTrue_->GetBinContent(hPdfPtTrue_->FindBin(ptTrue));
+  return hPdfPtTrue_->GetBinContent(hPdfPtTrue_->FindBin(ptTrue));
 }
 
 
@@ -819,31 +947,28 @@ double SmearGauss::pdfResponseDeriv(double r, double ptTrue, const double *par, 
 double  SmearGauss::pdfPtTrueNotNorm(double ptTrue, const double *par) const {
   double pdf = 0.;
 
-  // Underlying truth pdf, normalised from 0 to infinity
-  //  pdf = exp(-ptTrue/par[3])/par[3];
+  // Underlying truth pdf
 
-  double norm = exp(-specPar(par,0))*(exp(-specPar(par,1)*tMin_)-exp(-specPar(par,1)*tMax_))/specPar(par,1);
-  norm += exp(-specPar(par,2))*(exp(-specPar(par,3)*tMin_)-exp(-specPar(par,3)*tMax_))/specPar(par,3);
-  norm += exp(-specPar(par,4))*(exp(-specPar(par,5)*tMin_)-exp(-specPar(par,5)*tMax_))/specPar(par,5);
+  // ToyMC parametrization of spectrum, normalized from 0 to infty
+  pdf = exp(-ptTrue/par[3])/par[3];
 
-  pdf = exp(-specPar(par,0)-specPar(par,1)*ptTrue);
-  pdf += exp(-specPar(par,2)-specPar(par,3)*ptTrue);
-  pdf += exp(-specPar(par,4)-specPar(par,5)*ptTrue);
-  pdf /= norm;
+//   double norm = exp(-specPar(par,0))*(exp(-specPar(par,1)*tMin_)-exp(-specPar(par,1)*tMax_))/specPar(par,1);
+//   norm += exp(-specPar(par,2))*(exp(-specPar(par,3)*tMin_)-exp(-specPar(par,3)*tMax_))/specPar(par,3);
+//   norm += exp(-specPar(par,4))*(exp(-specPar(par,5)*tMin_)-exp(-specPar(par,5)*tMax_))/specPar(par,5);
 
-  // Convolution with cuts on ptdijet
-  double s = sigma(ptTrue,par);
-  double min = -ptTrue/sqrt(2.)/s;
-  double max = (2*ptDijetMax_ - ptTrue)/sqrt(2.)/s;
-  int nSteps = hPdfPtTrue_->GetNbinsX();
-  double dz = (max-min)/nSteps;
-  double c = 0.;
-  for(int i = 0; i < nSteps; i++) {
-    double z = min + (0.5+i)*dz;
-    c += exp(-z*z)*( erf(sqrt(2.)*(ptDijetMax_-ptTrue)/s-z) - erf(sqrt(2.)*(ptDijetMin_-ptTrue)/s-z) );
-  }
-  c *= dz/2./sqrt(M_PI) *4./pow((1.+erf(ptTrue/sqrt(2.)/s)),2.);
-  
+//   pdf = exp(-specPar(par,0)-specPar(par,1)*ptTrue);
+//   pdf += exp(-specPar(par,2)-specPar(par,3)*ptTrue);
+//   pdf += exp(-specPar(par,4)-specPar(par,5)*ptTrue);
+//   pdf /= norm;
+
+//   // Convolution with cuts on ptdijet
+//   double s = sigma(ptTrue,par)/sqrt(2.);
+//   double c = 0.5*( erf((ptDijetMax_-ptTrue)/s/sqrt(2.)) - erf((ptDijetMin_-ptTrue)/s/sqrt(2.)) );
+
+  // Convolution with cuts on 1. jet (randomly assigned)
+  double s = sqrt( par[0]*par[0] + par[1]*par[1]*ptTrue + par[2]*par[2]*ptTrue*ptTrue );
+  double c = 0.5*( erf((ptDijetMax_-ptTrue)/s/sqrt(2.)) - erf((ptDijetMin_-ptTrue)/s/sqrt(2.)) );
+
   return c*pdf;
 }
 
@@ -873,20 +998,36 @@ SmearGaussPtBin::SmearGaussPtBin(double tMin, double tMax, double ptDijetMin, do
   assert( 0.0 <= ptDijetMin_ && ptDijetMin_ < ptDijetMax_ );
   assert( scale_.size() >= nJetPars() );
 
-  hPdfPtTrue_ = new TH1D("hPdfPtTrue_","",1000,tMin,tMax);
+  TFile file("input/jsResponse_Unweighted.root","READ");
+  file.GetObject("hPtGen",hPurePdfPtTrue_);
+  if( !hPurePdfPtTrue_ ) {
+    std::cerr << "ERROR: No histogram found in file '" << file.GetName() << "'\n";
+    exit(1);
+  } else {
+    hPurePdfPtTrue_->SetDirectory(0);
+    hPurePdfPtTrue_->SetName("hPurePdfPtTrue_");
+    int binMin = hPurePdfPtTrue_->FindBin(tMin_);
+    int binMax = hPurePdfPtTrue_->FindBin(tMax_);
+    if( hPurePdfPtTrue_->Integral(binMin,binMax,"width") ) {
+      hPurePdfPtTrue_->Scale(1./(hPurePdfPtTrue_->Integral(binMin,binMax,"width")));
+    }
+  }
+  file.Close();
+
+  hPdfPtTrue_ = new TH1F("hPdfPtTrue_","",1000,tMin,tMax);
   //Fill values of unnormalised truth pdf
   double *truePar = new double[nJetPars()+3];
   truePar[0] = 0.;
-  truePar[1] = 5.01;
-  truePar[2] = 2.77;
-  truePar[3] = 8.63;
-  truePar[4] = 1.37;
-  truePar[5] = 1.188;
-  truePar[6] = 7.59;
+  truePar[1] = 5.7;
+  truePar[2] = 3.00;
+  truePar[3] = 3.91;
+  truePar[4] = 1.52;
+  truePar[5] = 7.15;
+  truePar[6] = 8.37;
   // For pt-dependent sigma
   truePar[7] = 0.;
-  truePar[8] = 1.19;
-  truePar[9] = 0.03;
+  truePar[8] = 1.4885;//1.145;
+  truePar[9] = 0.0481;//0.037;
   for(int bin = 1; bin <= hPdfPtTrue_->GetNbinsX(); bin++) {
     double ptTrue = hPdfPtTrue_->GetBinCenter(bin);
     hPdfPtTrue_->SetBinContent(bin,pdfPtTrueNotNorm(ptTrue,truePar));
@@ -899,16 +1040,48 @@ SmearGaussPtBin::SmearGaussPtBin(double tMin, double tMax, double ptDijetMin, do
 }
 
 
-SmearGaussPtBin::~SmearGaussPtBin() { delete hPdfPtTrue_; }
+SmearGaussPtBin::~SmearGaussPtBin() { 
+  if( hPdfPtTrue_ ) delete hPdfPtTrue_;
+  if( hPurePdfPtTrue_ ) delete hPurePdfPtTrue_;
+ }
 
 
 // ------------------------------------------------------------------------
 double SmearGaussPtBin::pdfPtMeas(double ptMeas, double ptTrue, const double *par) const {
   double s = sigma(par);
   double u = (ptMeas - ptTrue)/s;
-  //double cut = (1.+erf(ptTrue/sqrt(2.)/s))/2.;
-  return exp(-0.5*u*u)/sqrt(2.*M_PI)/s;
+  double norm = sqrt(M_PI/2.)*s*sqrt(( erf((ptDijetMax_-ptTrue)/sqrt(2.)/s) - erf((ptDijetMin_-ptTrue)/sqrt(2.)/s) ));
+  // This should be caught more cleverly
+  if( norm < 1E-10 ) norm = 1E-10;
+
+  return 0.;//exp(-0.5*u*u)/norm;
 }
+
+double SmearGaussPtBin::pdfPtMeasJet1(double ptMeas, double ptTrue, const double *par) const {
+  double pdf = 0.;
+  if( ptDijetMin_ < ptMeas && ptMeas < ptDijetMax_ ) {
+    double s = sigma(par);
+    double u = (ptMeas - ptTrue)/s;
+    double norm = sqrt(M_PI/2.)*s*( erf((ptDijetMax_-ptTrue)/sqrt(2.)/s) - erf((ptDijetMin_-ptTrue)/sqrt(2.)/s) );
+    // This should be caught more cleverly
+    if( norm < 1E-10 ) norm = 1E-10;
+    
+    pdf = exp(-0.5*u*u)/norm; 
+  }
+
+  return pdf;
+}
+
+double SmearGaussPtBin::pdfPtMeasJet2(double ptMeas, double ptTrue, const double *par) const {
+  double s = sigma(par);
+  double u = (ptMeas - ptTrue)/s;
+  double norm = sqrt(M_PI/2.)*s*( 1. + erf(ptTrue/sqrt(2.)/s) );
+  // This should be caught more cleverly
+  if( norm < 1E-10 ) norm = 1E-10;
+
+  return exp(-0.5*u*u)/norm;
+}
+
 
 
 // ------------------------------------------------------------------------
@@ -919,10 +1092,10 @@ double  SmearGaussPtBin::pdfPtTrue(double ptTrue, const double *par) const {
 // //     double norm = ( m == 0. ? log(tMax_/tMin_) : (pow(tMax_,m)-pow(tMin_,m))/m );
 // //     pdf = 1./pow(ptTrue,exponent(par))/norm;
 
-// //     double tau = exponent(par);
+// //     double tau = par[1];
 // //     double norm = tau*(exp(-tMin_/tau)-exp(-tMax_/tau));
 // //     pdf = exp(-ptTrue/tau)/norm;
-
+    
 //     double norm = exp(-specPar(par,0))*(exp(-specPar(par,1)*tMin_)-exp(-specPar(par,1)*tMax_))/specPar(par,1);
 //     norm += exp(-specPar(par,2))*(exp(-specPar(par,3)*tMin_)-exp(-specPar(par,3)*tMax_))/specPar(par,3);
 //     norm += exp(-specPar(par,4))*(exp(-specPar(par,5)*tMin_)-exp(-specPar(par,5)*tMax_))/specPar(par,5);
@@ -950,6 +1123,21 @@ double SmearGaussPtBin::pdfResponse(double r, double ptTrue, const double *par) 
 
 
 // ------------------------------------------------------------------------
+double SmearGaussPtBin::pdfResponseError(double r, double ptTrue, const double *par, const double *cov, const std::vector<int> &covIdx) const {
+  // Store derivatives
+  double s = sigma(par)/ptTrue;
+  double u = (r-1.)/s;
+  double df = pdfResponse(r,ptTrue,par)*(u*u - 1.)/s;
+
+  // Calculate variance
+  double var = df*df*scale_[0]*scale_[0]*cov[0]/ptTrue/ptTrue;
+
+  // Return standard deviation
+  return sqrt(var);
+}
+
+
+// ------------------------------------------------------------------------
 double SmearGaussPtBin::pdfDijetAsym(double a, double ptTrue, const double *par) const {
   double s = sigma(par)/ptTrue/sqrt(2.);
   double u = a/s;
@@ -962,8 +1150,8 @@ double SmearGaussPtBin::pdfDijetAsym(double a, double ptTrue, const double *par)
 double  SmearGaussPtBin::pdfPtTrueNotNorm(double ptTrue, const double *par) const {
   double pdf = 0.;
 
-  // Underlying truth pdf, normalised from 0 to infinity
-  //  pdf = exp(-ptTrue/par[3])/par[3];
+  // Underlying truth pdf
+  //  pdf = exp(-ptTrue/par[1])/par[1];
 
   double norm = exp(-specPar(par,0))*(exp(-specPar(par,1)*tMin_)-exp(-specPar(par,1)*tMax_))/specPar(par,1);
   norm += exp(-specPar(par,2))*(exp(-specPar(par,3)*tMin_)-exp(-specPar(par,3)*tMax_))/specPar(par,3);
@@ -974,23 +1162,19 @@ double  SmearGaussPtBin::pdfPtTrueNotNorm(double ptTrue, const double *par) cons
   pdf += exp(-specPar(par,4)-specPar(par,5)*ptTrue);
   pdf /= norm;
 
-  // Convolution with cuts on ptdijet
-  double s = sqrt( par[7]*par[7] + par[8]*par[8]*ptTrue + par[9]*par[9]*ptTrue*ptTrue );
-  double min = -ptTrue/sqrt(2.)/s;
-  double max = (2*ptDijetMax_ - ptTrue)/sqrt(2.)/s;
-  int nSteps = hPdfPtTrue_->GetNbinsX();
-  double dz = (max-min)/nSteps;
-  double c = 0.;
-  for(int i = 0; i < nSteps; i++) {
-    double z = min + (0.5+i)*dz;
-    c += exp(-z*z)*( erf(sqrt(2.)*(ptDijetMax_-ptTrue)/s-z) - erf(sqrt(2.)*(ptDijetMin_-ptTrue)/s-z) );
-  }
-  c *= dz/2./sqrt(M_PI) *4./pow((1.+erf(ptTrue/sqrt(2.)/s)),2.);
-  
-  return c*pdf;
-  //  return pdf;
-}
+//  pdf = hPurePdfPtTrue_->GetBinContent(hPurePdfPtTrue_->FindBin(ptTrue));
 
+
+//   // Convolution with cuts on ptdijet
+//   double s = sqrt( par[7]*par[7] + par[8]*par[8]*ptTrue + par[9]*par[9]*ptTrue*ptTrue )/sqrt(2.);
+//   double c = 0.5*( erf((ptDijetMax_-ptTrue)/s/sqrt(2.)) - erf((ptDijetMin_-ptTrue)/s/sqrt(2.)) );
+
+  // Convolution with cuts on 1. jet
+  double s = sqrt( par[7]*par[7] + par[8]*par[8]*ptTrue + par[9]*par[9]*ptTrue*ptTrue );
+  double c = 0.5*( erf((ptDijetMax_-ptTrue)/s/sqrt(2.)) - erf((ptDijetMin_-ptTrue)/s/sqrt(2.)) );
+ 
+  return c*pdf;
+}
 
 
 // ------------------------------------------------------------------------

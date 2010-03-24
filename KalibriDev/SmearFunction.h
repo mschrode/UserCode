@@ -8,6 +8,8 @@ class Parametrization;
 
 class SmearFunction {
   typedef double (Parametrization::*PdfPtMeas)(double ptMeas, double ptTrue, const double*) const;
+  typedef double (Parametrization::*PdfPtMeasJet1)(double ptMeas, double ptTrue, const double*) const;
+  typedef double (Parametrization::*PdfPtMeasJet2)(double ptMeas, double ptTrue, const double*) const;
   typedef double (Parametrization::*PdfPtTrue)(double ptTrue, const double*) const;
   typedef double (Parametrization::*PdfPtTrueError)(double ptTrue, const double*, const double*, const std::vector<int>&) const;
   typedef double (Parametrization::*PdfResp)(double r, double ptTrue, const double*) const;
@@ -15,13 +17,15 @@ class SmearFunction {
   typedef double (Parametrization::*PdfDijetAsym)(double a, double ptTrue, const double*) const;
 
  public:
-  SmearFunction(PdfPtMeas pdfPtMeas,
+  SmearFunction(PdfPtMeas pdfPtMeas, PdfPtMeas pdfPtMeasJet1, PdfPtMeas pdfPtMeasJet2,
 		PdfPtTrue pdfPtTrue, PdfPtTrueError pdfPtTrueError,
 		PdfResp pdfResp, PdfRespError pdfRespError,
 		PdfDijetAsym pdfDijetAsym,
 		int parIdx, int nPars, double *firstPar, const std::vector<bool>& isFixedPar,
 		const std::vector<int>& covIdx, double *firstCov, const Parametrization *p)
     : pdfPtMeas_(pdfPtMeas),
+    pdfPtMeasJet1_(pdfPtMeasJet1),
+    pdfPtMeasJet2_(pdfPtMeasJet2),
     pdfPtTrue_(pdfPtTrue),
     pdfPtTrueError_(pdfPtTrueError),
     pdfResp_(pdfResp),
@@ -43,6 +47,12 @@ class SmearFunction {
 
     double pdfPtMeas(double ptMeas, double ptTrue) const {
       return (param_->*pdfPtMeas_)(ptMeas,ptTrue,firstPar_);
+    }
+    double pdfPtMeasJet1(double ptMeas, double ptTrue) const {
+      return (param_->*pdfPtMeasJet1_)(ptMeas,ptTrue,firstPar_);
+    }
+    double pdfPtMeasJet2(double ptMeas, double ptTrue) const {
+      return (param_->*pdfPtMeasJet2_)(ptMeas,ptTrue,firstPar_);
     }
     double pdfPtTrue(double ptTrue) const {
       return (param_->*pdfPtTrue_)(ptTrue,firstPar_);
@@ -69,6 +79,8 @@ class SmearFunction {
 
  private:
     const PdfPtMeas pdfPtMeas_;
+    const PdfPtMeas pdfPtMeasJet1_;
+    const PdfPtMeas pdfPtMeasJet2_;
     const PdfPtTrue pdfPtTrue_;
     const PdfPtTrueError pdfPtTrueError_;
     const PdfResp pdfResp_;

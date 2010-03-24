@@ -1,5 +1,5 @@
 //
-//  $Id: Parametrization.h,v 1.10 2010/02/16 13:33:16 mschrode Exp $
+//  $Id: Parametrization.h,v 1.11 2010/02/25 15:28:18 mschrode Exp $
 //
 #ifndef CALIBCORE_PARAMETRIZATION_H
 #define CALIBCORE_PARAMETRIZATION_H
@@ -13,7 +13,7 @@
 #include "gsl/gsl_math.h"
 #include "gsl/gsl_roots.h"
      
-class TH1D;
+class TH1F;
 
 
 //!  \brief Abstract base class for parametrizations of
@@ -24,7 +24,7 @@ class TH1D;
 //!  to correct a tower or jet measurement.
 //!  \author Hartmut Stadie
 //!  \date Thu Apr 03 17:09:50 CEST 2008
-//!  $Id: Parametrization.h,v 1.10 2010/02/16 13:33:16 mschrode Exp $
+//!  $Id: Parametrization.h,v 1.11 2010/02/25 15:28:18 mschrode Exp $
 // -----------------------------------------------------------------
 class Parametrization 
 {
@@ -117,6 +117,8 @@ public:
 
   //! Returns probability density of measured jet pt given a true jet pt
   virtual double pdfPtMeas(double ptMeas, double ptTrue, const double *par) const { return 0.; }
+  virtual double pdfPtMeasJet1(double ptMeas, double ptTrue, const double *par) const { return 0.; }
+  virtual double pdfPtMeasJet2(double ptMeas, double ptTrue, const double *par) const { return 0.; }
   //! Returns probability density of true jet pt
   virtual double pdfPtTrue(double ptTrue, const double *par) const { return 0.; }
   virtual double pdfPtTrueError(double ptTrue, const double *par, const double *cov, const std::vector<int> &covIdx) const { return 0.; }
@@ -1186,7 +1188,7 @@ class SmearStepGaussInter : public Parametrization
   const std::vector<double> respParScales_;     //!< Parameter scales
   const std::vector<double> gaussPar_;  //!< Parameters of Gaussian part of response pdf
   std::vector<double> binCenters_;      //!< Centers of response bins
-  TH1D * ptDijetCutInt_;	        //!< Integral over dijet response for truth pdf for different t
+  TH1F * ptDijetCutInt_;	        //!< Integral over dijet response for truth pdf for different t
 
   //! Linear interpolation between two bins
   double interpolate(double r, const std::vector<double>& par) const;
@@ -1226,6 +1228,8 @@ class SmearCrystalBall : public Parametrization
   double pdfPtMeas(double ptMeas, double ptTrue, const double *par) const;
   double pdfPtTrue(double ptTrue, const double *par) const;
   double pdfResponse(double r, double ptTrue, const double *par) const;
+  double pdfResponseError(double r, double ptTrue, const double *par, const double *cov, const std::vector<int> &covIdx) const;
+  double pdfDijetAsym(double a, double ptTrue, const double *par) const;
 
 
  private:
@@ -1234,7 +1238,7 @@ class SmearCrystalBall : public Parametrization
   const double ptDijetMin_;             //!< Minimum of pt dijet
   const double ptDijetMax_;             //!< Maximum of pt dijet
   const std::vector<double> scale_;     //!< Parameter scales
-  TH1D *hPdfPtTrue_;
+  TH1F *hPdfPtTrue_;
 
   double sigma(const double *par) const {
     double val = par[0] > 0. ? par[0] : 1E-3;
@@ -1260,7 +1264,7 @@ class SmearCrystalBall : public Parametrization
   double crystalBallFunc(double x, double mean, double sigma, double alpha, double n) const;
   double crystalBallNorm(double mean, double sigma, double alpha, double n) const;
   double crystalBallInt(double mean, double sigma, double alpha, double n, double min, double max) const;
-
+  double crystalBallDerivative(double x, double mean, double sigma, double alpha, double n, int i) const;
   double pdfPtTrueNotNorm(double ptTrue, const double *parSpec, const double *parSigma, double alpha, double n) const;
   
   //! Print some initialization details
@@ -1370,12 +1374,16 @@ class SmearGauss : public Parametrization
   const double ptDijetMin_;             //!< Minimum of pt dijet
   const double ptDijetMax_;             //!< Maximum of pt dijet
   const std::vector<double> scale_;     //!< Parameter scales
-  TH1D *hPdfPtTrue_;
+  TH1F *hPdfPtTrue_;
 
   double sigma(double ptTrue, const double *par) const {
     double a[3];
     for(int i = 0; i < 3; i++) {
-      a[i] = scale_[i]*par[i];
+      if( par[i] > 1E-3 ) {
+	a[i] = scale_[i]*par[i];
+      } else {
+	a[i] = scale_[i]*1E-3;
+      }
     }
     return sqrt( a[0]*a[0] + a[1]*a[1]*ptTrue + a[2]*a[2]*ptTrue*ptTrue );
   }
@@ -1417,8 +1425,11 @@ class SmearGaussPtBin : public Parametrization
   double correctedGlobalJetEt(const Measurement *x,const double *par) const { return 0.; }
 
   double pdfPtMeas(double ptMeas, double ptTrue, const double *par) const;
+  double pdfPtMeasJet1(double ptMeas, double ptTrue, const double *par) const;
+  double pdfPtMeasJet2(double ptMeas, double ptTrue, const double *par) const;
   double pdfPtTrue(double ptTrue, const double *par) const;
   double pdfResponse(double r, double ptTrue, const double *par) const;
+  double pdfResponseError(double r, double ptTrue, const double *par, const double *cov, const std::vector<int> &covIdx) const;
   double pdfDijetAsym(double a, double ptTrue, const double *par) const;
 
 
@@ -1428,10 +1439,12 @@ class SmearGaussPtBin : public Parametrization
   const double ptDijetMin_;             //!< Minimum of pt dijet
   const double ptDijetMax_;             //!< Maximum of pt dijet
   const std::vector<double> scale_;     //!< Parameter scales
-  TH1D *hPdfPtTrue_;
+  TH1F *hPdfPtTrue_;
+  TH1F *hPurePdfPtTrue_;
 
   double sigma(const double *par) const {
-    return (scale_[0]*par[0] > 0) ? scale_[0]*par[0] : 1E-3;
+    double p = par[0] > 0 ? par[0] : 1E-3;
+    return scale_[0]*p;
   }
   double specPar(const double *par, int i) const {
     return scale_[1+i]*par[1+i];

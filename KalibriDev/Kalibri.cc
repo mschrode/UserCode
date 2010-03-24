@@ -1,4 +1,4 @@
-//  $Id: Kalibri.cc,v 1.4 2010/02/09 10:19:52 mschrode Exp $
+//  $Id: Kalibri.cc,v 1.5 2010/02/10 13:52:02 mschrode Exp $
 
 #include "Kalibri.h"
 
@@ -307,6 +307,7 @@ void Kalibri::run_Lvmini()
 	  std::cout << std::setw(15) << aux[param];
 	  std::cout << std::setw(15) << aux[param+npar] << std::endl;
 	}
+	std::cout << "fsum " << fsum << std::endl;
       }
       assert( fsum > 0 );
       lvmfun_(par_->GetPars(),fsum,iret,aux);
@@ -518,9 +519,18 @@ void Kalibri::init()
       }
     }
   } else {
-    cerr << "ERROR: Syntax error for fixed jet parameters. Syntax is:\n";
-    cerr << "       'fixed jet parameter = { <eta_id> <phi_id> <par_id> }' or\n"; 
-    cerr << "       'fixed jet parameter = { <eta_id> <phi_id> }'\n"; 
+//     cerr << "ERROR: Syntax error for fixed jet parameters. Syntax is:\n";
+//     cerr << "       'fixed jet parameter = { <eta_id> <phi_id> <par_id> }' or\n"; 
+//     cerr << "       'fixed jet parameter = { <eta_id> <phi_id> }'\n"; 
+    // Fix specified parameters in all jet bins
+    for(int jetBin = 0; jetBin < par_->GetEtaGranularityJet(); jetBin++) {
+      for(unsigned int i = 0 ; i < fixJetPars.size() ; i++) {
+	int parIdx = par_->GetNumberOfTowerParameters()
+	  + jetBin * par_->GetNumberOfJetParametersPerBin()
+	  + fixJetPars[i];
+	fixedJetPars_.push_back(parIdx);
+      }
+    }
   }
   for( std::vector<int>::const_iterator iter = fixedJetPars_.begin();
        iter != fixedJetPars_.end() ; ++ iter) {

@@ -5,7 +5,7 @@
 //!
 //!  \author Hartmut Stadie
 //!  \date  2008/12/12
-//!  $Id: ParameterLimitsReader.cc,v 1.5 2010/02/16 13:33:16 mschrode Exp $
+//!  $Id: ParameterLimitsReader.cc,v 1.6 2010/02/25 15:28:18 mschrode Exp $
 //!   
 #include "ParameterLimitsReader.h"
 
@@ -58,7 +58,7 @@ ParameterLimitsReader::ParameterLimitsReader(const std::string& configfile, TPar
     // For Crystal Ball Function
     else if( parclass == "SmearParametrizationCrystalBall" ) {
       // Loop over jet parameters in one bin
-      for(int i = 0; i < par_->GetNumberOfJetParametersPerBin(); i++) {
+      for(int i = 0; i < 3; i++) {
 	double min = 1E-3;   // Parameters have to be positive
 	double max = 10000.;
 
@@ -72,6 +72,22 @@ ParameterLimitsReader::ParameterLimitsReader(const std::string& configfile, TPar
       } // End of loop over parameters in one bin
     }
     // For Gauss Function
+    else if( parclass == "SmearParametrizationGauss" ) {
+      // Loop over jet parameters in one bin
+      for(int i = 0; i < par_->GetNumberOfJetParametersPerBin(); i++) {
+	double min = 1E-3;   // Parameters have to be positive
+	double max = 10000.;
+
+	// Loop over eta and phi bins
+	for(int j = par_->GetNumberOfTowerParameters() + i; 
+	    j <  par_->GetNumberOfParameters(); 
+	    j += par_->GetNumberOfJetParametersPerBin()) {
+	  if( j < par_->GetNumberOfParameters() )
+	    par_limits.push_back(ParameterLimit(j,min,max,limits.at(0)));
+	} // End of loop over eta and phi bins
+      } // End of loop over parameters in one bin
+    }
+    // For Gauss Function in one bin
     else if( parclass == "SmearParametrizationGaussPtBin" ) {
       // Loop over jet parameters in one bin
       for(int i = 0; i < 1; i++) {

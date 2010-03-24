@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.7 2010/02/16 13:33:16 mschrode Exp $
+// $Id: Parameters.cc,v 1.8 2010/02/25 15:28:18 mschrode Exp $
 
 #include <fstream>
 #include <cassert>
@@ -1619,6 +1619,8 @@ SmearFunction TParameters::resolutionFitPDF(int etaid, int phiid) {
   }
   int jetIdx = id * GetNumberOfJetParametersPerBin() + GetNumberOfTowerParameters();
   return SmearFunction(&Parametrization::pdfPtMeas,
+		       &Parametrization::pdfPtMeasJet1,
+		       &Parametrization::pdfPtMeasJet2,
 		       &Parametrization::pdfPtTrue,
 		       &Parametrization::pdfPtTrueError,
 		       &Parametrization::pdfResponse,

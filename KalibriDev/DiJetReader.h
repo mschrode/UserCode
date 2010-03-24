@@ -28,7 +28,7 @@
 //!
 //!  \author Hartmut Stadie
 //!  \date 2008/12/12
-//!  $Id: DiJetReader.h,v 1.2 2010/01/21 16:48:47 mschrode Exp $
+//!  $Id: DiJetReader.h,v 1.3 2010/02/25 15:28:18 mschrode Exp $
 // ----------------------------------------------------------------   
 
 
@@ -52,7 +52,7 @@ class DiJetReader : public EventReader{
 
  private:
   Event* createTwoJetsPtBalanceEvent();
-  Event* createSmearEvent();
+  Event* createSmearEvent(int callIdx);
   int createJetTruthEvents(std::vector<Event*>& data);
   CorFactors* createCorFactors(int jetid) const;
   std::vector<Jet*> readCaloJets(int nJets) const;

@@ -1,4 +1,4 @@
-// $Id: SmearDiJet.cc,v 1.4 2010/02/09 10:19:23 mschrode Exp $
+// $Id: SmearDiJet.cc,v 1.5 2010/02/16 13:33:16 mschrode Exp $
 
 #include "SmearDiJet.h"
 
@@ -83,8 +83,8 @@ double SmearDiJet::chi2() const
       
       // Calculate probability only at new nodes
       if(nIter == 0 || i % 3 != 0) {
-	double p0 = pdfPtMeas(jet1()->pt(),t);
-	double p1 = pdfPtMeas(jet2()->pt(),t);
+	double p0 = pdfPtMeasJet1(jet1()->pt(),t);
+	double p1 = pdfPtMeasJet2(jet2()->pt(),t);
 	pp.push_back(p0 * p1 * pdfPtTrue(t)); // Store product of pdfs and normalization
       } else {
 	pp.push_back(pp_old.at(i/3));       // Store product of pdfs previously calcluated
