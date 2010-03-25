@@ -1,5 +1,5 @@
 //
-//  $Id: Parametrization.cc,v 1.7 2010/02/25 15:28:19 mschrode Exp $
+//  $Id: Parametrization.cc,v 1.8 2010/03/24 14:30:19 mschrode Exp $
 //
 #include "Parametrization.h"
 
@@ -7,6 +7,7 @@
 #include "TF1.h"
 #include "TFile.h"
 #include "TH1F.h"
+#include "TH1D.h"
 #include "TMath.h"
 
 
@@ -987,82 +988,42 @@ void SmearGauss::print() const {
 
 
 // ------------------------------------------------------------------------
-SmearGaussPtBin::SmearGaussPtBin(double tMin, double tMax, double ptDijetMin, double ptDijetMax, const std::vector<double>& rParScales)
+SmearGaussPtBin::SmearGaussPtBin(double tMin, double tMax, double xMin, double xMax, const std::vector<double> &parScales, const std::vector<double> &startPar)
   : Parametrization(0,7,0,0),
     tMin_(tMin),
     tMax_(tMax),
-    ptDijetMin_(ptDijetMin),
-    ptDijetMax_(ptDijetMax),
-    scale_(rParScales) {
+    xMin_(xMin),
+    xMax_(xMax),
+    scale_(parScales) {
   assert( 0.0 <= tMin_ && tMin_ < tMax_ );
-  assert( 0.0 <= ptDijetMin_ && ptDijetMin_ < ptDijetMax_ );
+  assert( 0.0 <= xMin_ && xMin_ < xMax_ );
   assert( scale_.size() >= nJetPars() );
+  assert( startPar.size() >= nJetPars() );
 
-  TFile file("input/jsResponse_Unweighted.root","READ");
-  file.GetObject("hPtGen",hPurePdfPtTrue_);
-  if( !hPurePdfPtTrue_ ) {
-    std::cerr << "ERROR: No histogram found in file '" << file.GetName() << "'\n";
-    exit(1);
-  } else {
-    hPurePdfPtTrue_->SetDirectory(0);
-    hPurePdfPtTrue_->SetName("hPurePdfPtTrue_");
-    int binMin = hPurePdfPtTrue_->FindBin(tMin_);
-    int binMax = hPurePdfPtTrue_->FindBin(tMax_);
-    if( hPurePdfPtTrue_->Integral(binMin,binMax,"width") ) {
-      hPurePdfPtTrue_->Scale(1./(hPurePdfPtTrue_->Integral(binMin,binMax,"width")));
-    }
-  }
-  file.Close();
-
-  hPdfPtTrue_ = new TH1F("hPdfPtTrue_","",1000,tMin,tMax);
-  //Fill values of unnormalised truth pdf
-  double *truePar = new double[nJetPars()+3];
-  truePar[0] = 0.;
-  truePar[1] = 5.7;
-  truePar[2] = 3.00;
-  truePar[3] = 3.91;
-  truePar[4] = 1.52;
-  truePar[5] = 7.15;
-  truePar[6] = 8.37;
-  // For pt-dependent sigma
-  truePar[7] = 0.;
-  truePar[8] = 1.4885;//1.145;
-  truePar[9] = 0.0481;//0.037;
-  for(int bin = 1; bin <= hPdfPtTrue_->GetNbinsX(); bin++) {
-    double ptTrue = hPdfPtTrue_->GetBinCenter(bin);
-    hPdfPtTrue_->SetBinContent(bin,pdfPtTrueNotNorm(ptTrue,truePar));
-  }
-  // Normalise values of truth pdf
-  hPdfPtTrue_->Scale(1./hPdfPtTrue_->Integral("width"));
-  delete [] truePar;
-  
   print();
+
+//   std::vector<double> varStartPar = startPar;
+//   for(size_t i = 2; i < varStartPar.size(); i += 2) {
+//     varStartPar[i] = 1.5*varStartPar[i];
+//   }
+
+  hashTablePdfPtTrueNorm_ = new TH1D("hashTablePdfPtTrueNorm_","",5000,0.01,6);
+  hashPdfPtTrueNorm(&(startPar.front()));
 }
 
-
 SmearGaussPtBin::~SmearGaussPtBin() { 
-  if( hPdfPtTrue_ ) delete hPdfPtTrue_;
-  if( hPurePdfPtTrue_ ) delete hPurePdfPtTrue_;
- }
+  delete hashTablePdfPtTrueNorm_;
+}
+
 
 
 // ------------------------------------------------------------------------
-double SmearGaussPtBin::pdfPtMeas(double ptMeas, double ptTrue, const double *par) const {
-  double s = sigma(par);
-  double u = (ptMeas - ptTrue)/s;
-  double norm = sqrt(M_PI/2.)*s*sqrt(( erf((ptDijetMax_-ptTrue)/sqrt(2.)/s) - erf((ptDijetMin_-ptTrue)/sqrt(2.)/s) ));
-  // This should be caught more cleverly
-  if( norm < 1E-10 ) norm = 1E-10;
-
-  return 0.;//exp(-0.5*u*u)/norm;
-}
-
 double SmearGaussPtBin::pdfPtMeasJet1(double ptMeas, double ptTrue, const double *par) const {
   double pdf = 0.;
-  if( ptDijetMin_ < ptMeas && ptMeas < ptDijetMax_ ) {
+  if( xMin_ < ptMeas && ptMeas < xMax_ ) {
     double s = sigma(par);
     double u = (ptMeas - ptTrue)/s;
-    double norm = sqrt(M_PI/2.)*s*( erf((ptDijetMax_-ptTrue)/sqrt(2.)/s) - erf((ptDijetMin_-ptTrue)/sqrt(2.)/s) );
+    double norm = sqrt(M_PI/2.)*s*( erf((xMax_-ptTrue)/sqrt(2.)/s) - erf((xMin_-ptTrue)/sqrt(2.)/s) );
     // This should be caught more cleverly
     if( norm < 1E-10 ) norm = 1E-10;
     
@@ -1072,6 +1033,9 @@ double SmearGaussPtBin::pdfPtMeasJet1(double ptMeas, double ptTrue, const double
   return pdf;
 }
 
+
+
+// ------------------------------------------------------------------------
 double SmearGaussPtBin::pdfPtMeasJet2(double ptMeas, double ptTrue, const double *par) const {
   double s = sigma(par);
   double u = (ptMeas - ptTrue)/s;
@@ -1085,40 +1049,11 @@ double SmearGaussPtBin::pdfPtMeasJet2(double ptMeas, double ptTrue, const double
 
 
 // ------------------------------------------------------------------------
-double  SmearGaussPtBin::pdfPtTrue(double ptTrue, const double *par) const {
-//   double pdf = 0.;
-//   if( tMin_ < ptTrue && ptTrue < tMax_ ) {
-// //     double m = 1.-exponent(par);
-// //     double norm = ( m == 0. ? log(tMax_/tMin_) : (pow(tMax_,m)-pow(tMin_,m))/m );
-// //     pdf = 1./pow(ptTrue,exponent(par))/norm;
-
-// //     double tau = par[1];
-// //     double norm = tau*(exp(-tMin_/tau)-exp(-tMax_/tau));
-// //     pdf = exp(-ptTrue/tau)/norm;
-    
-//     double norm = exp(-specPar(par,0))*(exp(-specPar(par,1)*tMin_)-exp(-specPar(par,1)*tMax_))/specPar(par,1);
-//     norm += exp(-specPar(par,2))*(exp(-specPar(par,3)*tMin_)-exp(-specPar(par,3)*tMax_))/specPar(par,3);
-//     norm += exp(-specPar(par,4))*(exp(-specPar(par,5)*tMin_)-exp(-specPar(par,5)*tMax_))/specPar(par,5);
-
-//     pdf = exp(-specPar(par,0)-specPar(par,1)*ptTrue);
-//     pdf += exp(-specPar(par,2)-specPar(par,3)*ptTrue);
-//     pdf += exp(-specPar(par,4)-specPar(par,5)*ptTrue);
-//     pdf /= norm;
-
-// //    pdf = 1./(tMax_-tMin_);
-//   }
-//   return pdf;
-  
-  return hPdfPtTrue_->GetBinContent(hPdfPtTrue_->FindBin(ptTrue));
-}
-
-
-// ------------------------------------------------------------------------
 double SmearGaussPtBin::pdfResponse(double r, double ptTrue, const double *par) const {
   double s = sigma(par)/ptTrue;
   double u = (r - 1.)/s;
-  //double cut = (1.+erf(ptTrue/sqrt(2.)/s))/2.;
-  return exp(-0.5*u*u)/sqrt(2.*M_PI)/s;
+  double cut = (1.+erf(ptTrue/sqrt(2.)/s))/2.;
+  return exp(-0.5*u*u)/sqrt(2.*M_PI)/s/cut;
 }
 
 
@@ -1141,48 +1076,84 @@ double SmearGaussPtBin::pdfResponseError(double r, double ptTrue, const double *
 double SmearGaussPtBin::pdfDijetAsym(double a, double ptTrue, const double *par) const {
   double s = sigma(par)/ptTrue/sqrt(2.);
   double u = a/s;
-  //double cut = (1.+erf(ptTrue/sqrt(2.)/s))/2.;
   return exp(-0.5*u*u)/sqrt(2.*M_PI)/s;
 }
 
 
 // ------------------------------------------------------------------------
-double  SmearGaussPtBin::pdfPtTrueNotNorm(double ptTrue, const double *par) const {
-  double pdf = 0.;
+double SmearGaussPtBin::getHashedNormPdfPtTrue(const double *par) const {
+  double param = par[0];
+  if( param < hashTablePdfPtTrueNorm_->GetXaxis()->GetBinLowEdge(1) ) {
+    param = hashTablePdfPtTrueNorm_->GetXaxis()->GetBinLowEdge(1);
+  } else if( param > hashTablePdfPtTrueNorm_->GetXaxis()->GetBinUpEdge(hashTablePdfPtTrueNorm_->GetNbinsX()) ) {
+    param = hashTablePdfPtTrueNorm_->GetXaxis()->GetBinUpEdge(hashTablePdfPtTrueNorm_->GetNbinsX());
+  }
+  return hashTablePdfPtTrueNorm_->GetBinContent(hashTablePdfPtTrueNorm_->FindBin(param));
+}
 
-  // Underlying truth pdf
-  //  pdf = exp(-ptTrue/par[1])/par[1];
 
+// ------------------------------------------------------------------------
+void SmearGaussPtBin::hashPdfPtTrueNorm(const double *par) const {
+  std::cout << "  Hashing normalization of truth pdf... " << std::flush;
+  double *param = new double[nJetPars()];
+  // This is the parameter for sigma; will changed
+  // for hashing
+  param[0] = 0.;
+  // Copy parameters of spectrum
+  for(size_t i = 1; i < nJetPars(); i++) {
+    param[i] = par[i];
+  }
+
+  // Loop over (sigma) parameter values
+  for(int bin = 1; bin <= hashTablePdfPtTrueNorm_->GetNbinsX(); bin++) {
+    param[0] = hashTablePdfPtTrueNorm_->GetBinCenter(bin);
+    // Calculate norm for this (sigma) parameter value
+    double norm = 0.;
+    int nSteps = 1000;
+    double dt = (tMax_-tMin_)/nSteps;
+    for(int i = 0; i < nSteps; i++) {
+      double t = tMin_ + (i+0.5)*dt;
+      norm += pdfPtTrueNotNorm(t,param);
+    }
+    norm *= dt;
+    // Store norm in hash table
+    hashTablePdfPtTrueNorm_->SetBinContent(bin,norm);
+  }
+  delete [] param;
+  std::cout << "ok" << std::endl;
+}
+
+
+
+// ------------------------------------------------------------------------
+double SmearGaussPtBin::pdfPtTrueNotNorm(double ptTrue, const double *par) const {
+  double pdf = underlyingPdfPtTrue(ptTrue,par);
+  // Convolution with cuts on 1. jet
+  double s = sigma(par);
+  double c = 0.5*( erf((xMax_-ptTrue)/s/sqrt(2.)) - erf((xMin_-ptTrue)/s/sqrt(2.)) );
+
+  return c*pdf;
+}
+
+
+// ------------------------------------------------------------------------
+double SmearGaussPtBin::underlyingPdfPtTrue(double ptTrue, const double *par) const {
   double norm = exp(-specPar(par,0))*(exp(-specPar(par,1)*tMin_)-exp(-specPar(par,1)*tMax_))/specPar(par,1);
   norm += exp(-specPar(par,2))*(exp(-specPar(par,3)*tMin_)-exp(-specPar(par,3)*tMax_))/specPar(par,3);
   norm += exp(-specPar(par,4))*(exp(-specPar(par,5)*tMin_)-exp(-specPar(par,5)*tMax_))/specPar(par,5);
-
-  pdf = exp(-specPar(par,0)-specPar(par,1)*ptTrue);
+  
+  double pdf = exp(-specPar(par,0)-specPar(par,1)*ptTrue);
   pdf += exp(-specPar(par,2)-specPar(par,3)*ptTrue);
   pdf += exp(-specPar(par,4)-specPar(par,5)*ptTrue);
-  pdf /= norm;
 
-//  pdf = hPurePdfPtTrue_->GetBinContent(hPurePdfPtTrue_->FindBin(ptTrue));
-
-
-//   // Convolution with cuts on ptdijet
-//   double s = sqrt( par[7]*par[7] + par[8]*par[8]*ptTrue + par[9]*par[9]*ptTrue*ptTrue )/sqrt(2.);
-//   double c = 0.5*( erf((ptDijetMax_-ptTrue)/s/sqrt(2.)) - erf((ptDijetMin_-ptTrue)/s/sqrt(2.)) );
-
-  // Convolution with cuts on 1. jet
-  double s = sqrt( par[7]*par[7] + par[8]*par[8]*ptTrue + par[9]*par[9]*ptTrue*ptTrue );
-  double c = 0.5*( erf((ptDijetMax_-ptTrue)/s/sqrt(2.)) - erf((ptDijetMin_-ptTrue)/s/sqrt(2.)) );
- 
-  return c*pdf;
+  return pdf / norm;
 }
 
 
 // ------------------------------------------------------------------------
 void SmearGaussPtBin::print() const {
   std::cout << "Parametrization class '" << name() << "'\n";
-  std::cout << "  Probability density of ptTrue spectrum:\n";
-  std::cout << "    Powerlaw\n";
-  std::cout << "    " << tMin_ << " < ptTrue < " << tMax_ << " GeV\n";
-  std::cout << "    " << ptDijetMin_ << " < ptDijet < " << ptDijetMax_ << " GeV\n";
+  std::cout << "  " << tMin_ << " < ptTrue < " << tMax_ << " GeV\n";
+  std::cout << "  " << xMin_ << " < ptMeas < " << xMax_ << " GeV\n";
   std::cout << std::endl;
 }

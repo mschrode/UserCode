@@ -1,5 +1,5 @@
 //
-//  $Id: Parametrization.h,v 1.11 2010/02/25 15:28:18 mschrode Exp $
+//  $Id: Parametrization.h,v 1.12 2010/03/24 14:30:19 mschrode Exp $
 //
 #ifndef CALIBCORE_PARAMETRIZATION_H
 #define CALIBCORE_PARAMETRIZATION_H
@@ -14,7 +14,7 @@
 #include "gsl/gsl_roots.h"
      
 class TH1F;
-
+class TH1D;
 
 //!  \brief Abstract base class for parametrizations of
 //!         correction functions
@@ -24,7 +24,7 @@ class TH1F;
 //!  to correct a tower or jet measurement.
 //!  \author Hartmut Stadie
 //!  \date Thu Apr 03 17:09:50 CEST 2008
-//!  $Id: Parametrization.h,v 1.11 2010/02/25 15:28:18 mschrode Exp $
+//!  $Id: Parametrization.h,v 1.12 2010/03/24 14:30:19 mschrode Exp $
 // -----------------------------------------------------------------
 class Parametrization 
 {
@@ -1411,7 +1411,7 @@ class SmearGaussPtBin : public Parametrization
 { 
  public:
   //! Constructor
-  SmearGaussPtBin(double tMin, double tMax, double ptDijetMin, double ptDijetMax, const std::vector<double>& rParScales);
+  SmearGaussPtBin(double tMin, double tMax, double xMin, double xMax, const std::vector<double> &parScales, const std::vector<double> &startPar);
 
   ~SmearGaussPtBin();
 
@@ -1424,10 +1424,11 @@ class SmearGaussPtBin : public Parametrization
   double correctedJetEt(const Measurement *x,const double *par) const { return 0.; }
   double correctedGlobalJetEt(const Measurement *x,const double *par) const { return 0.; }
 
-  double pdfPtMeas(double ptMeas, double ptTrue, const double *par) const;
   double pdfPtMeasJet1(double ptMeas, double ptTrue, const double *par) const;
   double pdfPtMeasJet2(double ptMeas, double ptTrue, const double *par) const;
-  double pdfPtTrue(double ptTrue, const double *par) const;
+  double pdfPtTrue(double ptTrue, const double *par) const {
+    return pdfPtTrueNotNorm(ptTrue,par)/getHashedNormPdfPtTrue(par);
+  }
   double pdfResponse(double r, double ptTrue, const double *par) const;
   double pdfResponseError(double r, double ptTrue, const double *par, const double *cov, const std::vector<int> &covIdx) const;
   double pdfDijetAsym(double a, double ptTrue, const double *par) const;
@@ -1436,11 +1437,10 @@ class SmearGaussPtBin : public Parametrization
  private:
   const double tMin_;                   //!< Minimum of non-zero range of truth pdf
   const double tMax_;                   //!< Maximum of non-zero range of truth pdf
-  const double ptDijetMin_;             //!< Minimum of pt dijet
-  const double ptDijetMax_;             //!< Maximum of pt dijet
+  const double xMin_;                   //!< Minimum of pt dijet
+  const double xMax_;                   //!< Maximum of pt dijet
   const std::vector<double> scale_;     //!< Parameter scales
-  TH1F *hPdfPtTrue_;
-  TH1F *hPurePdfPtTrue_;
+  TH1D *hashTablePdfPtTrueNorm_;
 
   double sigma(const double *par) const {
     double p = par[0] > 0 ? par[0] : 1E-3;
@@ -1450,7 +1450,10 @@ class SmearGaussPtBin : public Parametrization
     return scale_[1+i]*par[1+i];
   }
 
+  double getHashedNormPdfPtTrue(const double *par) const;
+  void hashPdfPtTrueNorm(const double *par) const;
   double pdfPtTrueNotNorm(double ptTrue, const double *par) const;
+  double underlyingPdfPtTrue(double ptTrue, const double *par) const;
 
   //! Print some initialization details
   void print() const;

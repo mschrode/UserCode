@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.8 2010/02/25 15:28:18 mschrode Exp $
+// $Id: Parameters.cc,v 1.9 2010/03/24 14:30:19 mschrode Exp $
 
 #include <fstream>
 #include <cassert>
@@ -94,7 +94,8 @@ Parametrization* TParameters::CreateParametrization(const std::string& name, con
     double ptDijetMin = config.read<double>("Et min cut on dijet",0.);
     double ptDijetMax = config.read<double>("Et max cut on dijet",1.);
     std::vector<double> scale = bag_of<double>(config.read<string>("jet parameter scales",""));
-    return new SmearGaussPtBin(tMin,tMax,ptDijetMin,ptDijetMax,scale);
+    std::vector<double> startPar = bag_of<double>(config.read<string>("jet start values",""));
+    return new SmearGaussPtBin(tMin,tMax,ptDijetMin,ptDijetMax,scale,startPar);
   } else if(name == "GroomParametrization") {
     return new GroomParametrization();
   } else if(name == "EtaEtaParametrization") {
