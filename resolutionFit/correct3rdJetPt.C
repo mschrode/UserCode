@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: correct3rdJetPt.C,v 1.1 2010/03/29 12:24:53 mschrode Exp $
 
 #include <cmath>
 #include <iomanip>
@@ -19,13 +19,13 @@
 //! Investigate influence of a 3rd jet on fitted jet resolution
 //! and find correction function
 // ------------------------------------------------------------
-namepace correct3rdJetPt {
+namespace correct3rdJetPt {
 
   // ----- Global parameters -----
   const int nEvts_ = 100000;
   const double tMin_ = 50.;
   const double tMax_ = 500.;
-  const double dt_ = 0.9;
+  const double dt_ = 0.1;
   const double b_[3] = { 4., 1.2, 0.05 };
   const int nBins_ = 50;
 
@@ -37,15 +37,19 @@ namepace correct3rdJetPt {
   // ----- Type defintions and classes -----
   class Dijet {
   public:
-    Dijet(double t1, double x1, double t2, double x2) : t1_(t1), t2_(t2), x1_(x1), x2_(x2) {};
+    Dijet(double t1, double x1, double t2, double x2, double t3, double x3)
+      : t1_(t1), t2_(t2), t3_(t3), x1_(x1), x2_(x2), x3_(x3) {};
 
     double x1() const { return x1_; }
     double x2() const { return x2_; } 
+    double x3() const { return x3_; }
     double t1() const { return t1_; }
     double t2() const { return t2_; }
-
+    double t3() const { return t3_; }
+    double x3rel() const { return 2.*(x3_)/(x1_+x2_); }
+	
   private:
-    const double t1_, t2_, x1_, x2_;
+    const double t1_, t2_, t3_, x1_, x2_, x3_;
   };
   typedef std::vector<Dijet*> Data;
   typedef std::vector<Dijet*>::const_iterator DataIt;
@@ -57,32 +61,39 @@ namepace correct3rdJetPt {
   // ----- Function definitions -----
 
   //! Return width of Gaussian resolution
+  // ------------------------------------------------------------
   double sigma(double t) {
     return sqrt( b_[0]*b_[0] + b_[1]*b_[1]*t + b_[2]*b_[2]*t*t );
   }
 
+
   //! Generate \p nEvts_ \p Dijet events
+  // ------------------------------------------------------------
   Data generateData() {
     std::cout << "Generating " << nEvts_ << " dijet events... " << std::flush;
     Data data(nEvts_);
   
     TRandom3 rand(0);
-    double t[2] = { 0., 0. };
-    double x[2] = { 0., 0. };
+    double t[3] = { 0., 0., 0. };
+    double x[3] = { 0., 0., 0. };
     for(size_t i = 0; i < data.size(); ++i) {
       t[0] = rand.Uniform(tMin_,tMax_);
-      t[1] = dt_*t[0];
-      for(int j = 0; j < 2; ++j) {
+      double dt = rand.Uniform(0.,dt_);
+      t[1] = (1.-dt)*t[0];
+      t[2] = dt*t[0];
+      for(int j = 0; j < 3; ++j) {
 	x[j] = rand.Gaus(t[j],sigma(t[j]));
       }
-      data[i] = new Dijet(t[0],x[0],t[1],x[1]);
+      data[i] = new Dijet(t[0],x[0],t[1],x[1],t[2],x[2]);
     }
 
     std::cout << "ok" << std::endl;
     return data;
   }
 
+
   //! Find the bin 0 < bin < \p nBins_ for a given true pt
+  // ------------------------------------------------------------
   int bin(double t) {
     int b = static_cast<int>(hBinning_->GetBinContent(hBinning_->FindBin(t)));
     if( b < 0 ) b = 0;
@@ -90,8 +101,25 @@ namepace correct3rdJetPt {
     return b;
   }
 
+
+  //! Find bin for a given true pt
+  // ------------------------------------------------------------
+  int bin(double t, const std::vector<double> &edges) {
+    int nBins = static_cast<int>(edges.size())-1;
+    int b = 0;
+    for(int i = 0; i < nBins; ++i) {
+      if( t > edges[i] ) b = i;
+      else break;
+    }
+    return b;
+  }
+
+
+  //! \todo sigma for different pt3rel --> linear?
+
   //! Fit different defintions of the resolution and 
   //! find a correction function
+  // ------------------------------------------------------------
   void fitResolution(const Data &data, bool plotDistributions = true) {
     std::cout << "Fitting resolution... " << std::flush;
     // Spectrum
@@ -238,7 +266,105 @@ namepace correct3rdJetPt {
     std::cout << std::endl;
   }
 
+
+  //! Plot relation between sigma and 3rd jet pt
+  //! in different pt bins
+  // ------------------------------------------------------------
+  void plotExtrapolation(const Data &data) {
+    std::cout << "Extrapolating 3rd jet pt... " << std::flush;
+
+    // Coarser pt binning
+    int nPtBins = static_cast<int>(0.1*nBins_);
+    double dt = (tMax_-tMin_)/nPtBins;
+    std::vector<double> ptBinEdges(nPtBins+1);
+    for(int i = 0; i <= nPtBins; i++) {
+      ptBinEdges[i] = tMin_ + i*dt;
+    }
+    // Binning in pt3rel
+    std::vector<double> pt3BinEdges;
+    pt3BinEdges.push_back(0.);
+    pt3BinEdges.push_back(0.05);
+    pt3BinEdges.push_back(0.08);
+    pt3BinEdges.push_back(0.1);
+    pt3BinEdges.push_back(0.12);
+    pt3BinEdges.push_back(0.14);
+    int nPt3Bins = static_cast<int>(pt3BinEdges.size()-1);
+
+    // Create histograms per pt and pt3 bin
+    Hists hXtrapol(nPtBins);
+    std::vector< Hists > hReso(nPtBins);
+    for(int ptIdx = 0; ptIdx < nPtBins; ++ptIdx) {
+      hReso[ptIdx] = Hists(nPt3Bins);
+
+      char txt[100];
+      sprintf(txt,"%.0f < p_{T} < %.0f GeV",ptBinEdges[ptIdx],ptBinEdges[ptIdx+1]);
+      TString name = "hXtrapol";
+      name += ptIdx;
+      TString title = txt;
+      title += ";p^{rel}_{T,3};#bar{#sigma}";
+      hXtrapol[ptIdx] = new TH1D(name,title,nPt3Bins,&(pt3BinEdges.front()));
+      hXtrapol[ptIdx]->SetMarkerStyle(20);
+      for(int pt3Idx = 0; pt3Idx < nPt3Bins; ++pt3Idx) {
+	name = "hReso_";
+	name += ptIdx;
+	name += "_";
+	name += pt3Idx;
+	sprintf(txt,"%.2f < p^{3}_{T,rel} < %.2f",pt3BinEdges[pt3Idx],pt3BinEdges[pt3Idx+1]);
+	title = txt;
+	title += ";Resolution";
+	hReso[ptIdx][pt3Idx] = new TH1D(name,title,21,0.,2.);
+      }
+    }
+
+    // Filling
+    for(DataIt it = data.begin(); it != data.end(); ++it) {
+      const Dijet *dijet = *it;
+
+      // Fitted resolution around mean t
+      double meanT = 0.5*(dijet->t1()+dijet->t2());
+      int binMeanT = bin(meanT,ptBinEdges);
+      int binPt3 = bin(dijet->x3rel(),pt3BinEdges);
+      hReso[binMeanT][binPt3]->Fill(dijet->x1()/dijet->t1());
+      hReso[binMeanT][binPt3]->Fill(dijet->x2()/dijet->t2());
+    }
+    
+    // Fitting mean resolution
+    for(int ptIdx = 0; ptIdx < nPtBins; ++ptIdx) {
+      for(int pt3Idx = 0; pt3Idx < nPt3Bins; ++pt3Idx) {
+	hReso[ptIdx][pt3Idx]->Fit("gaus","0QIL");
+	TF1 *fit = hReso[ptIdx][pt3Idx]->GetFunction("gaus");
+	hXtrapol[ptIdx]->SetBinContent(1+pt3Idx,fit->GetParameter(2));
+	hXtrapol[ptIdx]->SetBinError(1+pt3Idx,fit->GetParError(2));
+      }
+    }
+
+    // Plotting resolution distributions
+    // per pt and pt3 bin
+    for(int ptIdx = 0; ptIdx < nPtBins; ++ptIdx) {
+      TString name = "CanResolutionPtBin";
+      name += ptIdx;
+      TCanvas *can = new TCanvas(name,name,900,600);
+      can->Divide(3,2);
+      for(int pt3Idx = 0; pt3Idx < nPt3Bins; ++pt3Idx) {
+	can->cd(1+pt3Idx);
+	hReso[ptIdx][pt3Idx]->Draw();
+      }
+    }
+
+    // Plot mean sigma
+    for(int ptIdx = 0; ptIdx < nPtBins; ++ptIdx) {
+      TString name = "CanMeanSigmaPtBin";
+      name += ptIdx;
+      TCanvas *can = new TCanvas(name,name,500,500);
+      can->cd();
+      hXtrapol[ptIdx]->Draw("PE1");
+    }
+    std::cout << "ok" << std::endl;
+  }
+
+
   //! Init global variables
+  // ------------------------------------------------------------
   void init() {
     gStyle->SetErrorX(0);
     gStyle->SetOptStat(0);
@@ -248,10 +374,13 @@ namepace correct3rdJetPt {
     }
   }
 
+
   //! Run the fit
+  // ------------------------------------------------------------
   void run() {
     init();
     Data data = generateData();
     fitResolution(data,false); 
+    plotExtrapolation(data);
   }
 }
