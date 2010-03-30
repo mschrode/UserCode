@@ -1,4 +1,4 @@
-// $Id: correct3rdJetPt.C,v 1.1 2010/03/29 12:24:53 mschrode Exp $
+// $Id: correct3rdJetPt.C,v 1.2 2010/03/30 13:54:35 mschrode Exp $
 
 #include <cmath>
 #include <iomanip>
@@ -22,12 +22,12 @@
 namespace correct3rdJetPt {
 
   // ----- Global parameters -----
-  const int nEvts_ = 100000;
+  const int nEvts_ = 500000;
   const double tMin_ = 50.;
   const double tMax_ = 500.;
   const double dt_ = 0.1;
   const double b_[3] = { 4., 1.2, 0.05 };
-  const int nBins_ = 50;
+  const int nBins_ = 25;
 
 
   // ----- Global variables -----
@@ -121,35 +121,71 @@ namespace correct3rdJetPt {
   //! find a correction function
   // ------------------------------------------------------------
   void fitResolution(const Data &data, bool plotDistributions = true) {
-    std::cout << "Fitting resolution... " << std::flush;
+    std::cout << "Fitting resolution" << std::endl;
+
+    // Binning in pt3rel
+    std::vector<double> pt3BinEdges;
+    pt3BinEdges.push_back(0.);
+    pt3BinEdges.push_back(0.03);
+    pt3BinEdges.push_back(0.06);
+    pt3BinEdges.push_back(0.09);
+    pt3BinEdges.push_back(0.12);
+    int nPt3Bins = static_cast<int>(pt3BinEdges.size()-1);
+
+    std::vector<int> color(nPt3Bins,1);
+    color[0] = 2;
+    color[1] = 4;
+    color[2] = 6;
+    color[3] = 8;
+
+    std::cout << "  Creating resolution hitograms... " << std::flush;
     // Spectrum
     TH1 *hSpectrum = new TH1D("hSpectrum",";p_{T} (GeV)",nBins_,0.,tMax_);
     // Resolution histograms in bins of t
     Hists hResMC(nBins_);
-    Hists hResMeanT(nBins_);
     Functs fResMC(nBins_);
-    Functs fResMeanT(nBins_);
-    double dt = (tMax_-tMin_)/nBins_;
-    for(int i = 0; i < nBins_; ++i) {
-      TString title = "";
-      title += tMin_+i*dt;
-      title += " < p_{T} < ";
-      title += tMin_+(1+i)*dt;
-      title += ";Resolution";
+    std::vector< Hists > hResMeanT(nPt3Bins);
+    std::vector< Functs > fResMeanT(nPt3Bins);
+    for(int pt3Bin = 0; pt3Bin < nPt3Bins; ++pt3Bin) {
+      hResMeanT[pt3Bin] = Hists(nBins_);
+      fResMeanT[pt3Bin] = Functs(nBins_);
 
-      TString name = "hResMC";
-      name += i;
-      hResMC[i] = new TH1D(name,title,51,0.,2.);
-      name = "fResMC";
-      fResMC[i] = new TF1(name,"gaus",0.,2.);
+      double dt = (tMax_-tMin_)/nBins_;
+      for(int i = 0; i < nBins_; ++i) {
+	TString title = "";
+	title += tMin_+i*dt;
+	title += " < p_{T} < ";
+	title += tMin_+(1+i)*dt;
+	title += ";Resolution";
 
-      name = "hResMeanT";
-      name += i;
-      hResMeanT[i] = static_cast<TH1D*>(hResMC[i]->Clone(name));
-      hResMeanT[i]->SetLineColor(2);
-      name = "fResMeanT";
-      fResMeanT[i] = static_cast<TF1*>(fResMC[i]->Clone(name));
+	if( pt3Bin == 0 ) {
+	  TString name = "hResMC";
+	  name += pt3Bin;
+	  name += "_";
+	  name += i;
+	  hResMC[i] = new TH1D(name,title,51,0.,2.);
+	  name = "fResMC";
+	  name += pt3Bin;
+	  name += "_";
+	  name += i;
+	  fResMC[i] = new TF1(name,"gaus",0.,2.);
+	}
+	TString name = "hResMeanT";
+	name += pt3Bin;
+	name += "_";
+	name += i;
+	hResMeanT[pt3Bin][i] = static_cast<TH1D*>(hResMC[i]->Clone(name));
+	hResMeanT[pt3Bin][i]->SetLineColor(color[pt3Bin]);
+	name = "fResMeanT";
+	name += pt3Bin;
+	name += "_";
+	name += i;
+	fResMeanT[pt3Bin][i] = static_cast<TF1*>(fResMC[i]->Clone(name));
+      }
     }
+    std::cout << "ok" << std::endl;
+
+    std::cout << "  Filling resolution hitograms... " << std::flush;
     // Filling with resolution
     for(DataIt it = data.begin(); it != data.end(); ++it) {
       const Dijet *dijet = *it;
@@ -161,35 +197,51 @@ namespace correct3rdJetPt {
       hResMC[bin(dijet->t2())]->Fill(dijet->x2()/dijet->t2());
       // Fitted resolution around mean t
       double meanT = 0.5*(dijet->t1()+dijet->t2());
-      hResMeanT[bin(meanT)]->Fill(dijet->x1()/meanT);
-      hResMeanT[bin(meanT)]->Fill(dijet->x2()/meanT);
+      int pt3bin = bin(dijet->x3rel(),pt3BinEdges);
+      hResMeanT[pt3bin][bin(meanT)]->Fill(dijet->x1()/meanT);
+      hResMeanT[pt3bin][bin(meanT)]->Fill(dijet->x2()/meanT);
     }
+    std::cout << "ok" << std::endl;
 
+    std::cout << "  Fitting resolution hitograms... " << std::flush;
     // Fits and histograms of Gaussian width per bin
     TH1 *hSigmaMC = new TH1D("hSigmaMC",";p_{T} (GeV);#sigma(p_{T}) / p_{T}",nBins_,tMin_,tMax_);
     hSigmaMC->Sumw2();
     hSigmaMC->SetMarkerStyle(7);
     TH1 *hSigmaRelDiff = static_cast<TH1D*>(hSigmaMC->Clone("hSigmaRelDiff"));
     hSigmaRelDiff->SetTitle(";p_{T} (GeV);#sigma / #sigma_{true})");
-
-    TH1 *hSigmaMeanT = static_cast<TH1D*>(hSigmaMC->Clone("hSigmaMeanT"));
-    hSigmaMeanT->SetMarkerColor(2);
-    hSigmaMeanT->SetLineColor(2);
-    TH1 *hSigmaRelDiffMeanT = static_cast<TH1D*>(hSigmaMeanT->Clone("hSigmaRelDiffMeanT"));
-
-    // Fitting Gaussian width per bin
-    for(int i = 0; i < nBins_; ++i) {
-      hResMC[i]->Fit(fResMC[i],"IL0Q");
-      hSigmaMC->SetBinContent(1+i,fResMC[i]->GetParameter(2));
-      hSigmaMC->SetBinError(1+i,fResMC[i]->GetParError(2));
-      hSigmaRelDiff->SetBinContent(1+i,1.);
-
-      hResMeanT[i]->Fit(fResMeanT[i],"IL0Q");
-      hSigmaMeanT->SetBinContent(1+i,fResMeanT[i]->GetParameter(2));
-      hSigmaMeanT->SetBinError(1+i,fResMeanT[i]->GetParError(2));
-      hSigmaRelDiffMeanT->Divide(hSigmaMeanT,hSigmaMC);
+    
+    Hists hSigmaMeanT(nPt3Bins);
+    Hists hSigmaRelDiffMeanT(nPt3Bins);
+    for(int pt3bin = 0; pt3bin < nPt3Bins; ++pt3bin) {
+      TString name = "hSigmaMeanT";
+      name += pt3bin;
+      hSigmaMeanT[pt3bin] = static_cast<TH1D*>(hSigmaMC->Clone(name));
+      hSigmaMeanT[pt3bin]->SetMarkerColor(color[pt3bin]);
+      hSigmaMeanT[pt3bin]->SetLineColor(color[pt3bin]);
+      
+      name = "hSigmaRelDiffMeanT";
+      name += pt3bin;
+      hSigmaRelDiffMeanT[pt3bin] = static_cast<TH1D*>(hSigmaMeanT[pt3bin]->Clone(name));
+      
+      // Fitting Gaussian width per bin
+      for(int i = 0; i < nBins_; ++i) {
+	if( pt3bin == 0 ) {
+	  hResMC[i]->Fit(fResMC[i],"IL0Q");
+	  hSigmaMC->SetBinContent(1+i,fResMC[i]->GetParameter(2));
+	  hSigmaMC->SetBinError(1+i,fResMC[i]->GetParError(2));
+	  hSigmaRelDiff->SetBinContent(1+i,1.);
+	}
+	
+	hResMeanT[pt3bin][i]->Fit(fResMeanT[pt3bin][i],"IL0Q");
+	hSigmaMeanT[pt3bin]->SetBinContent(1+i,fResMeanT[pt3bin][i]->GetParameter(2));
+	hSigmaMeanT[pt3bin]->SetBinError(1+i,fResMeanT[pt3bin][i]->GetParError(2));
+	hSigmaRelDiffMeanT[pt3bin]->Divide(hSigmaMeanT[pt3bin],hSigmaMC);
+      }
     }
+    std::cout << "ok" << std::endl;
 
+    std::cout << "  Fitting sigma(pt)... " << std::flush;
     // Fitting sigma(pt)
     std::vector<double> startPar(3);
     startPar[0] = 4.;
@@ -200,35 +252,43 @@ namespace correct3rdJetPt {
     fSigmaMC->SetLineColor(hSigmaMC->GetLineColor());
     for(int i = 0; i < 3; ++i) fSigmaMC->SetParameter(i,startPar[i]);
     hSigmaMC->Fit(fSigmaMC,"R0Q");
-    TF1 *fSigmaMeanT = new TF1("fSigmaMeanT","sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2])",tMin_,tMax_);
-    fSigmaMeanT->SetLineWidth(1);
-    fSigmaMeanT->SetLineColor(hSigmaMeanT->GetLineColor());
-    for(int i = 0; i < 3; ++i) fSigmaMeanT->SetParameter(i,startPar[i]);
-    hSigmaMeanT->Fit(fSigmaMeanT,"R0Q");
-
-    // Plot resolution per bin
-    if( plotDistributions ) {
-      int nCans = 0;
-      int nPadsX = 5;
-      int nPadsY = 4;
-      int nPads = nPadsX*nPadsY;
-      while( nCans*nPads < nBins_ ) {
-	TString name = "Resolution";
-	name += nCans;
-	TCanvas *can = new TCanvas(name,name,nPadsX*200,nPadsY*200);
-	can->Divide(nPadsX,nPadsY);
-	for(int p = 1; p <= nPads; ++p) {
-	  can->cd(p);
-	  int idx = nCans*nPads + p - 1;
-	  if( idx < nBins_ ) {
-	    hResMC[idx]->Draw();
-	    hResMeanT[idx]->Draw("same");
-	  }
-	}
-	nCans++;
-      }
+    
+    Functs fSigmaMeanT(nPt3Bins);
+    for(int pt3bin = 0; pt3bin < nPt3Bins; ++pt3bin) {
+      TString name = "fSigmaMeanT";
+      name += pt3bin;
+      fSigmaMeanT[pt3bin] = new TF1(name,"sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2])",tMin_,tMax_);
+      fSigmaMeanT[pt3bin]->SetLineWidth(1);
+      fSigmaMeanT[pt3bin]->SetLineColor(hSigmaMeanT[pt3bin]->GetLineColor());
+      for(int i = 0; i < 3; ++i) fSigmaMeanT[pt3bin]->SetParameter(i,startPar[i]);
+      hSigmaMeanT[pt3bin]->Fit(fSigmaMeanT[pt3bin],"R0Q");
     }
+    std::cout << "ok" << std::endl;
 
+    //     // Plot resolution per bin
+    //     if( plotDistributions ) {
+    //       int nCans = 0;
+    //       int nPadsX = 5;
+    //       int nPadsY = 4;
+    //       int nPads = nPadsX*nPadsY;
+    //       while( nCans*nPads < nBins_ ) {
+    // 	TString name = "Resolution";
+    // 	name += nCans;
+    // 	TCanvas *can = new TCanvas(name,name,nPadsX*200,nPadsY*200);
+    // 	can->Divide(nPadsX,nPadsY);
+    // 	for(int p = 1; p <= nPads; ++p) {
+    // 	  can->cd(p);
+    // 	  int idx = nCans*nPads + p - 1;
+    // 	  if( idx < nBins_ ) {
+    // 	    hResMC[idx]->Draw();
+    // 	    hResMeanT[idx]->Draw("same");
+    // 	  }
+    // 	}
+    // 	nCans++;
+    //       }
+    //     }
+
+    std::cout << "  Plotting histograms... " << std::flush;
     // Plot mean spectrum
     TCanvas *can1 = new TCanvas("canSpectrum","Spectrum",600,600);
     can1->cd();
@@ -239,8 +299,10 @@ namespace correct3rdJetPt {
     can2->cd();
     hSigmaMC->Draw("PE1");
     fSigmaMC->Draw("same");
-    hSigmaMeanT->Draw("PE1same");
-    fSigmaMeanT->Draw("same");
+    for(int pt3bin = 0; pt3bin < nPt3Bins; ++pt3bin) {
+      hSigmaMeanT[pt3bin]->Draw("PE1same");
+      fSigmaMeanT[pt3bin]->Draw("same");
+    }
 
     // Plot rel difference
     TCanvas *can3 = new TCanvas("canRelDiffs","Differences",600,600);
@@ -248,22 +310,23 @@ namespace correct3rdJetPt {
     hSigmaRelDiff->SetLineStyle(2);
     hSigmaRelDiff->GetYaxis()->SetRangeUser(0.95,1.45);
     hSigmaRelDiff->Draw();
-    hSigmaRelDiffMeanT->Draw("PE1same");
-  
+    for(int pt3bin = 0; pt3bin < nPt3Bins; ++pt3bin) {
+      hSigmaRelDiffMeanT[pt3bin]->Draw("PE1same");
+    }
     std::cout << "ok" << std::endl;
 
-    // Print fit results
-    std::cout << std::endl;
-    std::cout << setw(12) << "MC truth\t" << std::flush;
-    for(int i = 0; i < 3; ++i) {
-      std::cout << fSigmaMC->GetParameter(i) << " +/- " << fSigmaMC->GetParError(i) << "\t";
-    }
-    std::cout << std::endl;
-    std::cout << setw(12) << "MC truth\t" << std::flush;
-    for(int i = 0; i < 3; ++i) {
-      std::cout << fSigmaMeanT->GetParameter(i) << " +/- " << fSigmaMeanT->GetParError(i) << "\t";
-    }
-    std::cout << std::endl;
+    //     // Print fit results
+    //     std::cout << std::endl;
+    //     std::cout << setw(12) << "MC truth\t" << std::flush;
+    //     for(int i = 0; i < 3; ++i) {
+    //       std::cout << fSigmaMC->GetParameter(i) << " +/- " << fSigmaMC->GetParError(i) << "\t";
+    //     }
+    //     std::cout << std::endl;
+    //     std::cout << setw(12) << "MC truth\t" << std::flush;
+    //     for(int i = 0; i < 3; ++i) {
+    //       std::cout << fSigmaMeanT->GetParameter(i) << " +/- " << fSigmaMeanT->GetParError(i) << "\t";
+    //     }
+    //     std::cout << std::endl;
   }
 
 
@@ -381,6 +444,6 @@ namespace correct3rdJetPt {
     init();
     Data data = generateData();
     fitResolution(data,false); 
-    plotExtrapolation(data);
+    //plotExtrapolation(data);
   }
 }
