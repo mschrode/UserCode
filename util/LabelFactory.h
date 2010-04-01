@@ -44,6 +44,7 @@ namespace util {
     txt->SetBorderSize(0);
     txt->SetFillColor(0);
     txt->SetTextFont(42);
+    txt->SetTextAlign(12);
     return txt;
   }
 }
