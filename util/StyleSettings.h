@@ -24,6 +24,9 @@ namespace util {
 
 
   void StyleSettings::setStyle(const TString &mode, bool spaceForTitle) {
+    // Zero horizontal error bars
+    gStyle->SetErrorX(0);
+
     //  For 'colz' TH2
     gStyle->SetPalette(1);
     
