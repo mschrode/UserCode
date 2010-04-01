@@ -1,4 +1,4 @@
-// $Id: correct3rdJetPt.C,v 1.2 2010/03/30 13:54:35 mschrode Exp $
+// $Id: correct3rdJetPt.C,v 1.3 2010/03/30 16:17:29 mschrode Exp $
 
 #include <cmath>
 #include <iomanip>
@@ -10,9 +10,14 @@
 #include "TH1.h"
 #include "TH1D.h"
 #include "TH1I.h"
+#include "TLegend.h"
 #include "TRandom3.h"
+#include "TROOT.h"
 #include "TString.h"
 #include "TStyle.h"
+
+#include "/afs/naf.desy.de/user/m/mschrode/UserCode/mschrode/util/StyleSettings.h"
+#include "/afs/naf.desy.de/user/m/mschrode/UserCode/mschrode/util/LabelFactory.h"
 
 
 
@@ -289,6 +294,7 @@ namespace correct3rdJetPt {
     //     }
 
     std::cout << "  Plotting histograms... " << std::flush;
+    
     // Plot mean spectrum
     TCanvas *can1 = new TCanvas("canSpectrum","Spectrum",600,600);
     can1->cd();
@@ -299,10 +305,17 @@ namespace correct3rdJetPt {
     can2->cd();
     hSigmaMC->Draw("PE1");
     fSigmaMC->Draw("same");
+    TLegend *leg = util::LabelFactory::createLegend(nPt3Bins+1,0.5,0.07);
+    leg->AddEntry(hSigmaMC,"MC truth","L");
     for(int pt3bin = 0; pt3bin < nPt3Bins; ++pt3bin) {
       hSigmaMeanT[pt3bin]->Draw("PE1same");
       fSigmaMeanT[pt3bin]->Draw("same");
+
+      char text[50];
+      sprintf(text,"%.2f < p^{rel}_{T,3} < %.2f",pt3BinEdges[pt3bin],pt3BinEdges[pt3bin+1]);
+      leg->AddEntry(fSigmaMeanT[pt3bin],text,"L");
     }
+    leg->Draw("same");
 
     // Plot rel difference
     TCanvas *can3 = new TCanvas("canRelDiffs","Differences",600,600);
@@ -429,7 +442,9 @@ namespace correct3rdJetPt {
   //! Init global variables
   // ------------------------------------------------------------
   void init() {
-    gStyle->SetErrorX(0);
+    gROOT->ProcessLine(".L /afs/naf.desy.de/user/m/mschrode/UserCode/mschrode/util/LabelFactory.h+");
+    gROOT->ProcessLine(".L /afs/naf.desy.de/user/m/mschrode/UserCode/mschrode/util/StyleSettings.h+");
+    util::StyleSettings::presentationNoTitle();
     gStyle->SetOptStat(0);
     hBinning_ = new TH1I("hBinning_","",nBins_,tMin_,tMax_);
     for(int i = 0; i < nBins_; ++i) {
