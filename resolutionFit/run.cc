@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.3 2010/03/22 19:45:08 mschrode Exp $
+// $Id: run.cc,v 1.4 2010/03/23 20:00:39 mschrode Exp $
 
 #include <cassert>
 #include <vector>
@@ -31,17 +31,25 @@ int main() {
   TString baseMCStat = "~/results/ResolutionFit/Gauss/PtBins/Flat/gauss_Flat_StdSel_";
 
   std::vector<TString> baseSystUp;
-  baseSystUp.push_back("~/results/ResolutionFit/Gauss/PtBins/SigmaUp50/gauss_SigmaUp50_StdSel_");
+//   baseSystUp.push_back("~/results/ResolutionFit/Gauss/PtBins/SigmaUp30/gauss_SigmaUp30_StdSel_");
+//   baseSystUp.push_back("~/results/ResolutionFit/Gauss/PtBins/SigmaDown30/gauss_SigmaDown30_StdSel_");
   baseSystUp.push_back("~/results/ResolutionFit/Gauss/PtBins/SlopeUp50/gauss_SlopeUp50_StdSel_");
+  baseSystUp.push_back("~/results/ResolutionFit/Gauss/PtBins/SlopeDown50/gauss_SlopeDown50_StdSel_");
+
   std::vector<TString> baseSystDown;
-  baseSystDown.push_back("~/results/ResolutionFit/Gauss/PtBins/SigmaDown50/gauss_SigmaDown50_StdSel_");
+//   baseSystDown.push_back("~/results/ResolutionFit/Gauss/PtBins/SigmaUp30/gauss_SigmaUp30_StdSel_");
+//   baseSystDown.push_back("~/results/ResolutionFit/Gauss/PtBins/SigmaDown30/gauss_SigmaDown30_StdSel_");
+  baseSystDown.push_back("~/results/ResolutionFit/Gauss/PtBins/SlopeUp50/gauss_SlopeUp50_StdSel_");
   baseSystDown.push_back("~/results/ResolutionFit/Gauss/PtBins/SlopeDown50/gauss_SlopeDown50_StdSel_");
 
   std::vector<TString> labelSyst;
-  labelSyst.push_back("#sigma_{MC} #pm 50%");
-  labelSyst.push_back("Spektrum #pm 50%");
+//   labelSyst.push_back("#sigma_{MC} +30%");
+//   labelSyst.push_back("#sigma_{MC} -30%");
+  labelSyst.push_back("Spectrum +50%");
+  labelSyst.push_back("Spectrum -50%");
 
   std::vector<double> ptBinEdges;
+  //  ptBinEdges.push_back(80.);
   ptBinEdges.push_back(100.);
   ptBinEdges.push_back(120.);
   ptBinEdges.push_back(140.);
@@ -94,7 +102,7 @@ int main() {
   trueResPar.push_back(0.);
   trueResPar.push_back(1.145);
   trueResPar.push_back(0.037);
-  resolutionFit::FittedResolution *fit = new resolutionFit::FittedResolution(ptBins,trueResPar);
+  resolutionFit::FittedResolution *fit = new resolutionFit::FittedResolution(ptBins,trueResPar,"resFit_QCD_Gauss_");
   // Plot extrapolation per bin
   fit->plotExtrapolation();
 

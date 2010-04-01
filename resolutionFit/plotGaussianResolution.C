@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: plotGaussianResolution.C,v 1.1 2010/03/22 19:29:03 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -13,8 +13,8 @@
 #include "TLegend.h"
 #include "TPaveText.h"
 
-#include "/Users/matthias/UserCode/mschrode/util/LabelFactory.h"
-#include "/Users/matthias/UserCode/mschrode/util/StyleSettings.h"
+#include "/afs/naf.desy.de/user/m/mschrode/UserCode/mschrode/util/LabelFactory.h"
+#include "/afs/naf.desy.de/user/m/mschrode/UserCode/mschrode/util/StyleSettings.h"
 
 
 std::vector< std::vector<double> > pars_;  // <Parameter < Variation > >
@@ -25,6 +25,8 @@ std::vector<int> color_;
 std::vector<int> lineStyle_;
 std::vector<int> markerStyle_;
 TString outNamePrefix_;
+TString ptName_;
+TString ptGenName_;
 
 int nPars();
 int nVariations();
@@ -340,6 +342,12 @@ void plotResolution(const TString &fileName, const std::vector<double> &ptBinEdg
     }
     hTruth->SetDirectory(0);
     hPdf->SetDirectory(0);
+
+    hTruth->SetLineWidth(1);
+    hTruth->SetMarkerStyle(20);
+    hTruth->SetXTitle("R = "+ptName_+" / "+ptGenName_);
+    hTruth->SetYTitle("1 / N  dN / dR");
+
     hTrueRes.push_back(hTruth);
     hPdfRes.push_back(hPdf);
   }
@@ -348,12 +356,12 @@ void plotResolution(const TString &fileName, const std::vector<double> &ptBinEdg
     name += i;
     TCanvas *can = new TCanvas(name,name,500,500);
     can->cd();
-    hTrueRes[i]->Draw();
+    hTrueRes[i]->Draw("E1");
     hPdfRes[i]->Draw("Lsame");
 
     TLegend *leg = util::LabelFactory::createLegend(2);
     char entry[50];
-    sprintf(entry,"Truth (%.0f < p^{gen}_{T} < %.0f GeV)",ptBinEdges[i],ptBinEdges[i+1]);
+    sprintf(entry,"Truth (%.0f < %s < %.0f GeV)",ptBinEdges[i],ptGenName_.Data(),ptBinEdges[i+1]);
     leg->AddEntry(hTrueRes[i],entry,"L");
     leg->AddEntry(hPdfRes[i],"Fitted resolution","L");
     leg->Draw("same");
@@ -384,25 +392,30 @@ void plotSpectrum(const TString &fileName, double ptMin, double ptMax) {
   } else {
     hPtGen->SetDirectory(0);
     hPdfPtTrue->SetDirectory(0);
+
+    hPtGen->SetLineWidth(1);
+    hPtGen->SetMarkerStyle(20);
+    hPtGen->SetXTitle(ptGenName_);
+    hPtGen->SetYTitle("1 / N  dN / d"+ptGenName_+"  1 / (GeV)");
   }
 
   TLegend *leg = 0;
   TPaveText *text = 0;
   if( ptMax > ptMin ) {
     char entry[50];
-    sprintf(entry,"%.0f < p_{T} < %.0f GeV",ptMin,ptMax);
+    sprintf(entry,"%.0f < %s < %.0f GeV",ptMin,ptName_.Data(),ptMax);
     text = util::LabelFactory::createPaveText(1,0.6);
     text->AddText(entry);
     leg = util::LabelFactory::createLegend(2,0.6,util::LabelFactory::lineHeight(),1.1*util::LabelFactory::lineHeight());
   } else {
     leg = util::LabelFactory::createLegend(2,0.6);
   }
-  leg->AddEntry(hPtGen,"p^{gen}_{T} spectrum","L");
+  leg->AddEntry(hPtGen,ptGenName_+" spectrum","L");
   leg->AddEntry(hPdfPtTrue,"Pdf  f(p^{true}_{T})","L");
 
   TCanvas *can1 = new TCanvas("canSpectrumLin","Spectrum linear",500,500);
   can1->cd();
-  hPtGen->Draw();
+  hPtGen->Draw("E1");
   hPdfPtTrue->Draw("Lsame");
   if( ptMax > ptMin ) text->Draw("same");
   leg->Draw("same");
@@ -412,7 +425,7 @@ void plotSpectrum(const TString &fileName, double ptMin, double ptMax) {
   TCanvas *can2 = new TCanvas("canSpectrumLog","Spectrum log",500,500);
   can2->cd();
   hPtGen->SetMinimum(6E-8);
-  hPtGen->Draw();
+  hPtGen->Draw("E1");
   hPdfPtTrue->Draw("Lsame");
   if( ptMax > ptMin ) text->Draw("same");
   leg->Draw("same");
@@ -494,23 +507,31 @@ void plotGaussianResolution() {
   if( mode == 0 ) {
     // PtGen cuts
     outNamePrefix_ = "resFit_ToyMC_PtGenCuts_";
-    addVariation("toyMC_gauss_PtGenCuts_0050-1000/jsResponse.root","PtGen cuts");
+    ptName_ = "p^{meas}_{T}";
+    ptGenName_ = "p^{true}_{T}";
+
+    TString dir = "~/results/ResolutionFit/ToyMC/";
+    addVariation(dir+"toyMC_gauss_PtGenCuts_0050-1000/jsResponse.root","PtGen cuts");
     plotSigma(500,50.,1000.,truePar);
     plotRelDiff(500,50.,1000.,truePar);
-    plotSpectrum("toyMC_gauss_PtGenCuts_0050-1000/jsResponse.root");
-    plotResolution("toyMC_gauss_PtGenCuts_0050-1000/jsResponse.root",ptBinEdges);
+    plotSpectrum(dir+"toyMC_gauss_PtGenCuts_0050-1000/jsResponse.root");
+    plotResolution(dir+"toyMC_gauss_PtGenCuts_0050-1000/jsResponse.root",ptBinEdges);
   } else if( mode == 1 ) {
     // Pt cuts
     outNamePrefix_ = "resFit_ToyMC_PtCuts_";
-    addVariation("toyMC_gauss_PtCuts_0080-0800/jsResponse.root","Pt cuts");
-    addVariation("toyMC_gauss_PtCuts_0080-0800_SpecDown30/jsResponse.root","Spectrum -30%");
-    addVariation("toyMC_gauss_PtCuts_0080-0800_SpecUp30/jsResponse.root","Spectrum +30%");
-    addVariation("toyMC_gauss_PtCuts_0080-0800_SigmaDown30/jsResponse.root","Resolution -30%");
-    addVariation("toyMC_gauss_PtCuts_0080-0800_SigmaUp30/jsResponse.root","Resolution +30%");
+    ptName_ = "p^{meas}_{T}";
+    ptGenName_ = "p^{true}_{T}";
+
+    TString dir = "~/results/ResolutionFit/ToyMC/";
+    addVariation(dir+"toyMC_gauss_PtCuts_0080-0800/jsResponse.root","Pt cuts");
+    addVariation(dir+"toyMC_gauss_PtCuts_0080-0800_SpecDown30/jsResponse.root","Spectrum -30%");
+    addVariation(dir+"toyMC_gauss_PtCuts_0080-0800_SpecUp30/jsResponse.root","Spectrum +30%");
+    addVariation(dir+"toyMC_gauss_PtCuts_0080-0800_SigmaDown30/jsResponse.root","Resolution -30%");
+    addVariation(dir+"toyMC_gauss_PtCuts_0080-0800_SigmaUp30/jsResponse.root","Resolution +30%");
     plotSigma(500,80.,800.,truePar);
     plotRelDiff(500,80.,800.,truePar);
-    plotSpectrum("toyMC_gauss_PtCuts_0080-0800/jsResponse.root",80.,800.);
-    plotResolution("toyMC_gauss_PtCuts_0080-0800/jsResponse.root",ptBinEdges);
+    plotSpectrum(dir+"toyMC_gauss_PtCuts_0080-0800/jsResponse.root",80.,800.);
+    plotResolution(dir+"toyMC_gauss_PtCuts_0080-0800/jsResponse.root",ptBinEdges);
   }
   print();
 }

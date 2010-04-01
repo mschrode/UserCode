@@ -4,6 +4,8 @@
 #include <cassert>
 #include <vector>
 
+#include "TString.h"
+
 #include "PtBin.h"
 
 class TF1;
@@ -12,7 +14,7 @@ class TGraphAsymmErrors;
 namespace resolutionFit {
   class FittedResolution {
   public:
-    FittedResolution(const std::vector<PtBin*> &ptBins, const std::vector<double> &trueResPar);
+    FittedResolution(const std::vector<PtBin*> &ptBins, const std::vector<double> &trueResPar, const TString &outNamePrefix = "");
     ~FittedResolution();
 
     int nPtBins() const { return static_cast<int>(ptBins_.size()); }
@@ -37,6 +39,7 @@ namespace resolutionFit {
 
   private:
     const bool verbose_;
+    const TString outNamePrefix_;
 
     std::vector<PtBin*> ptBins_;
     TF1 *trueRes_;

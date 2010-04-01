@@ -15,8 +15,8 @@
 
 
 namespace resolutionFit {
-  FittedResolution::FittedResolution(const std::vector<PtBin*> &ptBins, const std::vector<double> &trueResPar)
-    : verbose_(true) {
+  FittedResolution::FittedResolution(const std::vector<PtBin*> &ptBins, const std::vector<double> &trueResPar, const TString &outNamePrefix)
+    : verbose_(true), outNamePrefix_(outNamePrefix) {
     // Set ptbins
     ptBins_ = ptBins;
 
@@ -101,7 +101,8 @@ namespace resolutionFit {
       txt->Draw("same");
       
       // Write canvas to file
-      name = "ExtrapolatedSigma_PtBin";
+      name = outNamePrefix_;
+      name += "ExtrapolatedSigma_PtBin";
       name += bin;
       name += ".eps";
       can->SaveAs(name,"eps");
@@ -161,7 +162,8 @@ namespace resolutionFit {
       leg->Draw("same");
 
       // Write Canvas to fiel
-      name = "Resolution_PtBin";
+      name = outNamePrefix_;
+      name += "Resolution_PtBin";
       name += bin;
       name += ".eps";
       can->SaveAs(name,"eps");
@@ -189,9 +191,9 @@ namespace resolutionFit {
     h->GetYaxis()->SetRangeUser(0.7*relSigma(nPtBins()-1),0.185);
     h->Draw();
 
-    // Draw systematic uncertainty band
-    TGraphAsymmErrors *gSyst = getTGraphOfResolution("Systematic");
-    gSyst->Draw("E3same");
+//     // Draw systematic uncertainty band
+//     TGraphAsymmErrors *gSyst = getTGraphOfResolution("Systematic");
+//     gSyst->Draw("E3same");
 
     // Draw true and fitted resolution functions
     trueRes_->Draw("same");
@@ -202,20 +204,20 @@ namespace resolutionFit {
     gStat->Draw("PE1same");
 
     // Add a legend
-    TLegend *leg = util::LabelFactory::createLegend(5);
+    TLegend *leg = util::LabelFactory::createLegend(4);
     leg->AddEntry(gStat,"Extrapolated #bar{#sigma} (p^{3}_{T,rel} #rightarrow 0)","P");
     leg->AddEntry(gStat,"Statistical uncertainty","L");
-    leg->AddEntry(gSyst,"Uncertainty from spectrum","F");
+    //leg->AddEntry(gSyst,"Uncertainty from spectrum","F");
     leg->AddEntry(trueRes_,"MC truth","L");
     leg->AddEntry(fittedRes_,"Fit #sigma(p_{T}) to #bar{#sigma}","L");
     leg->Draw("same");
 
     // Write canvas to file
-    can->SaveAs("ExtrapolatedResolution.eps","eps");
+    can->SaveAs(outNamePrefix_+"ExtrapolatedResolution.eps","eps");
 
     // Clean up
     delete h;
-    delete gSyst;
+    //    delete gSyst;
     delete gStat;
     delete leg;
     delete can;
@@ -239,15 +241,19 @@ namespace resolutionFit {
       name += bin;
       TH1F *hPtGen = (*it)->getHistPtGen(name);
       hPtGen->UseCurrentStyle();
+      hPtGen->SetMarkerStyle(20);
+      hPtGen->SetLineWidth(1);
+      hPtGen->SetXTitle("p_{T}(particleJet)  (GeV)");
+      hPtGen->SetYTitle("1 / N  dN / dp_{T}  1 / (GeV)");
       hPtGen->GetYaxis()->SetRangeUser(0.,2.4*hPtGen->GetMaximum());
-      hPtGen->Draw();
+      hPtGen->Draw("PE1");
 
       // Draw pdf
       name = "PlotPdfPtTrueBin";
       name += bin;
       TH1F *hPdfPtTrue = (*it)->getHistPdfPtTrue(name);
       hPdfPtTrue->Draw("Lsame");
-      hPtGen->Draw("same");
+      hPtGen->Draw("PE1same");
 
       // Labels
       TPaveText *txt = util::LabelFactory::createPaveText(1,1.,0.06);
@@ -270,7 +276,8 @@ namespace resolutionFit {
       leg->Draw("same");
 
       // Write Canvas to fiel
-      name = "Spectrum_PtBin";
+      name = outNamePrefix_;
+      name += "Spectrum_PtBin";
       name += bin;
       name += ".eps";
       can->SaveAs(name,"eps");
@@ -333,14 +340,14 @@ namespace resolutionFit {
     // Plot systematic uncertainties
     for(int n = 0; n < gSystUp.size(); n++) {
       gSystUp[n]->Draw("Lsame");
-      gSystDown[n]->Draw("Lsame");
+      //gSystDown[n]->Draw("Lsame");
     }
 
     // Add legend
     leg->Draw("same");
 
     // Write canvas to file
-    can->SaveAs("SystematicUncertainties.eps","eps");
+    can->SaveAs(outNamePrefix_+"SystematicUncertainties.eps","eps");
 
     // Clean up
     delete h;
