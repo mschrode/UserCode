@@ -1,5 +1,5 @@
 //
-// $Id: ControlPlotsJetSmearing.h,v 1.6 2010/02/25 15:28:18 mschrode Exp $
+// $Id: ControlPlotsJetSmearing.h,v 1.7 2010/03/24 14:30:19 mschrode Exp $
 //
 #ifndef JS_CONTROLPLOTS_JETSMEARING_H
 #define JS_CONTROLPLOTS_JETSMEARING_H
@@ -13,6 +13,7 @@
 
 class TH1F;
 class TH2F;
+class TLegend;
 class TObject;
 class TPostScript;
 class TCanvas;
@@ -22,7 +23,7 @@ class TRandom3;
 //!  \brief Generates validation plots for jet-smearing method
 //!  \author Matthias Schroeder
 //!  \date Thu May  7 11:30:28 CEST 2009 
-//!  $Id: ControlPlotsJetSmearing.h,v 1.6 2010/02/25 15:28:18 mschrode Exp $
+//!  $Id: ControlPlotsJetSmearing.h,v 1.7 2010/03/24 14:30:19 mschrode Exp $
 // --------------------------------------------------
 class ControlPlotsJetSmearing {
  public:
@@ -56,9 +57,14 @@ class ControlPlotsJetSmearing {
   void plotLogP() const;
   void plotMeanResponseAndResolution() const;
 
+  double gaussianWidth(double pt, const std::vector<double> scale) const;
+  double gaussianWidthError(double pt, const std::vector<double> scale) const;
+
+  TLegend *createLegend(int nEntries, double width = 1., double lineHgt = -1., double yOffset = 0.) const;
   void drawPSPage(TPostScript * ps, TCanvas * can, TObject * obj, std::string option = "", bool log = false) const;
   void drawPSPage(TPostScript * ps, TCanvas * can, std::vector<TObject*> objs, std::string option = "", bool log = false) const;
   void findYRange(const TH1F * h, double& min, double& max) const;
+  double lineHeight() const { return 0.06; }
   void normHist(TH1F * h, std::string option = "") const;
   void normHist(TH1F *h, double min, double max, std::string option = "") const;
   void setGStyle() const;

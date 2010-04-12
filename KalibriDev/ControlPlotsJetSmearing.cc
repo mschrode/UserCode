@@ -1,4 +1,4 @@
-// $Id: ControlPlotsJetSmearing.cc,v 1.16 2010/02/25 15:28:18 mschrode Exp $
+// $Id: ControlPlotsJetSmearing.cc,v 1.17 2010/03/24 14:30:19 mschrode Exp $
 
 #include "ControlPlotsJetSmearing.h"
 
@@ -145,7 +145,11 @@ void ControlPlotsJetSmearing::plotResponse() const
   TH1F * hPtGenJet1 = 0;         // PtGen spectrum
   TH1F * hPtHat = 0;         // PtHat spectrum
   TH1F * hPtDijet = 0;       // Dijet spectrum
-
+  TH1F * hGaussWidth = 0;
+  TH1F * hGaussWidthErr = 0;
+  TH1F * hGaussWidthTruth = 0;
+  TH1F * hGaussWidthRatio = 0;
+  TH1F * hGaussWidthRatioErr = 0;
 
   for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
     std::string name = "hRespMeasAbs_" + toString(ptBin);
@@ -269,6 +273,25 @@ void ControlPlotsJetSmearing::plotResponse() const
   hTruthPDFErrStat = static_cast<TH1F*>(hTruthPDF->Clone("hTruthPDFErrStat"));
   hTruthPDFErrStat->SetFillColor(45);
 
+  hGaussWidth = new TH1F("hGaussWidth",";p_{T} (GeV);#sigma(p_{T}) / p_{T}",
+			 500,ptBinEdges.front(),ptBinEdges.back());
+  hGaussWidth->SetNdivisions(505);
+  hGaussWidth->SetLineWidth(2);
+  hGaussWidth->SetLineColor(2);
+  hGaussWidthErr = static_cast<TH1F*>(hGaussWidth->Clone("hGaussWidthErr"));
+  hGaussWidthErr->SetLineWidth(0);
+  hGaussWidthErr->SetLineColor(43);
+  hGaussWidthErr->SetFillColor(43);
+  hGaussWidthTruth = static_cast<TH1F*>(hGaussWidth->Clone("hGaussWidthTruth"));
+  hGaussWidthTruth->SetLineColor(4);
+  hGaussWidthTruth->SetLineStyle(2);
+  hGaussWidthRatio = static_cast<TH1F*>(hGaussWidth->Clone("hGaussWidthRatio"));
+  hGaussWidthRatio->SetTitle(";p_{T} (GeV);(#sigma - #sigma_{true}) / #sigma_{true}");
+  hGaussWidthRatioErr = static_cast<TH1F*>(hGaussWidthRatio->Clone("hGaussWidthRatioErr"));
+  hGaussWidthRatioErr->SetLineWidth(0);
+  hGaussWidthRatioErr->SetLineColor(43);
+  hGaussWidthRatioErr->SetFillColor(43);
+
 
   // --- Fill histograms of measured response --------------
   for(DataIt datait = data_->begin(); datait != data_->end(); datait++) {
@@ -314,25 +337,6 @@ void ControlPlotsJetSmearing::plotResponse() const
 	}
       }
       hPtDijet->Fill( dijet->dijetPt(), dijet->GetWeight() );
-      //     } else if( (*datait)->GetType() == TypeSmearPhotonJet )  {  // Select GammaJet events
-      //       SmearPhotonJet * gammaJet = static_cast<SmearPhotonJet*>(*datait);  
-      
-      //       hPtHat->Fill( gammaJet->ptHat(), gammaJet->GetWeight() );
-      //       const Jet * jet = gammaJet->jet();
-      
-      //       hPtGenAbs->Fill( jet->genPt(), gammaJet->GetWeight() );
-      //       //hPtGen->Fill( jet->genPt(), gammaJet->GetWeight() );
-      
-      //       for(int i = 0; i < nPtBins; i++) {
-      // 	double var = 0.;
-      // 	if( binningVar == "ptGen" ) var = jet->genPt();
-      // 	if( ptBinEdges[i] <= var && var < ptBinEdges[i+1] ) {
-      // 	  hRespMeasAbs[i]->Fill( jet->pt() / jet->genPt(), gammaJet->GetWeight() );
-      // 	  hRespMeas[i]->Fill( jet->pt() / jet->genPt(), gammaJet->GetWeight() );
-      // 	  hPtGenAbsBins[i]->Fill( jet->genPt(), gammaJet->GetWeight() );
-      // 	  continue;
-      // 	}
-      //       }
     }
   } // End of loop over data
   for(int ptBin = 0; ptBin < nPtBins; ptBin++) {
@@ -370,10 +374,6 @@ void ControlPlotsJetSmearing::plotResponse() const
 	hRespFit[ptBin]->SetBinContent(bin,val);
 	hRespFitErrStat[ptBin]->SetBinContent(bin,val);
 	hRespFitErrStat[ptBin]->SetBinError(bin,smearData->pdfRespError(r,pt));
-
-//   	if( ptBin == 0 ) {
-//   	  std::cout << r << ":  " << smearData->respPDF(r,ptBinCenters[ptBin]) << " +/- " << smearData->respPDFError(r,ptBinCenters[ptBin]) << std::endl;
-//   	}
       }
       for(int bin = 1; bin <= hFitPtAsym[ptBin]->GetNbinsX(); bin++) {
 	double a = hFitPtAsym[ptBin]->GetBinCenter(bin);
@@ -420,50 +420,31 @@ void ControlPlotsJetSmearing::plotResponse() const
       for(int i = 0; i < param_->GetNumberOfParameters(); i++) {
 	param_->GetPars()[i] = fittedPar.at(i);
       }
-
-      // In case of interpolated step + gauss parametrization
-      //      if( param == "SmearParametrizationStepGaussInter" ) {
-// 	// Step part of fit function
-// 	for(int bin = 1; bin <= hRespFitStep[ptBin]->GetNbinsX(); bin++) {
-// 	  double val  = scale.at(bin+1)*(smearData->respPar(bin+1));
-// 	  hRespFitStep[ptBin]->SetBinContent(bin,val);
-// 	}
-// 	normHist(hRespFitStep[ptBin],"width");
-// 	hRespFitStep[ptBin]->Scale(1. - scale.at(0)*(smearData->respPar(0)));
-	
-// 	// Gauss part of fit function
-// 	for(int bin = 1; bin <= hRespFitGaus[ptBin]->GetNbinsX(); bin++) {
-// 	  // Mean
-// 	  double mu = auxPar.at(0);
-// 	  // Width
-// // 	  double a1 = scale.at(1)*(smearData->respPar()[1]);
-// // 	  double a2 = scale.at(2)*(smearData->respPar()[2]);
-// // 	  double a3 = scale.at(3)*(smearData->respPar()[3]);
-// // 	  double sigma = sqrt( a1*a1/ptBinCenters[ptBin]/ptBinCenters[ptBin]
-// // 			       + a2*a2/ptBinCenters[ptBin] + a3*a3 );
-// 	  double sigma = scale[1]*(smearData->respPar(1));
-// 	  // pdf
-// 	  double c     = scale.at(0)*(smearData->respPar(0));
-// 	  double r     = hRespFitGaus[ptBin]->GetBinCenter(bin);
-// 	  double val   = c * exp( -pow((mu-r)/sigma,2) / 2. ) / sqrt(2.*M_PI) / sigma;
-// 	  hRespFitGaus[ptBin]->SetBinContent(bin,val);
-// 	}
-      
-// 	// Sum
-// 	for(int binGaus = 1; binGaus <= hRespFitGaus[ptBin]->GetNbinsX(); binGaus++) {
-// 	  int binStep = hRespFitStep[ptBin]->FindBin(hRespFitGaus[ptBin]->GetBinCenter(binGaus));
-// 	  double val = hRespFitStep[ptBin]->GetBinContent(binStep)
-// 	    + hRespFitGaus[ptBin]->GetBinContent(binGaus);
-// 	  hRespFitSum[ptBin]->SetBinContent(binGaus,val);
-// 	}
-//       } else if( param == "SmearParametrizationCrystalBall"
-// 		 ||  param == "SmearParametrizationCrystalBallPt"
-// 		 ||  param == "SmearParametrizationGauss") {
-//       } else {
-// 	std::cout << "WARNING: No controlplots implemented for parametrization '" << param << "'\n";
-//       }
     } // End of loop over ptBins
   } // End if( smearData )
+
+
+  // --- Fill histograms of fitted Gaussian width -----------
+  if( param == "SmearParametrizationGauss" ) {
+    std::vector<double> truthPar = bag_of<double>(config_->read<string>("plots true resolution parameters",""));
+    for(int bin = 1; bin <= hGaussWidth->GetNbinsX(); ++bin) {
+      double pt = hGaussWidth->GetBinCenter(bin);
+      double sigma = gaussianWidth(pt,scale) / pt;
+      double err = gaussianWidthError(pt,scale) / pt;
+      hGaussWidth->SetBinContent(bin,sigma);
+      hGaussWidthErr->SetBinContent(bin,sigma);
+      hGaussWidthErr->SetBinError(bin,err);
+      if( truthPar.size() == 3 ) {
+	double sigmaTrue = sqrt( truthPar[0]*truthPar[0]/pt/pt
+				 +truthPar[1]*truthPar[1]/pt
+				 +truthPar[2]*truthPar[2]      );
+	hGaussWidthTruth->SetBinContent(bin,sigmaTrue);
+	hGaussWidthRatio->SetBinContent(bin,sigma/sigmaTrue-1.);
+	hGaussWidthRatioErr->SetBinContent(bin,hGaussWidthRatio->GetBinContent(bin));
+	hGaussWidthRatioErr->SetBinError(bin,err/sigmaTrue);
+      }
+    }
+  }
 
 
   // --- Fill histograms of fitted truth spectrum -----------
@@ -599,16 +580,16 @@ void ControlPlotsJetSmearing::plotResponse() const
 //     c1->SetLogy();
 //     c1->Draw();
 
-    ps->NewPage();
-    c1->cd();
-    hRespMeas[ptBin]->Draw();
-    hRespFitErrStat[ptBin]->Draw("E3 same");
-    hRespMeas[ptBin]->Draw("same");
-    hRespFit[ptBin]->Draw("Lsame");
-    gPad->RedrawAxis();
-    legPtRangeAndCenters[ptBin]->Draw("same");
-    c1->SetLogy(logy);
-    c1->Draw();
+//     ps->NewPage();
+//     c1->cd();
+//     hRespMeas[ptBin]->Draw();
+//     hRespFitErrStat[ptBin]->Draw("E3 same");
+//     hRespMeas[ptBin]->Draw("same");
+//     hRespFit[ptBin]->Draw("Lsame");
+//     gPad->RedrawAxis();
+//     legPtRangeAndCenters[ptBin]->Draw("same");
+//     c1->SetLogy(logy);
+//     c1->Draw();
 
     ps->NewPage();
     c1->cd();
@@ -635,14 +616,14 @@ void ControlPlotsJetSmearing::plotResponse() const
     c1->SetLogy(logy);
     c1->Draw();
 
-    ps->NewPage();
-    c1->cd();
-    hRespMCPtHat[ptBin]->Draw();
-    hRespFit[ptBin]->Draw("Lsame");
-    gPad->RedrawAxis();
-    legPtRangeAndCenters[ptBin]->Draw("same");
-    c1->SetLogy(logy);
-    c1->Draw();
+//     ps->NewPage();
+//     c1->cd();
+//     hRespMCPtHat[ptBin]->Draw();
+//     hRespFit[ptBin]->Draw("Lsame");
+//     gPad->RedrawAxis();
+//     legPtRangeAndCenters[ptBin]->Draw("same");
+//     c1->SetLogy(logy);
+//     c1->Draw();
 
 //     ps->NewPage();
 //     c1->cd();
@@ -718,7 +699,7 @@ void ControlPlotsJetSmearing::plotResponse() const
   tmpMax *= 1.4;
   hPtGen->GetYaxis()->SetRangeUser(0.,tmpMax);
   hPtGen->Draw();
-  hTruthPDF->Draw("same");
+  hTruthPDF->Draw("Lsame");
   gPad->RedrawAxis();
   legPtRange[0]->Draw("same");
   c1->SetLogy(0);
@@ -727,15 +708,50 @@ void ControlPlotsJetSmearing::plotResponse() const
   c1->SetLogx(0);
 
   std::vector<TObject*> objs;
-  objs.clear();
-  objs.push_back(hPtHat);
-  objs.push_back(hTruthPDF);
-  drawPSPage(ps,c1,objs,"",true);
+//   objs.clear();
+//   objs.push_back(hPtHat);
+//   objs.push_back(hTruthPDF);
+//   drawPSPage(ps,c1,objs,"",true);
 
   objs.clear();
   objs.push_back(hPtDijet);
   objs.push_back(hTruthPDF);
   drawPSPage(ps,c1,objs,"",true);
+
+  // Gaussian width
+  if( param == "SmearParametrizationGauss" ) {
+    TLegend *legSig = createLegend(3,0.7);
+    legSig->AddEntry(hGaussWidthTruth,"True width","L");
+    legSig->AddEntry(hGaussWidth,"Fitted width","L");
+    legSig->AddEntry(hGaussWidthErr,"Statistical uncertainty","F");
+    
+    ps->NewPage();
+    c1->cd();
+    hGaussWidth->Draw("L");
+    hGaussWidthErr->Draw("LE3same");
+    hGaussWidthTruth->Draw("Lsame");
+    hGaussWidth->Draw("Lsame");
+    legSig->Draw("same");
+    gPad->RedrawAxis();
+    c1->SetLogy(0);
+    c1->Draw();
+
+    delete legSig;
+
+    ps->NewPage();
+    c1->cd();
+    hGaussWidthRatio->GetYaxis()->SetRangeUser(-0.2,0.4);
+    hGaussWidthRatio->Draw("L");
+    hGaussWidthRatioErr->Draw("LE3same");
+    hGaussWidthRatio->Draw("Lsame");
+    TLine line(hGaussWidthRatio->GetXaxis()->GetBinLowEdge(1),0.,
+	       hGaussWidthRatio->GetXaxis()->GetBinLowEdge(hGaussWidthRatio->GetNbinsX()),0.);
+    line.SetLineStyle(2);
+    line.Draw("same");
+    gPad->RedrawAxis();
+    c1->SetLogy(0);
+    c1->Draw();
+  }
 
 
   // Write histos to root file
@@ -764,6 +780,11 @@ void ControlPlotsJetSmearing::plotResponse() const
   rootfile.WriteTObject(hPtDijet);
   rootfile.WriteTObject(hTruthPDF);
   rootfile.WriteTObject(hTruthPDFErrStat);
+  rootfile.WriteTObject(hGaussWidth);
+  rootfile.WriteTObject(hGaussWidthErr);
+  rootfile.WriteTObject(hGaussWidthTruth);
+  rootfile.WriteTObject(hGaussWidthRatio);
+  rootfile.WriteTObject(hGaussWidthRatioErr);
 
   rootfile.Close();
 
@@ -796,6 +817,11 @@ void ControlPlotsJetSmearing::plotResponse() const
   delete hPtDijet;
   delete hTruthPDF;
   delete hTruthPDFErrStat;
+  delete hGaussWidth;
+  delete hGaussWidthErr;
+  delete hGaussWidthTruth;
+  delete hGaussWidthRatio;
+  delete hGaussWidthRatioErr;
   delete c1;
   delete ps;
 }
@@ -1684,6 +1710,43 @@ void ControlPlotsJetSmearing::plotMeanResponseAndResolution() const {
 }
 
 
+// --------------------------------------------------
+double ControlPlotsJetSmearing::gaussianWidth(double pt, const std::vector<double> scale) const {
+  double a[3];
+  for(int i = 0; i < 3; i++) {
+    a[i] = scale[i]*param_->GetPars()[i];
+  }
+  return sqrt( a[0]*a[0] + a[1]*a[1]*pt + a[2]*a[2]*pt*pt );
+}
+
+
+// ------------------------------------------------------------------------
+double ControlPlotsJetSmearing::gaussianWidthError(double pt, const std::vector<double> scale) const {
+  // Calculate derivatives
+  std::vector<double> ds(3);
+  double s = gaussianWidth(pt,scale);
+  for(int i = 0; i < 3; i++) {
+    ds[i] = scale[i]*param_->GetPars()[i]/s;
+    if( i == 1 ) ds[i] *= pt;
+    if( i == 2 ) ds[i] *= pt*pt;
+  }
+
+  // Calculate variance
+  double var = 0.;
+  for(int i = 0; i < 3; i++) { // Outer loop over parameters
+    for(int j = 0; j < i+1; j++) { // Inner loop over parameters
+      int idx = (i*i + i)/2 + j; // Index of (i,j) in covariance vector
+      if( i == j ) { // Diagonal terms
+	var += ds[i]*ds[i]*scale[i]*scale[i]*param_->GetCovCoeff()[idx];
+      } else { // Off-diagonal terms
+	var += 2*ds[i]*ds[j]*scale[i]*scale[j]*param_->GetCovCoeff()[idx];
+      }
+    } // End of inner loop over parameters
+  } // End of outer loop over parameters
+
+  return sqrt(var);
+}
+
 
 //!  \brief Draw TObject on one page of a ps file
 //!
@@ -1857,6 +1920,25 @@ void ControlPlotsJetSmearing::setGStyle() const
 
   gStyle->SetPadTickX(1);
   gStyle->SetPadTickY(1);
+}
+
+
+
+// --------------------------------------------------
+TLegend *ControlPlotsJetSmearing::createLegend(int nEntries, double width, double lineHgt, double yOffset) const {
+  double margin = 0.04;
+  double x0 = gStyle->GetPadLeftMargin()+margin;
+  double x1 = 1.-(gStyle->GetPadRightMargin()+margin);
+  x0 = x0 + (1.-width)*(x1-x0);
+  double y1 = 1.-(gStyle->GetPadTopMargin()+margin+0.02+yOffset);
+  double height = lineHeight();
+  if( lineHgt > 0 ) height = lineHgt;
+  double y0 = y1 - nEntries*height;
+  TLegend *leg = new TLegend(x0,y0,x1,y1);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextFont(42);
+  return leg;
 }
  
  
