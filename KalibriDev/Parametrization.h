@@ -1,5 +1,5 @@
 //
-//  $Id: Parametrization.h,v 1.12 2010/03/24 14:30:19 mschrode Exp $
+//  $Id: Parametrization.h,v 1.13 2010/03/25 08:30:59 mschrode Exp $
 //
 #ifndef CALIBCORE_PARAMETRIZATION_H
 #define CALIBCORE_PARAMETRIZATION_H
@@ -24,7 +24,7 @@ class TH1D;
 //!  to correct a tower or jet measurement.
 //!  \author Hartmut Stadie
 //!  \date Thu Apr 03 17:09:50 CEST 2008
-//!  $Id: Parametrization.h,v 1.12 2010/03/24 14:30:19 mschrode Exp $
+//!  $Id: Parametrization.h,v 1.13 2010/03/25 08:30:59 mschrode Exp $
 // -----------------------------------------------------------------
 class Parametrization 
 {
@@ -116,7 +116,6 @@ public:
   virtual double correctedGlobalJetEt(const Measurement *x,const double *par) const { return x->pt;}
 
   //! Returns probability density of measured jet pt given a true jet pt
-  virtual double pdfPtMeas(double ptMeas, double ptTrue, const double *par) const { return 0.; }
   virtual double pdfPtMeasJet1(double ptMeas, double ptTrue, const double *par) const { return 0.; }
   virtual double pdfPtMeasJet2(double ptMeas, double ptTrue, const double *par) const { return 0.; }
   //! Returns probability density of true jet pt
@@ -1121,234 +1120,14 @@ class SmearFermiTail : public Parametrization{
 
 
 
-//! \brief Parametrization used for response function estimation
-//!        with one Gaussian and an interpolated step function
-//!
-//! The response pdf consists of a central Gaussians around 1 and an
-//! interpolated step function (Histogram) parametrizing the tail:
-//! \f[
-//!  p(r) = c \cdot G(1,\sigma) + (1-c) \cdot H_{inter}(b_{i})
-//! \f]
-//!
-//! The truth pdf is \f$ f(t) = N/t^{n} \f$. The normalization
-//! is such that the dijet probability
-//! \f[
-//!   p = \int\;dt\;f(t)r(m_{1}/t)r(m_{2}/t)
-//! \f]
-//! is normalized to one. Therefore: \f$ n > 3 \f$
-//!
-//! Number of free parameters:
-//!  - towers: 0
-//!  - jets:   12
-//!    - 0:      Normalization \f$ c \f$
-//!    - 1:      Width \f$ \sigma \f$ of main Gaussian
-//!    - 2 - 11: Bin content of histogram
-//!  - tracks: 0
-//!  - global: 1
-//!  - The exponent of the truth spectrum
-// ------------------------------------------------------------------------
-class SmearStepGaussInter : public Parametrization
-{ 
- public:
-  //! Constructor
-  SmearStepGaussInter(double tMin, double tMax, double rMin, double rMax, int rNBins, double ptDijetMin, double ptDijetMax, const std::vector<double>& rParScales, const std::vector<double>& gaussPar);
-
-  ~SmearStepGaussInter();
-
-  const char* name() const { return "SmearStepGaussInter";}
-
-  virtual bool needsUpdate() const { return true; }
-
-  //! Update integral over dijet resolution \p ptDijetCutInt_
-  virtual void update(const double * par);
-
-  //! Returns 0
-  double correctedTowerEt(const Measurement *x,const double *par) const { return 0.; }
-
-  //! Returns probability density of response
-  double correctedJetEt(const Measurement *x,const double *par) const;
-  double correctedJetEtSigma(const Measurement *x,const double *par,const double *cov, const std::vector<int> &covIdx) const;
-
-  //! Returns probability density of true pt multiplied by normalization
-  //! of dijet probability (see also \p SmearDiJet::truthPDF(t)).
-  double correctedGlobalJetEt(const Measurement *x,const double *par) const;
-  virtual double correctedGlobalJetEtSigma(const Measurement *x,const double *par,const double *cov, const std::vector<int> &covIdx) const;
-
-
- private:
-  const double tMin_;                   //!< Minimum of non-zero range of truth pdf
-  const double tMax_;                   //!< Maximum of non-zero range of truth pdf
-  const double rMin_;                   //!< Minimum of non-zero range of response pdf
-  const double rMax_;                   //!< Maximum of non-zero range of response pdf
-  const double ptDijetMin_;             //!< Minimum of pt dijet
-  const double ptDijetMax_;             //!< Maximum of pt dijet
-  const int    nStepPar_;               //!< Number of parameters of step part of pdf
-  const int    nGaussPar_;              //!< Number of parameters of Gauss part of pdf
-  const double binWidth_;               //!< Bin width
-  const std::vector<double> respParScales_;     //!< Parameter scales
-  const std::vector<double> gaussPar_;  //!< Parameters of Gaussian part of response pdf
-  std::vector<double> binCenters_;      //!< Centers of response bins
-  TH1F * ptDijetCutInt_;	        //!< Integral over dijet response for truth pdf for different t
-
-  //! Linear interpolation between two bins
-  double interpolate(double r, const std::vector<double>& par) const;
-
-  //! Returns probability density (not normalised!) of truth
-  //! considering cuts on dijet pt
-  double truthPDF(double pt, double n) const;
-
-  double respDerivative(const Measurement *x, const double *par, int i) const;
-
-  //! Print some initialization details
-  void print() const;
-};
-
-
-
-//! \brief Parametrization used for response function estimation
-//!        with a crystal ball function
-// ------------------------------------------------------------------------
-class SmearCrystalBall : public Parametrization
-{ 
- public:
-  //! Constructor
-  SmearCrystalBall(double tMin, double tMax, double ptDijetMin, double ptDijetMax, const std::vector<double>& rParScales);
-
-  ~SmearCrystalBall();
-
-  const char* name() const { return "SmearCrystalBall";}
-
-  virtual bool needsUpdate() const { return false; }
-
-  //! Returns 0
-  double correctedTowerEt(const Measurement *x,const double *par) const { return 0.; }
-  double correctedJetEt(const Measurement *x,const double *par) const { return 0.; }
-  double correctedGlobalJetEt(const Measurement *x,const double *par) const { return 0.; }
-
-  double pdfPtMeas(double ptMeas, double ptTrue, const double *par) const;
-  double pdfPtTrue(double ptTrue, const double *par) const;
-  double pdfResponse(double r, double ptTrue, const double *par) const;
-  double pdfResponseError(double r, double ptTrue, const double *par, const double *cov, const std::vector<int> &covIdx) const;
-  double pdfDijetAsym(double a, double ptTrue, const double *par) const;
-
-
- private:
-  const double tMin_;                   //!< Minimum of non-zero range of truth pdf
-  const double tMax_;                   //!< Maximum of non-zero range of truth pdf
-  const double ptDijetMin_;             //!< Minimum of pt dijet
-  const double ptDijetMax_;             //!< Maximum of pt dijet
-  const std::vector<double> scale_;     //!< Parameter scales
-  TH1F *hPdfPtTrue_;
-
-  double sigma(const double *par) const {
-    double val = par[0] > 0. ? par[0] : 1E-3;
-    return scale_[0]*val;
-  }
-  double alpha(const double *par) const {
-    double val = par[1] > 0. ? par[1] : 1E-3;
-    return scale_[1]*val;
-  }
-  double n(const double *par) const {
-    double val = par[2] > 0. ? par[2] : 1E-3;
-    return scale_[2]*val;
-  }
-  double exponent(const double *par) const {
-    return scale_[3]*par[3] > 0. ? scale_[3]*par[3] : 1E-3;
-  }
-  double specPar(const double *par, int i) const {
-    return scale_[3+i]*par[3+i];
-  }
-
-  //! Returns the function value of a normalized crystal
-  //! ball function
-  double crystalBallFunc(double x, double mean, double sigma, double alpha, double n) const;
-  double crystalBallNorm(double mean, double sigma, double alpha, double n) const;
-  double crystalBallInt(double mean, double sigma, double alpha, double n, double min, double max) const;
-  double crystalBallDerivative(double x, double mean, double sigma, double alpha, double n, int i) const;
-  double pdfPtTrueNotNorm(double ptTrue, const double *parSpec, const double *parSigma, double alpha, double n) const;
-  
-  //! Print some initialization details
-  void print() const;
-};
-
-
-
-//! \brief Parametrization used for response function estimation
-//!        with a crystal ball function
-// ------------------------------------------------------------------------
-class SmearCrystalBallPt : public Parametrization
-{ 
- public:
-  //! Constructor
-  SmearCrystalBallPt(double tMin, double tMax, double ptDijetMin, double ptDijetMax, const std::vector<double>& rParScales);
-
-  ~SmearCrystalBallPt() {};
-
-  const char* name() const { return "SmearCrystalBallPt";}
-
-  //! Returns 0
-  double correctedTowerEt(const Measurement *x,const double *par) const { return 0.; }
-  double correctedJetEt(const Measurement *x,const double *par) const { return 0.; }
-  double correctedGlobalJetEt(const Measurement *x,const double *par) const { return 0.; }
-
-  double pdfPtMeas(double ptMeas, double ptTrue, const double *par) const;
-  double pdfPtTrue(double ptTrue, const double *par) const;
-  double pdfResponse(double r, double ptTrue, const double *par) const;
-
-
- private:
-  const double tMin_;                   //!< Minimum of non-zero range of truth pdf
-  const double tMax_;                   //!< Maximum of non-zero range of truth pdf
-  const double ptDijetMin_;             //!< Minimum of pt dijet
-  const double ptDijetMax_;             //!< Maximum of pt dijet
-  const std::vector<double> scale_;     //!< Parameter scales
-
-  double sigma(double ptTrue, const double *par) const {
-    double a[3];
-    for(int i = 0; i < 3; i++) {
-      a[i] = scale_[i]*par[i];
-      if( a[i] <= 0. ) a[i] = 1E-5;
-    }
-    return sqrt( a[0]*a[0] + a[1]*a[1]*ptTrue + a[2]*a[2]*ptTrue*ptTrue );
-  }
-  double alpha(double ptTrue, const double *par) const {
-    //return scale_[3]*par[3] > 0. ? scale_[3]*par[3] : 1E-3;
-    double a[2];
-    for(int i = 0; i < 2; i++) {
-      a[i] = scale_[3+i]*par[3+i];
-      if( a[i] <= 0. ) a[i] = 1E-5;
-    }
-    return a[0] + a[1]/ptTrue/ptTrue;
-  }
-  double n(const double *par) const {
-    return scale_[5]*par[5] > 0. ? scale_[5]*par[5] : 1E-3;
-  }
-  double exponent(const double *par) const {
-    return scale_[6]*par[6] > 0. ? scale_[6]*par[6] : 1E-3;
-  }
-  double specPar(const double *par, int i) const {
-    return scale_[6+i]*par[6+i] > 0. ? scale_[6+i]*par[6+i] : 1E-3;
-  }
-
-  //! Returns the function value of a normalized crystal
-  //! ball function
-  double crystalBallFunc(double x, double mean, double sigma, double alpha, double n) const;
-  double crystalBallNorm(double mean, double sigma, double alpha, double n) const;
-
-  //! Print some initialization details
-  void print() const;
-};
-
-
-
-//! \brief Parametrization used for response function estimation
+//! \brief Parametrization used for resolution function estimation
 //!        with a Gaussian function
 // ------------------------------------------------------------------------
 class SmearGauss : public Parametrization
 { 
  public:
   //! Constructor
-  SmearGauss(double tMin, double tMax, double ptDijetMin, double ptDijetMax, const std::vector<double>& rParScales);
+  SmearGauss(double tMin, double tMax, double xMin, double xMax, const std::vector<double>& parScales);
 
   ~SmearGauss();
 
@@ -1361,7 +1140,8 @@ class SmearGauss : public Parametrization
   double correctedJetEt(const Measurement *x,const double *par) const { return 0.; }
   double correctedGlobalJetEt(const Measurement *x,const double *par) const { return 0.; }
 
-  double pdfPtMeas(double ptMeas, double ptTrue, const double *par) const;
+  double pdfPtMeasJet1(double ptMeas, double ptTrue, const double *par) const;
+  double pdfPtMeasJet2(double ptMeas, double ptTrue, const double *par) const;
   double pdfPtTrue(double ptTrue, const double *par) const;
   double pdfResponse(double r, double ptTrue, const double *par) const;
   double pdfResponseError(double r, double ptTrue, const double *par, const double *cov, const std::vector<int> &covIdx) const;
@@ -1371,8 +1151,8 @@ class SmearGauss : public Parametrization
  private:
   const double tMin_;                   //!< Minimum of non-zero range of truth pdf
   const double tMax_;                   //!< Maximum of non-zero range of truth pdf
-  const double ptDijetMin_;             //!< Minimum of pt dijet
-  const double ptDijetMax_;             //!< Maximum of pt dijet
+  const double xMin_;             //!< Minimum of pt dijet
+  const double xMax_;             //!< Maximum of pt dijet
   const std::vector<double> scale_;     //!< Parameter scales
   TH1F *hPdfPtTrue_;
 
@@ -1394,8 +1174,8 @@ class SmearGauss : public Parametrization
     return scale_[3+i]*par[3+i];
   }
 
+  double corr3rdJet(double ptTrue) const;
   double pdfResponseDeriv(double r, double ptTrue, const double *par, int i) const;
-
   double pdfPtTrueNotNorm(double ptTrue, const double *par) const;
 
   //! Print some initialization details
@@ -1404,7 +1184,7 @@ class SmearGauss : public Parametrization
 
 
 
-//! \brief Parametrization used for response function estimation
+//! \brief Parametrization used for resolution function estimation
 //!        with a Gaussian function with one sigma (not pt-dependent)
 // ------------------------------------------------------------------------
 class SmearGaussPtBin : public Parametrization
@@ -1426,9 +1206,7 @@ class SmearGaussPtBin : public Parametrization
 
   double pdfPtMeasJet1(double ptMeas, double ptTrue, const double *par) const;
   double pdfPtMeasJet2(double ptMeas, double ptTrue, const double *par) const;
-  double pdfPtTrue(double ptTrue, const double *par) const {
-    return pdfPtTrueNotNorm(ptTrue,par)/getHashedNormPdfPtTrue(par);
-  }
+  double pdfPtTrue(double ptTrue, const double *par) const;
   double pdfResponse(double r, double ptTrue, const double *par) const;
   double pdfResponseError(double r, double ptTrue, const double *par, const double *cov, const std::vector<int> &covIdx) const;
   double pdfDijetAsym(double a, double ptTrue, const double *par) const;
@@ -1440,18 +1218,20 @@ class SmearGaussPtBin : public Parametrization
   const double xMin_;                   //!< Minimum of pt dijet
   const double xMax_;                   //!< Maximum of pt dijet
   const std::vector<double> scale_;     //!< Parameter scales
-  TH1D *hashTablePdfPtTrueNorm_;
+  TH1D *hashTablePdfPtTrue_;
 
   double sigma(const double *par) const {
     double p = par[0] > 0 ? par[0] : 1E-3;
     return scale_[0]*p;
   }
-  double specPar(const double *par, int i) const {
+  double specSigmaPar(const double *par, int i) const {
     return scale_[1+i]*par[1+i];
   }
+  double specSlopePar(const double *par, int i) const {
+    return scale_[4+i]*par[4+i];
+  }
 
-  double getHashedNormPdfPtTrue(const double *par) const;
-  void hashPdfPtTrueNorm(const double *par) const;
+  void hashPdfPtTrue(const double *par) const;
   double pdfPtTrueNotNorm(double ptTrue, const double *par) const;
   double underlyingPdfPtTrue(double ptTrue, const double *par) const;
 

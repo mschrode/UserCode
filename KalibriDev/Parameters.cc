@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.10 2010/03/25 08:30:59 mschrode Exp $
+// $Id: Parameters.cc,v 1.11 2010/04/12 13:47:43 mschrode Exp $
 
 #include <fstream>
 #include <cassert>
@@ -56,20 +56,6 @@ Parametrization* TParameters::CreateParametrization(const std::string& name, con
     return new ToySimpleInverseParametrization();
   } else if(name == "SmearFermiTail") {
     return new SmearFermiTail();
-  } else if(name == "SmearCrystalBall") {
-    double tMin = config.read<double>("DiJet integration min",0.);
-    double tMax = config.read<double>("DiJet integration max",1.);
-    double xMin = config.read<double>("Et min cut on jet",0.);
-    double xMax = config.read<double>("Et max cut on jet",1.);
-    std::vector<double> scale = bag_of<double>(config.read<string>("jet parameter scales",""));
-    return new SmearCrystalBall(tMin,tMax,xMin,xMax,scale);
-  } else if(name == "SmearCrystalBallPt") {
-    double tMin = config.read<double>("DiJet integration min",0.);
-    double tMax = config.read<double>("DiJet integration max",1.);
-    double xMin = config.read<double>("Et min cut on jet",0.);
-    double xMax = config.read<double>("Et max cut on jet",1.);
-    std::vector<double> scale = bag_of<double>(config.read<string>("jet parameter scales",""));
-    return new SmearCrystalBallPt(tMin,tMax,xMin,xMax,scale);
   } else if(name == "SmearGauss") {
     double tMin = config.read<double>("DiJet integration min",0.);
     double tMax = config.read<double>("DiJet integration max",1.);
@@ -129,14 +115,6 @@ TParameters* TParameters::CreateParameters(const std::string& configfile)
     parclass = "StepJetParametrization";
   } else if(parclass == "TTrackParameters") {
     parclass = "TrackParametrization";
-  } else if(parclass == "SmearParametrizationFermiTail") {
-    parclass = "SmearFermiTail";
-  } else if(parclass == "SmearParametrizationStepGaussInter") {
-    parclass = "SmearStepGaussInter";
-  } else if(parclass == "SmearParametrizationCrystalBall") {
-    parclass = "SmearCrystalBall";
-  } else if(parclass == "SmearParametrizationCrystalBallPt") {
-    parclass = "SmearCrystalBallPt";
   } else if(parclass == "SmearParametrizationGauss") {
     parclass = "SmearGauss";
   } else if(parclass == "SmearParametrizationGaussPtBin") {
@@ -1608,8 +1586,7 @@ SmearFunction TParameters::resolutionFitPDF(int etaid, int phiid) {
     exit(-2);  
   }
   int jetIdx = id * GetNumberOfJetParametersPerBin() + GetNumberOfTowerParameters();
-  return SmearFunction(&Parametrization::pdfPtMeas,
-		       &Parametrization::pdfPtMeasJet1,
+  return SmearFunction(&Parametrization::pdfPtMeasJet1,
 		       &Parametrization::pdfPtMeasJet2,
 		       &Parametrization::pdfPtTrue,
 		       &Parametrization::pdfPtTrueError,
