@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.9 2010/03/24 14:30:19 mschrode Exp $
+// $Id: Parameters.cc,v 1.10 2010/03/25 08:30:59 mschrode Exp $
 
 #include <fstream>
 #include <cassert>
@@ -56,46 +56,35 @@ Parametrization* TParameters::CreateParametrization(const std::string& name, con
     return new ToySimpleInverseParametrization();
   } else if(name == "SmearFermiTail") {
     return new SmearFermiTail();
-  } else if(name == "SmearStepGaussInter") {
-    double rMin       = config.read<double>("Response pdf min",0.);
-    double rMax       = config.read<double>("Response pdf max",1.8);
-    int    rNBins     = config.read<int>("Response pdf nsteps",10);
-    double tMin       = config.read<double>("DiJet integration min",0.);
-    double tMax       = config.read<double>("DiJet integration max",1.);
-    double ptDijetMin = config.read<double>("Et min cut on dijet",0.);
-    double ptDijetMax = config.read<double>("Et max cut on dijet",1.);
-    std::vector<double> scale = bag_of<double>(config.read<string>("jet parameter scales",""));
-    std::vector<double> gaussPar = bag_of<double>(config.read<string>("mean response parameters","1 0"));
-    return new SmearStepGaussInter(tMin,tMax,rMin,rMax,rNBins,ptDijetMin,ptDijetMax,scale,gaussPar);
   } else if(name == "SmearCrystalBall") {
-    double tMin       = config.read<double>("DiJet integration min",0.);
-    double tMax       = config.read<double>("DiJet integration max",1.);
-    double ptDijetMin = config.read<double>("Et min cut on dijet",0.);
-    double ptDijetMax = config.read<double>("Et max cut on dijet",1.);
+    double tMin = config.read<double>("DiJet integration min",0.);
+    double tMax = config.read<double>("DiJet integration max",1.);
+    double xMin = config.read<double>("Et min cut on jet",0.);
+    double xMax = config.read<double>("Et max cut on jet",1.);
     std::vector<double> scale = bag_of<double>(config.read<string>("jet parameter scales",""));
-    return new SmearCrystalBall(tMin,tMax,ptDijetMin,ptDijetMax,scale);
+    return new SmearCrystalBall(tMin,tMax,xMin,xMax,scale);
   } else if(name == "SmearCrystalBallPt") {
-    double tMin       = config.read<double>("DiJet integration min",0.);
-    double tMax       = config.read<double>("DiJet integration max",1.);
-    double ptDijetMin = config.read<double>("Et min cut on dijet",0.);
-    double ptDijetMax = config.read<double>("Et max cut on dijet",1.);
+    double tMin = config.read<double>("DiJet integration min",0.);
+    double tMax = config.read<double>("DiJet integration max",1.);
+    double xMin = config.read<double>("Et min cut on jet",0.);
+    double xMax = config.read<double>("Et max cut on jet",1.);
     std::vector<double> scale = bag_of<double>(config.read<string>("jet parameter scales",""));
-    return new SmearCrystalBallPt(tMin,tMax,ptDijetMin,ptDijetMax,scale);
+    return new SmearCrystalBallPt(tMin,tMax,xMin,xMax,scale);
   } else if(name == "SmearGauss") {
-    double tMin       = config.read<double>("DiJet integration min",0.);
-    double tMax       = config.read<double>("DiJet integration max",1.);
-    double ptDijetMin = config.read<double>("Et min cut on dijet",0.);
-    double ptDijetMax = config.read<double>("Et max cut on dijet",1.);
+    double tMin = config.read<double>("DiJet integration min",0.);
+    double tMax = config.read<double>("DiJet integration max",1.);
+    double xMin = config.read<double>("Et min cut on jet",0.);
+    double xMax = config.read<double>("Et max cut on jet",1.);
     std::vector<double> scale = bag_of<double>(config.read<string>("jet parameter scales",""));
-    return new SmearGauss(tMin,tMax,ptDijetMin,ptDijetMax,scale);
+    return new SmearGauss(tMin,tMax,xMin,xMax,scale);
   } else if(name == "SmearGaussPtBin") {
-    double tMin       = config.read<double>("DiJet integration min",0.);
-    double tMax       = config.read<double>("DiJet integration max",1.);
-    double ptDijetMin = config.read<double>("Et min cut on dijet",0.);
-    double ptDijetMax = config.read<double>("Et max cut on dijet",1.);
+    double tMin = config.read<double>("DiJet integration min",0.);
+    double tMax = config.read<double>("DiJet integration max",1.);
+    double xMin = config.read<double>("Et min cut on jet",0.);
+    double xMax = config.read<double>("Et max cut on jet",1.);
     std::vector<double> scale = bag_of<double>(config.read<string>("jet parameter scales",""));
     std::vector<double> startPar = bag_of<double>(config.read<string>("jet start values",""));
-    return new SmearGaussPtBin(tMin,tMax,ptDijetMin,ptDijetMax,scale,startPar);
+    return new SmearGaussPtBin(tMin,tMax,xMin,xMax,scale,startPar);
   } else if(name == "GroomParametrization") {
     return new GroomParametrization();
   } else if(name == "EtaEtaParametrization") {

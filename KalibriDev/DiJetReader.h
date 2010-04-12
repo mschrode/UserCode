@@ -28,7 +28,7 @@
 //!
 //!  \author Hartmut Stadie
 //!  \date 2008/12/12
-//!  $Id: DiJetReader.h,v 1.3 2010/02/25 15:28:18 mschrode Exp $
+//!  $Id: DiJetReader.h,v 1.4 2010/03/24 14:30:19 mschrode Exp $
 // ----------------------------------------------------------------   
 
 
@@ -67,6 +67,7 @@ class DiJetReader : public EventReader{
   int    prescale_;             //!< only read every nth event
 
   double minJetEt_;             //!< Minimum pt of jet
+  double maxJetEt_;             //!< Maximum pt of jet
   double minDijetEt_;           //!< Minimum dijet pt
   double maxDijetEt_;           //!< Maximum dijet pt
   double max3rdJetEt_;          //!< Maximum pt of 3rd jet in dijet event
@@ -81,6 +82,7 @@ class DiJetReader : public EventReader{
 
   int    nDiJetCut_;            //!< Number of events with less than 2 jets
   int    nMinJetEt_;            //!< Number of events rejected by minJetEt_ cut
+  int    nMaxJetEt_;            //!< Number of events rejected by maxJetEt_ cut
   int    nMinDijetEt_;          //!< Number of events rejected by minDijetEt_ cut
   int    nMaxDijetEt_;          //!< Number of events rejected by maxDijetEt_ cut
   int    nCutOn3rdJet_;         //!< Number of events rejected by max3rdJetEt_ or maxRelJetEt_ cut

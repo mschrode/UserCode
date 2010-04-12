@@ -1,6 +1,6 @@
 //
 //    first version: Hartmut Stadie 2008/12/12
-//    $Id: DiJetReader.cc,v 1.7 2010/02/25 15:28:18 mschrode Exp $
+//    $Id: DiJetReader.cc,v 1.8 2010/03/24 14:30:19 mschrode Exp $
 //   
 #include "DiJetReader.h"
 
@@ -50,8 +50,9 @@ DiJetReader::DiJetReader(const std::string& configfile, TParameters* p)
 
   // Cuts
   minJetEt_          = config_->read<double>("Et min cut on jet",0.0);
+  maxJetEt_          = config_->read<double>("Et max cut on jet",10000.0);
   minDijetEt_        = config_->read<double>("Et min cut on dijet",0.0); 
-  maxDijetEt_        = config_->read<double>("Et max cut on dijet",100.0); 
+  maxDijetEt_        = config_->read<double>("Et max cut on dijet",10000.0); 
   max3rdJetEt_       = config_->read<double>("Et cut on n+1 Jet",10.0);
   maxRel3rdJetEt_    = config_->read<double>("Relative n+1 Jet Et Cut",0.2);
   maxJetEta_         = config_->read<double>("Eta cut on jet",5.0);
@@ -64,6 +65,7 @@ DiJetReader::DiJetReader(const std::string& configfile, TParameters* p)
   // Counter for cutflow
   nDiJetCut_          = 0;
   nMinJetEt_          = 0;
+  nMaxJetEt_          = 0;
   nMinDijetEt_        = 0;
   nMaxDijetEt_        = 0;
   nCutOn3rdJet_       = 0;
@@ -107,6 +109,7 @@ int DiJetReader::readEvents(std::vector<Event*>& data)
   // Reset counters of rejected events
   nDiJetCut_          = 0;
   nMinJetEt_          = 0;
+  nMaxJetEt_          = 0;
   nMinDijetEt_        = 0;
   nMaxDijetEt_        = 0;
   nCutOn3rdJet_       = 0;
@@ -188,6 +191,8 @@ int DiJetReader::readEvents(std::vector<Event*>& data)
     std::cout << " dijet events with DeltaR < " << maxDeltaR_ << "\n";
     std::cout << "  " << (nReadEvts-=nMinJetEt_) << std::flush;
     std::cout << " dijet events Et > " << minJetEt_ << " GeV\n";
+    std::cout << "  " << (nReadEvts-=nMaxJetEt_) << std::flush;
+    std::cout << " dijet events Et < " << maxJetEt_ << " GeV\n";
     std::cout << "  " << (nReadEvts-=nMaxJetEta_) << std::flush;
     std::cout << " dijet events with |eta| < " << maxJetEta_ << "\n";
     std::cout << "  " << (nReadEvts-=nMinJetHadFraction_) << std::flush;
@@ -211,6 +216,8 @@ int DiJetReader::readEvents(std::vector<Event*>& data)
     std::cout << " jet-truth events with DeltaR < " << maxDeltaR_ << "\n";
     std::cout << "    " << (nReadEvts-=nMinJetEt_) << std::flush;
     std::cout << " jet-truth events Et > " << minJetEt_ << "\n";
+    std::cout << "  " << (nReadEvts-=nMaxJetEt_) << std::flush;
+    std::cout << " jet-truth events Et < " << maxJetEt_ << " GeV\n";
     std::cout << "    " << (nReadEvts-=nMaxJetEta_) << std::flush;
     std::cout << " jet-truth events with |eta| < " << maxJetEta_ << "\n";
     std::cout << "    " << (nReadEvts-=nMinJetHadFraction_) << std::flush;
@@ -226,10 +233,12 @@ int DiJetReader::readEvents(std::vector<Event*>& data)
     std::cout << " dijet events with ptgen < " << maxGenJetEt_ << " GeV\n";
     std::cout << "  " << (nReadEvts-=nMaxDeltaR_) << std::flush;
     std::cout << " dijet events with DeltaR < " << maxDeltaR_ << "\n";
-    std::cout << "  " << (nReadEvts-=nMinJetEt_) << std::flush;
-    std::cout << " dijet events Et > " << minJetEt_ << " GeV\n";
     std::cout << "  " << (nReadEvts-=nMaxJetEta_) << std::flush;
     std::cout << " dijet events with |eta| < " << maxJetEta_ << "\n";
+    std::cout << "  " << (nReadEvts-=nMinJetEt_) << std::flush;
+    std::cout << " dijet events Et > " << minJetEt_ << " GeV\n";
+    std::cout << "  " << (nReadEvts-=nMaxJetEt_) << std::flush;
+    std::cout << " dijet events Et < " << maxJetEt_ << " GeV\n";
     std::cout << "  " << (nReadEvts-=nMinDijetEt_) << std::flush;
     std::cout << " dijet events dijet pt > " << minDijetEt_ << " GeV\n";
     std::cout << "  " << (nReadEvts-=nMaxDijetEt_) << std::flush;
@@ -432,29 +441,9 @@ Event* DiJetReader::createSmearEvent(int callIdx)
   // Sort jets by corrected pt
   std::sort(jets.begin(),jets.end(),Jet::caloPtGreaterThan);
 
-  
-//   if( nJet_->NobjGenJet < 3 ) {
-//     nDiJetCut_++;
-//     return 0;
-//   }
-//   if( nJet_->GenJetColPt[1] < minGenJetEt_ ) {
-//     nMinGenJetEt_++;
-//     return 0;
-//   } else if( nJet_->GenJetColPt[0] > maxGenJetEt_ ) {
-//     nMaxGenJetEt_++;
-//     return 0;
-//   }
-//   // Read jets and apply L3 correction
-//   std::vector<Jet*> jets = readGenJetSortedJets(3);
-
-  
-  // Create SmearDiJet event from three jets
+    // Create SmearDiJet event from three jets
   // with highest corrected pt
   int jetIdx[3] = { 0, 1, 2 };
-//   if( rand_->Uniform() > 0.5 ) {
-//     jetIdx[0] = 1;
-//     jetIdx[1] = 0;
-//   }
   if( callIdx == 1 ) {
     jetIdx[0] = 1;
     jetIdx[1] = 0;
@@ -502,27 +491,14 @@ Event* DiJetReader::createSmearEvent(int callIdx)
     nMaxJetEta_++;
     isGoodEvt = false;
   }
-
-//   else if( smearDijet->dijetPt() < minDijetEt_ ) {
-//     nMinDijetEt_++;
-//     isGoodEvt = false;
-//   }
-//   else if( smearDijet->dijetPt() > maxDijetEt_ ) {
-//     nMaxDijetEt_++;
-//     isGoodEvt = false;
-//   }
-
-  
-  else if( j1->pt() < minDijetEt_ ) {
+  else if( j1->pt() < minJetEt_ ) {
     nMinDijetEt_++;
     isGoodEvt = false;
   }
-  else if( j1->pt() > maxDijetEt_ ) {
+  else if( j1->pt() > maxJetEt_ ) {
     nMaxDijetEt_++;
     isGoodEvt = false;
   }
-
-
   else if( j1->HadEt()/(j1->HadEt() + j1->EMF) < minJetHadFraction_ ||
 	   j2->HadEt()/(j2->HadEt() + j2->EMF) < minJetHadFraction_ ) {
     nMinJetHadFraction_++;
@@ -537,24 +513,10 @@ Event* DiJetReader::createSmearEvent(int callIdx)
     nCutOn3rdJet_++;
     isGoodEvt = false;
   }
-//   else if( 2*j3->genPt() / (j1->genPt()+j2->genPt()) > maxRel3rdJetEt_ && j3->genPt() > max3rdJetEt_ ) {
-//     nCutOn3rdJet_++;
-//     isGoodEvt = false;
-//   }
-
   else if( std::abs(TVector2::Phi_mpi_pi(j1->phi() - j2->phi())) < minDeltaPhi_ ) {
     nMinDeltaPhi_++;
     isGoodEvt = false;
   }
-
-
-  //Hack: Reject tails
-//   double sigma = 1.16*sqrt(j1->genPt());
-//   if( std::abs(j1->pt() - j1->genPt()) > 3.5*sigma
-//     || std::abs(j2->pt() - j2->genPt()) > 3.5*sigma  ) {
-//     isGoodEvt = false;
-//   }
-  // End hack
 
   if(! isGoodEvt) {
     if( smearDijet ) delete smearDijet;
