@@ -1,4 +1,4 @@
-// $Id: ControlPlotsJetSmearing.cc,v 1.17 2010/03/24 14:30:19 mschrode Exp $
+// $Id: ControlPlotsJetSmearing.cc,v 1.18 2010/04/12 11:42:41 mschrode Exp $
 
 #include "ControlPlotsJetSmearing.h"
 
@@ -109,6 +109,10 @@ void ControlPlotsJetSmearing::plotResponse() const
       ptBinEdges.clear();
       ptBinEdges.push_back(config_->read<double>("Et genJet min",100));
       ptBinEdges.push_back(config_->read<double>("Et genJet max",500));
+    } else if( binningVar == "pt" ) {
+      ptBinEdges.clear();
+      ptBinEdges.push_back(config_->read<double>("Et min cut on jet",100));
+      ptBinEdges.push_back(config_->read<double>("Et max cut on jet",500));
     } else if( binningVar == "ptDijet" ) {
       ptBinEdges.clear();
       ptBinEdges.push_back(config_->read<double>("Et min cut on dijet",100));
@@ -323,6 +327,7 @@ void ControlPlotsJetSmearing::plotResponse() const
 	for(int bin = 0; bin < nPtBins; bin++) {
 	  double var = 0.;
 	  if( binningVar == "ptGen" ) var = jet->genPt();
+	  else if( binningVar == "pt" ) var = jet->pt();
 	  else if( binningVar == "ptDijet" ) var = dijet->dijetPt();
 	  if( ptBinEdges[bin] <= var && var < ptBinEdges[bin+1] ) {
 	    hRespMeasAbs[bin]->Fill( jet->pt() / jet->genPt(), dijet->GetWeight() );
@@ -540,6 +545,7 @@ void ControlPlotsJetSmearing::plotResponse() const
 
     std::string binVar;
     if( binningVar == "ptDijet" ) binVar = "p^{dijet}_{T}";
+    else if( binningVar == "pt" ) binVar = "p_{T}";
     else if( binningVar == "ptGen" ) binVar = "p^{gen}_{T}";
 
     std::string label = toString(ptBinEdges[ptBin])
