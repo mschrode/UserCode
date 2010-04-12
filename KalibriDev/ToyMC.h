@@ -16,7 +16,7 @@ class ConfigFile;
 //!
 //!  \author Hartmut Stadie
 //!  \date   Mon Jun 30 11:00:00 CEST 2008
-//!  $Id: ToyMC.h,v 1.4 2010/02/16 13:34:41 mschrode Exp $
+//!  $Id: ToyMC.h,v 1.5 2010/02/25 15:28:19 mschrode Exp $
 // ----------------------------------------------------------------  
 class ToyMC {
 
@@ -141,12 +141,18 @@ class ToyMC {
   std::vector<double> parResp_;        //!< Parameters for Response
 
   ResolutionModel resolutionModel_;    //!< Resolution model
+  bool energyDependentReso_;           //!< If false, pt dependent resolution
   std::vector<double> parReso_;        //!< Parameters for Respolution
   TF1           * fRes_;              //!< For parameterized resolution / response
   TH1F          * histRes_;           //!< For histogramed resolution / response
 
   double          smearFactor_;        //!< Combined smear factor from response and resolution
   bool            smearTowersIndividually_;  //!< If true, mSmearTowersIndividually is determined individually for each tower, else for each jet
+
+  // Additional jets (gluon radiation)
+  bool gluonRadiation_;
+  double dPt_;
+  double dPhi_;
 
 
   void genInput();
@@ -155,6 +161,7 @@ class ToyMC {
 		  float& tout, float& temtrue, float& thadtrue, float& touttrue);  
   int  splitJet(const TLorentzVector* jet ,float* et,float* eta,float * phi, int* ieta,int* iphi);
   void calculateSmearFactor(const TLorentzVector* jet, double pt);
+  void splitLorentzVector(const TLorentzVector &v, double dPt, double dPhi, TLorentzVector &v1, TLorentzVector &v2) const;
   double getRandomCrystalBall(double pt, const std::vector<double> &par) const;
 
   static double crystalBallFunc(double *x, double *par);

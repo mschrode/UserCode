@@ -1,4 +1,4 @@
-// $Id: ToyMC.cc,v 1.4 2010/02/16 13:34:41 mschrode Exp $
+// $Id: ToyMC.cc,v 1.5 2010/02/25 15:28:19 mschrode Exp $
 
 #include "ToyMC.h"
 
@@ -24,8 +24,9 @@
 // -----------------------------------------------------------------
 ToyMC::ToyMC() : type_(1), minEta_(-2.5),maxEta_(2.5),minPt_(30), maxPt_(400),ptSpectrum_(Uniform),
 		 histPtEta_(0),chunks_(200),jetSpreadA_(0.5),jetSpreadB_(0),noOutOfCone_(true),
-		 maxPi0Frac_(0.5),maxEmf_(0.5),responseModel_(Constant), resolutionModel_(Gauss),
-		 fRes_(0), histRes_(0), smearFactor_(1.), smearTowersIndividually_(true)
+		 maxPi0Frac_(0.5), maxEmf_(0.5),responseModel_(Constant), resolutionModel_(Gauss),
+		 energyDependentReso_(true), fRes_(0), histRes_(0),
+		 smearFactor_(1.),smearTowersIndividually_(true), dPt_(0.), dPhi_(0.)
 {
   pInput_ = new TLorentzVector();
   random_ = new TRandom3();
@@ -155,18 +156,20 @@ void ToyMC::calculateSmearFactor(const TLorentzVector* jet, double E) {
 
   // Apply resolution
   double smear = 1.;
+  double x = E;
+  if( !energyDependentReso_ ) x = pt;
   if( resolutionModel_ == Landau) {
     do {
-      smear =  random_->Landau(1,sqrt(parReso_.at(0)*parReso_.at(0)/E/E +
-				      parReso_.at(1)*parReso_.at(1)/E   +
+      smear =  random_->Landau(1,sqrt(parReso_.at(0)*parReso_.at(0)/x/x +
+				      parReso_.at(1)*parReso_.at(1)/x   +
 				      parReso_.at(2)*parReso_.at(2))      );
     } while((smear < 0) || (smear > 2));
     smear = 2 - smear;
   }
   else if ( (resolutionModel_ == Gauss) ) {
     do {
-      smear = random_->Gaus(1.0,sqrt(parReso_.at(0)*parReso_.at(0)/pt/pt +
-				     parReso_.at(1)*parReso_.at(1)/pt   +
+      smear = random_->Gaus(1.0,sqrt(parReso_.at(0)*parReso_.at(0)/x/x +
+				     parReso_.at(1)*parReso_.at(1)/x   +
 				     parReso_.at(2)*parReso_.at(2))      );
     } while((smear < 0) || (smear > 2));
   }
@@ -873,9 +876,9 @@ int ToyMC::generateDiJetTree(TTree* CalibTree, int nevents)
 
 
   // Generate events
-  TLorentzVector jet[2];
+  TLorentzVector jet[3];
   TLorentzVector orijet;
-  TLorentzVector genjet[2];
+  TLorentzVector genjet[3];
   TLorentzVector tower;
 
   // Loop over events
@@ -894,13 +897,26 @@ int ToyMC::generateDiJetTree(TTree* CalibTree, int nevents)
     // Second genjet gets random eta
     // between -3 and 3, and phi+PI
     jetgenpt[1]  = jetgenpt[0];
-    //    jetgeneta[1] = random_->Gaus(jetgeneta[0],1.0);
-    jetgeneta[1] = random_->Uniform(minEta_,maxEta_);
-//     if((jetgeneta[1] > 3.0) || (jetgeneta[1] < -3.0)) {
-//       --n;
-//       continue;
-//     }
+    jetgeneta[1] = random_->Gaus(jetgeneta[0],1.0);
+    if((jetgeneta[1] > 3.0) || (jetgeneta[1] < -3.0)) {
+      --n;
+      continue;
+    }
     jetgenphi[1] = jetgenphi[0] + M_PI;
+
+    // Optionally, radiate third jet off the second
+    if( gluonRadiation_ ) {
+      genjet[0].SetPtEtaPhiM(jetgenpt[1],jetgeneta[1],jetgenphi[1],0.);
+      double dPhi = random_->Uniform() > 0.5 ? dPhi_ : -dPhi_;
+      double dPt = random_->Uniform()*dPt_;
+      splitLorentzVector(genjet[0],dPt,dPhi,genjet[2],genjet[1]);
+      for(int i = 1; i < 3; i++) {
+	jetgenpt[i]  = genjet[i].Pt();
+	jetgeneta[i] = genjet[i].Eta();
+	jetgenphi[i] = genjet[i].Phi();
+      }
+    }
+
     // Set random response paramters for this event
     // if required by response model
     if     (responseModel_ == Flat) parResp_.at(0) = random_->Uniform(1.5);
@@ -911,10 +927,12 @@ int ToyMC::generateDiJetTree(TTree* CalibTree, int nevents)
       parResp_.at(0) = 2. - std::max(u1,u2);
     }
 
-    // Loop over first two jets and
+    // Loop over first two (three) jets and
     // split genjets into towers
+    int nJets = 2;
+    if( gluonRadiation_ ) nJets = 3;
     NobjTow = 0;
-    for(int i = 0 ; i < 2 ; ++i) {
+    for(int i = 0 ; i < nJets ; ++i) {
       // Create 4-momentum of genjet (massless)
       orijet.SetPtEtaPhiM(jetgenpt[i],jetgeneta[i],jetgenphi[i],0);
       // Split it into towers and set truth of towers
@@ -980,11 +998,6 @@ int ToyMC::generateDiJetTree(TTree* CalibTree, int nevents)
       jetgenet[i]     = genjet[i].Pt();
       jetgene[i]      = genjet[i].E();
 
-//       if( !smearTowersIndividually_ ) {
-// 	jscalel2[i]  = 1. / smearFactor_;
-// 	jscalel23[i] = jscalel2[i];
-//       }
-
       genJetColPt[i]  = genjet[i].Pt();
       genJetColPhi[i] = genjet[i].Phi();
       genJetColEta[i] = genjet[i].Eta();
@@ -1000,49 +1013,7 @@ int ToyMC::generateDiJetTree(TTree* CalibTree, int nevents)
       continue;
     }
 
-    // Order jets by pt
-    //    if((jeteta[1] > minEta_) && (jeteta[1] < maxEta_)
-    // && (jetpt[1] > jetpt[0])) {
-
-    if( jetpt[1] > jetpt[0]) {
-
-      //swap jets
-      jetpt[0]     = jet[1].Pt();
-      jetphi[0]    = jet[1].Phi();
-      jeteta[0]    = jet[1].Eta();
-      jetet[0]     = jet[1].Pt();
-      jete[0]      = jet[1].E(); 
-      jetgenpt[0]  = genjet[1].Pt();
-      jetgenphi[0] = genjet[1].Phi();
-      jetgeneta[0] = genjet[1].Eta();
-      jetgenet[0]  = genjet[1].Pt();
-      jetgene[0]   = genjet[1].E();
-      genJetColJetIdx[0] = 1;
-
-      double l2CorrTmp = jscalel2[0];
-      jscalel2[0]   = jscalel2[1];
-      jscalel23[0] = jscalel2[0];
-
-      jetpt[1]     = jet[0].Pt();
-      jetphi[1]    = jet[0].Phi();
-      jeteta[1]    = jet[0].Eta();
-      jetet[1]     = jet[0].Pt();
-      jete[1]      = jet[0].E(); 
-      jetgenpt[1]  = genjet[0].Pt();
-      jetgenphi[1] = genjet[0].Phi();
-      jetgeneta[1] = genjet[0].Eta();
-      jetgenet[1]  = genjet[0].Pt();
-      jetgene[1]   = genjet[0].E();
-      genJetColJetIdx[1] = 0;
-
-      jscalel2[1]   = l2CorrTmp;
-      jscalel23[1] = jscalel2[1];
-
-      // Swap towers
-      for(int j = 0 ; j < NobjTow ; ++j) {
-	tow_jetidx[j] = (tow_jetidx[j] == 0) ? 1 : 0;
-      }
-
+    if( !gluonRadiation_ ) {
       // Set third dummy jet to zero
       jetpt[2]        = 0.;
       jetphi[2]       = 0.;
@@ -1054,7 +1025,7 @@ int ToyMC::generateDiJetTree(TTree* CalibTree, int nevents)
       jetgeneta[2]    = 0.;
       jetgenet[2]     = 0.;
       jetgene[2]      = 0.;
-
+      
       genJetColPt[2]  = 0.;
       genJetColPhi[2] = 0.;
       genJetColEta[2] = 0.;
@@ -1422,7 +1393,8 @@ void ToyMC::init(const ConfigFile* config) {
   }
 
   // Resolution model
-  parReso_               = bag_of<double>(config->read<string>("ToyMC resolution parameters","4.44 1.11 0.03"));
+  energyDependentReso_ = config->read<bool>("ToyMC energy dependent resolution",true);
+  parReso_ = bag_of<double>(config->read<string>("ToyMC resolution parameters","4.44 1.11 0.03"));
   std::string resolution = config->read<std::string>("ToyMC resolution model","Gauss");
   if(resolution == "Gauss") {
     resolutionModel_ = Gauss;
@@ -1490,6 +1462,11 @@ void ToyMC::init(const ConfigFile* config) {
   chunks_      = config->read<int>("ToyMC chunks",200);
   maxPi0Frac_  = config->read<double>("ToyMC max pi0 fraction",0.5);
   maxEmf_      = config->read<double>("ToyMC tower max EMF",0.5);
+
+  // Additional jets by gluon radiation
+  gluonRadiation_ = config->read<bool>("ToyMC 3rd jet",false);
+  dPt_ = config->read<double>("ToyMC 3rd jet pt fraction max",0.);
+  dPhi_ = config->read<double>("ToyMC 3rd jet delta phi",0.);
   
   // General
   int seed = config->read<int>("ToyMC seed",0); 
@@ -1546,7 +1523,7 @@ void ToyMC::print() const {
   std::cout << "\n";
 
   std::cout << "  resolution:   ";
-  if( resolutionModel_ == Gauss )
+  if( resolutionModel_ == Gauss ) 
     std::cout << "'Gauss'";
   else if( resolutionModel_ == Landau )
     std::cout << "'Landau'";
@@ -1561,6 +1538,8 @@ void ToyMC::print() const {
   else if( resolutionModel_ == CrystalBall )
     std::cout << "'CrystalBall'";
 
+  if( energyDependentReso_ ) std::cout << " (E dependent)";
+  else std::cout << " (pt dependent)";
 
   std::cout << " with parameters ";
   for(unsigned int i = 0; i < parReso_.size(); i++)
@@ -1593,14 +1572,34 @@ void ToyMC::print() const {
   std::cout << "  type:         ";
   if( type_ == 1 )
     std::cout << "Photon-jet events\n";
-  else if( type_ == 2 )
-    std::cout << "Dijet events\n";
+  else if( type_ == 2 ) {
+    std::cout << "Dijet events";
+    if( gluonRadiation_ ) std::cout << " (with 3rd jet)";
+    std::cout << "\n";
+  }
   else if( type_ == 3 ) 
     std::cout << "Top events\n";
+
+
 
   std::cout << "\n";
 }
 
+
+// -----------------------------------------------------------------
+void ToyMC::splitLorentzVector(const TLorentzVector &v, double dPt, double dPhi, TLorentzVector &v1, TLorentzVector &v2) const {
+  double phi[2];
+  double pt[2];
+
+  phi[0] = v.Phi() + dPhi;
+  pt[0] = dPt*v.Pt();
+
+  phi[1] = atan2( (sin(v.Phi()) - dPt*sin(phi[0])), (cos(v.Phi()) - dPt*cos(phi[0])) );
+  pt[1] = (v.Pt()*cos(v.Phi()) - pt[0]*cos(phi[0])) / cos(phi[1]);
+
+  v1.SetPtEtaPhiM(pt[0],v.Eta(),phi[0],0.);
+  v2.SetPtEtaPhiM(pt[1],v.Eta(),phi[1],0.);
+}
 
 
 // -----------------------------------------------------------------
