@@ -3,7 +3,7 @@
 #include <cmath>
 
 #include "TCanvas.h"
-#include "TH1D.h"
+#include "TH1.h"
 #include "TF1.h" 
 #include "TGraph.h"
 #include "TGraphAsymmErrors.h"
@@ -39,9 +39,9 @@ namespace resolutionFit {
     // total uncertainty
     TGraphAsymmErrors *gStat = getTGraphOfResolution("Statistic");
     fittedRes_ = new TF1("FittedResolution::fittedRes_",
-			 "sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2])",
+			 "sqrt([0]*[0]/x + [1]*[1])",//"sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2])",
 			 xMin,xMax);
-    fittedRes_->SetParameter(0,0.);
+    //fittedRes_->SetParameter(0,0.);
     fittedRes_->SetParameter(0,1.);
     fittedRes_->SetParameter(0,0.03);
     fittedRes_->SetLineColor(2);
@@ -78,7 +78,7 @@ namespace resolutionFit {
       // Draw a frame
       name = "FrameExtrapolationPtBin";
       name += bin;
-      TH1D *h = (*it)->getFrameOfVariation(name);
+      TH1 *h = (*it)->getFrameOfVariation(name);
       h->SetXTitle("p^{3}_{T,rel} - Schnitt");
       h->Draw();
 
@@ -132,7 +132,7 @@ namespace resolutionFit {
       // Draw MC truth resolution
       name = "PlotResolutionBin";
       name += bin;
-      TH1F *hResGen = (*it)->getHistResGen(name);
+      TH1 *hResGen = (*it)->getHistResGen(name);
       hResGen->UseCurrentStyle();
       hResGen->GetXaxis()->SetRangeUser(0.4,1.6);
       hResGen->GetYaxis()->SetRangeUser(0.,1.8*hResGen->GetMaximum());
@@ -141,7 +141,7 @@ namespace resolutionFit {
       // Draw pdf
       name = "PlotPdfResolutionBin";
       name += bin;
-      TH1F *hPdfRes = (*it)->getHistPdfRes(name);
+      TH1 *hPdfRes = (*it)->getHistPdfRes(name);
       hPdfRes->Draw("Lsame");
       hResGen->Draw("same");
 
@@ -186,7 +186,7 @@ namespace resolutionFit {
     // Draw a frame
     double xMin = 0.8*meanPt(0);
     double xMax = 1.1*meanPt(nPtBins()-1);
-    TH1D *h = new TH1D("FrameExtrapolatedResolution",";p_{T} (GeV);#sigma / p_{T}",
+    TH1 *h = new TH1D("FrameExtrapolatedResolution",";p_{T} (GeV);#sigma / p_{T}",
 		       1000,xMin,xMax);
     h->GetYaxis()->SetRangeUser(0.7*relSigma(nPtBins()-1),0.185);
     h->Draw();
@@ -239,7 +239,7 @@ namespace resolutionFit {
       // Draw MC truth spectrum
       name = "PlotPtGenPtBin";
       name += bin;
-      TH1F *hPtGen = (*it)->getHistPtGen(name);
+      TH1 *hPtGen = (*it)->getHistPtGen(name);
       hPtGen->UseCurrentStyle();
       hPtGen->SetMarkerStyle(20);
       hPtGen->SetLineWidth(1);
@@ -251,7 +251,7 @@ namespace resolutionFit {
       // Draw pdf
       name = "PlotPdfPtTrueBin";
       name += bin;
-      TH1F *hPdfPtTrue = (*it)->getHistPdfPtTrue(name);
+      TH1 *hPdfPtTrue = (*it)->getHistPdfPtTrue(name);
       hPdfPtTrue->Draw("Lsame");
       hPtGen->Draw("PE1same");
 
@@ -270,7 +270,7 @@ namespace resolutionFit {
       char entry[100];
       sprintf(entry,"#frac{#sigma_{MC}(p_{T})}{p_{T}} = #frac{%.3f}{#sqrt{p_{T} / GeV}} #oplus %.3f",
 	      trueRes_->GetParameter(1),trueRes_->GetParameter(2));
-      TH1F *hDummy = new TH1F("hDummy","",10,0,1);
+      TH1 *hDummy = new TH1D("hDummy","",10,0,1);
       hDummy->SetLineColor(0);
       leg->AddEntry(hDummy,entry,"L");
       leg->Draw("same");
@@ -328,7 +328,7 @@ namespace resolutionFit {
     // Create frame histogram
     double xMin = 0.8*meanPt(0);
     double xMax = 1.1*meanPt(nPtBins()-1);
-    TH1D *h = new TH1D("FrameSystematicUncertainties",";p_{T} (GeV);#Delta#sigma / #sigma",
+    TH1 *h = new TH1D("FrameSystematicUncertainties",";p_{T} (GeV);#Delta#sigma / #sigma",
 		       1000,xMin,xMax);
     for(int bin = 1; bin < h->GetNbinsX(); bin++) {
       h->SetBinContent(bin,0.);
@@ -379,12 +379,13 @@ namespace resolutionFit {
       std::cout << "FittedResolution: Creating graph of resolution" << std::endl;
     }
     std::vector<double> x(nPtBins());
-    std::vector<double> ex(nPtBins(),0.);
+    std::vector<double> ex(nPtBins());
     std::vector<double> y(nPtBins());
     std::vector<double> eyDown(nPtBins());
     std::vector<double> eyUp(nPtBins());
     for(int i = 0; i < nPtBins(); i++) {
       x[i] = ptBins_[i]->meanPt();
+      ex[i] = ptBins_[i]->meanPtUncert();
       y[i] = ptBins_[i]->relSigma();
       if( uncertType == "Total" ) {
 	eyDown[i] = ptBins_[i]->uncertDown();

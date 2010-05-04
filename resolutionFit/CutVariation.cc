@@ -1,4 +1,4 @@
-// $Id: CutVariation.cc,v 1.3 2010/03/22 19:40:46 mschrode Exp $
+// $Id: CutVariation.cc,v 1.4 2010/03/23 20:00:06 mschrode Exp $
 
 #include "CutVariation.h"
 #include "KalibriFileParser.h"
@@ -7,6 +7,7 @@
 
 #include "TF1.h"
 #include "TGraphAsymmErrors.h"
+#include "TH1.h"
 #include "TH1D.h"
 
 namespace resolutionFit {
@@ -27,7 +28,7 @@ namespace resolutionFit {
       KalibriFileParser *parser = new KalibriFileParser(fileNames[i],verbose_);
       // Mean pt for all varied cuts (set only once)
       if( i == 0 ) {
-	meanPt_ = parser->meanPdfPtTrue();
+	meanPt_ = parser->meanPt();
 	mcStatUncert_ /= meanPt_;
       }
       // Create value at cut variation i
@@ -78,8 +79,8 @@ namespace resolutionFit {
     return graph;
   }
 
-  TH1D *CutVariation::getFrame(const TString &name) const { 
-    TH1D *hFrame = new TH1D(name,";p^{3}_{T,rel};#sigma / p_{T}",1000,0.,1.4*maxCutValue());
+  TH1 *CutVariation::getFrame(const TString &name) const { 
+    TH1 *hFrame = new TH1D(name,";p^{3}_{T,rel};#sigma / p_{T}",1000,0.,1.4*maxCutValue());
     hFrame->GetYaxis()->SetRangeUser(0.8*relSigma(0),1.2*relSigma(nCutValues()-1));
     return hFrame;
   }

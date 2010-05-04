@@ -10,7 +10,7 @@
 
 class TF1;
 class TGraphAsymmErrors;
-class TH1F;
+class TH1;
 
 namespace resolutionFit {
   class PtBin {
@@ -34,19 +34,20 @@ namespace resolutionFit {
     const Uncertainty *uncertSyst() const { return uncert_->uncert(1); }
     int nUncertSyst() const { return uncert_->uncert(1)->nUncerts(); }
     double meanPt() const { return meanPt_; }
+    double meanPtUncert() const { return meanPtUncert_; }
     double minPt() const { return minPt_; }
     double maxPt() const { return maxPt_; }
     TString minPtStr() const { char str[10]; sprintf(str,"%.0f",minPt()); return str; }
     TString maxPtStr() const { char str[10]; sprintf(str,"%.0f",maxPt()); return str; }
 
-    TH1F *getHistPtGen(const TString &newName) const { return getHist("hPtGen",newName); }
-    TH1F *getHistPdfPtTrue(const TString &newName) const { return getHist("hPdfPtTrue",newName); }
-    TH1F *getHistResGen(const TString &newName) const { return getHist("hResGen",newName); }
-    TH1F *getHistPdfRes(const TString &newName) const { return getHist("hPdfRes",newName); }
+    TH1 *getHistPtGen(const TString &newName) const { return getHist("hPtGen",newName); }
+    TH1 *getHistPdfPtTrue(const TString &newName) const { return getHist("hPdfPtTrue",newName); }
+    TH1 *getHistResGen(const TString &newName) const { return getHist("hResGen",newName); }
+    TH1 *getHistPdfRes(const TString &newName) const { return getHist("hPdfRes",newName); }
 
     TF1 *getTF1OfVariation(const TString &name) const { return cutVar_->getTF1(name); }
     TGraphAsymmErrors *getTGraphOfVariation() const { return cutVar_->getTGraph(); }
-    TH1D *getFrameOfVariation(const TString &name) const { return cutVar_->getFrame(name); }
+    TH1 *getFrameOfVariation(const TString &name) const { return cutVar_->getFrame(name); }
 
 
   private:
@@ -57,16 +58,17 @@ namespace resolutionFit {
     double minPt_;
     double maxPt_;
     double meanPt_;
+    double meanPtUncert_;
     double relSigma_;
     CutVariation *cutVar_;
     Uncertainty *uncert_;
 
-    TH1F* hPtGen_;
-    TH1F* hPdfPtTrue_;
-    TH1F* hResGen_;
-    TH1F* hPdfRes_;
+    TH1* hPtGen_;
+    TH1* hPdfPtTrue_;
+    TH1* hResGen_;
+    TH1* hPdfRes_;
 
-    TH1F *getHist(const TString &name, const TString &newName) const;
+    TH1 *getHist(const TString &name, const TString &newName) const;
   };
 }
 #endif

@@ -10,7 +10,7 @@
 
 class TF1;
 class TGraphAsymmErrors;
-class TH1D;
+class TH1;
 
 namespace resolutionFit {
   class CutVariation {
@@ -30,7 +30,7 @@ namespace resolutionFit {
 
     TF1 *getTF1(const TString &name) const;
     TGraphAsymmErrors *getTGraph() const;
-    TH1D *getFrame(const TString &name) const;
+    TH1 *getFrame(const TString &name) const;
 
     void extrapolate();
 

@@ -1,10 +1,11 @@
-// $Id: PtBin.cc,v 1.5 2010/03/23 20:00:07 mschrode Exp $
+// $Id: PtBin.cc,v 1.6 2010/04/01 11:00:02 mschrode Exp $
 
 #include "PtBin.h"
 
 #include <iostream>
 
-#include "TH1F.h"
+#include "TH1.h"
+#include "TH1D.h"
 
 #include "KalibriFileParser.h"
 
@@ -39,7 +40,8 @@ namespace resolutionFit {
     relSigma_ = cutVar_->extrapolatedRelSigma();
     minPt_ = minPt;
     maxPt_ = maxPt;
-    meanPt_ = parserStdSel->meanPdfPtTrue();
+    meanPt_ = parserStdSel->meanPt();
+    meanPtUncert_ = parserStdSel->meanPtUncert();
 
     // Sum up systematic uncertainties
     assert( fileNamesSystUncertDown.size() == fileNamesSystUncertUp.size() );
@@ -101,12 +103,12 @@ namespace resolutionFit {
   }
 
   
-  TH1F *PtBin::getHist(const TString &name, const TString &newName) const {
-    TH1F *h = 0;
-    if( name == "hPtGen" ) h = static_cast<TH1F*>(hPtGen_->Clone(newName));
-    else if( name == "hPdfPtTrue" ) h = static_cast<TH1F*>(hPdfPtTrue_->Clone(newName));
-    else if( name == "hResGen" ) h = static_cast<TH1F*>(hResGen_->Clone(newName));
-    else if( name == "hPdfRes" ) h = static_cast<TH1F*>(hPdfRes_->Clone(newName));
+  TH1 *PtBin::getHist(const TString &name, const TString &newName) const {
+    TH1 *h = 0;
+    if( name == "hPtGen" ) h = static_cast<TH1D*>(hPtGen_->Clone(newName));
+    else if( name == "hPdfPtTrue" ) h = static_cast<TH1D*>(hPdfPtTrue_->Clone(newName));
+    else if( name == "hResGen" ) h = static_cast<TH1D*>(hResGen_->Clone(newName));
+    else if( name == "hPdfRes" ) h = static_cast<TH1D*>(hPdfRes_->Clone(newName));
     else {
       std::cerr << "ERROR PtBin::getHist: No histogram of name '" << name << "'" << std::endl;
       exit(-1);

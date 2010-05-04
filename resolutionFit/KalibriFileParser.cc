@@ -1,11 +1,11 @@
-// $Id: $
+// $Id: KalibriFileParser.cc,v 1.2 2010/03/22 19:45:08 mschrode Exp $
 
 #include "KalibriFileParser.h"
 
 #include <iostream>
 
 #include "TFile.h"
-#include "TH1F.h"
+#include "TH1.h"
 #include "TH1D.h"
 
 namespace resolutionFit {
@@ -34,13 +34,16 @@ namespace resolutionFit {
     meanPtGen_ = 0.;
     meanPtDijet_ = 0.;
     meanPdfPtTrue_ = 0.;
+    meanPtGenUncert_ = 0.;	
+    meanPtDijetUncert_ = 0.;
+    meanPdfPtTrueUncert_ = 0.;
     setMeanPt();
   }
 
 
   // --------------------------------------------
   KalibriFileParser::~KalibriFileParser() {
-    for(std::map<TString,TH1F*>::iterator it = hists_.begin();
+    for(std::map<TString,TH1*>::iterator it = hists_.begin();
 	it != hists_.end(); it++) {
       if( it->second ) delete it->second;
     }
@@ -59,22 +62,22 @@ namespace resolutionFit {
   //! the name \p newName; deletion has to be taken
   //! care of by the calling instance!
   // --------------------------------------------
-  TH1F *KalibriFileParser::hist(const TString &name, const TString &newName) const {
-    TH1F *h = 0;
+  TH1 *KalibriFileParser::hist(const TString &name, const TString &newName) const {
+    TH1 *h = 0;
     HistIt it = hists_.find(name);
     if( it == hists_.end() ) {
       std::cerr << "WARNING: No histogram with name '" << name << "'" << std::endl;
     } else {
-      // This is weird: a simple TH1F::Clone(newName) to get
+      // This is weird: a simple TH1::Clone(newName) to get
       // h produces a crash if the next TFile is opened i.e.
       // if a new object of KalibriFileParser is created...
-      // (Even though TH1F::SetDirectory(0) was set above.)
+      // (Even though TH1::SetDirectory(0) was set above.)
       // Who understands ROOT?!
       TString title = ";";
       title += it->second->GetXaxis()->GetTitle();
       title += ";";
       title += it->second->GetYaxis()->GetTitle();
-      h = new TH1F(newName,title,
+      h = new TH1D(newName,title,
 		   it->second->GetNbinsX(),
 		   it->second->GetXaxis()->GetXmin(),
 		   it->second->GetXaxis()->GetXmax());
@@ -117,7 +120,7 @@ namespace resolutionFit {
     if( !ioError ) {
       // Read fitted values and statistical uncertainties from file
       if( verbose_ == 2 ) std::cout << "  Getting fitted values... " << std::flush;
-      TH1D *h = 0;
+      TH1 *h = 0;
       file.GetObject("hAbsoluteParameters",h);
       if( !h ) {
 	std::cerr << "  ERROR: 'hAbsoluteParameters' not found." << std::endl;
@@ -137,9 +140,9 @@ namespace resolutionFit {
 
       // Read histograms from file
       if( verbose_ == 2 ) std::cout << "  Getting histograms from file... " << std::flush;
-      for(std::map<TString,TH1F*>::iterator it = hists_.begin();
+      for(std::map<TString,TH1*>::iterator it = hists_.begin();
 	  it != hists_.end(); it++) {
-	TH1F *h = 0;
+	TH1 *h = 0;
 	TString name = it->first;
 	file.GetObject(name,h);
 	if( !h ) {
@@ -167,9 +170,16 @@ namespace resolutionFit {
     if( verbose_ == 2 ) std::cout << "Setting mean pt values" << std::endl;
 
     for(HistIt it = hists_.begin(); it != hists_.end(); it++) {
-      if( it->first == "hPtGen" ) meanPtGen_ = it->second->GetMean();
-      else if( it->first == "hPtDijet" ) meanPtDijet_ = it->second->GetMean();
-      else if( it->first == "hTruthPDF" ) meanPdfPtTrue_ = it->second->GetMean();
+      if( it->first == "hPtGen" ) {
+	meanPtGen_ = it->second->GetMean();
+	meanPtGenUncert_ = it->second->GetMeanError();
+      } else if( it->first == "hPtDijet" ) {
+	meanPtDijet_ = it->second->GetMean();
+	meanPtDijetUncert_ = it->second->GetMeanError();
+      } else if( it->first == "hTruthPDF" ) {
+	meanPdfPtTrue_ = it->second->GetMean();
+	meanPdfPtTrueUncert_ = it->second->GetMeanError();
+      }
     }
   }
 }
