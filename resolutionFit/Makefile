@@ -1,4 +1,4 @@
-# $Id: $
+# $Id: Makefile,v 1.2 2010/03/22 19:45:08 mschrode Exp $
 
 ROOTLIBS   = $(shell root-config --libs) -lMinuit
 ROOTCFLAGS = $(shell root-config --cflags)
@@ -15,7 +15,7 @@ run: $(OBJ)
 	g++ $(OBJ) $(LFLAG) -o run
 	@echo 'Created executable "run".'
 
-CutVariation.o: CutVariation.h CutVariation.cc Uncertainty.h
+CutVariation.o: CutVariation.h CutVariation.cc Uncertainty.h KalibriFileParser.h
 	g++ $(CFLAG) -c CutVariation.cc
 
 FittedResolution.o: FittedResolution.h FittedResolution.cc PtBin.h $(UTIL)
