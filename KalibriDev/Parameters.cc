@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.11 2010/04/12 13:47:43 mschrode Exp $
+// $Id: Parameters.cc,v 1.51 2010/04/27 16:04:16 stadie Exp $
 
 #include <fstream>
 #include <cassert>
@@ -71,14 +71,51 @@ Parametrization* TParameters::CreateParametrization(const std::string& name, con
     std::vector<double> scale = bag_of<double>(config.read<string>("jet parameter scales",""));
     std::vector<double> startPar = bag_of<double>(config.read<string>("jet start values",""));
     return new SmearGaussPtBin(tMin,tMax,xMin,xMax,scale,startPar);
+  } else if(name == "SmearGaussExtrapolation") {
+    double tMin = config.read<double>("DiJet integration min",0.);
+    double tMax = config.read<double>("DiJet integration max",1.);
+    double xMin = config.read<double>("Et min cut on jet",0.);
+    double xMax = config.read<double>("Et max cut on jet",1.);
+    std::vector<double> scale = bag_of<double>(config.read<string>("jet parameter scales",""));
+    return new SmearGaussExtrapolation(tMin,tMax,xMin,xMax,scale);
+  } else if(name == "SmearGaussImbalance") {
+    double tMin = config.read<double>("DiJet integration min",0.);
+    double tMax = config.read<double>("DiJet integration max",1.);
+    double xMin = config.read<double>("Et min cut on jet",0.);
+    double xMax = config.read<double>("Et max cut on jet",1.);
+    std::vector<double> scale = bag_of<double>(config.read<string>("jet parameter scales",""));
+    return new SmearGaussImbalance(tMin,tMax,xMin,xMax,scale);
+  } else if(name == "SmearCrystalBallPtBin") {
+    double tMin = config.read<double>("DiJet integration min",0.);
+    double tMax = config.read<double>("DiJet integration max",1.);
+    double xMin = config.read<double>("Et min cut on jet",0.);
+    double xMax = config.read<double>("Et max cut on jet",1.);
+    std::vector<double> scale = bag_of<double>(config.read<string>("jet parameter scales",""));
+    std::vector<double> startPar = bag_of<double>(config.read<string>("jet start values",""));
+    return new SmearCrystalBallPtBin(tMin,tMax,xMin,xMax,scale,startPar);
   } else if(name == "GroomParametrization") {
     return new GroomParametrization();
   } else if(name == "EtaEtaParametrization") {
     return new EtaEtaParametrization();
+  } else if(name == "PhiPhiParametrization") {
+    return new PhiPhiParametrization();
+  } else if(name == "BinnedEMFParametrization") {
+    return new BinnedEMFParametrization();
+  } else if(name == "BinnedPhiPhiParametrization") {
+    return new BinnedPhiPhiParametrization();
+  } else if(name == "BinnedPhiPhiParametrization2") {
+    return new BinnedPhiPhiParametrization2();
+  } else if(name == "BinnedScaledPhiPhiParametrization") {
+    return new BinnedScaledPhiPhiParametrization();
+  } else if(name == "BinnedScaledEtaEtaParametrization") {
+    return new BinnedScaledEtaEtaParametrization();
+  } else if(name == "SimplePhiPhiParametrization") {
+    return new SimplePhiPhiParametrization();
   }
   return 0;
 }
-TParameters* TParameters::CreateParameters(const std::string& configfile) 
+
+TParameters* TParameters::CreateParameters(const ConfigFile& config) 
 {
   static Cleaner cleanup;
   if(  instance != 0  )
@@ -86,8 +123,6 @@ TParameters* TParameters::CreateParameters(const std::string& configfile)
     delete instance; 
     instance = 0; 
   }  
- 
-  ConfigFile config( configfile.c_str() );
   
   string parclass = config.read<string>("Parametrization Class","");
   //create Parameters
@@ -115,10 +150,18 @@ TParameters* TParameters::CreateParameters(const std::string& configfile)
     parclass = "StepJetParametrization";
   } else if(parclass == "TTrackParameters") {
     parclass = "TrackParametrization";
+  } else if(parclass == "SmearParametrizationFermiTail") {
+    parclass = "SmearFermiTail";
   } else if(parclass == "SmearParametrizationGauss") {
     parclass = "SmearGauss";
   } else if(parclass == "SmearParametrizationGaussPtBin") {
     parclass = "SmearGaussPtBin";
+  } else if(parclass == "SmearParametrizationGaussExtrapolation") {
+    parclass = "SmearGaussExtrapolation";
+  } else if(parclass == "SmearParametrizationGaussImbalance") {
+    parclass = "SmearGaussImbalance";
+  } else if(parclass == "SmearParametrizationCrystalBallPtBin") {
+    parclass = "SmearCrystalBallPtBin";
   }
 
   Parametrization *param = CreateParametrization(parclass,config);
@@ -127,7 +170,9 @@ TParameters* TParameters::CreateParameters(const std::string& configfile)
     exit(1);
   }
   instance = new TParameters(param);
+
   instance->Init(config);
+
   return instance;
 }
 
@@ -197,24 +242,21 @@ void TParameters::Init(const ConfigFile& config)
   k = new double[GetNumberOfParameters()];
   parErrors_ = new double[GetNumberOfParameters()];
   parGCorr_ = new double[GetNumberOfParameters()];
-  parCov_ = new double[(GetNumberOfParameters()*GetNumberOfParameters()+GetNumberOfParameters())/2];
-  trackEff = new double[169];
-
+  parCov_ = new double[GetNumberOfCovCoeffs()];
   for(int i = 0; i < GetNumberOfParameters(); i++) {
     k[i] = 0.;
     parErrors_[i] = 0.;
     parGCorr_[i] = 0.;
   }
-  for(int i = 0; i < (GetNumberOfParameters()*GetNumberOfParameters()+GetNumberOfParameters())/2; i++) {
+  for(int i = 0; i < GetNumberOfCovCoeffs(); ++i) {
     parCov_[i] = 0.;
   }
+  trackEff = new double[169];
   isFixedPar_ = std::vector<bool>(GetNumberOfParameters(),false); 
 
   for (unsigned int bin=0; bin<eta_granularity*phi_granularity; ++bin){
     for (unsigned int tp=0; tp < p->nTowerPars(); ++tp){
-      //step[ bin*free_pars_per_bin + tp ]   = step_sizes[ tp ];
       k[ bin*p->nTowerPars() + tp ] = start_values[ tp ];
-      parErrors_[ bin*p->nTowerPars() + tp ] = 0.0;
     }
   }
   for (unsigned int bin=0; bin<eta_granularity_jet*phi_granularity_jet; ++bin){
@@ -242,7 +284,7 @@ void TParameters::Init(const ConfigFile& config)
     int i = GetNumberOfTowerParameters() + GetNumberOfJetParameters() + GetNumberOfTrackParameters() + gjp;   
     k[i] = global_jet_start_values[gjp];
   }
-  
+
   // read predefined calibration contants from cfi
   // or txt file depending on the ending of the name
   std::vector<std::string> inputCalibration = bag_of_string(config.read<string>("input calibration",";"));
@@ -311,13 +353,8 @@ void TParameters::Init(const ConfigFile& config)
   readTrackEffTxt(trackEffFileName);
   }
 
+  //TODO: Should be made available via config
   parNames_ = std::vector<std::string>(GetNumberOfParameters(),"");
-  if( p->name() == "SmearCrystalBall" ) {
-    parNames_[0] = "#sigma";
-    parNames_[1] = "#alpha";
-    parNames_[2] = "n";
-    parNames_[3] = "m";
-  }
 }
 
 
@@ -325,9 +362,9 @@ TParameters::~TParameters() {
   delete p;
   delete [] k;
   delete [] parErrors_;
+  delete [] trackEff;
   delete [] parGCorr_;
   delete [] parCov_;
-  delete [] trackEff;
 }
 
 
@@ -1541,9 +1578,8 @@ Function TParameters::tower_function(int etaid, int phiid) {
     exit(-2);  
   }
   int parIndex = id*GetNumberOfTowerParametersPerBin();
-  return Function(&Parametrization::correctedTowerEt,0,parIndex,
-		  GetNumberOfTowerParametersPerBin(),
-		  GetTowerParRef(id),p);
+  return Function(&Parametrization::correctedTowerEt,0,
+		  GetTowerParRef(id),parIndex,GetNumberOfTowerParametersPerBin(),p);
 }
 
 Function TParameters::jet_function(int etaid, int phiid) {
@@ -1555,8 +1591,7 @@ Function TParameters::jet_function(int etaid, int phiid) {
   int parIndex = id * GetNumberOfJetParametersPerBin() + GetNumberOfTowerParameters();
   return Function(&Parametrization::correctedJetEt,
 		  p->hasInvertedCorrection() ? &Parametrization::inverseJetCorrection : 0,
-		  parIndex,GetNumberOfJetParametersPerBin(),
-		  GetJetParRef(id),p);
+		  GetJetParRef(id),parIndex,GetNumberOfJetParametersPerBin(),p);
 }
 
 Function TParameters::track_function(int etaid, int phiid) {
@@ -1568,15 +1603,13 @@ Function TParameters::track_function(int etaid, int phiid) {
   int parIndex = id * GetNumberOfTrackParametersPerBin() +
     GetNumberOfTowerParameters() + GetNumberOfJetParameters();
   return Function(&Parametrization::GetExpectedResponse,0,
-		  parIndex,GetNumberOfTrackParametersPerBin(),
-		  GetTrackParRef(id),p);
+		  GetTrackParRef(id),parIndex,GetNumberOfTrackParametersPerBin(),p);
 }
 
 Function TParameters::global_jet_function() {
   int parIndex = GetNumberOfTowerParameters()+GetNumberOfJetParameters()+GetNumberOfTrackParameters();
   return Function(&Parametrization::correctedGlobalJetEt,0,
-		  parIndex,GetNumberOfGlobalJetParameters(),
-		  GetGlobalJetParRef(),p);
+		  GetGlobalJetParRef(),parIndex,GetNumberOfGlobalJetParameters(),p);
 }
 
 SmearFunction TParameters::resolutionFitPDF(int etaid, int phiid) {
@@ -1631,9 +1664,7 @@ double TParameters::toy_jet_error_parametrization(const double *x, const Measure
   return sqrt(truncvar) * x[0];
 }
 
-//!  \brief Return one line of LaTeX tabular containing the
-//!         name and value of a given parameter from config file
-//!
+
 //!  The line is the following: "\texttt{<fieldname>} & = & <value> \\"
 //!
 //!  \param config Configfile
@@ -1649,6 +1680,10 @@ template<class T> std::string TParameters::texTabularLine(const ConfigFile& conf
 }
 
 
+//! The returned vector stores the indices of the
+//! submatrix elements w.r.t. full covariance matrix
+//! \p parCov_ .
+// --------------------------------------------------
 std::vector<int> TParameters::findCovIndices(int firstPar, int nPar) const {
   // Dimension of the submatrix
   int nCov = (nPar*nPar+nPar)/2;
@@ -1676,6 +1711,7 @@ std::vector<int> TParameters::findCovIndices(int firstPar, int nPar) const {
 }
 
 
+// --------------------------------------------------
 std::vector<bool> TParameters::findParStatus(int firstPar, int nPar) const {
   std::vector<bool> isFixed(nPar);
   for(int i = 0; i < nPar; i++) {

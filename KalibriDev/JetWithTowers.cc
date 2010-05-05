@@ -2,21 +2,32 @@
 //    Class for jets with towers 
 //
 //    first version: Hartmut Stadie 2008/12/25
-//    $Id: JetWithTowers.cc,v 1.21 2009/11/26 18:24:41 stadie Exp $
+//    $Id: JetWithTowers.cc,v 1.24 2010/02/15 12:40:18 stadie Exp $
 //   
 #include"JetWithTowers.h"
 
 #include "TLorentzVector.h"
 
 JetWithTowers::JetWithTowers(double Et, double EmEt, double HadEt ,double OutEt, double E,
-			     double eta,double phi, double etaeta, Flavor flavor, double genPt, double dR,
+			     double eta,double phi, double phiphi, double etaeta, 
+			     Flavor flavor, double genPt, double dR,
 			     CorFactors* corFactors, const Function& func, 
 			     double (*errfunc)(const double *x, const Measurement *xorig, double err), 
 			     const Function& gfunc, double Etmin) 
-  :  Jet(Et,EmEt,HadEt,OutEt,E,eta,phi,etaeta,flavor,genPt,dR,corFactors,
+  :  Jet(Et,EmEt,HadEt,OutEt,E,eta,phi,phiphi,etaeta,flavor,genPt,dR,corFactors,
 	 func,errfunc,gfunc,Etmin),
      ntowerpars(0)
 {
+}
+
+JetWithTowers::JetWithTowers(const JetWithTowers& j) 
+  : Jet(j),ntowerpars(0)
+{ 
+  for(TowerCollConstIter i = j.towers.begin() ; i != j.towers.end() ; ++i) {
+    const Tower *t = *i;
+    addTower(t->Et(),t->EmEt(),t->HadEt(),t->OutEt(),t->E(),t->eta(),t->phi(),
+	     t->f,t->errf);
+  }
 }
 
 JetWithTowers::~JetWithTowers() 
@@ -24,6 +35,7 @@ JetWithTowers::~JetWithTowers()
   for(TowerCollIter i = towers.begin() ; i != towers.end() ; ++i) {
     delete *i;
   }
+  towers.clear();
 }  
 
 void JetWithTowers::ChangeParAddress(double* oldpar, double* newpar) 
@@ -93,9 +105,9 @@ const Jet::VariationColl& JetWithTowers::varyPars(double eps, double Et, double 
 }
 // varies all parameters for this jet by eps and returns a vector of the
 // parameter id and the Et for the par + eps and par - eps variation
-const Jet::VariationColl& JetWithTowers::varyParsDirectly(double eps)
+const Jet::VariationColl& JetWithTowers::varyParsDirectly(double eps, bool computeDeriv)
 {
-  Jet::varyParsDirectly(eps);
+  Jet::varyParsDirectly(eps,computeDeriv);
   int i = Jet::nPar();
   
   const double deltaE = eps * 100.0;
@@ -111,11 +123,15 @@ const Jet::VariationColl& JetWithTowers::varyParsDirectly(double eps)
       p[towpar] += eps;
       varcoll[i].upperEt = correctedEt(Measurement::pt);
       varcoll[i].upperError = expectedError(varcoll[i].upperEt);
-      varcoll[i].upperEtDeriv =  (correctedEt(Measurement::pt+deltaE) -  correctedEt(Measurement::pt-deltaE))/2/deltaE;
+      if(computeDeriv) {
+	varcoll[i].upperEtDeriv =  (correctedEt(Measurement::pt+deltaE) -  correctedEt(Measurement::pt-deltaE))/2/deltaE;
+      }
       p[towpar] = orig - eps;
       varcoll[i].lowerEt = correctedEt(Measurement::pt); 
       varcoll[i].lowerError = expectedError(varcoll[i].lowerEt);
-      varcoll[i].lowerEtDeriv =  (correctedEt(Measurement::pt+deltaE) -  correctedEt(Measurement::pt-deltaE))/2/deltaE;
+      if(computeDeriv) {
+	varcoll[i].lowerEtDeriv =  (correctedEt(Measurement::pt+deltaE) -  correctedEt(Measurement::pt-deltaE))/2/deltaE;
+      }
       p[towpar] = orig;
       varcoll[i].parid = id + towpar;
       //std::cout << "up:" << varcoll[i].upperEt << " low:" << varcoll[i].lowerEt << '\n'; 

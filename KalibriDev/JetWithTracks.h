@@ -12,14 +12,15 @@
 //!
 //!    \author Hartmut Stadie
 //!    \date 2008/12/25
-//!    $Id: JetWithTracks.h,v 1.7 2009/11/26 18:24:42 stadie Exp $
+//!    $Id: JetWithTracks.h,v 1.10 2010/02/15 12:40:18 stadie Exp $
 // ---------------------------------------------------------------   
 class JetWithTracks : public Jet
 {
  public:
   JetWithTracks(double Et, double EmEt, double HadEt ,double OutEt, double E,
-		double eta,double phi, double etaeta, Flavor flavor,double genPt, double dR,
-		CorFactors* corFactors, const Function& f,
+		double eta,double phi, double phiphi, double etaeta, 
+		Flavor flavor,double genPt, double dR, CorFactors* corFactors,
+		const Function& f,
 		double (*errfunc)(const double *x, const Measurement *xorig, double err), 
 		const Function& gf, double Etmin = 0); 
   virtual ~JetWithTracks(); 
@@ -31,7 +32,7 @@ class JetWithTracks : public Jet
   // varies all parameters for this jet by eps and returns a vector of the
   // parameter id and the Et for the par + eps and par - eps variation
   virtual const VariationColl& varyPars(double eps, double Et, double start);
-  virtual const VariationColl& varyParsDirectly(double eps);
+  virtual const VariationColl& varyParsDirectly(double eps, bool computeDeriv);
 
   void addTrack(double Et, double EmEt, double HadEt ,double OutEt, double E,
 		double eta,double phi,int TrackId, int TowerId, double DR, double DRout,
@@ -39,9 +40,11 @@ class JetWithTracks : public Jet
 		double Had5, double TrackChi2, int NValidHits, bool TrackQualityT, 
 		double MuDR, double MuDE, double Efficiency, const Function& f,
 		double (*errfunc)(const double *x, const Measurement *xorig, double err));
+  virtual Jet* clone() const { return new JetWithTracks(*this);} //!< Clone this jet
  protected:
   virtual double expectedEt(double truth, double start, bool fast = false);
  private:
+  JetWithTracks(const JetWithTracks& j); //!< disallow copies!
   class Track : public TTrack {
   public:
     Track(double Et, double EmEt, double HadEt ,double OutEt, double E,
@@ -72,6 +75,8 @@ class JetWithTracks : public Jet
   private:
     Function f;
     double (*errf)(const double *x, const Measurement *xorig, double err);
+
+    friend class JetWithTracks;
   };
   typedef std::vector<Track*> TrackColl;
   typedef TrackColl::iterator TrackCollIter;

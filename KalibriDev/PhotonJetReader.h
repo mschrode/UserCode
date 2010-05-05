@@ -7,7 +7,7 @@
 //!
 //!  \author Hartmut Stadie
 //!  \date 2008/12/12
-//!  $Id: PhotonJetReader.h,v 1.2 2010/01/21 16:49:21 mschrode Exp $
+//!  $Id: PhotonJetReader.h,v 1.10 2010/04/13 13:44:10 mschrode Exp $
 // ----------------------------------------------------------------   
 
 

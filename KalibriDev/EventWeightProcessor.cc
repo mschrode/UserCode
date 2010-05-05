@@ -19,6 +19,7 @@ EventWeightProcessor::EventWeightProcessor(const std::string& configfile, TParam
     std::cout << "  Config file " << weightConfigFileName << "\n";
 
     ConfigFile weightConfig(weightConfigFileName.c_str());
+    std::cout << "  Weights for '" << weightConfig.read<string>("Name","") << "'" << std::endl;
     std::string type = weightConfig.read<string>("Type","");
     if( type == "pthat bins" ) type_ = 0;
     else if( type == "pthat" ) type_ = 1;
@@ -103,11 +104,6 @@ int EventWeightProcessor::process(std::vector<Event*>& data) {
       }
       else if( type_ == 1 ) {
 	weight = globalWeight_*pow((*evt)->ptHat(),expo_);
-	
-// 	// Hack
-// 	SmearDiJet *dijet = dynamic_cast<SmearDiJet*>(*evt);  
-// 	weight *= pow((dijet->dijetPt() - 40.),4.5);
-// 	weight *= 1E-6;
       }
 
       (*evt)->setWeight( weight );

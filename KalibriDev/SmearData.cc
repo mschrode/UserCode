@@ -1,4 +1,4 @@
-// $Id: SmearData.cc,v 1.5 2010/02/09 10:19:23 mschrode Exp $
+// $Id: SmearData.cc,v 1.9 2010/04/13 13:38:23 mschrode Exp $
 
 #include "SmearData.h"
 

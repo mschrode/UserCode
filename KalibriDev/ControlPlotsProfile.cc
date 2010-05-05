@@ -1,4 +1,4 @@
-// $Id: ControlPlotsProfile.cc,v 1.2 2010/01/14 13:13:17 mschrode Exp $
+// $Id: ControlPlotsProfile.cc,v 1.6 2010/04/13 13:56:47 mschrode Exp $
 
 #include "ControlPlotsProfile.h"
 
@@ -7,6 +7,8 @@
 #include "TCanvas.h"
 #include "TF1.h"
 #include "TROOT.h"
+#include "TImage.h"
+#include "TStyle.h"
 
 #include "CalibData.h"
 #include "ControlPlotsFunction.h"
@@ -41,6 +43,7 @@ ControlPlotsProfile::ControlPlotsProfile(const ControlPlotsConfig *config, const
 			 config_->nXBins(),
 			 config_->xMin(),
 			 config_->xMax());
+  hXSpectrum_->SetMarkerStyle(20);
   hXSpectrum_->SetXTitle((config_->xTitle()).c_str());
   hXSpectrum_->SetYTitle("Number of events");
   hXSpectrum_->GetXaxis()->SetNdivisions(505);
@@ -66,6 +69,17 @@ ControlPlotsProfile::~ControlPlotsProfile() {
 // ----------------------------------------------------------------   
 void ControlPlotsProfile::draw() {
   TCanvas *c1 = new TCanvas("c1","",500,500);
+  TPad *p1 = new TPad("i1", "i1", 0.84, 0.86,0.99,0.99);
+  p1->SetFillStyle(4000);  
+  TImage* img = TImage::Open("kalibriLogoSmall.gif");
+  //img->Scale(img->GetWidth(),img->GetHeight()); 
+  p1->cd();
+  img->Draw("XZ");  
+  TPad *p2 = new TPad("i1", "i1", 0.79, 0.71,0.94,0.84);
+  p2->SetFillStyle(4000);  
+  //img->Scale(img->GetWidth(),img->GetHeight()); 
+  p2->cd();
+  img->Draw("XZ");
   c1->cd();
   std::string fileName;
 
@@ -78,8 +92,9 @@ void ControlPlotsProfile::draw() {
       TH2D *h = (*binIt)->hYvsX(*corrTypeIt);
       h->Draw("COLZ");
       if( config_->logX() ) c1->SetLogx(1);
-      c1->RedrawAxis();
-
+      c1->RedrawAxis();      
+      p1->DrawClone();
+      config_->toRootFile(h);
       fileName = config_->outDirName() + "/";
       fileName += (*binIt)->hist2DFileName(*corrTypeIt) + "." + config_->outFileType();
       c1->SaveAs(fileName.c_str(),(config_->outFileType()).c_str());
@@ -89,6 +104,8 @@ void ControlPlotsProfile::draw() {
   // Draw profile histograms
   TLegend *leg = bins_.front()->createLegend();
   TLine *hLine = bins_.front()->createHorizontalLine();
+  c1->SetRightMargin(0.02);
+  c1->SetTopMargin(0.13);
   for(std::vector<Bin*>::iterator binIt = bins_.begin();
       binIt != bins_.end(); binIt++) {
     ControlPlotsConfig::ProfileTypeIt profTypeIt = config_->profileTypesBegin();
@@ -99,19 +116,20 @@ void ControlPlotsProfile::draw() {
       for(; corrTypeIt != config_->correctionTypesEnd(); corrTypeIt++) {
 	TH1D *h = (*binIt)->hXProfile(*corrTypeIt,*profTypeIt);
 	if( firstHist ) {
-	  h->Draw("PE1");
+	  h->Draw("PE1X0");
 	  firstHist = false;
 	} else {
-	  h->Draw("PE1same");
+	  h->Draw("PE1X0same");
 	}
 	config_->toRootFile(h);
       }
-      hLine->Draw("same");
+      if( *profTypeIt == ControlPlotsConfig::Mean
+	  || *profTypeIt == ControlPlotsConfig::GaussFitMean ) hLine->Draw("same");
       leg->Draw("same");
 
       if( config_->logX() ) c1->SetLogx(1);
       c1->RedrawAxis();
-
+      p2->DrawClone();
       fileName = config_->outDirName() + "/";
       fileName += (*binIt)->profileFileName(*profTypeIt) + "." + config_->outFileType();
       c1->SaveAs(fileName.c_str(),(config_->outFileType()).c_str());
@@ -130,18 +148,19 @@ void ControlPlotsProfile::draw() {
 	TH1D *h = (*binIt)->hXProfile(*corrTypeIt,*profTypeIt);
 	h->GetYaxis()->SetRangeUser(config_->yMinZoom(),config_->yMaxZoom());
 	if( firstHist ) {
-	  h->Draw("PE1");
+	  h->Draw("PE1X0");
 	  firstHist = false;
 	} else {
-	  h->Draw("PE1same");
+	  h->Draw("PE1X0same");
 	}
       }
-      hLine->Draw("same");
+      if( *profTypeIt == ControlPlotsConfig::Mean
+	  || *profTypeIt == ControlPlotsConfig::GaussFitMean ) hLine->Draw("same");
       leg->Draw("same");
 
       if( config_->logX() ) c1->SetLogx(1);
       c1->RedrawAxis();
-
+      p2->DrawClone();
       fileName = config_->outDirName() + "/";
       fileName += (*binIt)->profileFileName(*profTypeIt) + "_zoom." + config_->outFileType();
       c1->SaveAs(fileName.c_str(),(config_->outFileType()).c_str());
@@ -159,7 +178,8 @@ void ControlPlotsProfile::draw() {
 	h->Draw("HIST");
 	c1->SetLogx(0);
 	c1->RedrawAxis();
-
+	p2->DrawClone();
+	config_->toRootFile(h);
 	fileName = config_->outDirName() + "/";
 	fileName += (*binIt)->distributionFileName(n,*corrTypeIt) + "." + config_->outFileType();
 	c1->SaveAs(fileName.c_str(),(config_->outFileType()).c_str());
@@ -170,17 +190,17 @@ void ControlPlotsProfile::draw() {
   // Draw x spectrum
   c1->Clear();
   c1->cd();
-  hXSpectrum_->Draw();
+  hXSpectrum_->Draw("PE1");
   c1->SetLogx(0);
   c1->SetLogy(1);
-
+  p2->DrawClone();
   fileName = config_->outDirName() + "/";
   fileName += hXSpectrum_->GetName();
   fileName += "." + config_->outFileType();
   c1->SaveAs(fileName.c_str(),(config_->outFileType()).c_str());
   config_->toRootFile(hXSpectrum_);
-
   // Clean up
+  delete p1;
   delete c1;
   delete leg;
   delete hLine;
@@ -443,7 +463,7 @@ int ControlPlotsProfile::Bin::fitProfiles() {
       TH1D *h = static_cast<TH1D*>(htemp->Clone(name));
       h->SetTitle((config_->xBinTitle(xBin-1,min(),max())).c_str());
       h->SetXTitle((config_->yTitle()).c_str());
-      h->SetYTitle("N");
+      h->SetYTitle("Number of jets");
       h->SetLineColor(config_->color(corrIt->first));	   
       hYDistributions_[corrIt->first].at(xBin-1) = h;
         
@@ -552,7 +572,7 @@ TLegend *ControlPlotsProfile::Bin::createLegend() {
   size_t nEntries = hXProfile_.size();
   TLegend * leg = 0;
   if( nEntries ) {
-    leg = new TLegend(0.5,0.8-nEntries*0.07,0.8,0.8);
+    leg = new TLegend(0.5,0.85-nEntries*0.06,0.8,0.85);
     leg->SetBorderSize(0);
     leg->SetFillColor(0);
     leg->SetTextFont(42);

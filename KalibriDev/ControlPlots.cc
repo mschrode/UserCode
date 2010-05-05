@@ -45,17 +45,7 @@ void ControlPlots::createJetTruthEventPlots() const {
   std::cout << "Creating JetTruthEvent plots\n";
     
   // Read different control plot names
-  std::vector<std::string> names;
-  int nNames = 1;
-  std::string tmpName = "";
-  char nameLabel[100];
-  do {
-    sprintf(nameLabel,"JetTruthEvent plots name %i",nNames);
-    tmpName = config_->read<std::string>(nameLabel,"");
-    if( tmpName != "" ) names.push_back(tmpName);
-    nNames++;
-  } while( tmpName != "" );
-
+  std::vector<std::string> names = bag_of_string(config_->read<std::string>("JetTruthEvent plots names",""));
   // Loop over names
   std::vector<ControlPlotsConfig*> configs(names.size());
   std::vector<ControlPlotsFunction*> functions(names.size());
@@ -87,6 +77,8 @@ void ControlPlots::createJetTruthEventPlots() const {
   for( DataIt evt = data_->begin(); evt != data_->end(); evt++ ) {
     JetTruthEvent *jte = dynamic_cast<JetTruthEvent*>(*evt);
     if( jte ) {
+      double weight = jte->GetWeight();
+      if( weight != 1. ) std::cout << "Weight " << weight << std::endl;
       for(size_t i = 0; i < configs.size(); i++) {
 	profiles.at(i)->fill(jte);
       }
@@ -94,7 +86,8 @@ void ControlPlots::createJetTruthEventPlots() const {
   }
 
   // Fitting profiles and writing plots to file
-  std::cout << "  Fitting profiles and writing plots to file'\n";	  
+  std::cout << "  Fitting profiles and writing plots to file" << std::endl;
+	  
   for(size_t i = 0; i < configs.size(); i++) {
     profiles.at(i)->fitProfiles();
     profiles.at(i)->draw();
@@ -117,19 +110,33 @@ void ControlPlots::createJetTruthEventPlots() const {
 //!  \p type.
 // -------------------------------------------------------------
 ControlPlotsFunction::Function ControlPlots::findJetTruthEventFunction(const std::string& varName, ControlPlotsConfig::CorrectionType type) const {
-  ControlPlotsFunction::Function f = 0;
   if( varName == "Eta" )
-    f = &ControlPlotsFunction::jetTruthEventJetEta;
-  else if( varName == "GenJetPt" )
-    f = &ControlPlotsFunction::jetTruthEventTruthPt;
-  else if( varName == "GenJetResponse" && type == ControlPlotsConfig::Uncorrected )
-    f = &ControlPlotsFunction::jetTruthEventResponse;
-  else if( varName == "GenJetResponse" && type == ControlPlotsConfig::Kalibri )
-    f = &ControlPlotsFunction::jetTruthEventResponseKalibriCorrected;
-  else if( varName == "GenJetResponse" && type == ControlPlotsConfig::L2L3 )
-    f = &ControlPlotsFunction::jetTruthEventResponseL2L3Corrected;
+    return  &ControlPlotsFunction::jetTruthEventJetEta;
+  if( varName == "Pt" )
+   return  &ControlPlotsFunction::jetTruthEventJetPt;
+  if( varName == "EMF" )
+    return  &ControlPlotsFunction::jetTruthEventJetEMF;
+  if( varName == "momentEtaEta" )
+    return  &ControlPlotsFunction::jetTruthEventJetMomentEtaEta;
+  if( varName == "scaledEtaEta" )
+    return  &ControlPlotsFunction::jetTruthEventJetScaledEtaEta;
+  if( varName == "scaledPhiPhi" )
+    return  &ControlPlotsFunction::jetTruthEventJetScaledPhiPhi;
+  if( varName == "GenJetPt" )
+    return  &ControlPlotsFunction::jetTruthEventTruthPt;
+  if( varName == "momentPhiPhi" )
+    return &ControlPlotsFunction::jetTruthEventJetMomentPhiPhi;
+  if( varName == "Flavor" )
+    return &ControlPlotsFunction::jetTruthEventJetFlavor;
+  if( varName == "GenJetResponse" && type == ControlPlotsConfig::Uncorrected )
+   return &ControlPlotsFunction::jetTruthEventResponse;
+  if( varName == "GenJetResponse" && type == ControlPlotsConfig::Kalibri )
+    return &ControlPlotsFunction::jetTruthEventResponseKalibriCorrected;
+  if( varName == "GenJetResponse" && type == ControlPlotsConfig::L2L3 )
+    return  &ControlPlotsFunction::jetTruthEventResponseL2L3Corrected;
 
-  return f;
+  std::cerr << "ControlPlots: unknown variable " << varName << std::endl;
+  return 0;
 }
 
 
@@ -137,6 +144,7 @@ ControlPlotsFunction::Function ControlPlots::findJetTruthEventFunction(const std
 //!  Set style option for the output.
 //---------------------------------------------------------------
 void ControlPlots::setGStyle() const {
+  gStyle->SetErrorX(0);
   gStyle->SetPalette(1);
 
   // For the canvas:

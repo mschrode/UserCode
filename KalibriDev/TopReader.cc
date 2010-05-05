@@ -4,7 +4,7 @@
 //    This class reads events according fo the TopSel
 //
 //    first version: Hartmut Stadie 2008/12/12
-//    $Id: TopReader.cc,v 1.21 2009/11/27 15:28:12 stadie Exp $
+//    $Id: TopReader.cc,v 1.22 2010/01/25 17:35:20 stadie Exp $
 //   
 #include "TopReader.h"
 
@@ -129,6 +129,8 @@ Event* TopReader::createTwoJetsInvMassEvents()
     int closestTower = 0; 
     double seta = 0;
     double seta2 = 0;
+    double sphi = 0;
+    double sphi2 = 0;
     double sumpt = 0;
     for(int n=0; n<top_->NobjTow; ++n){
       if(top_->Tow_jetidx[n] != i) continue;//look for ij-jet's towers
@@ -152,7 +154,9 @@ Event* TopReader::createTwoJetsInvMassEvents()
       terr[n] *= terr[n];
       err2 += terr[n];
       seta += tower.pt  * tower.eta;
-      seta2 += tower.pt  * tower.eta * tower.eta;
+      seta2 += tower.pt * tower.eta * tower.eta; 
+      sphi += tower.pt  * tower.phi;
+      sphi2 += tower.pt * tower.phi * tower.phi;
       sumpt += tower.pt;
       double dphi = TVector2::Phi_mpi_pi(top_->JetPhi[i]-tower.phi);
       double dr = sqrt((top_->JetEta[i]-tower.eta)*(top_->JetEta[i]-tower.eta)+
@@ -173,6 +177,7 @@ Event* TopReader::createTwoJetsInvMassEvents()
     tower.phi = top_->JetPhi[i];
     tower.E   = top_->JetE[i];
     tower.etaeta = sqrt(seta2/sumpt - seta * seta /(sumpt * sumpt));
+    tower.phiphi = sqrt(sphi2/sumpt - sphi * sphi /(sumpt * sumpt));
     double err =  jet_error_param(&tower.pt,&tower,0);
     err2 += err * err;
     Jet **jet = jets[0] ? &jets[1] : &jets[0];
@@ -185,6 +190,7 @@ Event* TopReader::createTwoJetsInvMassEvents()
 			  out * factor,
 			  top_->JetE[i],
 			  top_->JetEta[i], top_->JetPhi[i],
+			  tower.phiphi,
 			  tower.etaeta,
 			  Jet::uds, top_->GenJetPt[i], 0.,
 			  corFactors,
@@ -209,7 +215,7 @@ Event* TopReader::createTwoJetsInvMassEvents()
 		     out * factor,
 		     top_->JetE[i],
 		     top_->JetEta[i], top_->JetPhi[i],
-		     tower.etaeta,
+		     tower.phiphi,tower.etaeta,
 		     Jet::uds, top_->GenJetPt[i], 0.,
 		     corFactors,
 		     par_->jet_function(top_->TowId_eta[closestTower],

@@ -7,7 +7,7 @@ class Parametrization;
 
 
 class SmearFunction {
-  typedef double (Parametrization::*PdfPtMeas)(double ptMeas, double ptTrue, const double*) const;
+  typedef double (Parametrization::*PdfPtMeas)(double ptMeas, double ptTrue, double pt3Rel, const double*) const;
   typedef double (Parametrization::*PdfPtTrue)(double ptTrue, const double*) const;
   typedef double (Parametrization::*PdfPtTrueError)(double ptTrue, const double*, const double*, const std::vector<int>&) const;
   typedef double (Parametrization::*PdfResp)(double r, double ptTrue, const double*) const;
@@ -42,11 +42,11 @@ class SmearFunction {
     double par(int i) const { assert( i >= 0 && i < nPars() ); return firstPar_[i]; }
     bool isFixedPar(int i) const { assert( i >= 0 && i < nPars() ); return isFixedPar_[i]; }
 
-    double pdfPtMeasJet1(double ptMeas, double ptTrue) const {
-      return (param_->*pdfPtMeasJet1_)(ptMeas,ptTrue,firstPar_);
+    double pdfPtMeasJet1(double ptMeas, double ptTrue, double pt3Rel) const {
+      return (param_->*pdfPtMeasJet1_)(ptMeas,ptTrue,pt3Rel,firstPar_);
     }
-    double pdfPtMeasJet2(double ptMeas, double ptTrue) const {
-      return (param_->*pdfPtMeasJet2_)(ptMeas,ptTrue,firstPar_);
+    double pdfPtMeasJet2(double ptMeas, double ptTrue, double pt3Rel) const {
+      return (param_->*pdfPtMeasJet2_)(ptMeas,ptTrue,pt3Rel,firstPar_);
     }
     double pdfPtTrue(double ptTrue) const {
       return (param_->*pdfPtTrue_)(ptTrue,firstPar_);

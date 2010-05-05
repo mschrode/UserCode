@@ -1,4 +1,4 @@
-//  $Id: Kalibri.h,v 1.1 2010/01/21 16:46:05 mschrode Exp $
+//  $Id: Kalibri.h,v 1.5 2010/04/24 14:10:52 mschrode Exp $
 
 //!  \mainpage
 //!
@@ -14,92 +14,6 @@
 //!  \section label_sec_workflow Workflow
 //!  \image html kalibri_workflow.png
 //!  (Graphic in <A HREF="../graphic/kalibri.eps">eps</A> format.)
-//!
-//!  \section label_sec_milestones Milestones
-//!  - July 2009: Determination of the Summer08 L2L3 MC truth corrections
-//!    - <A HREF="http://indico.cern.ch/conferenceDisplay.py?confId=64137">
-//!      Presentation in Jet Energy Corrections Meeting</A>
-//!    - <A HREF="../results/L2L3MCTruthCorrections/KalibriL2L3fromSummer08DiJetMC.txt">
-//!      Calibration constants</A>
-//!    - Controlplots
-//!      - <A HREF="../results/L2L3MCTruthCorrections/controlplots.root">
-//!        controlplots.root</A>
-//!      - <A HREF="../results/L2L3MCTruthCorrections/controlplotsJetTruthEventResponse.ps">
-//!        controlplotsJetTruthEventResponse.ps</A>
-//!      - <A HREF="../results/L2L3MCTruthCorrections/controlplotsJetTruthEventResolution.ps">
-//!        controlplotsJetTruthEventResolution.ps</A>
-//!      - <A HREF="../results/L2L3MCTruthCorrections/controlplotsBinnedResponse.ps">
-//!        controlplotsBinnedResponse.ps</A>
-//!    - <A HREF="../results/L2L3MCTruthCorrections/L2L3Summer08Dijets.cfg">
-//!      Configuration file</A>
-//!
-//!  \section label_sec_geninfo General information about and results of the calibration method
-//!
-//!  - S. Naumann-Emme:
-//!    <A HREF="http://indico.cern.ch/conferenceDisplay.py?confId=65022">
-//!    JEC from top using "Kalibri" method</A>,
-//!    CMS Jet Energy Corrections Meeting, 24th July, 2009
-//!
-//!  - M. Schr&ouml;der:
-//!    <A HREF="http://indico.cern.ch/conferenceDisplay.py?confId=64137">
-//!    An Unbinned Fit for Jet Energy Corrections</A>,
-//!    CMS Jet Energy Corrections Meeting, 10th July, 2009
-//!
-//!  - J. Thomsen:
-//!    <A HREF="https://indico.desy.de/getFile.py/access?contribId=0&resId=0&materialId=slides&confId=1638">
-//!    Inclusion of track information</A>,
-//!    UHH Jetcalibration meeting, 8th May, 2009
-//!
-//!  - H. Stadie:
-//!    <A HREF="http://indico.cern.ch/getFile.py/access?contribId=4&resId=0&materialId=slides&confId=55161">
-//!    Jet Calibraton Activities in Hamburg</A>,
-//!    FSP-CMS Meeting, 28th April 2009
-//!
-//!  - S. Naumann-Emme:
-//!    <A HREF="https://indico.desy.de/getFile.py/access?contribId=3&amp;resId=0&amp;materialId=slides&amp;confId=1683">
-//!    Jet Energy Corrections from Top Quark Decays</A>,
-//!    CMS Hamburg Meeting, 28th January 2009
-//!
-//!  - M. Schr&ouml;der:
-//!    <A HREF="https://indico.desy.de/getFile.py/access?contribId=2&amp;resId=0&amp;materialId=slides&amp;confId=1683">
-//!    Conceptual Studies for a Jet Energy Correction</A>,
-//!    CMS Hamburg Meeting, 28th January 2009
-//!
-//!  - H. Stadie:
-//!    <A HREF="https://indico.desy.de/getFile.py/access?contribId=1&amp;resId=0&amp;materialId=slides&amp;confId=1683">
-//!    CMS Calorimeter and Jet Calibration</A>,
-//!    CMS Hamburg Meeting, 28th January 2009
-//!
-//!  - S. Naumann-Emme: Top as a Calibration Tool,
-//!    2nd "Physics at the Terascale" Workshop, 27th November 2008
-//!
-//!  - T. Schum:
-//!    <A HREF="https://indico.desy.de/getFile.py/access?contribId=1&amp;resId=0&amp;materialId=slides&amp;confId=627">
-//!    HCAL Calibration using a Global Fit Ansatz</A>,
-//!    Hamburg CMS Meeting, 12th March 2008
-//!
-//!  - R. Wolf:
-//!    <A HREF="http://indico.cern.ch/getFile.py/access?contribId=3&resId=0&materialId=slides&confId=29582">
-//!    Data-Driven Calorimeter Calibration Exploiting a Global-Fit Ansatz</A>,
-//!    JetMET Meeting, 26th February 2008
-//!
-//!  - C. Autermann:
-//!    <A HREF="http://indico.cern.ch/getFile.py/access?contribId=7&resId=0&materialId=slides&confId=22705">
-//!    A global fit approach to HCAL/jet calibration</A>,
-//!    JetMET Meeting, 18th October 2007
-//!
-//!  \section label_sec_techinfo Technical information and tutorials
-//!  - <A HREF="https://indico.desy.de/getFile.py/access?contribId=1&resId=0&materialId=slides&confId=1643">
-//!    SmearData: Extension of framework to jet smearing method</A>
-//!    UHH Jetcalibration meeting, 12th June, 2009
-//!
-//!  - <A HREF="https://indico.desy.de/getFile.py/access?contribId=1&resId=0&materialId=slides&confId=1623">
-//!    Inversion technique including towers</A>
-//!    UHH Jetcalibration meeting, 23rd January, 2009
-//!    
-//!  - <A HREF="https://indico.desy.de/getFile.py/access?contribId=1&resId=0&materialId=slides&confId=1622">
-//!    Details of the inversion technique</A>
-//!    UHH Jetcalibration meeting, 16th January, 2009
 //!
 //!  \section label_sec_authors Authors
 //!  - Christian Autermann
@@ -136,7 +50,7 @@ class Measurement;
 //!         LD_PRELOAD=./gprof-helper.so ./junk
 //!  \authors Christian Autermann, Hartmut Stadie, Matthias Schroeder
 //!  \date Wed Jul 18 13:54:50 CEST 2007
-//!  $Id: Kalibri.h,v 1.1 2010/01/21 16:46:05 mschrode Exp $
+//!  $Id: Kalibri.h,v 1.5 2010/04/24 14:10:52 mschrode Exp $
 // -----------------------------------------------------------------
 class Kalibri {
 public :
@@ -166,7 +80,7 @@ public :
 
   ~Kalibri(){};
 
-  void init();   //!< Read parameters from configfile, read data
+  void init();  //!< Read parameters from configfile, read data
   void run();    //!< Run the fit
   void done();   //!< Make control plots, clean up
   const char * getOutputFile() { return outputFile_.c_str(); }; //!< Get the ouputfile name
@@ -189,6 +103,7 @@ private:
   int nTrackClusterEvents_;   //!< Number of track-cluster events
   int nZjetEvents_;           //!< Number of Zjet events
   int nTopEvents_;            //!< Number of top events
+  int mode_;
 
   // control parameters of fit
   bool printParNDeriv_;     //!< Control whether to print derivatives in each iteration

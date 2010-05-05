@@ -12,14 +12,15 @@
 //!
 //!    \author Hartmut Stadie
 //!    \date 2008/12/25
-//!    $Id: JetWithTowers.h,v 1.18 2009/11/26 18:24:42 stadie Exp $
+//!    $Id: JetWithTowers.h,v 1.21 2010/02/15 12:40:18 stadie Exp $
 // ----------------------------------------------------------------   
 class JetWithTowers : public Jet
 {
  public:
   JetWithTowers(double Et, double EmEt, double HadEt ,double OutEt, double E,
-		double eta,double phi, double etaeta, Flavor flavor,
-		double genPt, double dR, CorFactors* corFactors, const Function& f,
+		double eta,double phi, double phiphi, double etaeta, 
+		Flavor flavor, double genPt, double dR, CorFactors* corFactors,
+		const Function& f,
 		double (*errfunc)(const double *x, const Measurement *xorig, double err), 
 		const Function& gf, double Etmin = 0); 
   virtual ~JetWithTowers(); 
@@ -31,12 +32,14 @@ class JetWithTowers : public Jet
   // varies all parameters for this jet by eps and returns a vector of the
   // parameter id and the Et for the par + eps and par - eps variation
   virtual const VariationColl& varyPars(double eps, double Et, double start);
-  virtual const VariationColl& varyParsDirectly(double eps);
+  virtual const VariationColl& varyParsDirectly(double eps, bool computeDeriv = false);
 
   void addTower(double Et, double EmEt, double HadEt ,double OutEt, double E,
 		double eta,double phi,const Function& f,
 		double (*errfunc)(const double *x, const Measurement *xorig, double err));
+  virtual Jet* clone() const { return new JetWithTowers(*this);} //!< Clone this jet
  private:
+  JetWithTowers(const JetWithTowers& j); //!< disallow copies!
   class Tower : public Measurement {
   public:
     Tower(double Et, double EmEt, double HadEt ,double OutEt, double E,
@@ -77,6 +80,8 @@ class JetWithTowers : public Jet
     mutable double fraction;
     Function f;
     double (*errf)(const double *x, const Measurement *xorig, double err);
+
+    friend class JetWithTowers;
   };
   typedef std::vector<Tower*> TowerColl;
   typedef TowerColl::iterator TowerCollIter;

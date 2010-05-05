@@ -1,4 +1,4 @@
-// $Id: SmearDiJet.h,v 1.5 2010/02/16 13:33:16 mschrode Exp $
+// $Id: SmearDiJet.h,v 1.7 2010/04/13 13:38:24 mschrode Exp $
 
 #ifndef SmearDiJet_h
 #define SmearDiJet_h
@@ -11,7 +11,7 @@
 //!  \brief Dijet data for jetsmearing method
 //!  \author Matthias Schroeder
 //!  \date Tue Jun  9 18:23:44 CEST 2009
-//!  $Id: SmearDiJet.h,v 1.5 2010/02/16 13:33:16 mschrode Exp $
+//!  $Id: SmearDiJet.h,v 1.7 2010/04/13 13:38:24 mschrode Exp $
 // --------------------------------------------------
 class SmearDiJet : public SmearData {
  public:
@@ -36,11 +36,12 @@ class SmearDiJet : public SmearData {
   const Jet * jet2() const { return jet2_; }
   const Jet * jet3() const { return jet3_; }
 
-  double pdfPtMeasJet1(double ptMeas, double ptTrue) const { return pdf_.pdfPtMeasJet1(ptMeas,ptTrue); }
-  double pdfPtMeasJet2(double ptMeas, double ptTrue) const { return pdf_.pdfPtMeasJet2(ptMeas,ptTrue); }
+  double pdfPtMeasJet1(double ptMeas, double ptTrue, double pt3Rel) const { return pdf_.pdfPtMeasJet1(ptMeas,ptTrue,pt3Rel); }
+  double pdfPtMeasJet2(double ptMeas, double ptTrue, double pt3Rel) const { return pdf_.pdfPtMeasJet2(ptMeas,ptTrue,pt3Rel); }
 
   //! Get dijet pt \f$ \frac{1}{2} (p^{1}_{T} + p^{2}_{T}) \f$
   double dijetPt() const { return 0.5 * (jet1()->pt() + jet2()->pt()); } 
+  double relJet3Pt() const { return jet3()->pt() / dijetPt(); }
 
 
  private:

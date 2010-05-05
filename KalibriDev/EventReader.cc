@@ -1,11 +1,13 @@
 //
-// $Id: EventReader.cc,v 1.3 2010/01/29 20:55:36 mschrode Exp $
+// $Id: EventReader.cc,v 1.12 2010/04/29 13:29:41 stadie Exp $
 //
 #include "EventReader.h"
 
 #include "ConfigFile.h"
 #include "Parameters.h" 
+#include "Parametrization.h"
 #include "CorFactorsFactory.h"
+#include "JetConstraintEvent.h" 
 #include "TChain.h"
 #include "ToyMC.h"
 #include "TTree.h"
@@ -13,9 +15,10 @@
 #include <dlfcn.h>
 
 unsigned int EventReader::numberOfEventReaders_ = 0;
+std::vector<JetConstraintEvent*> EventReader::constraints_;
 
 EventReader::EventReader(const std::string& configfile, TParameters* param) 
-  : config_(0),par_(param),corFactorsFactory_(0)
+  : config_(0),par_(param),corFactorsFactory_(0),cp_(new ConstParametrization())
 {
   numberOfEventReaders_++;
 
@@ -24,12 +27,6 @@ EventReader::EventReader(const std::string& configfile, TParameters* param)
   useTracks_ = config_->read<bool>("use Tracks",true);
   if(par_->GetNumberOfTrackParameters() < 1) useTracks_ = false;
 
-  // Print info on track usage only once for all readers
-  if( numberOfEventReaders_ == 1 ) {
-    if(useTracks_)  std::cout<<"Tracks are used to calibrate jets"<< std::endl;
-    else std::cout<<"Only Calorimeter information is used"<< std::endl;
-  }
-  
   //Error Parametrization...
   //...for tracks:
   track_error_param = par_->track_error_parametrization;
@@ -80,18 +77,58 @@ EventReader::EventReader(const std::string& configfile, TParameters* param)
     }
   }
   corFactorsFactory_ = CorFactorsFactory::map[jcn];
-
+  if(jcn !="" && (! corFactorsFactory_)) {
+    std::cerr << "Failed to apply correction " << jcn << " from " << jcs << std::endl;
+    exit(-1);
+  } 
+  if(corFactorsFactory_) {
+    std::cout << "Jet corrections will be overwritten with " << jcn << " from " << jcs << std::endl; 
+  }
   correctToL3_ = config_->read<bool>("correct jets to L3",false);
   correctL2L3_ = config_->read<bool>("correct jets L2L3",false);
   if( correctToL3_ && correctL2L3_ ) {
     std::cerr << "WARNING: Jets are corrected twice (to L3 and L2L3).\n" << std::endl;
     exit(-9);
   }
+
+  // Print info only once for all readers
+  if( numberOfEventReaders_ == 1 ) {
+    // Track usage
+    if(useTracks_)  std::cout<<"Tracks are used to calibrate jets"<< std::endl;
+    else std::cout<<"Only Calorimeter information is used"<< std::endl;
+    // Correction of jets
+    if(correctToL3_) {
+      std::cout << "Jets will be corrected to Level 3 (i.e. with L1 * L2 * L3)" << std::endl;
+    } else if(correctL2L3_) {
+      std::cout << "Jets will be corrected with L2 * L3" << std::endl;
+    } 
+  }
+
+  if(! constraints_.size() ) {
+    std::vector<double> jet_constraint = bag_of<double>(config_->read<std::string>( "jet constraints",""));
+    if(jet_constraint.size() % 5 == 0) {
+      for(unsigned int i = 0 ; i < jet_constraint.size() ; i += 5) {
+	constraints_.push_back(new JetConstraintEvent(jet_constraint[i],jet_constraint[i+1],jet_constraint[i+2],jet_constraint[i+3],jet_constraint[i+4]));
+      } 
+    } else if(jet_constraint.size() > 1) {
+      std::cout << "wrong number of arguments for jet constraint:" << jet_constraint.size() << '\n';
+    }
+    for(unsigned int i = 0 ; i < constraints_.size() ; ++i) {
+      const JetConstraintEvent* jce = constraints_[i];
+      std::cout << "adding constraint for jets with " << jce->minEta() << " < |eta| <  " 
+		<< jce->maxEta() << " and " << jce->minPt() << " < pt < " << jce->maxPt() 
+		<< " with weight " << jce->weight() << "\n";
+    }
+  }
 }
 
 EventReader::~EventReader()
 {
   delete config_;
+  for(unsigned int i = 0 ; i < constraints_.size() ; ++i) {
+    delete constraints_[i];
+  }
+  constraints_.clear();
 }
 
 
@@ -106,11 +143,6 @@ TTree * EventReader::createTree(const std::string &dataType) const {
     treeName = config_->read<string>("Di-Jet tree","CalibTree");
     inputFileNames = bag_of_string(config_->read<std::string>("Di-Jet input file","input/dijet.root"));  
     nEvts = config_->read<int>("use Di-Jet events",-1);
-  } else if( dataType == "gammaJet" ) {
-    readerName = "GammaJetReader";
-    treeName = config_->read<string>("Gamma-Jet tree","CalibTree");
-    inputFileNames = bag_of_string(config_->read<std::string>("Gamma-Jet input file","input/gammajet.root"));  
-    nEvts = config_->read<int>("use Gamma-Jet events",-1);
   }
 
   int inputMode = -1;
@@ -156,12 +188,17 @@ TTree * EventReader::createTree(const std::string &dataType) const {
     std::ifstream filelist;
     filelist.open(inputFileNames[0].c_str());
     int nOpenedFiles = 0;
-    std::string name = "";
-    while( !filelist.eof() ) {
-      filelist >> name;
-      if( filelist.eof() ) break;
-      chain->Add( name.c_str() );
-      nOpenedFiles++;
+    if( filelist.is_open() ) {
+      std::string name = "";
+      while( !filelist.eof() ) {
+	filelist >> name;
+	if( filelist.eof() ) break;
+	chain->Add( name.c_str() );
+	nOpenedFiles++;
+      }
+    } else {
+      std::cerr << "ERROR opening file '" << inputFileNames[0] << "'\n";
+      exit(1);
     }
     filelist.close();
     tree = chain;
@@ -174,3 +211,16 @@ TTree * EventReader::createTree(const std::string &dataType) const {
   return tree;
 }
  
+int EventReader::addConstraints(std::vector<Event*>& data) {
+  unsigned int n = constraints_.size();
+  for(unsigned int i = 0 ; i < n ; ++i) { 
+    JetConstraintEvent* jce = constraints_[i];
+    std::cout << "added constraint for jets with " << jce->minEta() << " < |eta| <  " 
+	      << jce->maxEta() << " and " << jce->minPt() << " < pt < " << jce->maxPt() 
+	      << " with weight " << jce->weight() << " and " << jce->nJets() 
+	      << " jets " << "\n";
+    data.push_back(jce);
+  }
+  constraints_.clear();
+  return n;
+}

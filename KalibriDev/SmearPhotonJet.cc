@@ -1,4 +1,4 @@
-// $Id: SmearPhotonJet.cc,v 1.3 2010/02/09 10:19:23 mschrode Exp $
+// $Id: SmearPhotonJet.cc,v 1.5 2010/04/13 13:38:24 mschrode Exp $
 
 #include "SmearPhotonJet.h"
 
@@ -8,7 +8,7 @@
 //!  \return The negative log-likelihood of this event
 // --------------------------------------------------
 double SmearPhotonJet::chi2() const {
-  double pdf = pdfPtMeas(GetMess()->pt,GetTruth());
+  double pdf = pdfPtMeas(GetMess()->pt,GetTruth(),0.);
   return -1. * GetWeight() * log(pdf/GetTruth()); // Need to divide by truth to have probability (!= density)
 }
 

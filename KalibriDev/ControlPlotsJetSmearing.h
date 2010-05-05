@@ -1,5 +1,5 @@
 //
-// $Id: ControlPlotsJetSmearing.h,v 1.7 2010/03/24 14:30:19 mschrode Exp $
+// $Id: ControlPlotsJetSmearing.h,v 1.10 2010/04/18 14:40:38 mschrode Exp $
 //
 #ifndef JS_CONTROLPLOTS_JETSMEARING_H
 #define JS_CONTROLPLOTS_JETSMEARING_H
@@ -11,19 +11,20 @@
 #include "ConfigFile.h"
 #include "Parameters.h"
 
-class TH1F;
-class TH2F;
+class Jet;
+class TCanvas;
+class TH1;
 class TLegend;
 class TObject;
+class TPaveText;
 class TPostScript;
-class TCanvas;
 class TRandom3;
 
 
 //!  \brief Generates validation plots for jet-smearing method
 //!  \author Matthias Schroeder
 //!  \date Thu May  7 11:30:28 CEST 2009 
-//!  $Id: ControlPlotsJetSmearing.h,v 1.7 2010/03/24 14:30:19 mschrode Exp $
+//!  $Id: ControlPlotsJetSmearing.h,v 1.10 2010/04/18 14:40:38 mschrode Exp $
 // --------------------------------------------------
 class ControlPlotsJetSmearing {
  public:
@@ -35,6 +36,8 @@ class ControlPlotsJetSmearing {
 
 
  private:
+  static double spectrum(double *x, double *par);
+
   typedef std::vector<Event*>::const_iterator DataIt;
 
   const std::vector<Event*> * data_;   //!< The data which is plotted
@@ -46,6 +49,13 @@ class ControlPlotsJetSmearing {
   double       respMax_;               //!< Maximum of response control plots \p plotResponse()
   std::string  dir_;                   //!< Directory in which the control plots are written
   TRandom3 *rand_;
+  std::string parClass_;
+  std::vector<double> startParJet_;
+  std::vector<double> scale_;
+  std::vector<double> truthPar_;
+  std::string ptBinningVar_;
+  std::vector<double> ptBinEdges_;
+  std::vector<double> ptBinCenters_;
 
   void plotDijets() const;
   void plotResponse() const;
@@ -56,19 +66,30 @@ class ControlPlotsJetSmearing {
   //! each event before and after the fit
   void plotLogP() const;
   void plotMeanResponseAndResolution() const;
+  void plot3rdJet() const;
 
-  double gaussianWidth(double pt, const std::vector<double> scale) const;
-  double gaussianWidthError(double pt, const std::vector<double> scale) const;
+  double gaussianWidth(double pt) const;
+  double gaussianWidthError(double pt) const;
+  double gaussianWidthTruth(double pt) const;
+
+  int nPtBins() const { return static_cast<int>(ptBinEdges_.size()-1); }
+  double ptBinsMin() const { return ptBinEdges_.front(); }
+  double ptBinsMax() const { return ptBinEdges_.back(); }
+  int findPtBin(const Jet *jet) const;
+  int findPtBin(double pt) const;
+  int findBin(double x, const std::vector<double> &binEdges) const;
+  bool equidistLogBins(std::vector<double>& bins, int nBins, double first, double last) const;
 
   TLegend *createLegend(int nEntries, double width = 1., double lineHgt = -1., double yOffset = 0.) const;
-  void drawPSPage(TPostScript * ps, TCanvas * can, TObject * obj, std::string option = "", bool log = false) const;
-  void drawPSPage(TPostScript * ps, TCanvas * can, std::vector<TObject*> objs, std::string option = "", bool log = false) const;
-  void findYRange(const TH1F * h, double& min, double& max) const;
+  TPaveText *createPaveText(int nEntries, double width = 1., double lineHgt = -1.) const;
+  void drawPSPage(TPostScript * ps, TCanvas * can, TObject * obj, const std::string &option = "", bool log = false) const;
+  void drawPSPage(TPostScript * ps, TCanvas * can, std::vector<TObject*> objs, const std::string &option = "", bool log = false) const;
+  void findYRange(const TH1 * h, double& min, double& max) const;
   double lineHeight() const { return 0.06; }
-  void normHist(TH1F * h, std::string option = "") const;
-  void normHist(TH1F *h, double min, double max, std::string option = "") const;
+  void normHist(TH1 * h, std::string option = "") const;
+  void normHist(TH1 *h, double min, double max, std::string option = "") const;
   void setGStyle() const;
-  void setYRange(TH1F * h, double c1 = 0.9, double c2 = 1.1, double minLimit = 0.) const;
+  void setYRange(TH1 * h, double c1 = 0.9, double c2 = 1.1, double minLimit = 0.) const;
   template <class T> std::string toString(const T& t) const;
 };
 #endif

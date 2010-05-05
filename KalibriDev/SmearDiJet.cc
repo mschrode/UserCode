@@ -1,4 +1,4 @@
-// $Id: SmearDiJet.cc,v 1.5 2010/02/16 13:33:16 mschrode Exp $
+// $Id: SmearDiJet.cc,v 1.9 2010/04/13 13:38:24 mschrode Exp $
 
 #include "SmearDiJet.h"
 
@@ -83,8 +83,8 @@ double SmearDiJet::chi2() const
       
       // Calculate probability only at new nodes
       if(nIter == 0 || i % 3 != 0) {
-	double p0 = pdfPtMeasJet1(jet1()->pt(),t);
-	double p1 = pdfPtMeasJet2(jet2()->pt(),t);
+	double p0 = pdfPtMeasJet1(jet1()->pt(),t,relJet3Pt());
+	double p1 = pdfPtMeasJet2(jet2()->pt(),t,relJet3Pt());
 	pp.push_back(p0 * p1 * pdfPtTrue(t)); // Store product of pdfs and normalization
       } else {
 	pp.push_back(pp_old.at(i/3));       // Store product of pdfs previously calcluated
@@ -155,21 +155,30 @@ double SmearDiJet::chi2_fast(double * temp_derivative1,
       pdf_.par()[i] += epsilon;
       temp1 = chi2();
       
-      //     std::cout << std::setprecision(10) << i << ": " << oldpar << " -- > " << f << std::endl;
-      //     std::cout << "   " << pdf_.respPar()[i] << " -- > " << temp1 << std::endl;
+//       std::cout << std::endl;
+//       std::cout << std::setprecision(10) << i << ": " << oldpar << " -- > " << f << std::endl;
+//       std::cout << "   " << pdf_.par()[i] << " -- > " << temp1 << std::endl;
       
       pdf_.par()[i] -= 2.*epsilon;
       temp2 = chi2();
       
-      //     std::cout << "   " << pdf_.respPar()[i] << " -- > " << temp1 << std::endl;
+      //      std::cout << "   " << pdf_.par()[i] << " -- > " << temp1 << std::endl;
       
       
       pdf_.par()[i] = oldpar;
       
-      //     std::cout << i << ": " << pdf_.respParIdx()+i << " += " << temp1 - temp2 << std::endl;
+      //      std::cout << i << ": " << pdf_.parIdx()+i << " += " << temp1 - temp2 << std::endl;
       
       temp_derivative1[pdf_.parIdx()+i] += temp1 - temp2;
       temp_derivative2[pdf_.parIdx()+i] += temp1 + temp2 - 2*f;
+
+
+//       if( !(f == f) ) {
+// 	std::cout << "NAN error\n";
+// 	std::cout << "  " << jet1()->genPt() << ",  " << jet1()->pt() << std::endl;
+// 	std::cout << "  " << jet2()->genPt() << ",  " << jet2()->pt() << std::endl;
+//       }
+
     }
   }
 

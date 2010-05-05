@@ -16,7 +16,7 @@ class ConfigFile;
 //!
 //!  \author Hartmut Stadie
 //!  \date   Mon Jun 30 11:00:00 CEST 2008
-//!  $Id: ToyMC.h,v 1.5 2010/02/25 15:28:19 mschrode Exp $
+//!  $Id: ToyMC.h,v 1.26 2010/04/13 13:55:36 mschrode Exp $
 // ----------------------------------------------------------------  
 class ToyMC {
 

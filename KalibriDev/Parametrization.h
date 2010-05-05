@@ -1,5 +1,5 @@
 //
-//  $Id: Parametrization.h,v 1.13 2010/03/25 08:30:59 mschrode Exp $
+//  $Id: Parametrization.h,v 1.60 2010/04/27 16:03:41 stadie Exp $
 //
 #ifndef CALIBCORE_PARAMETRIZATION_H
 #define CALIBCORE_PARAMETRIZATION_H
@@ -13,8 +13,8 @@
 #include "gsl/gsl_math.h"
 #include "gsl/gsl_roots.h"
      
-class TH1F;
-class TH1D;
+class TH1;
+
 
 //!  \brief Abstract base class for parametrizations of
 //!         correction functions
@@ -24,7 +24,7 @@ class TH1D;
 //!  to correct a tower or jet measurement.
 //!  \author Hartmut Stadie
 //!  \date Thu Apr 03 17:09:50 CEST 2008
-//!  $Id: Parametrization.h,v 1.13 2010/03/25 08:30:59 mschrode Exp $
+//!  $Id: Parametrization.h,v 1.60 2010/04/27 16:03:41 stadie Exp $
 // -----------------------------------------------------------------
 class Parametrization 
 {
@@ -40,7 +40,6 @@ public:
     nglobaljetpars_(nglobaljetpars) {}
 
   virtual ~Parametrization() {}
-
 
   //!  \brief Corrects the measured tower Et
   //!
@@ -115,9 +114,10 @@ public:
   // -----------------------------------------------------------------
   virtual double correctedGlobalJetEt(const Measurement *x,const double *par) const { return x->pt;}
 
+
   //! Returns probability density of measured jet pt given a true jet pt
-  virtual double pdfPtMeasJet1(double ptMeas, double ptTrue, const double *par) const { return 0.; }
-  virtual double pdfPtMeasJet2(double ptMeas, double ptTrue, const double *par) const { return 0.; }
+  virtual double pdfPtMeasJet1(double ptMeas, double ptTrue, double pt3Rel, const double *par) const { return 0.; }
+  virtual double pdfPtMeasJet2(double ptMeas, double ptTrue, double pt3Rel, const double *par) const { return 0.; }
   //! Returns probability density of true jet pt
   virtual double pdfPtTrue(double ptTrue, const double *par) const { return 0.; }
   virtual double pdfPtTrueError(double ptTrue, const double *par, const double *cov, const std::vector<int> &covIdx) const { return 0.; }
@@ -174,6 +174,31 @@ public:
   virtual bool needsUpdate() const { return false; }
   virtual void update(const double * par) {;}
 
+ protected:
+  //interpolotion code from JetMETObjects/Utilities
+  static double quadraticInterpolation(double fZ, const double fX[3], const double fY[3])
+  {
+    // Quadratic interpolation through the points (x[i],y[i]). First find the parabola that
+    // is defined by the points and then calculate the y(z).
+    float D[4],a[3];
+    D[0] = fX[0]*fX[1]*(fX[0]-fX[1])+fX[1]*fX[2]*(fX[1]-fX[2])+fX[2]*fX[0]*(fX[2]-fX[0]);
+    D[3] = fY[0]*(fX[1]-fX[2])+fY[1]*(fX[2]-fX[0])+fY[2]*(fX[0]-fX[1]);
+    D[2] = fY[0]*(pow(fX[2],2)-pow(fX[1],2))+fY[1]*(pow(fX[0],2)-pow(fX[2],2))+fY[2]*(pow(fX[1],2)-pow(fX[0],2));
+    D[1] = fY[0]*fX[1]*fX[2]*(fX[1]-fX[2])+fY[1]*fX[0]*fX[2]*(fX[2]-fX[0])+fY[2]*fX[0]*fX[1]*(fX[0]-fX[1]);
+    if (D[0] != 0)
+      {
+        a[0] = D[1]/D[0];
+        a[1] = D[2]/D[0];
+        a[2] = D[3]/D[0];
+      }
+    else
+      {
+        a[0] = 0.0;
+        a[1] = 0.0;
+        a[2] = 0.0;
+      }
+    return a[0]+fZ*(a[1]+fZ*a[2]);
+  }
 private: 
   Parametrization();
   unsigned int ntowerpars_;      //!< Number of parameters of the tower parametrization
@@ -190,17 +215,18 @@ private:
 //!  \sa Parametrization
 // -----------------------------------------------------------------
 class ConstParametrization : public Parametrization { 
-public:
-  ConstParametrization() : Parametrization(0,0,0,0) {}
-  const char* name() const { return "ConstParametrization";}
-  
-  double correctedTowerEt(const Measurement *x,const double *par) const {
-    return x->pt;
-  }
+ public:
+  ConstParametrization() : Parametrization(0,0,0,0) {} 
     
-  double correctedJetEt(const Measurement *x,const double *par) const {
-    return  x->pt;   
-  }
+  const char* name() const { return "ConstParametrization";}
+    
+    double correctedTowerEt(const Measurement *x,const double *par) const {
+      return x->pt;
+    }
+    
+    double correctedJetEt(const Measurement *x,const double *par) const {
+      return  x->pt;   
+    }
 };
 
 //!  \brief Parametrization of the hadronic tower response 
@@ -213,8 +239,9 @@ public:
 //!  \sa Parametrization
 // -----------------------------------------------------------------
 class StepParametrization : public Parametrization { 
-public:
+ public:
   StepParametrization() : Parametrization(12,0,0,0) {}
+    
   const char* name() const { return "StepParametrization";}
   
   double correctedTowerEt(const Measurement *x,const double *par) const {
@@ -234,7 +261,7 @@ public:
     else if (x->HadF>1000.0 )                   result = x->EMF+x->OutF+par[11]*x->HadF;
     return result;
   }
-    
+  
   double correctedJetEt(const Measurement *x,const double *par) const {
     return  x->pt;   
     //OutOfCone, Dominant, parametrized in Et since cone R lorenz invariant
@@ -247,7 +274,7 @@ public:
       else if (x->pt>80.0 )                 result =  par[6]*x->pt + par[7];
       return result;
     */
-  }
+    }
 };
 
 
@@ -508,7 +535,7 @@ class MyParametrization: public Parametrization {
 // -----------------------------------------------------------------
 class JetMETParametrization: public Parametrization {
 public:
-  JetMETParametrization() : Parametrization(3,5,0,0) {}
+  JetMETParametrization() : Parametrization(3,5,0,0) {} 
   const char* name() const { return "JetMETParametrization";}
   
   double correctedTowerEt(const Measurement *x,const double *par) const {
@@ -533,7 +560,7 @@ public:
 // -----------------------------------------------------------------
 class GlobalScaleFactorParametrization: public Parametrization {
 public:
-  GlobalScaleFactorParametrization() : Parametrization(0,0,0,1) {}
+  GlobalScaleFactorParametrization() : Parametrization(0,0,0,1) {} 
   const char* name() const { return "GlobalScaleFactorParametrization";}
 
   double correctedTowerEt(const Measurement *x,const double *par) const {
@@ -561,7 +588,7 @@ public:
 // -----------------------------------------------------------------
 class SimpleParametrization: public Parametrization {
 public:
-  SimpleParametrization() : Parametrization(3,3,0,0) {}
+  SimpleParametrization() : Parametrization(3,3,0,0) {} 
   const char* name() const { return "SimpleParametrization";}
 
   double correctedTowerEt(const Measurement *x,const double *par) const {
@@ -588,7 +615,7 @@ public:
 // -----------------------------------------------------------------
 class ToyParametrization: public Parametrization {
 public:
-  ToyParametrization() : Parametrization(1,0,0,0) {}
+  ToyParametrization() : Parametrization(1,0,0,0) {} 
   const char* name() const { return "ToyParametrization";}
 
   double correctedTowerEt(const Measurement *x,const double *par) const {
@@ -615,7 +642,7 @@ public:
 // -----------------------------------------------------------------
 class ToyJetParametrization: public Parametrization {
 public:
-  ToyJetParametrization() : Parametrization(0,1,0,0) {}
+  ToyJetParametrization() : Parametrization(0,1,0,0) {} 
   const char* name() const { return "ToyJetParametrization";}
 
   double correctedTowerEt(const Measurement *x,const double *par) const {
@@ -647,7 +674,7 @@ public:
 // -----------------------------------------------------------------
 class ToyStepParametrization : public Parametrization { 
 public:
-  ToyStepParametrization() : Parametrization(15,0,0,0) {}
+  ToyStepParametrization() : Parametrization(15,0,0,0) {} 
   const char* name() const { return "ToyStepParametrization";}
   
   double correctedTowerEt(const Measurement *x,const double *par) const {
@@ -696,7 +723,7 @@ public:
 // -----------------------------------------------------------------
 class ToyStepJetParametrization : public Parametrization { 
  public:
-  ToyStepJetParametrization() : Parametrization(0,15,0,0) {}
+  ToyStepJetParametrization() : Parametrization(0,15,0,0) {} 
   const char* name() const { return "ToyStepJetParametrization";}
   
   double correctedTowerEt(const Measurement *x,const double *par) const {
@@ -740,7 +767,7 @@ class ToyStepJetParametrization : public Parametrization {
 // -----------------------------------------------------------------
 class TrackParametrization : public Parametrization {
  public:
-  TrackParametrization() : Parametrization(12,3,6,0) {}  //(36,3,3,0) {}
+  TrackParametrization() : Parametrization(12,3,6,0) {}  //(36,3,3,0) {} 
   const char* name() const { return "TrackParametrization";}
 
   double correctedTowerEt(const Measurement *x,const double *par) const 
@@ -860,7 +887,7 @@ class TrackParametrization : public Parametrization {
 // -----------------------------------------------------------------
 class L2L3JetParametrization : public Parametrization { 
 public:
-  L2L3JetParametrization() : Parametrization(0,5,0,4) {}
+  L2L3JetParametrization() : Parametrization(0,5,0,4) {} 
   const char* name() const { return "L2L3JetParametrization";}
   
   double correctedTowerEt(const Measurement *x,const double *par) const {
@@ -876,9 +903,12 @@ public:
   double correctedJetEt(const Measurement *x,const double *par) const {
     double  pt = (x->pt < 4.0) ? 4.0 : (x->pt > 2000.0) ? 2000.0 : x->pt;
     double logpt = log10(pt);
-    double c1 = par[0]+logpt*(0.1 * par[1]+logpt *(0.01* par[2]+logpt*(0.01*par[3]+logpt*(0.01*par[4]))));
-
-    return c1 * x->pt;
+    double c = par[0]+logpt*(0.1 * par[1]+logpt *(0.01* par[2]+logpt*(0.01*par[3]+logpt*(0.01*par[4]))));
+    
+    if(c < 0.2) c = 0.2;
+    if(c > 5.0) c = 5.0;
+    //assert(c > 0);
+    return c * x->pt;
   }
 
   //!  \brief Code from SimpleL3AbsoluteCorrector
@@ -890,9 +920,11 @@ public:
   double correctedGlobalJetEt(const Measurement *x,const double *par) const {
     double pt = (x->pt < 4.0) ? 4.0 : (x->pt > 2000.0) ? 2000.0 : x->pt;
     double logpt = log10(pt);
-    double c2 = par[0] + par[1]/(pow(logpt,par[2]) + par[3]);
-
-    return  c2 * x->pt;
+    double c = par[0] + par[1]/(pow(logpt,par[2]) + par[3]);
+    if(c < 0.3) c = 0.3;
+    if(c > 3.0) c = 3.0;
+    assert(c > 0);
+    return  c * x->pt;
   }
 };
 
@@ -912,7 +944,7 @@ public:
 // -----------------------------------------------------------------
 class L2L3JetParametrization2 : public Parametrization { 
 public:
-  L2L3JetParametrization2() : Parametrization(0,7,0,0) {}
+  L2L3JetParametrization2() : Parametrization(0,7,0,0) {} 
   const char* name() const { return "L2L3JetParametrization";}
   
   double correctedTowerEt(const Measurement *x,const double *par) const {
@@ -953,7 +985,7 @@ public:
 
 class L2L3JetTrackParametrization : public Parametrization { 
 public:
-  L2L3JetTrackParametrization() : Parametrization(0,3,5,4) {}
+  L2L3JetTrackParametrization() : Parametrization(0,3,5,4) {} 
   const char* name() const { return "L2L3JetTrackParametrization";}
   
   double correctedTowerEt(const Measurement *x,const double *par) const {
@@ -1079,7 +1111,6 @@ public:
 };
 
 
-
 //!  \brief Parametrization used for SmearFunction estimation
 // -----------------------------------------------------------------
 class SmearFermiTail : public Parametrization{
@@ -1140,8 +1171,8 @@ class SmearGauss : public Parametrization
   double correctedJetEt(const Measurement *x,const double *par) const { return 0.; }
   double correctedGlobalJetEt(const Measurement *x,const double *par) const { return 0.; }
 
-  double pdfPtMeasJet1(double ptMeas, double ptTrue, const double *par) const;
-  double pdfPtMeasJet2(double ptMeas, double ptTrue, const double *par) const;
+  double pdfPtMeasJet1(double ptMeas, double ptTrue, double pt3Rel, const double *par) const;
+  double pdfPtMeasJet2(double ptMeas, double ptTrue, double pt3Rel, const double *par) const;
   double pdfPtTrue(double ptTrue, const double *par) const;
   double pdfResponse(double r, double ptTrue, const double *par) const;
   double pdfResponseError(double r, double ptTrue, const double *par, const double *cov, const std::vector<int> &covIdx) const;
@@ -1154,21 +1185,22 @@ class SmearGauss : public Parametrization
   const double xMin_;             //!< Minimum of pt dijet
   const double xMax_;             //!< Maximum of pt dijet
   const std::vector<double> scale_;     //!< Parameter scales
-  TH1F *hPdfPtTrue_;
+  TH1 *hPdfPtTrue_;
 
   double sigma(double ptTrue, const double *par) const {
-    double a[3];
-    for(int i = 0; i < 3; i++) {
+    double a[3] = { 0., 0., 0. };
+    for(int i = 1; i < 2; i++) {
       if( par[i] > 1E-3 ) {
 	a[i] = scale_[i]*par[i];
       } else {
 	a[i] = scale_[i]*1E-3;
       }
     }
+
     return sqrt( a[0]*a[0] + a[1]*a[1]*ptTrue + a[2]*a[2]*ptTrue*ptTrue );
   }
   double exponent(const double *par) const {
-    return scale_[3]*par[3] > 0. ? scale_[3]*par[3] : 1E-3;
+    return par[3] > 1E-3 ? scale_[3]*par[3] : scale_[3]*1E-3;
   }
   double specPar(const double *par, int i) const {
     return scale_[3+i]*par[3+i];
@@ -1204,8 +1236,8 @@ class SmearGaussPtBin : public Parametrization
   double correctedJetEt(const Measurement *x,const double *par) const { return 0.; }
   double correctedGlobalJetEt(const Measurement *x,const double *par) const { return 0.; }
 
-  double pdfPtMeasJet1(double ptMeas, double ptTrue, const double *par) const;
-  double pdfPtMeasJet2(double ptMeas, double ptTrue, const double *par) const;
+  double pdfPtMeasJet1(double ptMeas, double ptTrue, double pt3Rel, const double *par) const;
+  double pdfPtMeasJet2(double ptMeas, double ptTrue, double pt3Rel, const double *par) const;
   double pdfPtTrue(double ptTrue, const double *par) const;
   double pdfResponse(double r, double ptTrue, const double *par) const;
   double pdfResponseError(double r, double ptTrue, const double *par, const double *cov, const std::vector<int> &covIdx) const;
@@ -1218,7 +1250,8 @@ class SmearGaussPtBin : public Parametrization
   const double xMin_;                   //!< Minimum of pt dijet
   const double xMax_;                   //!< Maximum of pt dijet
   const std::vector<double> scale_;     //!< Parameter scales
-  TH1D *hashTablePdfPtTrue_;
+  TH1 *hashTablePdfPtTrue_;
+  TH1 *hPdfPtTrue_;
 
   double sigma(const double *par) const {
     double p = par[0] > 0 ? par[0] : 1E-3;
@@ -1230,6 +1263,211 @@ class SmearGaussPtBin : public Parametrization
   double specSlopePar(const double *par, int i) const {
     return scale_[4+i]*par[4+i];
   }
+
+  void hashPdfPtTrue(const double *par) const;
+  double pdfPtTrueNotNorm(double ptTrue, const double *par) const;
+  double underlyingPdfPtTrue(double ptTrue, const double *par) const;
+
+  //! Print some initialization details
+  void print() const;
+};
+
+
+//! \brief Parametrization used for resolution function estimation
+//!        with a Gaussian function
+// ------------------------------------------------------------------------
+class SmearGaussExtrapolation : public Parametrization
+{ 
+ public:
+  //! Constructor
+  SmearGaussExtrapolation(double tMin, double tMax, double xMin, double xMax, const std::vector<double>& parScales);
+  ~SmearGaussExtrapolation();
+
+  const char* name() const { return "SmearGaussExtrapolation";}
+
+  //! Returns 0
+  double correctedTowerEt(const Measurement *x,const double *par) const { return 0.; }
+  double correctedJetEt(const Measurement *x,const double *par) const { return 0.; }
+  double correctedGlobalJetEt(const Measurement *x,const double *par) const { return 0.; }
+
+  double pdfPtMeasJet1(double ptMeas, double ptTrue, double pt3Rel, const double *par) const;
+  double pdfPtMeasJet2(double ptMeas, double ptTrue, double pt3Rel, const double *par) const;
+  double pdfPtTrue(double ptTrue, const double *par) const;
+  double pdfResponse(double r, double ptTrue, const double *par) const;
+  double pdfResponseError(double r, double ptTrue, const double *par, const double *cov, const std::vector<int> &covIdx) const;
+  double pdfDijetAsym(double a, double ptTrue, const double *par) const;
+
+
+ private:
+  const double tMin_;                   //!< Minimum of non-zero range of truth pdf
+  const double tMax_;                   //!< Maximum of non-zero range of truth pdf
+  const double xMin_;             //!< Minimum of pt dijet
+  const double xMax_;             //!< Maximum of pt dijet
+  const std::vector<double> scale_;     //!< Parameter scales
+  TH1 *hPdfPtTrue_;
+
+  double sigma(double ptTrue, const double *par) const {
+    double a[3] = { 0., 0., 0. };
+    for(int i = 1; i < 2; i++) {
+      if( par[i] > 1E-3 ) {
+	a[i] = scale_[i]*par[i];
+      } else {
+	a[i] = scale_[i]*1E-3;
+      }
+    }
+
+    return sqrt( a[0]*a[0] + a[1]*a[1]*ptTrue + a[2]*a[2]*ptTrue*ptTrue );
+  }
+  double sigmaOffsetSlope(double ptTrue, const double *par) const {
+    return par[3] > 1E-3 ? scale_[3]*par[3] : scale_[3]*1E-3;
+  }
+  double sigmaWithOffset(double ptTrue, double pt3Rel, const double *par) const {
+    return sigma(ptTrue,par) + sigmaOffsetSlope(ptTrue,par)*pt3Rel;
+  }
+  double exponent(const double *par) const {
+    return par[5] > 1E-3 ? scale_[5]*par[5] : scale_[5]*1E-3;
+  }
+  double specPar(const double *par, int i) const {
+    return scale_[5+i]*par[5+i];
+  }
+
+  double pdfResponseDeriv(double r, double ptTrue, const double *par, int i) const;
+
+  //! Print some initialization details
+  void print() const;
+};
+
+
+//! \brief Parametrization used for resolution function estimation
+//!        with a Gaussian function
+// ------------------------------------------------------------------------
+class SmearGaussImbalance : public Parametrization
+{ 
+ public:
+  //! Constructor
+  SmearGaussImbalance(double tMin, double tMax, double xMin, double xMax, const std::vector<double>& parScales);
+  ~SmearGaussImbalance();
+
+  const char* name() const { return "SmearGaussImbalance";}
+
+  //! Returns 0
+  double correctedTowerEt(const Measurement *x,const double *par) const { return 0.; }
+  double correctedJetEt(const Measurement *x,const double *par) const { return 0.; }
+  double correctedGlobalJetEt(const Measurement *x,const double *par) const { return 0.; }
+
+  double pdfPtMeasJet1(double ptMeas, double ptTrue, double pt3Rel, const double *par) const;
+  double pdfPtMeasJet2(double ptMeas, double ptTrue, double pt3Rel, const double *par) const;
+  double pdfPtTrue(double ptTrue, const double *par) const;
+  double pdfResponse(double r, double ptTrue, const double *par) const;
+  double pdfResponseError(double r, double ptTrue, const double *par, const double *cov, const std::vector<int> &covIdx) const;
+  double pdfDijetAsym(double a, double ptTrue, const double *par) const;
+
+
+ private:
+  const double tMin_;                   //!< Minimum of non-zero range of truth pdf
+  const double tMax_;                   //!< Maximum of non-zero range of truth pdf
+  const double xMin_;             //!< Minimum of pt dijet
+  const double xMax_;             //!< Maximum of pt dijet
+  const std::vector<double> scale_;     //!< Parameter scales
+  const double dPtTrue_;
+  std::vector<double> parMin_;
+  TH1 *hPdfPtTrue_;
+
+  double ptTrue2Min(double ptTrue) const {
+    return ptTrue*(1.-dPtTrue_);
+  }
+  double ptTrue2Max(double ptTrue) const {
+    return ptTrue*(1.+dPtTrue_);
+  }
+
+  double param(int i, const double *par) const {
+    return par[i] > parMin_[i] ? scale_[i]*par[i] : scale_[i]*parMin_[i];
+  }
+  double sigma(double ptTrue, const double *par) const {
+    double a[3] = { parMin_[0], parMin_[1], parMin_[2] };
+    for(int i = 1; i < 3; i++) {
+      if( par[i] > parMin_[i] ) {
+	a[i] = scale_[i]*par[i];
+      } else {
+	a[i] = scale_[i]*parMin_[i];
+      }
+    }
+
+    return sqrt( a[0]*a[0] + a[1]*a[1]*ptTrue + a[2]*a[2]*ptTrue*ptTrue );
+  }
+  double exponent(const double *par) const {
+    return par[3] > 1E-3 ? scale_[3]*par[3] : scale_[3]*1E-3;
+  }
+  double specPar(const double *par, int i) const {
+    return scale_[3+i]*par[3+i];
+  }
+
+
+  double pdfResponseDeriv(double r, double ptTrue, const double *par, int i) const;
+
+  //! Print some initialization details
+  void print() const;
+};
+
+
+//! \brief Parametrization used for resolution function estimation
+//!        with a Crystal Ball function with one sigma (not pt-dependent)
+// ------------------------------------------------------------------------
+class SmearCrystalBallPtBin : public Parametrization
+{ 
+ public:
+  //! Constructor
+  SmearCrystalBallPtBin(double tMin, double tMax, double xMin, double xMax, const std::vector<double> &parScales, const std::vector<double> &startPar);
+
+  ~SmearCrystalBallPtBin();
+
+  const char* name() const { return "SmearCrystalBallPtBin";}
+
+  virtual bool needsUpdate() const { return false; }
+
+  //! Returns 0
+  double correctedTowerEt(const Measurement *x,const double *par) const { return 0.; }
+  double correctedJetEt(const Measurement *x,const double *par) const { return 0.; }
+  double correctedGlobalJetEt(const Measurement *x,const double *par) const { return 0.; }
+
+  double pdfPtMeasJet1(double ptMeas, double ptTrue, double pt3Rel, const double *par) const;
+  double pdfPtMeasJet2(double ptMeas, double ptTrue, double pt3Rel, const double *par) const;
+  double pdfPtTrue(double ptTrue, const double *par) const;
+  double pdfResponse(double r, double ptTrue, const double *par) const;
+  double pdfResponseError(double r, double ptTrue, const double *par, const double *cov, const std::vector<int> &covIdx) const { return 0.; }
+  double pdfDijetAsym(double a, double ptTrue, const double *par) const;
+
+
+ private:
+  const double tMin_;                   //!< Minimum of non-zero range of truth pdf
+  const double tMax_;                   //!< Maximum of non-zero range of truth pdf
+  const double xMin_;                   //!< Minimum of pt dijet
+  const double xMax_;                   //!< Maximum of pt dijet
+  const std::vector<double> scale_;     //!< Parameter scales
+  TH1 *hashTablePdfPtTrue_;
+
+  double sigma(const double *par) const {
+    double p = par[0] > 0 ? par[0] : 1E-3;
+    return scale_[0]*p;
+  }
+  double alpha(const double *par) const {
+    double p = par[1] > 0 ? par[1] : 1E-3;
+    return scale_[1]*p;
+  }
+  double n(const double *par) const {
+    double p = par[2] > 0 ? par[2] : 1E-3;
+    return scale_[2]*p;
+  }
+  double specSigmaPar(const double *par, int i) const {
+    return scale_[3+i]*par[3+i];
+  }
+  double specSlopePar(const double *par, int i) const {
+    return scale_[6+i]*par[6+i];
+  }
+
+  double crystalBallFunc(double x, double mean, double sigma, double alpha, double n) const;
+  double crystalBallNorm(double mean, double sigma, double alpha, double n) const;
+  double crystalBallInt(double mean, double sigma, double alpha, double n, double min, double max) const;
 
   void hashPdfPtTrue(const double *par) const;
   double pdfPtTrueNotNorm(double ptTrue, const double *par) const;
@@ -1332,6 +1570,7 @@ public:
   }
  
   double correctedJetEt(const Measurement *x,const double *par) const {
+    if(std::abs(x->eta) > 1.2) return x->pt;
     double y = x->etaeta > 0.25 ? 0.12 : x->etaeta - 0.13;
     
     double c = 1/(par[0] + exp((x->pt-par[1])/par[2])) + par[3];
@@ -1342,6 +1581,334 @@ public:
   }
 };
 
+//!  \brief Parametrization of jet response based to eta-eta moment
+//!
+//!  This parametrization has 14 jet parameters.
+//!
+//!  \sa Parametrization
+// -----------------------------------------------------------------
+class PhiPhiParametrization: public Parametrization {
+public:
+  PhiPhiParametrization() : Parametrization(0,14,0,0) {}
+  const char* name() const { return "PhiPhiParametrization";}
+    
+  double correctedTowerEt(const Measurement *x,const double *par) const {
+    return x->pt;
+  }
+ 
+  double correctedJetEt(const Measurement *x,const double *par) const {
+    if(std::abs(x->eta) > 1.2) return x->pt;
+    double y = x->phiphi > 0.25 ? 0.12 : x->phiphi - 0.13;
+    double pt =  (x->pt < 20) ? 20 : ((x->pt > 1000) ? 1000 : x->pt);
+    double c = 1/(par[0] + exp((pt-par[1])/par[2])) + par[3];
+    c += y * ( par[4] - par[5]/(pow(log(pt),par[6])+par[7]) + par[8]/pt);
+    c += y *y *(par[9] * pt + par[10] * pow(pt,2.0/3.0) + par[11] * pow(pt,-1.0/3.0) + par[12] * (pt - par[13])/pt);
+    // std::cout << x->pt << ":" << c << ", " << 1/c << std::endl;
+    return 1/c * x->pt;  
+  }
+};
 
+
+//!  \brief Parametrization of jet response based on emf
+//!
+//!  This parametrization has 40 jet parameters.
+//!
+//!  \sa Parametrization
+// -----------------------------------------------------------------
+class BinnedEMFParametrization: public Parametrization {
+public:
+  BinnedEMFParametrization() : Parametrization(0,40,0,0) {}
+  const char* name() const { return "BinnedEMFParametrization";}
+    
+  double correctedTowerEt(const Measurement *x,const double *par) const {
+    return x->pt;
+  }
+ 
+  double correctedJetEt(const Measurement *x,const double *par) const {
+    if(std::abs(x->eta) > 1.2) return x->pt;
+    // please note that Measurement::EMF is EmEt!!!
+    double emf = x->EMF / (x->EMF+x->HadF);
+    if(emf < 0) return x->pt;
+    if(emf > 1) return x->pt;
+    int bin = (int)(emf * 10);
+    if(bin == 10) bin = 9;
+    
+    double pt = (x->pt < 4.0) ? 4.0 : (x->pt > 2000.0) ? 2000.0 : x->pt; 
+    double logpt = log10(pt);
+    double fX[3],fY[3];
+    if((bin > 0) && (bin < 9)) {
+      for(int i = 0 ; i < 3 ; ++i) {
+	int id = 4 * (bin + i - 1);
+	fX[i] = (bin + i - 1) / 10.0 + 0.05;
+	fY[i] = par[id] + logpt *(0.1*par[id+1] + logpt * (0.001*par[id+2]+ 0.001*par[id+3]*logpt));
+	//std::cout << i << ":" << fX[i] << ", " << fY[i] << '\n';
+      }
+      double c = quadraticInterpolation(emf,fX,fY);
+      if(c != c) { 
+	for(int i = 0 ; i < 3 ; ++i) {
+	  std::cout << i << ":" << fX[i] << ", " << fY[i] << '\n';
+	}
+	std::cout << "interpolated:" << emf << ":" << c << '\n';
+      }
+      return c * x->pt;	
+    } 
+    int id = 4 * bin;
+    double c = par[id] + logpt *(0.1*par[id+1] + logpt * (0.001*par[id+2]+ 0.001*par[id+3]*logpt));
+    return c * x->pt;
+  }
+};
+
+//!  \brief Parametrization of jet response based on width in phi
+//!
+//!  This parametrization has 40 jet parameters.
+//!
+//!  \sa Parametrization
+// -----------------------------------------------------------------
+class BinnedPhiPhiParametrization: public Parametrization {
+public:
+  BinnedPhiPhiParametrization() : Parametrization(0,50,0,0) {}
+  const char* name() const { return "BinnedPhiPhiParametrization";}
+    
+  double correctedTowerEt(const Measurement *x,const double *par) const {
+    return x->pt;
+  }
+ 
+  double correctedJetEt(const Measurement *x,const double *par) const {
+    if(std::abs(x->eta) > 1.2) return x->pt;
+    
+    int bin = (int)(x->phiphi * 40 );
+    if(bin > 9) bin = 9;
+    if(bin < 0) {
+      std::cout << "error: wrong bin " << bin << " for phiphi: " << x->phiphi 
+		<< std::endl;
+      assert(bin >= 0);
+    }
+    double pt = (x->pt < 4.0) ? 4.0 : (x->pt > 2000.0) ? 2000.0 : x->pt; 
+    double logpt = log10(pt);
+
+    double fX[3],fY[3];
+    if((bin > 0) && (bin < 9)) {
+      for(int i = 0 ; i < 3 ; ++i) {
+	int id = 5 * (bin + i - 1);
+	fX[i] = (bin + i - 1) / 40.0;
+	fY[i] = par[id] + logpt *(0.1*par[id+1] + logpt * (0.001*par[id+2]+ logpt * (0.001*par[id+3] + logpt * 0.001*par[id+4])));
+	//std::cout << i << ":" << fX[i] << ", " << fY[i] << '\n';
+      }
+      double c = quadraticInterpolation(x->phiphi,fX,fY);
+      if(c != c) { 
+	for(int i = 0 ; i < 3 ; ++i) {
+	  std::cout << i << ":" << fX[i] << ", " << fY[i] << '\n';
+	}
+	std::cout << "interpolated:" << x->phiphi << ":" << c << '\n';
+      }
+      return c * x->pt;	
+    } 
+    int id = 5 * bin;
+    double c = par[id] + logpt *(0.1*par[id+1] + logpt * (0.001*par[id+2]+ logpt * (0.001*par[id+3] + logpt * 0.001 * par[id+4])));
+    return c * x->pt;
+  }  
+};
+
+
+class BinnedPhiPhiParametrization2 : public Parametrization {
+public:
+  BinnedPhiPhiParametrization2() : Parametrization(0,40,0,0) {}
+  const char* name() const { return "BinnedPhiPhiParametrization2";}
+    
+  double correctedTowerEt(const Measurement *x,const double *par) const {
+    return x->pt;
+  }
+ 
+  double correctedJetEt(const Measurement *x,const double *par) const {
+    //if(std::abs(x->eta) > 3.0) return x->pt;
+    
+    int bin = (int)((x->phiphi-0.025) * 45 );
+    if(bin > 9) bin = 9;
+    if(bin < 0) bin = 0;
+
+    double pt = (x->E < 15.0) ? 15.0 : (x->E > 1200.0) ? 1200.0 : x->pt; 
+    double logpt = log10(pt);
+    double fX[3],fY[3];
+    
+    if((bin > 0) && (bin < 9)) {
+      for(int i = 0 ; i < 3 ; ++i) {
+	int id = 4 * (bin + i - 1);
+	fX[i] = (bin + i - 1) / 40.0;
+	fY[i] = par[id] + 0.1 * logpt * ( par[id+1] + 0.1 * logpt * ( par[id+2] + 0.1 * par[id+3] * logpt));
+	if(std::isnan(fY[i])) { 
+	  std::cout << i << ":" << fX[i] << ", " << fY[i] << ", " << pt << ", " << logpt << '\n';
+	}
+      }
+      double c = quadraticInterpolation(x->phiphi,fX,fY);
+      if(c != c) { 
+	for(int i = 0 ; i < 3 ; ++i) {
+	  std::cout << i << ":" << fX[i] << ", " << fY[i] << '\n';
+	}
+	std::cout << "interpolated:" << x->phiphi << ":" << c << '\n';
+      }
+      return 1/c * x->pt;	
+    } 
+    int id = 4 * bin;
+    double c = par[id] + 0.1 * logpt * ( par[id+1] + 0.1 * logpt * ( par[id+2] + 0.1 * par[id+3] * logpt));
+    if(c <= 0)  {
+      std::cout << "bad factor:" << c << " from " <<  par[id] << ", " 
+		<< par[id+1] << ", " << par[id+2] << ", " << par[id+3] 
+		<< " and pt " << pt << std::endl; 
+    }
+    return 1/c * x->pt;
+  }  
+};
+
+//!  \brief Parametrization of jet response based on width in phi
+//!
+//!  This parametrization has 10 jet parameters.
+//!
+//!  \sa Parametrization
+// -----------------------------------------------------------------
+class BinnedScaledPhiPhiParametrization: public Parametrization {
+public:
+  BinnedScaledPhiPhiParametrization() : Parametrization(0,45,0,0) {}
+  const char* name() const { return "BinnedScaledPhiPhiParametrization";}
+    
+  double correctedTowerEt(const Measurement *x,const double *par) const {
+    return x->pt;
+  }
+ 
+  double correctedJetEt(const Measurement *x,const double *par) const {
+    if(std::abs(x->eta) > 1.2) return x->pt;
+
+    //hack use original Jet pt for scaling
+    double scaled = x->phiphi /(0.2 - 0.02 * log(x->EMF + x->HadF));
+    int bin = (int)(scaled * 10);
+    if(bin > 14) bin = 14;
+    if(bin < 0) bin = 0;
+    
+    double pt = (x->pt < 4.0) ? 4.0 : (x->pt > 1200.0) ? 1200.0 : x->pt; 
+    double logpt = log10(pt);
+    double fX[3],fY[3];
+    if((bin > 0) && (bin < 9)) {
+      for(int i = 0 ; i < 3 ; ++i) {
+	int id = 3 * (bin + i - 1);
+	fX[i] = (bin + i - 1) / 20.0 + 0.2;
+	fY[i] = par[id] + 0.1 * logpt * ( par[id+1] + 0.1 * logpt );
+	if(std::isnan(fY[i])) { 
+	  std::cout << i << ":" << fX[i] << ", " << fY[i] << '\n';
+	}
+      }
+      double c = quadraticInterpolation(scaled,fX,fY);
+      if(c != c) { 
+	for(int i = 0 ; i < 3 ; ++i) {
+	  std::cout << i << ":" << fX[i] << ", " << fY[i] << '\n';
+	}
+	std::cout << "interpolated:" << scaled << ":" << c << '\n';
+      }
+      return 1/c * x->pt;	
+    } 
+    int id = 3 * bin;
+    double c = par[id] + 0.1 * logpt * ( par[id+1] + 0.1 * logpt);
+    if(c <= 0)  {
+      std::cout << "bad factor:" << c << " from " <<  par[bin] << std::endl; 
+    }
+    return 1/c * x->pt;
+  }
+};
+
+
+//!  \brief Parametrization of jet response based on width in eta
+//!
+//!  This parametrization has 10 jet parameters.
+//!
+//!  \sa Parametrization
+// -----------------------------------------------------------------
+class BinnedScaledEtaEtaParametrization: public Parametrization {
+public:
+  BinnedScaledEtaEtaParametrization() : Parametrization(0,10,0,0) {}
+  const char* name() const { return "BinnedScaledEtaEtaParametrization";}
+    
+  double correctedTowerEt(const Measurement *x,const double *par) const {
+    return x->pt;
+  }
+ 
+  double correctedJetEt(const Measurement *x,const double *par) const {
+    if(std::abs(x->eta) > 1.2) return x->pt;
+
+    //hack use original Jet pt for scaling
+    double scaled = x->etaeta * log(x->EMF + x->HadF);
+    int bin = (int)((scaled - 0.2) * 20);
+    if(bin > 9) bin = 9;
+    if(bin < 0) bin = 0;
+    
+    double fX[3],fY[3];
+    if((bin > 0) && (bin < 9)) {
+      for(int i = 0 ; i < 3 ; ++i) {
+	int id = bin + i - 1;
+	fX[i] = (bin + i - 1) / 20.0 + 0.2;
+	fY[i] = par[id];
+	if(std::isnan(fY[i])) { 
+	  std::cout << i << ":" << fX[i] << ", " << fY[i] << '\n';
+	}
+      }
+      double c = quadraticInterpolation(scaled,fX,fY);
+      if(c != c) { 
+	for(int i = 0 ; i < 3 ; ++i) {
+	  std::cout << i << ":" << fX[i] << ", " << fY[i] << '\n';
+	}
+	std::cout << "interpolated:" << scaled << ":" << c << '\n';
+      }
+      return c * x->pt;	
+    } 
+    
+    double c = par[bin];
+    if(c <= 0)  {
+      std::cout << "bad factor:" << c << " from " <<  par[bin] << std::endl; 
+    }
+    return c * x->pt;
+  }
+};
+
+
+//!  \brief Parametrization of jet response based on width in phi
+//!
+//!  This parametrization has 5 jet parameters.
+//!
+//!  \sa Parametrization
+// -----------------------------------------------------------------
+class SimplePhiPhiParametrization : public Parametrization {
+public:
+  SimplePhiPhiParametrization() : Parametrization(0,10,0,0) {}
+  const char* name() const { return "SimplePhiPhiParametrization";}
+    
+  double correctedTowerEt(const Measurement *x,const double *par) const {
+    return x->pt;
+  }
+ 
+  double correctedJetEt(const Measurement *x,const double *par) const {
+    //if(std::abs(x->eta) > 1.2) return x->pt;
+    
+    double cut = 30 * x->pt / x->E;
+    double pt = (x->pt < cut) ? cut : (x->pt > 800.0) ? 800.0 : x->pt; 
+    double logpt = log10(pt);
+    double phi = x->phiphi;
+    //phi *= (1 + (par[0] + (0.1 * par[1] + (0.01 * par[2] + 0.001 * par[3] * logpt) * logpt) * logpt) * 
+    double phimean =  0.1 * par[8] - 0.01 * par[9] * logpt;
+    //std::cout << par[8] << ", " << par[9] << ", " <<  phimean << '\n';
+    if(phimean > 0.2) phimean = 0.2;
+    if(phimean < 0.05) phimean = 0.05;
+    phi -= phimean;
+    //if(phi < -0.15) phi = -0.15;
+    //else if(phi > 0.3) phi = 0.3;
+    //phi =- 0.213 - 0.0486 * logpt;
+    double a = par[0] + logpt * ( par[1] + logpt * (par[2] + logpt * par[3]));
+    double b = par[4] + logpt * ( par[5] + logpt * (par[6] + logpt * par[7])); 
+    double c = 1 + (0.1 * a + 0.1 * b * phi) * phi;
+    //if(c <= 0) {
+    //  std::cout << pt << ", " << phi << '\n';
+    //}
+    if(c < 0.3) c = 0.3;
+    if(c > 3.0) c = 3.0;
+    assert(c > 0);
+    return x->pt / c;
+  }  
+};
 
 #endif

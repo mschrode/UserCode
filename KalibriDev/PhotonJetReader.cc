@@ -1,5 +1,5 @@
 //
-//  $Id: PhotonJetReader.cc,v 1.2 2010/01/21 16:49:20 mschrode Exp $
+//  $Id: PhotonJetReader.cc,v 1.29 2010/04/13 13:44:10 mschrode Exp $
 //
 #include "PhotonJetReader.h"
 
@@ -216,6 +216,8 @@ Event* PhotonJetReader::createJetTruthEvent()
   // and sum up emf, hadf, outf
   double seta = 0;
   double seta2 = 0;
+  double sphi = 0;
+  double sphi2 = 0;
   double sumpt = 0;
   for(int n = 0; n < gammaJet_->NobjTowCal; ++n) {
     em          += gammaJet_->TowEm[n];
@@ -226,6 +228,8 @@ Event* PhotonJetReader::createJetTruthEvent()
     double eta =  gammaJet_->TowEta[n];
     seta += gammaJet_->TowEt[n] * eta;
     seta2 += gammaJet_->TowEt[n] * eta * eta;
+    sphi += gammaJet_->TowEt[n] * phi;
+    sphi2 += gammaJet_->TowEt[n] * phi * phi;
     sumpt += gammaJet_->TowEt[n];
     double dphi  = TVector2::Phi_mpi_pi(gammaJet_->JetCalPhi-phi);
     double dr    = sqrt((gammaJet_->JetCalEta-eta)*(gammaJet_->JetCalEta-eta)+
@@ -247,12 +251,13 @@ Event* PhotonJetReader::createJetTruthEvent()
 
   double factor = gammaJet_->JetCalEt /  gammaJet_->JetCalE;
   double etaeta = sqrt(seta2/sumpt - seta * seta /(sumpt * sumpt));
+  double phiphi = sqrt(sphi2/sumpt - sphi * sphi /(sumpt * sumpt));
   Jet *j;
   if(dataClass_ == 2) {
     JetWithTowers *jt = 
       new JetWithTowers(gammaJet_->JetCalEt,em * factor,had * factor,
 			out * factor,gammaJet_->JetCalE,gammaJet_->JetCalEta,
-			gammaJet_->JetCalPhi,etaeta,Jet::uds,gammaJet_->JetGenEt,
+			gammaJet_->JetCalPhi,phiphi,etaeta,Jet::uds,gammaJet_->JetGenEt,
 			LJet.DeltaR(LGenJet),createCorFactors(0),
 			par_->jet_function(gammaJet_->TowId_eta[closestTower],
 					   gammaJet_->TowId_phi[closestTower]),
@@ -270,7 +275,7 @@ Event* PhotonJetReader::createJetTruthEvent()
   else { 
     j = new Jet(gammaJet_->JetCalEt,em * factor,had * factor,out * factor,
 		gammaJet_->JetCalE,gammaJet_->JetCalEta,gammaJet_->JetCalPhi,
-		etaeta,Jet::uds,gammaJet_->JetGenEt,LJet.DeltaR(LGenJet),
+		phiphi,etaeta,Jet::uds,gammaJet_->JetGenEt,LJet.DeltaR(LGenJet),
 		createCorFactors(0),
 		par_->jet_function(gammaJet_->TowId_eta[closestTower],
 				   gammaJet_->TowId_phi[closestTower]),
@@ -327,21 +332,22 @@ Event* PhotonJetReader::createSmearEvent()
   // Set up measurement
   double projFac   = gammaJet_->JetCalEt /  gammaJet_->JetCalE;
   Jet *jet = new Jet(gammaJet_->JetCalEt,
-			  em * projFac,
-			  had * projFac,
-			  out * projFac,
-			  gammaJet_->JetCalE,
-			  gammaJet_->JetCalEta,
-			  gammaJet_->JetCalPhi,
-			  0.,
-			  Jet::uds,
-			  gammaJet_->JetGenPt,
-			  LJet.DeltaR(LGenJet),
-			  createCorFactors(0),
-			  par_->jet_function(gammaJet_->TowId_eta[closestTower],
-					     gammaJet_->TowId_phi[closestTower]),
-			  jet_error_param,
-			  par_->global_jet_function());
+		     em * projFac,
+		     had * projFac,
+		     out * projFac,
+		     gammaJet_->JetCalE,
+		     gammaJet_->JetCalEta,
+		     gammaJet_->JetCalPhi,
+		     0.,
+		     0.,
+		     Jet::uds,
+		     gammaJet_->JetGenPt,
+		     LJet.DeltaR(LGenJet),
+		     createCorFactors(0),
+		     par_->jet_function(gammaJet_->TowId_eta[closestTower],
+					gammaJet_->TowId_phi[closestTower]),
+		     jet_error_param,
+		     par_->global_jet_function());
 
   // Create smear event
   return new SmearPhotonJet(jet,gammaJet_->PhotonEt,1.,1.,par_->resolutionFitPDF(1,1));

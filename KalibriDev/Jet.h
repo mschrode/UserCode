@@ -4,7 +4,7 @@
 //!
 //!    \date 2008/12/14
 //!
-//!    $Id: Jet.h,v 1.2 2010/01/21 16:49:08 mschrode Exp $
+//!    $Id: Jet.h,v 1.35 2010/04/13 13:44:10 mschrode Exp $
 #ifndef JET_H
 #define JET_H
 
@@ -40,13 +40,23 @@ class Jet : public Measurement
   //!  - 1: u, d, or s quark
   //!  - 2: c quark
   //!  - 3: b quark
-  enum Flavor{ gluon=0, uds=1, c=2, b=3 };
+  enum Flavor{ unknown = -1, gluon=0, uds=1, c=2, b=3 };
 
+  //! return flavor for pdg id
+  static Flavor flavorFromPDG(int pdg) {
+    if(pdg == 21) return gluon;
+    if(pdg == 0) return unknown;
+    unsigned int id = std::abs(pdg);
+    if(id < 4) return uds;
+    if(id == 4) return c;
+    if(id == 5) return b;
+    return unknown;
+  }
 
  public:
   Jet(double Et, double EmEt, double HadEt ,double OutEt, double E,
-      double eta,double phi, double etaeta, Flavor flavor, double genPt, 
-      double dR, CorFactors* corFactors, const Function& f,
+      double eta,double phi, double phiphi, double etaeta, Flavor flavor, 
+      double genPt, double dR, CorFactors* corFactors, const Function& f,
       double (*errfunc)(const double *x, const Measurement *xorig, double err), 
       const Function& gf, double Etmin = 0); 
   virtual ~Jet();
@@ -59,13 +69,18 @@ class Jet : public Measurement
   double E()      const {return Measurement::E;}    //!< Return energy
   double eta()    const {return Measurement::eta;}  //!< Return pseudorapidity
   double phi()    const {return Measurement::phi;}  //!< Return azimuthal angle
+  double momentPhiPhi() const {return Measurement::phiphi;}  //!< Return phi-phi moment (width of jet in phi)
   double momentEtaEta() const {return Measurement::etaeta;}  //!< Return eta-eta moment (width of jet in eta)
+  double scaledPhiWidth() const { return (sphi_ > 0 ? sphi_ : sphi_ = momentPhiPhi() /( 0.2 - 0.02 * log(Et())));}
+  double scaledEtaWidth() const { return (seta_ > 0 ? seta_ : seta_ = momentEtaEta() /(0.2 -  0.02 * log(Et())));}  
   Flavor flavor() const {return flavor_;}       //!< Return jet flavor
   double genPt()  const {return genPt_;}        //!< Return Pt for corresponding GenJet 
   double dR() const {return dR_;}               //!< \f$ \Delta R \f$ between jet and genjet
   const CorFactors& corFactors() const { return *corFactors_;}
   void updateCorFactors(CorFactors *cor);
+  //! Correct measurement by product \p L1*L2*L3
   void correctToL3();
+  //! Correct measurement by product \p L2*L3
   void correctL2L3();
 
   //!  \brief Change address of parameters covered by this jet
@@ -130,15 +145,20 @@ class Jet : public Measurement
   typedef std::vector<ParameterVariation> VariationColl;
   typedef std::vector<ParameterVariation>::const_iterator VariationCollIter;
   virtual const VariationColl& varyPars(double eps, double Et, double start);
-  virtual const VariationColl& varyParsDirectly(double eps);
-
+  virtual const VariationColl& varyParsDirectly(double eps, bool computeDeriv = true);
+  
   void print();                       //!< Print some jet members
   static void printInversionStats();  //!< Print some info on inversion
 
   int parIndex() const { return f.parIndex(); }
+
+  virtual Jet* clone() const { return new Jet(*this);} //!< Clone this jet
+  void setGlobalFunction(const Function& ngf) { gf = ngf;} //!< Set global correction function, needed for constraints
+
  protected:
   mutable VariationColl varcoll;
   virtual double expectedEt(double truth, double start, bool fast = false);
+  Jet(const Jet&j); //!< disallow copies!
 
  private: 
   Flavor flavor_;           //!< The jet's Flavor
@@ -160,6 +180,8 @@ class Jet : public Measurement
   static long long nwarns;        //!< Number of warnings during inversion
 
   mutable Measurement temp;
+  mutable double root;
+  mutable double sphi_,seta_;
   const double EoverPt;
   class GslImplementation {
     struct rf_par {

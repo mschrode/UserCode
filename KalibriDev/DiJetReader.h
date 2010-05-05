@@ -28,7 +28,7 @@
 //!
 //!  \author Hartmut Stadie
 //!  \date 2008/12/12
-//!  $Id: DiJetReader.h,v 1.4 2010/03/24 14:30:19 mschrode Exp $
+//!  $Id: DiJetReader.h,v 1.17 2010/04/13 13:44:09 mschrode Exp $
 // ----------------------------------------------------------------   
 
 
@@ -52,7 +52,7 @@ class DiJetReader : public EventReader{
 
  private:
   Event* createTwoJetsPtBalanceEvent();
-  Event* createSmearEvent(int callIdx);
+  Event* createSmearEvent(int callIdx = 0);
   int createJetTruthEvents(std::vector<Event*>& data);
   CorFactors* createCorFactors(int jetid) const;
   std::vector<Jet*> readCaloJets(int nJets) const;
@@ -73,6 +73,7 @@ class DiJetReader : public EventReader{
   double max3rdJetEt_;          //!< Maximum pt of 3rd jet in dijet event
   double maxRel3rdJetEt_;       //!< Maximum relative pt of 3rd jet in dijet event
   double minDeltaPhi_;          //!< Minimum DeltaPhi for 0 < DeltaPhi < Pi
+  double minJetEta_;            //!< Minimum absolute jet eta
   double maxJetEta_;            //!< Maximum absolute jet eta
   double minJetHadFraction_;    //!< Minimum jet Had/(Had+EMF)
   double maxJetHadFraction_;    //!< Maximum jet Had/(Had+EMF)
@@ -87,6 +88,7 @@ class DiJetReader : public EventReader{
   int    nMaxDijetEt_;          //!< Number of events rejected by maxDijetEt_ cut
   int    nCutOn3rdJet_;         //!< Number of events rejected by max3rdJetEt_ or maxRelJetEt_ cut
   int    nMinDeltaPhi_;         //!< Number of events rejected by maxDeltaPhi_ cut
+  int    nMinJetEta_;           //!< Number of events rejected by minJetEta_ cut
   int    nMaxJetEta_;           //!< Number of events rejected by maxJetEta_ cut
   int    nMinJetHadFraction_;   //!< Number of events rejected by minJetHadFraction_ cut
   int    nMaxJetHadFraction_;   //!< Number of events rejected by maxJetHadFraction_ cut

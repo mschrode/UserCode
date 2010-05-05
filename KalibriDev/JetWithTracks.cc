@@ -2,21 +2,33 @@
 //    Class for jets with tracks 
 //
 //    first version: Hartmut Stadie 2009/04/08
-//    $Id: JetWithTracks.cc,v 1.8 2009/11/26 18:24:41 stadie Exp $
+//    $Id: JetWithTracks.cc,v 1.11 2010/02/15 12:40:18 stadie Exp $
 //   
 #include"JetWithTracks.h"
 
 #include "TLorentzVector.h"
 
 JetWithTracks::JetWithTracks(double Et, double EmEt, double HadEt ,double OutEt, double E,
-			     double eta,double phi, double etaeta, Flavor flavor, double genPt, double dR,
+			     double eta,double phi, double phiphi, double etaeta, Flavor flavor, double genPt, double dR,
 			     CorFactors* corFactors, const Function& func, 
 			     double (*errfunc)(const double *x, const Measurement *xorig, double err), 
 			     const Function& gfunc, double Etmin) 
-  :  Jet(Et,EmEt,HadEt,OutEt,E,eta,phi,etaeta,flavor,genPt,dR,corFactors,
+  :  Jet(Et,EmEt,HadEt,OutEt,E,eta,phi,phiphi,etaeta,flavor,genPt,dR,corFactors,
 	 func,errfunc,gfunc,Etmin),
      ntrackpars(0), expectedCaloEt(0), trackPt(0)
 {
+}
+
+JetWithTracks::JetWithTracks(const JetWithTracks& j) 
+  :  Jet(j),ntrackpars(0), expectedCaloEt(0), trackPt(0)
+{
+  for(TrackCollConstIter i = j.tracks.begin() ; i != j.tracks.end() ; ++i) {
+    const Track *t = *i;
+    addTrack(t->Et(),t->EmEt(),t->HadEt(),t->OutEt(),t->E(),t->eta(),t->phi(),
+	     t->TrackId,t->TowerId,t->DR,t->DRout,t->etaOut,t->phiOut,
+	     t->EM1,t->EM5,t->Had1,t->Had5,t->TrackChi2,t->NValidHits,
+	     t->TrackQualityT,t->MuDR,t->MuDE,t->Efficiency,t->f,t->errf);
+  }
 }
 
 JetWithTracks::~JetWithTracks() 
@@ -103,9 +115,9 @@ const Jet::VariationColl& JetWithTracks::varyPars(double eps, double Et, double 
 }
 // varies all parameters for this jet by eps and returns a vector of the
 // parameter id and the Et for the par + eps and par - eps variation
-const Jet::VariationColl& JetWithTracks::varyParsDirectly(double eps)
+const Jet::VariationColl& JetWithTracks::varyParsDirectly(double eps, bool computeDeriv)
 {
-  Jet::varyParsDirectly(eps);
+  Jet::varyParsDirectly(eps,computeDeriv);
   int i = Jet::nPar();
 
   const double deltaE = eps * 100.0;
@@ -121,11 +133,15 @@ const Jet::VariationColl& JetWithTracks::varyParsDirectly(double eps)
       p[trkpar] += eps;
       varcoll[i].upperEt = correctedEt(Measurement::pt);
       varcoll[i].upperError = expectedError(varcoll[i].upperEt);
-      varcoll[i].upperEtDeriv =  (correctedEt(Measurement::pt+deltaE) -  correctedEt(Measurement::pt-deltaE))/2/deltaE;
+      if(computeDeriv) {
+	varcoll[i].upperEtDeriv =  (correctedEt(Measurement::pt+deltaE) -  correctedEt(Measurement::pt-deltaE))/2/deltaE;
+      }
       p[trkpar] = orig - eps;
       varcoll[i].lowerEt = correctedEt(Measurement::pt); 
       varcoll[i].lowerError = expectedError(varcoll[i].lowerEt);
-      varcoll[i].lowerEtDeriv =  (correctedEt(Measurement::pt+deltaE) -  correctedEt(Measurement::pt-deltaE))/2/deltaE;
+      if(computeDeriv) {
+	varcoll[i].lowerEtDeriv =  (correctedEt(Measurement::pt+deltaE) -  correctedEt(Measurement::pt-deltaE))/2/deltaE;
+      }      
       p[trkpar] = orig;
       varcoll[i].parid = id + trkpar;
       //std::cout << "up:" << varcoll[i].upperEt << " low:" << varcoll[i].lowerEt << '\n'; 

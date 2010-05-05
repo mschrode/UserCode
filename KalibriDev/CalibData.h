@@ -1,5 +1,5 @@
 //
-// $Id: CalibData.h,v 1.2 2010/01/21 16:48:40 mschrode Exp $
+// $Id: CalibData.h,v 1.80 2010/04/13 13:44:09 mschrode Exp $
 //
 #ifndef CalibData_h
 #define CalibData_h
@@ -26,19 +26,20 @@ enum DataType {Default, TrackTower, GammaJet, TrackCluster, MessMess, PtBalance,
 //!
 //!  \sa Jet, Tower, Track, JetWithTowers, JetWithTracks
 //!
-//!  \author Christian Autermann
-//!  $Id: CalibData.h,v 1.2 2010/01/21 16:48:40 mschrode Exp $
+//!  \author Christian Autermann, Hartmut Stadie
+//!  $Id: CalibData.h,v 1.80 2010/04/13 13:44:09 mschrode Exp $
 class Measurement
 {
 public:
  Measurement() :
-  pt(0.),EMF(0.),HadF(0.),OutF(0.),E(0.),eta(0.),phi(0.),etaeta(0.0)
+  pt(0.),EMF(0.),HadF(0.),OutF(0.),E(0.),eta(0.),phi(0.),phiphi(0),
+   etaeta(0)
     {
     }
  Measurement(double Et,double EmEt,double HadEt,double OutEt,double E,
-	     double eta,double phi, double etaeta = 0)
+	     double eta,double phi, double phiphi = 0,double etaeta = 0)
    : pt(Et),EMF(EmEt),HadF(HadEt),OutF(OutEt),E(E),eta(eta),phi(phi),
-    etaeta(etaeta) 
+    phiphi(phiphi),etaeta(etaeta) 
   {
   }
   virtual ~Measurement() {};
@@ -50,6 +51,7 @@ public:
   double E;      //!< Total energy					
   double eta;    //!< Pseudorapidity eta				
   double phi;    //!< Polar angle phi  
+  double phiphi; //!< Phi-Phi moment (width in phi) 
   double etaeta; //!< Eta-Eta moment (width in eta) 
 };
 
@@ -63,7 +65,7 @@ public:
 //!  \todo Document members
 //!
 //!  \author Jan Thomsen
-//!  $Id: CalibData.h,v 1.2 2010/01/21 16:48:40 mschrode Exp $
+//!  $Id: CalibData.h,v 1.80 2010/04/13 13:44:09 mschrode Exp $
 class TTrack : public Measurement
 {
 public:
@@ -120,7 +122,7 @@ public:
 //!     The available data types are:
 //!  \author Christian Autermann
 //!  \date Wed Jul 18 13:54:50 CEST 2007
-//! $Id: CalibData.h,v 1.2 2010/01/21 16:48:40 mschrode Exp $
+//! $Id: CalibData.h,v 1.80 2010/04/13 13:44:09 mschrode Exp $
 class Event
 {
 public:
@@ -132,7 +134,7 @@ public:
   virtual DataType GetType() const = 0;                                //!< Get DataType
   virtual double GetWeight() const = 0;                                //!< Get weight
   virtual void setWeight(double w) = 0;                              //!< Set weight
-  double ptHat() const { return ptHat_; }                      //!< Get event scale
+  double ptHat() const { return ptHat_; }                                    //!< Get event scale
 
 
   //!  \brief Get the normalized, squared residual \f$ z^{2} \f$ of this event
@@ -223,6 +225,7 @@ public:
   //!  \return Scaled residual
   static double ScaleTukey(double z2);  //!< Scaling of residual a la  Tukey
 
+
  protected:
   double ptHat_;
 };
@@ -238,7 +241,7 @@ public:
 //!
 //!  \author Hartmut Stadie
 //!  \date Thu Dec 11 17:20:25 2008 UTC
-//!  $Id: CalibData.h,v 1.2 2010/01/21 16:48:40 mschrode Exp $
+//!  $Id: CalibData.h,v 1.80 2010/04/13 13:44:09 mschrode Exp $
 class TAbstractData : public Event
 {
 public:

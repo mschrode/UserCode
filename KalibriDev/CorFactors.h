@@ -1,6 +1,6 @@
 //!  \brief   Container class for jet correction factors
 //
-//    $Id: CorFactors.h,v 1.2 2009/11/26 10:27:48 stadie Exp $
+//    $Id: CorFactors.h,v 1.4 2010/04/13 13:44:09 mschrode Exp $
 //   
 #ifndef CORFACTORS_H
 #define CORFACTORS_H

@@ -4,7 +4,7 @@
 //    This class reads events according fo the ZJetSel
 //
 //    first version: Hartmut Stadie 2008/12/12
-//    $Id: ZJetReader.cc,v 1.22 2009/11/27 15:28:12 stadie Exp $
+//    $Id: ZJetReader.cc,v 1.24 2010/04/13 13:44:10 mschrode Exp $
 //   
 #include "ZJetReader.h"
 
@@ -118,7 +118,9 @@ Event* ZJetReader::createJetTruthEvent()
   double dR = 10;
   int closestTower = 0;
   double seta = 0;
-  double seta2 = 0;
+  double seta2 = 0; 
+  double sphi = 0;
+  double sphi2 = 0;
   double sumpt = 0;
   for(int n = 0; n < zjet->NobjTowCal; ++n) {
     em += zjet->TowEm[n];
@@ -140,7 +142,9 @@ Event* ZJetReader::createJetTruthEvent()
     terr[n] *= terr[n];
     err2 += terr[n];  
     seta += tower.pt  * tower.eta;
-    seta2 += tower.pt  * tower.eta * tower.eta;
+    seta2 += tower.pt * tower.eta * tower.eta;
+    sphi += tower.pt  * tower.phi;
+    sphi2 += tower.pt * tower.phi * tower.phi;
     sumpt += tower.pt;
     double dphi = TVector2::Phi_mpi_pi(zjet->JetCalPhi-tower.phi);
     double dr = sqrt((zjet->JetCalEta-tower.eta)*(zjet->JetCalEta-tower.eta)+
@@ -161,6 +165,7 @@ Event* ZJetReader::createJetTruthEvent()
   tower.phi = zjet->JetCalPhi;
   tower.E   = zjet->JetCalE;
   tower.etaeta = sqrt(seta2/sumpt - seta * seta /(sumpt * sumpt));
+  tower.phiphi = sqrt(sphi2/sumpt - sphi * sphi /(sumpt * sumpt));
   double err =  jet_error_param(&tower.pt,&tower,0);
   err2 += err * err;
 
@@ -174,8 +179,9 @@ Event* ZJetReader::createJetTruthEvent()
     JetWithTowers *jt = 
       new JetWithTowers(zjet->JetCalEt,em * factor,had * factor,
 			out * factor,zjet->JetCalE,zjet->JetCalEta,
-			zjet->JetCalPhi,tower.etaeta,Jet::uds,zjet->JetGenEt,
-			LJet.DeltaR(LGenJet),createCorFactors(0),
+			zjet->JetCalPhi,tower.phiphi,tower.etaeta,Jet::uds,
+			zjet->JetGenEt,LJet.DeltaR(LGenJet),
+			createCorFactors(0),
 			par_->jet_function(zjet->TowId_eta[closestTower],
 					   zjet->TowId_phi[closestTower]),
 			jet_error_param,par_->global_jet_function());
@@ -192,8 +198,8 @@ Event* ZJetReader::createJetTruthEvent()
     JetWithTracks *jt = 
       new JetWithTracks(zjet->JetCalEt,em * factor,had * factor,
 			out * factor, zjet->JetCalE,zjet->JetCalEta,
-			zjet->JetCalPhi,tower.etaeta,Jet::uds,zjet->JetGenEt,
-			LJet.DeltaR(LGenJet),createCorFactors(0),
+			zjet->JetCalPhi,tower.phiphi,tower.etaeta,Jet::uds,
+			zjet->JetGenEt,LJet.DeltaR(LGenJet),createCorFactors(0),
 			par_->jet_function(zjet->TowId_eta[closestTower],
 					   zjet->TowId_phi[closestTower]),
 			jet_error_param,par_->global_jet_function());
@@ -213,7 +219,8 @@ Event* ZJetReader::createJetTruthEvent()
   } else { 
     j = new Jet(zjet->JetCalEt,em * factor,had * factor,out * factor,
 		zjet->JetCalE,zjet->JetCalEta,zjet->JetCalPhi,tower.etaeta,
-		Jet::uds,zjet->JetGenEt,LJet.DeltaR(LGenJet),createCorFactors(0),
+		tower.phiphi,Jet::uds,zjet->JetGenEt,LJet.DeltaR(LGenJet),
+		createCorFactors(0),
 		par_->jet_function(zjet->TowId_eta[closestTower],
 				   zjet->TowId_phi[closestTower]),
 		jet_error_param,par_->global_jet_function());
@@ -222,6 +229,7 @@ Event* ZJetReader::createJetTruthEvent()
       j->updateCorFactors(corFactorsFactory_->create(j));
   }
   if(correctToL3_) j->correctToL3();
+  else if(correctL2L3_) j->correctL2L3();
   JetTruthEvent* jte = new JetTruthEvent(j,zjet->JetGenEt,1.0);//zjet->EventWeight);
   delete [] terr;
   return jte;

@@ -1,4 +1,4 @@
-//  $Id: Kalibri.cc,v 1.5 2010/02/10 13:52:02 mschrode Exp $
+//  $Id: Kalibri.cc,v 1.6 2010/04/24 14:10:52 mschrode Exp $
 
 #include "Kalibri.h"
 
@@ -23,7 +23,6 @@ boost::mutex io_mutex;
 #include "ZJetReader.h"
 #include "TopReader.h"
 #include "ParameterLimitsReader.h"
-#include "JetConstraintsReader.h"
 #include "EventProcessor.h"
 #include "EventWeightProcessor.h"
 
@@ -215,11 +214,12 @@ void Kalibri::run_Lvmini()
     else if(  loop+1 == 2  ) cout << "nd" << flush;
     else if(  loop+1 == 3  ) cout << "rd" << flush;
     else cout << "th" << flush;
-    cout << " of " << residualScalingScheme_.size() <<" iteration(s): " << flush;
-    if(  residualScalingScheme_.at(loop) == 0  ) {
+    cout << " of " << residualScalingScheme_.size() <<" iteration(s)" << flush;
+    if( mode_ == 0 ) {
+      if(  residualScalingScheme_.at(loop) == 0  ) {
 	Event::ScaleResidual = &Event::ScaleNone;	
-	cout << "no scaling of residuals." << endl;
-
+	cout << ": no scaling of residuals." << endl;
+	
 	cout << "Rejecting outliers " << flush;
 	DataIter beg = partition(data_.begin(), data_.end(), OutlierRejection(outlierChi2Cut_));
 	for(DataIter i = beg ; i != data_.end() ; ++i) {
@@ -228,21 +228,24 @@ void Kalibri::run_Lvmini()
 	data_.erase(beg,data_.end());
 	cout << "and using " << data_.size() << " events." << endl;
       }
-    else if(  residualScalingScheme_.at(loop) == 1  ) {
+      else if(  residualScalingScheme_.at(loop) == 1  ) {
 	Event::ScaleResidual = &Event::ScaleCauchy;	
-	cout << "scaling of residuals with Cauchy-Function." << endl;
+	cout << ": scaling of residuals with Cauchy-Function." << endl;
       }
-    else if(  residualScalingScheme_.at(loop) == 2  ) {
+      else if(  residualScalingScheme_.at(loop) == 2  ) {
 	Event::ScaleResidual = &Event::ScaleHuber;	
-	cout << "scaling of residuals with Huber-Function." << endl;
+	cout << ": scaling of residuals with Huber-Function." << endl;
       }
-    else if(  residualScalingScheme_.at(loop) == 3  ) {
-      Event::ScaleResidual = &Event::ScaleTukey;	
-      cout << "scaling of residuals a la Tukey." << endl;
-    }
-    else {
-      cerr << "ERROR: " << residualScalingScheme_.at(loop) << " is not a valid scheme for resdiual scaling! Breaking iteration!" << endl;
-      break;
+      else if(  residualScalingScheme_.at(loop) == 3  ) {
+	Event::ScaleResidual = &Event::ScaleTukey;	
+	cout << ": scaling of residuals a la Tukey." << endl;
+      }
+      else {
+	cerr << "ERROR: " << residualScalingScheme_.at(loop) << " is not a valid scheme for resdiual scaling! Breaking iteration!" << endl;
+	break;
+      }
+    } else {
+      std::cout << std::endl;
     }
     if(lvmdim_(npar,mvec) > naux)
       cout<<"Aux field too small. "<<lvmdim_(npar,mvec)<<" enntires needed."<<endl;
@@ -416,12 +419,11 @@ void Kalibri::done()
 
   // Make control plots
   if( config.read<bool>("create plots",0) ) {
-    int mode = config.read<int>("Mode",0);
-    if( mode == 0 ) {  // Control plots for calibration
+    if( mode_ == 0 ) {  // Control plots for calibration
       ControlPlots * plots = new ControlPlots(&config,&data_);
       plots->makePlots();
       delete plots;
-    } else if( mode == 1 ) {  // Control plots for jetsmearing
+    } else if( mode_ == 1 ) {  // Control plots for jetsmearing
       ControlPlotsJetSmearing * plotsjs = new ControlPlotsJetSmearing(configFile_,&data_,par_);
       plotsjs->makePlots();
       delete plotsjs;
@@ -448,8 +450,10 @@ void Kalibri::init()
 
   //initialize temp arrays for fast derivative calculation
   TAbstractData::total_n_pars     = par_->GetNumberOfParameters();
+
   //--------------------------------------------------------------------------
   //read config file
+  mode_ = config.read<int>("Mode",0);
   fitMethod_ = config.read<int>("Fit method",1);
   nThreads_ = config.read<int>("Number of Threads",1);
   
@@ -581,8 +585,7 @@ void Kalibri::init()
   ParameterLimitsReader plr(configFile_,par_);
   plr.readEvents(data_);
 
-  JetConstraintsReader jcr(configFile_,par_);
-  jcr.readEvents(data_);
+  EventReader::addConstraints(data_);
 }
 //--^-Kalibri class-^------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------

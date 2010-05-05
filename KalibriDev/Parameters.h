@@ -1,7 +1,7 @@
 //
 // Original Authors:  Christian Autermann, Hartmut Stadie
 //         Created:  Wed Jul 18 13:54:50 CEST 2007
-// $Id: Parameters.h,v 1.5 2010/01/26 17:49:22 mschrode Exp $
+// $Id: Parameters.h,v 1.60 2010/04/13 13:53:21 mschrode Exp $
 //
 #ifndef TParameters_h
 #define TParameters_h
@@ -22,17 +22,16 @@
 #include "SmearFunction.h"
 
 
-
 //!  \brief Connection between detector geometry and fit parameters,
 //!         interface to response and error parametrizations
 //!  \author Christian Autermann
 //!  \date   Wed Jul 18 13:54:50 CEST 2007
-//!  $Id: Parameters.h,v 1.5 2010/01/26 17:49:22 mschrode Exp $
+//!  $Id: Parameters.h,v 1.60 2010/04/13 13:53:21 mschrode Exp $
 // -----------------------------------------------------------------
 class TParameters {  
 public :
   
-  static TParameters* CreateParameters(const std::string& configfile);
+  static TParameters* CreateParameters(const ConfigFile& config);
 
   std::string GetName() const;
 
@@ -117,7 +116,7 @@ public :
     assert( i >= 0 && i < GetNumberOfParameters() );
     return parNames_[i];
   }
-  
+
   void SetParameters(double *np) {
     std::memcpy(k,np,GetNumberOfParameters()*sizeof(double));
   }
@@ -134,14 +133,11 @@ public :
     assert( i >= 0 && i < GetNumberOfParameters() );
     isFixedPar_[i] = true;
   }
-
   void SetFitChi2(double chi2) { fitchi2 = chi2;}
   double GetFitChi2() const { return fitchi2;}
-
   void FillErrors(double* copy) const {
     std::memcpy(copy,parErrors_,GetNumberOfParameters()*sizeof(double));
   }
-
   double* GetPars() { return k; }
   double* GetErrors() { return parErrors_; }
   double* GetGlobalCorrCoeff() { return parGCorr_; }
@@ -266,13 +262,13 @@ public :
   //!  \return The absolute resolution
   // -----------------------------------------------------
   static double jet_only_jet_error_parametrization_et(const double *x, const Measurement *xorig=0, double errorig=0) {
-    const static double a[5] = { 4.44 , 4.35 , 4.34 , 4.08 , 3.90 };
-    const static double b[5] = { 1.11 , 1.17 , 0.85 , 0.45 , 0.29 };
-    const static double c[5] = { 0.03 , 0.04 , 0.03 , 0.04 , 0.09 };
+    const static double a[5] = { 4.44 * 4.44, 4.35 * 4.35, 4.34 * 4.34 , 4.08 * 4.08, 3.90 * 3.90 };
+    const static double b[5] = { 1.11 * 1.11, 1.17 * 1.17, 0.85 * 0.85, 0.45 * 0.45, 0.29 * 0.29};
+    const static double c[5] = { 0.03 * 0.03, 0.04 * 0.04, 0.03 * 0.03, 0.04 * 0.04, 0.09 * 0.09};
 
     double abseta = std::abs(xorig->eta);
     int i = (abseta < 0.8) ? 0 : ((abseta < 1.5) ? 1 : ((abseta < 2.4) ? 2 : (abseta < 3.2) ? 3 : 4));
-    return sqrt(a[i]*a[i]/x[0]/x[0] + b[i]*b[i]/x[0] + c[i]*c[i]) * x[0];
+    return sqrt(a[i] + (b[i] + c[i] *x[0]) * x[0]);
   }
 
   static double jet_only_jet_error_parametrization_energy(const double *x, const Measurement *xorig=0, double errorig=0) {
@@ -360,17 +356,21 @@ public :
 
 protected:
   TParameters(Parametrization* p) 
-    : p(p),k(0),parErrors_(0),parGCorr_(0),trackEff(0),fitchi2(0) {
+    : p(p),k(0),parErrors_(0),parGCorr_(0),parCov_(0),trackEff(0),fitchi2(0) {
   };
   virtual ~TParameters();
+
 
 private:
   TParameters();
   TParameters(const TParameters&) {}
   int GetEtaBin(int phi_id, int etagranu, int phigranu, bool etasym) const;
   int GetPhiBin(int phi_id, int phigranu) const;
+  //! Return one line of LaTeX tabular containing the name and value of a given parameter from config file
   template<class T> std::string texTabularLine(const ConfigFile& config, const std::string& fieldname) const;
+  //! Return submatrix of covariance matrix for \p nPar parameters from \p firstPar
   std::vector<int> findCovIndices(int firstPar, int nPar) const;
+  //! Return stati (is fixed?) for \p nPar parameters from \p firstPar
   std::vector<bool> findParStatus(int firstPar, int nPar) const;
 
   //Towers in Eta-, Phi- direction (according to PTDR Vol I, p.201)

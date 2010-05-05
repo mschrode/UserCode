@@ -2,7 +2,7 @@
 //    Class for basic jets 
 //
 //    first version: Hartmut Stadie 2008/12/14
-//    $Id: Jet.cc,v 1.2 2010/01/21 16:48:56 mschrode Exp $
+//    $Id: Jet.cc,v 1.43 2010/04/13 13:44:10 mschrode Exp $
 //   
 #include "Jet.h"  
 
@@ -12,13 +12,24 @@
 #include <iomanip>
 
 Jet::Jet(double Et, double EmEt, double HadEt ,double OutEt, double E,
-         double eta,double phi, double etaeta, Flavor flavor, double genPt, 
-	 double dR, CorFactors* corFactors, const Function& f, 
+         double eta,double phi, double phiphi, double etaeta, Flavor flavor, 
+	 double genPt, double dR, CorFactors* corFactors, const Function& f, 
 	 double (*errfunc)(const double *x, const Measurement *xorig, double err), 
 	 const Function& gf, double Etmin) 
-  : Measurement(Et,EmEt,HadEt,OutEt,E,eta,phi,etaeta),flavor_(flavor), genPt_(genPt), 
-    dR_(dR), corFactors_(corFactors),f(f),gf(gf),errf(errfunc),
-    etmin(Etmin),EoverPt(E/Et),gsl_impl(this)
+  : Measurement(Et,EmEt,HadEt,OutEt,E,eta,phi,phiphi,etaeta),flavor_(flavor), 
+    genPt_(genPt),dR_(dR),corFactors_(corFactors),f(f),gf(gf),
+    errf(errfunc),etmin(Etmin),root(Et),EoverPt(E/Et),gsl_impl(this)
+{
+  temp = *this;
+  varcoll.resize(f.nPars() + gf.nPars());
+  assert(Measurement::phiphi == Measurement::phiphi);
+}
+
+Jet::Jet(const Jet& j) 
+  : Measurement(j), flavor_(j.flavor_), genPt_(j.genPt_),dR_(j.dR_), 
+    corFactors_(new CorFactors(*(j.corFactors_))),f(j.f),
+    gf(j.gf),errf(j.errf),etmin(j.etmin),root(j.root),EoverPt(j.EoverPt),
+    gsl_impl(this)
 {
   temp = *this;
   varcoll.resize(f.nPars() + gf.nPars());
@@ -70,14 +81,17 @@ void Jet::correctL2L3()
 const Jet::VariationColl& Jet::varyPars(double eps, double Et, double start)
 {
   //start = Et;
+  double oldroot = root;
   for(int i = 0 ; i < f.nPars() ; ++i) {
     double orig = f.firstPar()[i];
     f.firstPar()[i] += eps;
     varcoll[i].upperEt = expectedEt(Et,start,varcoll[i].upperError);
+    root = oldroot;
     //if( varcoll[i].upperEt < 0) return varcoll;
     //varcoll[i].upperEt = expectedEt(Et,s,false);
     f.firstPar()[i] = orig - eps;;
     varcoll[i].lowerEt = expectedEt(Et,start,varcoll[i].lowerError); 
+    root = oldroot;
     //if( varcoll[i].lowerEt < 0) return varcoll;
     //varcoll[i].lowerEt = expectedEt(Et,s,false);
     f.firstPar()[i] = orig;
@@ -87,10 +101,12 @@ const Jet::VariationColl& Jet::varyPars(double eps, double Et, double start)
     double orig = gf.firstPar()[i];
     gf.firstPar()[i] += eps;
     varcoll[j].upperEt = expectedEt(Et,start,varcoll[j].upperError);
+    root = oldroot;
     //if( varcoll[j].upperEt < 0) return varcoll;
     //varcoll[j].upperEt = expectedEt(Et,s,false);
     gf.firstPar()[i] = orig - eps;;
     varcoll[j].lowerEt = expectedEt(Et,start,varcoll[j].lowerError);
+    root = oldroot;
     //if( varcoll[j].lowerEt < 0) return varcoll;
     //varcoll[j].lowerEt = expectedEt(Et,s,false);
     gf.firstPar()[i] = orig;
@@ -111,7 +127,7 @@ const Jet::VariationColl& Jet::varyPars(double eps, double Et, double start)
 //!  \return Vector of ParameterVariation
 //!  \sa varyPars
 // -------------------------------------------------------
-const Jet::VariationColl& Jet::varyParsDirectly(double eps)
+const Jet::VariationColl& Jet::varyParsDirectly(double eps, bool computeDeriv)
 {
   const double deltaE = eps * 100.0;
   for(int i = 0 ; i < f.nPars() ; ++i) {
@@ -119,11 +135,15 @@ const Jet::VariationColl& Jet::varyParsDirectly(double eps)
     f.firstPar()[i] += eps;
     varcoll[i].upperEt = correctedEt(Measurement::pt);
     varcoll[i].upperError = expectedError(varcoll[i].upperEt);
-    varcoll[i].upperEtDeriv =  (correctedEt(Measurement::pt+deltaE) -  correctedEt(Measurement::pt-deltaE))/2/deltaE;
+    if(computeDeriv) {
+      varcoll[i].upperEtDeriv =  (correctedEt(Measurement::pt+deltaE) -  correctedEt(Measurement::pt-deltaE))/2/deltaE;
+    }
     f.firstPar()[i] = orig - eps;
     varcoll[i].lowerEt = correctedEt(Measurement::pt); 
     varcoll[i].lowerError = expectedError(varcoll[i].lowerEt);
-    varcoll[i].lowerEtDeriv =  (correctedEt(Measurement::pt+deltaE) -  correctedEt(Measurement::pt-deltaE))/2/deltaE;
+    if(computeDeriv) {
+      varcoll[i].lowerEtDeriv =  (correctedEt(Measurement::pt+deltaE) -  correctedEt(Measurement::pt-deltaE))/2/deltaE;
+    }
     f.firstPar()[i] = orig;
     varcoll[i].parid = f.parIndex() + i;
   }  
@@ -132,11 +152,15 @@ const Jet::VariationColl& Jet::varyParsDirectly(double eps)
     gf.firstPar()[i] += eps;
     varcoll[j].upperEt = correctedEt(Measurement::pt);
     varcoll[j].upperError = expectedError(varcoll[j].upperEt);
-    varcoll[j].upperEtDeriv =  (correctedEt(Measurement::pt+deltaE) -  correctedEt(Measurement::pt-deltaE))/2/deltaE;
+    if(computeDeriv) {
+      varcoll[j].upperEtDeriv =  (correctedEt(Measurement::pt+deltaE) -  correctedEt(Measurement::pt-deltaE))/2/deltaE;
+    }
     gf.firstPar()[i] = orig - eps;
     varcoll[j].lowerEt = correctedEt(Measurement::pt); 
     varcoll[j].lowerError = expectedError(varcoll[j].lowerEt);
-    varcoll[j].lowerEtDeriv =  (correctedEt(Measurement::pt+deltaE) -  correctedEt(Measurement::pt-deltaE))/2/deltaE;
+    if(computeDeriv) {
+      varcoll[j].lowerEtDeriv =  (correctedEt(Measurement::pt+deltaE) -  correctedEt(Measurement::pt-deltaE))/2/deltaE;
+    }
     gf.firstPar()[i] = orig;
     varcoll[j].parid = gf.parIndex() + i;
   }
@@ -176,6 +200,7 @@ double Jet::correctedEt(double Et, bool fast) const {
   if(temp.pt <= 0.0) {
     //std::cout << "WARNING: jet cor. Et <= 0.0 GeV:" << corEt << " at eta " << TJet::eta << '\n';
     temp.pt = 1.0;
+    temp.E = EoverPt;
   }
   //temp.HadF = corEt - OutF - EMF;
   //if(temp.HadF < 0) temp.HadF = 0;
@@ -187,6 +212,7 @@ double Jet::correctedEt(double Et, bool fast) const {
   if(temp.pt <= 1.0) {
     //std::cout << "WARNING: global jet cor. Et <= 1.0 GeV:" << corEt << " at eta " << TJet::eta << '\n';
     temp.pt = 1.0;
+    temp.E = EoverPt;
   }
   return temp.pt;
 }
@@ -223,25 +249,64 @@ double Jet::expectedEt(double truth, double start, bool fast)
     return f.inverse(&temp);
   }
   static const double eps = 1.0e-12;
-  double x1 = start,x2;
+  double x1 = root;
   //find root of truth - jet->correctedEt(expectedEt)
   // x: expectedEt
   // y: truth -  jet->correctedEt(expectedEt)
   // f: jet->correctedEt(expectedEt)
   double f1 = correctedEt(x1,false);
-  if(std::abs(f1 - truth) < eps) {
+
+  if(std::abs(f1 - truth) < eps * truth) {
+    //std::cout << "this really happens!?\n";
     return x1;
   }
-
-  x2 = 0.1 * start;
-  x1 = 5 * start;
-  if(! gsl_impl.root(truth,x2,x1,eps)) return -1;
+ 
+  //bracket the root
+  double x2 = x1 + 0.2;
+  
+  double f2 = correctedEt(x2,false);
+  for( int i = 0 ; ; ++i) {
+    if(f1 >= f2) {
+      if((f1 > truth) && (f2 < truth)) break; 
+      double step = 0.5 * i;
+      x1 -= 2 * step;
+      x2 += 2 * step;
+      f1 = correctedEt(x1,false);
+      f2 = correctedEt(x2,false);
+    }
+    else {
+      if(f1 > truth) {
+	double step = (f1 - truth) * (x2-x1)/(f2-f1);
+	if(step < 0.1) step = 0.1;
+	x1 -=  2 * step;
+	f1 = correctedEt(x1,false);
+	++ntries;
+      } else if(f2 < truth) {
+	double step = (truth - f2) * (x2-x1)/(f2-f1);
+	if(step < 0.1) step = 0.1;
+	x2 += 2 * step;
+	f2 = correctedEt(x2,false);
+	++ntries;
+      } else break;
+    }
+    if(i > 20) {
+      ++nfails;
+      std::cout << "Warning failed to bag: " << x1 << ", " << x2 << ":" << f1 << " < " << truth << " < " << f2 << std::endl;
+      //assert(i < 10);
+      return -1;
+    }
+  }
+  //assert((x1 == x1) && (x2 == x2));
+  if(! gsl_impl.root(truth,x1,x2,eps)) return -1;
+  return root = x2;
+  
   //get second point assuming a constant correction factor
   //x2 = (truth - EMF - OutF) * (x1 - EMF - OutF)/(f1 - EMF - OutF) + EMF;
   //x2 = truth * x1 / f1;
   //if(! secant(truth,x2,x1,eps)) return -1;
-  //assert(std::abs(correctedEt(x2)-truth)/truth < eps); 
-  return x2;
+  //assert(std::abs(correctedEt(x2)-truth) < eps * truth); 
+  //root = x2;
+  //return x2;
 }
 
 
@@ -311,7 +376,7 @@ bool Jet::falseposition(double truth, double& x1, double& x2,double eps)
   //std::cout << "x1,2:" << x1 << "," << x2 << " f1,2:" << f1 << ", " << f2 
   //	    << " y1,2:" << y1 << ", " << y2 << std::endl;
   int i = 0;
-  while(y1 * y2 > 0) {
+  while( 1 ) {
     //std::cout << "x1,2:" << x1 << "," << x2 << " f1,2:" << f1 << ", " << f2 
     //      << " y1,2:" << y1 << ", " << y2 << std::endl;
     if(f1 > truth) {
@@ -319,31 +384,38 @@ bool Jet::falseposition(double truth, double& x1, double& x2,double eps)
       f1 = correctedEt(x1,true);
       y1 = truth - f1;
       ++ntries;
-    }
-    if(f2 < truth) {
+    } else if(f2 < truth) {
       x2 += step;
       f2 = correctedEt(x2,true);
       y2 = truth - f2;
       ++ntries;
     }
+    else break;
     ++i;
-    if(i > 5) break;
+    //if(i > 5) break;
+    assert(i < 100);
   } 
   i = 0;
-  while(std::abs((x2-x1)/x1) > eps) {
+  while(std::abs(y2)/truth > eps) {
     //std::cout << i << ":" << x1 << ", " << x2 << " : " << y1 << ", " << y2 << std::endl;
     double x3 = x1 + y1 * (x2-x1)/(f2 - f1);
     double f3 = correctedEt(x3,true);
     double y3 = truth - f3;
+    //std::cout << i << ":" << x3 << ":" << y3 << std::endl;
     ++i;
-    if(y1 * y3 < 0) {
+    if(std::abs(y3) / truth < eps) {
       x2 = x3;
-      f2 = f3;
-      y2 = y3;
-    } else {
+      x1 = x1;
+      return true;
+    }
+    if(y3 > 0) {
       x1 = x3;
       f1 = f3;
       y1 = y3;
+    } else {
+      x2 = x3;
+      f2 = f3;
+      y2 = y3;
     }
     if(i > 100) {
       ++nfails;
@@ -352,7 +424,6 @@ bool Jet::falseposition(double truth, double& x1, double& x2,double eps)
     }
   } 
   ntries += i;
-  x2 = 0.5*(x1 + x2);
   return true;
 }
 
@@ -360,10 +431,8 @@ bool Jet::falseposition(double truth, double& x1, double& x2,double eps)
 bool Jet::secant(double truth, double& x2, double& x1,double eps)
 {
   //x2 is the best estimate!
-  const double up = 4 * truth;
-  const double low = 1; 
-  if(x2 > up ) x2 = up;
-  if(x2 < low) x2 = low;
+  const double up = 5 * x2;
+  const double low = 1.0; 
  
   double f1 = correctedEt(x1,true);
   double f2 = correctedEt(x2,true);
@@ -377,9 +446,9 @@ bool Jet::secant(double truth, double& x2, double& x1,double eps)
     dx = std::abs(x1-x2);
   }
   //std::cout << "first intervall size:" << dx/x1 << '\n';
-  while((dx/x1 > eps)&&(i < 100)) {
+  while((std::abs(y2) > eps * truth)&&(i < 1000)) {
     if(f1 == f2) {
-      //std::cout << "Warning: no difference in corrected Et:" << f1 << "," << f2 << '\n';
+      std::cout << "Warning: no difference in corrected Et:" << f1 << "," << f2 << '\n';
       //print();
       x2 = 0.5 * (x1 + x2);
       ++nfails;
@@ -411,7 +480,7 @@ bool Jet::secant(double truth, double& x2, double& x1,double eps)
     //std::cout << x1 << ":" << f1 << " " << x2 << ":" << f2 << " " << x3 << ":" << f3 << '\n';
     double y3 = truth - f3;
     //use false position if root is bracketed
-    if(y1 * y3 < 0) {
+    if(((y3 < 0) && (y1 > 0)) || ((y3 > 0) && (y1 < 0))) {
       x2 = x3;
       f2 = f3;
       y2 = y3;
@@ -435,7 +504,7 @@ bool Jet::secant(double truth, double& x2, double& x1,double eps)
     //     } 
   } 
   ntries += i;
-  if(std::abs(y2) > eps * truth) {
+  if( i >= 1000) {
     //std::cout << "failed to find good root\n";
     //std::cout << i << ":" << x1 << ", " << x2 << ":" << truth - f2 << " truth:" << truth << "fs:" << f1 << "," << f2 << "\n";
     ++nfails;
@@ -443,8 +512,8 @@ bool Jet::secant(double truth, double& x2, double& x1,double eps)
   }
   
   if(x2 != x2) {
-//     std::cout << "failed to find good root\n";
-//     std::cout << i << ":" << x1 << ", " << x2 << ":" << truth - f2 << "\n";
+    std::cout << "failed to find good root\n";
+    std::cout << i << ":" << x1 << ", " << x2 << ":" << truth - f2 << "\n";
     ++nfails;
     return false;
   }
@@ -455,6 +524,7 @@ bool Jet::secant(double truth, double& x2, double& x1,double eps)
 bool Jet::GslImplementation::root(double truth, double& x1, double& x2, double eps) {
   par.y = truth;
   ++ncalls;
+ 
   if(gsl_root_fsolver_set(s,&F,x1,x2)) {
     //std::cout << "Warning: root not bracketed\n";
     ++nfails;
@@ -470,9 +540,11 @@ bool Jet::GslImplementation::root(double truth, double& x1, double& x2, double e
     x2 = gsl_root_fsolver_x_upper(s);
     status = gsl_root_test_interval(x1,x2,0, eps);
     }
-  while(status == GSL_CONTINUE && iter < 20);
+  while(status == GSL_CONTINUE && iter < 100);
   ntries += iter;
   if(status != GSL_SUCCESS) {
+    std::cout << "inversion failed:" << x1 << ", " << x2 << " truth:" 
+	      << truth << std::endl;
     ++nfails;
     return false;
   }

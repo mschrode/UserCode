@@ -1,23 +1,31 @@
 //////////////////////////////////////////////////////////
 // This class has been automatically generated on
-// Fri Feb 27 18:11:17 2009 by ROOT version 5.20/00
+// Mon Jan 25 13:43:09 2010 by ROOT version 5.20/00
 // from TTree DiJetTree/
-// found on file: /scratch/current/cms/user/stadie/DiJet_Track_230_300_rereco_incomplete.root
+// found on file: /scratch/hh/current/cms/user/stadie/Summer09QCDFlat-MC_31X_V9_7TeV-v1_A/Summer09QCDFlat_Pt15to3000MC_31X_V9_7TeV-v1_1.root
 //////////////////////////////////////////////////////////
 
 #ifndef NJetSel_h
 #define NJetSel_h
 
-#include <TROOT.h>
-#include <TChain.h>
-#include <TFile.h>
-#include <TSelector.h>
+#include "TROOT.h"
+#include "TChain.h"
+#include "TFile.h"
+#include "TSelector.h"
 
 class NJetSel : public TSelector {
 public :
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain
 
    // Declaration of leaf types
+   UInt_t          RunNumber;
+   UInt_t          LumiBlockNumber;
+   UInt_t          EventNumber;
+   Int_t           VtxNTracks;
+   Float_t         VtxPosX;
+   Float_t         VtxPosY;
+   Float_t         VtxPosZ;
+   Float_t         VtxNormalizedChi2;
    Int_t           NobjTow;
    Int_t           TowId[10000];   //[NobjTow]
    Int_t           TowId_phi[10000];   //[NobjTow]
@@ -30,6 +38,12 @@ public :
    Float_t         TowHad[10000];   //[NobjTow]
    Float_t         TowOE[10000];   //[NobjTow]
    Int_t           Tow_jetidx[10000];   //[NobjTow]
+   UInt_t          TowNumBadEcalCells[10000];   //[NobjTow]
+   UInt_t          TowNumBadHcalCells[10000];   //[NobjTow]
+   UInt_t          TowNumProblematicEcalCells[10000];   //[NobjTow]
+   UInt_t          TowNumProblematicHcalCells[10000];   //[NobjTow]
+   UInt_t          TowNumRecoveredEcalCells[10000];   //[NobjTow]
+   UInt_t          TowNumRecoveredHcalCells[10000];   //[NobjTow]
    Int_t           NobjTrack;
    Int_t           TrackTowId[10000];   //[NobjTrack]
    Int_t           TrackTowIdPhi[10000];   //[NobjTrack]
@@ -63,24 +77,47 @@ public :
    Float_t         JetEta[100];   //[NobjJet]
    Float_t         JetEt[100];   //[NobjJet]
    Float_t         JetE[100];   //[NobjJet]
+   Int_t           JetN90Hits[100];   //[NobjJet]
+   Float_t         JetEMF[100];   //[NobjJet]
+   Float_t         JetFHPD[100];   //[NobjJet]
+   Float_t         JetFRBX[100];   //[NobjJet]
+   Float_t         JetEtWeightedSigmaPhi[100];   //[NobjJet]
+   Float_t         JetEtWeightedSigmaEta[100];   //[NobjJet]
    Float_t         JetCorrZSP[100];   //[NobjJet]
    Float_t         JetCorrL2[100];   //[NobjJet]
    Float_t         JetCorrL3[100];   //[NobjJet]
    Float_t         JetCorrJPT[100];   //[NobjJet]
    Float_t         JetCorrL2L3[100];   //[NobjJet]
    Float_t         JetCorrL2L3JPT[100];   //[NobjJet]
+   Int_t           JetIEta[100];   //[NobjJet]
+   Int_t           JetIPhi[100];   //[NobjJet]
+   Float_t         JetGenJetDeltaR[100];   //[NobjJet]
    Float_t         GenJetPt[100];   //[NobjJet]
    Float_t         GenJetPhi[100];   //[NobjJet]
    Float_t         GenJetEta[100];   //[NobjJet]
    Float_t         GenJetEt[100];   //[NobjJet]
    Float_t         GenJetE[100];   //[NobjJet]
    Int_t           NobjGenJet;
-   Float_t         GenJetColPt[100];   //[NobjJet]
-   Float_t         GenJetColPhi[100];   //[NobjJet]
-   Float_t         GenJetColEta[100];   //[NobjJet]
-   Float_t         GenJetColEt[100];   //[NobjJet]
-   Float_t         GenJetColE[100];   //[NobjJet]
-   Int_t           GenJetColJetIdx[100];
+   Float_t         GenJetColPt[100];   //[NobjGenJet]
+   Float_t         GenJetColPhi[100];   //[NobjGenJet]
+   Float_t         GenJetColEta[100];   //[NobjGenJet]
+   Float_t         GenJetColEt[100];   //[NobjGenJet]
+   Float_t         GenJetColE[100];   //[NobjGenJet]
+   Int_t           GenJetColJetIdx[100];   //[NobjGenJet]
+   Float_t         GenPartPt_algo[100];   //[NobjJet]
+   Float_t         GenPartPhi_algo[100];   //[NobjJet]
+   Float_t         GenPartEta_algo[100];   //[NobjJet]
+   Float_t         GenPartEt_algo[100];   //[NobjJet]
+   Float_t         GenPartE_algo[100];   //[NobjJet]
+   Float_t         GenPartM_algo[100];   //[NobjJet]
+   Int_t           GenPartId_algo[100];   //[NobjJet]
+   Float_t         GenPartPt_phys[100];   //[NobjJet]
+   Float_t         GenPartPhi_phys[100];   //[NobjJet]
+   Float_t         GenPartEta_phys[100];   //[NobjJet]
+   Float_t         GenPartEt_phys[100];   //[NobjJet]
+   Float_t         GenPartE_phys[100];   //[NobjJet]
+   Float_t         GenPartM_phys[100];   //[NobjJet]
+   Int_t           GenPartId_phys[100];   //[NobjJet]
    Float_t         GenEvtScale;
    Float_t         Met;
    Float_t         MetPhi;
@@ -88,6 +125,14 @@ public :
    Float_t         Weight;
 
    // List of branches
+   TBranch        *b_RunNumber;   //!
+   TBranch        *b_LumiBlockNumber;   //!
+   TBranch        *b_EventNumber;   //!
+   TBranch        *b_VtxNTracks;   //!
+   TBranch        *b_VtxPosX;   //!
+   TBranch        *b_VtxPosY;   //!
+   TBranch        *b_VtxPosZ;   //!
+   TBranch        *b_VtxNormalizedChi2;   //!
    TBranch        *b_NobjTow;   //!
    TBranch        *b_TowId;   //!
    TBranch        *b_TowId_phi;   //!
@@ -100,6 +145,12 @@ public :
    TBranch        *b_TowHad;   //!
    TBranch        *b_TowOE;   //!
    TBranch        *b_Tow_jetidx;   //!
+   TBranch        *b_TowNumBadEcalCells;   //!
+   TBranch        *b_TowNumBadHcalCells;   //!
+   TBranch        *b_TowNumProblematicEcalCells;   //!
+   TBranch        *b_TowNumProblematicHcalCells;   //!
+   TBranch        *b_TowNumRecoveredEcalCells;   //!
+   TBranch        *b_TowNumRecoveredHcalCells;   //!
    TBranch        *b_NobjTrack;   //!
    TBranch        *b_TrackTowId;   //!
    TBranch        *b_TrackTowIdPhi;   //!
@@ -133,25 +184,48 @@ public :
    TBranch        *b_JetEta;   //!
    TBranch        *b_JetEt;   //!
    TBranch        *b_JetE;   //!
+   TBranch        *b_JetN90Hits;   //!
+   TBranch        *b_JetEMF;   //!
+   TBranch        *b_JetFHPD;   //!
+   TBranch        *b_JetFRBX;   //!
+   TBranch        *b_JetEtWeightedSigmaPhi;   //!
+   TBranch        *b_JetEtWeightedSigmaEta;   //!
    TBranch        *b_JetCorrZSP;   //!
    TBranch        *b_JetCorrL2;   //!
    TBranch        *b_JetCorrL3;   //!
    TBranch        *b_JetCorrJPT;   //!
    TBranch        *b_JetCorrL2L3;   //!
    TBranch        *b_JetCorrL2L3JPT;   //!
+   TBranch        *b_JetIEta;   //!
+   TBranch        *b_JetIPhi;   //!
+   TBranch        *b_JetGenJetDeltaR;   //!
    TBranch        *b_GenJetPt;   //!
    TBranch        *b_GenJetPhi;   //!
    TBranch        *b_GenJetEta;   //!
    TBranch        *b_GenJetEt;   //!
    TBranch        *b_GenJetE;   //!
-   TBranch        *b_NobjGenJet;
+   TBranch        *b_NobjGenJet;   //!
    TBranch        *b_GenJetColPt;   //!
    TBranch        *b_GenJetColPhi;   //!
    TBranch        *b_GenJetColEta;   //!
    TBranch        *b_GenJetColEt;   //!
    TBranch        *b_GenJetColE;   //!
-   TBranch        *b_GenJetColJetIdx; //!
-   TBranch        *b_GenEvtScale; //!
+   TBranch        *b_GenJetColJetIdx;   //!
+   TBranch        *b_GenPartPt_algo;   //!
+   TBranch        *b_GenPartPhi_algo;   //!
+   TBranch        *b_GenPartEta_algo;   //!
+   TBranch        *b_GenPartEt_algo;   //!
+   TBranch        *b_GenPartE_algo;   //!
+   TBranch        *b_GenPartM_algo;   //!
+   TBranch        *b_GenPartId_algo;   //!
+   TBranch        *b_GenPartPt_phys;   //!
+   TBranch        *b_GenPartPhi_phys;   //!
+   TBranch        *b_GenPartEta_phys;   //!
+   TBranch        *b_GenPartEt_phys;   //!
+   TBranch        *b_GenPartE_phys;   //!
+   TBranch        *b_GenPartM_phys;   //!
+   TBranch        *b_GenPartId_phys;   //!
+   TBranch        *b_GenEvtScale;   //!
    TBranch        *b_Met;   //!
    TBranch        *b_MetPhi;   //!
    TBranch        *b_MetSum;   //!
@@ -194,6 +268,14 @@ void NJetSel::Init(TTree *tree)
    fChain = tree;
    fChain->SetMakeClass(1);
 
+   fChain->SetBranchAddress("RunNumber", &RunNumber, &b_RunNumber);
+   fChain->SetBranchAddress("LumiBlockNumber", &LumiBlockNumber, &b_LumiBlockNumber);
+   fChain->SetBranchAddress("EventNumber", &EventNumber, &b_EventNumber);
+   fChain->SetBranchAddress("VtxNTracks", &VtxNTracks, &b_VtxNTracks);
+   fChain->SetBranchAddress("VtxPosX", &VtxPosX, &b_VtxPosX);
+   fChain->SetBranchAddress("VtxPosY", &VtxPosY, &b_VtxPosY);
+   fChain->SetBranchAddress("VtxPosZ", &VtxPosZ, &b_VtxPosZ);
+   fChain->SetBranchAddress("VtxNormalizedChi2", &VtxNormalizedChi2, &b_VtxNormalizedChi2);
    fChain->SetBranchAddress("NobjTow", &NobjTow, &b_NobjTow);
    fChain->SetBranchAddress("TowId", TowId, &b_TowId);
    fChain->SetBranchAddress("TowId_phi", TowId_phi, &b_TowId_phi);
@@ -206,6 +288,12 @@ void NJetSel::Init(TTree *tree)
    fChain->SetBranchAddress("TowHad", TowHad, &b_TowHad);
    fChain->SetBranchAddress("TowOE", TowOE, &b_TowOE);
    fChain->SetBranchAddress("Tow_jetidx", Tow_jetidx, &b_Tow_jetidx);
+   fChain->SetBranchAddress("TowNumBadEcalCells", TowNumBadEcalCells, &b_TowNumBadEcalCells);
+   fChain->SetBranchAddress("TowNumBadHcalCells", TowNumBadHcalCells, &b_TowNumBadHcalCells);
+   fChain->SetBranchAddress("TowNumProblematicEcalCells", TowNumProblematicEcalCells, &b_TowNumProblematicEcalCells);
+   fChain->SetBranchAddress("TowNumProblematicHcalCells", TowNumProblematicHcalCells, &b_TowNumProblematicHcalCells);
+   fChain->SetBranchAddress("TowNumRecoveredEcalCells", TowNumRecoveredEcalCells, &b_TowNumRecoveredEcalCells);
+   fChain->SetBranchAddress("TowNumRecoveredHcalCells", TowNumRecoveredHcalCells, &b_TowNumRecoveredHcalCells);
    fChain->SetBranchAddress("NobjTrack", &NobjTrack, &b_NobjTrack);
    fChain->SetBranchAddress("TrackTowId", TrackTowId, &b_TrackTowId);
    fChain->SetBranchAddress("TrackTowIdPhi", TrackTowIdPhi, &b_TrackTowIdPhi);
@@ -239,12 +327,21 @@ void NJetSel::Init(TTree *tree)
    fChain->SetBranchAddress("JetEta", JetEta, &b_JetEta);
    fChain->SetBranchAddress("JetEt", JetEt, &b_JetEt);
    fChain->SetBranchAddress("JetE", JetE, &b_JetE);
+   fChain->SetBranchAddress("JetN90Hits", JetN90Hits, &b_JetN90Hits);
+   fChain->SetBranchAddress("JetEMF", JetEMF, &b_JetEMF);
+   fChain->SetBranchAddress("JetFHPD", JetFHPD, &b_JetFHPD);
+   fChain->SetBranchAddress("JetFRBX", JetFRBX, &b_JetFRBX);
+   fChain->SetBranchAddress("JetEtWeightedSigmaPhi", JetEtWeightedSigmaPhi, &b_JetEtWeightedSigmaPhi);
+   fChain->SetBranchAddress("JetEtWeightedSigmaEta", JetEtWeightedSigmaEta, &b_JetEtWeightedSigmaEta);
    fChain->SetBranchAddress("JetCorrZSP", JetCorrZSP, &b_JetCorrZSP);
    fChain->SetBranchAddress("JetCorrL2", JetCorrL2, &b_JetCorrL2);
    fChain->SetBranchAddress("JetCorrL3", JetCorrL3, &b_JetCorrL3);
    fChain->SetBranchAddress("JetCorrJPT", JetCorrJPT, &b_JetCorrJPT);
    fChain->SetBranchAddress("JetCorrL2L3", JetCorrL2L3, &b_JetCorrL2L3);
    fChain->SetBranchAddress("JetCorrL2L3JPT", JetCorrL2L3JPT, &b_JetCorrL2L3JPT);
+   fChain->SetBranchAddress("JetIEta", JetIEta, &b_JetIEta);
+   fChain->SetBranchAddress("JetIPhi", JetIPhi, &b_JetIPhi);
+   fChain->SetBranchAddress("JetGenJetDeltaR", JetGenJetDeltaR, &b_JetGenJetDeltaR);
    fChain->SetBranchAddress("GenJetPt", GenJetPt, &b_GenJetPt);
    fChain->SetBranchAddress("GenJetPhi", GenJetPhi, &b_GenJetPhi);
    fChain->SetBranchAddress("GenJetEta", GenJetEta, &b_GenJetEta);
@@ -257,6 +354,20 @@ void NJetSel::Init(TTree *tree)
    fChain->SetBranchAddress("GenJetColEt", GenJetColEt, &b_GenJetColEt);
    fChain->SetBranchAddress("GenJetColE", GenJetColE, &b_GenJetColE);
    fChain->SetBranchAddress("GenJetColJetIdx", GenJetColJetIdx, &b_GenJetColJetIdx);
+   fChain->SetBranchAddress("GenPartPt_algo", GenPartPt_algo, &b_GenPartPt_algo);
+   fChain->SetBranchAddress("GenPartPhi_algo", GenPartPhi_algo, &b_GenPartPhi_algo);
+   fChain->SetBranchAddress("GenPartEta_algo", GenPartEta_algo, &b_GenPartEta_algo);
+   fChain->SetBranchAddress("GenPartEt_algo", GenPartEt_algo, &b_GenPartEt_algo);
+   fChain->SetBranchAddress("GenPartE_algo", GenPartE_algo, &b_GenPartE_algo);
+   fChain->SetBranchAddress("GenPartM_algo", GenPartM_algo, &b_GenPartM_algo);
+   fChain->SetBranchAddress("GenPartId_algo", GenPartId_algo, &b_GenPartId_algo);
+   fChain->SetBranchAddress("GenPartPt_phys", GenPartPt_phys, &b_GenPartPt_phys);
+   fChain->SetBranchAddress("GenPartPhi_phys", GenPartPhi_phys, &b_GenPartPhi_phys);
+   fChain->SetBranchAddress("GenPartEta_phys", GenPartEta_phys, &b_GenPartEta_phys);
+   fChain->SetBranchAddress("GenPartEt_phys", GenPartEt_phys, &b_GenPartEt_phys);
+   fChain->SetBranchAddress("GenPartE_phys", GenPartE_phys, &b_GenPartE_phys);
+   fChain->SetBranchAddress("GenPartM_phys", GenPartM_phys, &b_GenPartM_phys);
+   fChain->SetBranchAddress("GenPartId_phys", GenPartId_phys, &b_GenPartId_phys);
    fChain->SetBranchAddress("GenEvtScale", &GenEvtScale, &b_GenEvtScale);
    fChain->SetBranchAddress("Met", &Met, &b_Met);
    fChain->SetBranchAddress("MetPhi", &MetPhi, &b_MetPhi);
@@ -271,7 +382,6 @@ Bool_t NJetSel::Notify()
    // is started when using PROOF. It is normally not necessary to make changes
    // to the generated code, but the routine can be extended by the
    // user if needed. The return value is currently not used.
-
    return kTRUE;
 }
 

@@ -5,7 +5,7 @@
 //!
 //!  \author Hartmut Stadie
 //!  \date  2008/12/12
-//!  $Id: ParameterLimitsReader.cc,v 1.6 2010/02/25 15:28:18 mschrode Exp $
+//!  $Id: ParameterLimitsReader.cc,v 1.11 2010/04/13 13:57:11 mschrode Exp $
 //!   
 #include "ParameterLimitsReader.h"
 
@@ -38,52 +38,22 @@ ParameterLimitsReader::ParameterLimitsReader(const std::string& configfile, TPar
     std::string parclass = config_->read<std::string>("Parametrization Class","");
     std::cout << "Using default parameter limits for '" << parclass << "':" << std::endl;
 
-    // For SmearHistGaussInter
-    if( parclass == "SmearParametrizationStepGaussInter" ) {
-      // Loop over parameters in one bin
-      for(int i = 0; i < par_->GetNumberOfJetParametersPerBin(); i++) {
-	double min = 0.;
-	double max = 10000.;   // Sigma and histogrammed parameters have no upper limit
-	if( i == 0 ) max = 1.; // Normalization constant between 0 and 1
-
-	// Loop over eta and phi bins
-	for(int j = par_->GetNumberOfTowerParameters() + i; 
-	    j <  par_->GetNumberOfParameters(); 
-	    j += par_->GetNumberOfJetParametersPerBin()) {
-	  if( j < par_->GetNumberOfParameters()-1 )
-	    par_limits.push_back(ParameterLimit(j,min,max,limits.at(0)));
-	} // End of loop over eta and phi bins
-      } // End of loop over parameters in one bin
-    }
-    // For Crystal Ball Function
-    else if( parclass == "SmearParametrizationCrystalBall" ) {
-      // Loop over jet parameters in one bin
-      for(int i = 0; i < 3; i++) {
-	double min = 1E-3;   // Parameters have to be positive
-	double max = 10000.;
-
-	// Loop over eta and phi bins
-	for(int j = par_->GetNumberOfTowerParameters() + i; 
-	    j <  par_->GetNumberOfParameters(); 
-	    j += par_->GetNumberOfJetParametersPerBin()) {
-	  if( j < par_->GetNumberOfParameters() )
-	    par_limits.push_back(ParameterLimit(j,min,max,limits.at(0)));
-	} // End of loop over eta and phi bins
-      } // End of loop over parameters in one bin
-    }
     // For Gauss Function
-    else if( parclass == "SmearParametrizationGauss" ) {
+    if( parclass == "SmearParametrizationGauss"
+	|| parclass == "SmearParametrizationGaussImbalance" ) {
       // Loop over jet parameters in one bin
       for(int i = 0; i < par_->GetNumberOfJetParametersPerBin(); i++) {
-	double min = 1E-3;   // Parameters have to be positive
-	double max = 10000.;
-
-	// Loop over eta and phi bins
-	for(int j = par_->GetNumberOfTowerParameters() + i; 
-	    j <  par_->GetNumberOfParameters(); 
-	    j += par_->GetNumberOfJetParametersPerBin()) {
-	  if( j < par_->GetNumberOfParameters() )
-	    par_limits.push_back(ParameterLimit(j,min,max,limits.at(0)));
+	if( i > 0 ) {
+	  double min = 1E-3;   // Parameters have to be positive
+	  double max = 10000.;
+	  
+	  // Loop over eta and phi bins
+	  for(int j = par_->GetNumberOfTowerParameters() + i; 
+	      j <  par_->GetNumberOfParameters(); 
+	      j += par_->GetNumberOfJetParametersPerBin()) {
+	    if( j < par_->GetNumberOfParameters() )
+	      par_limits.push_back(ParameterLimit(j,min,max,limits.at(0)));
+	  }
 	} // End of loop over eta and phi bins
       } // End of loop over parameters in one bin
     }
@@ -103,7 +73,24 @@ ParameterLimitsReader::ParameterLimitsReader(const std::string& configfile, TPar
 	} // End of loop over eta and phi bins
       } // End of loop over parameters in one bin
     }
+    // For Gauss Function with linear extrapolation
+    else if( parclass == "SmearParametrizationGaussExtrapolation" ) {
+      // Loop over jet parameters in one bin
+      for(int i = 0; i < par_->GetNumberOfJetParametersPerBin(); i++) {
+	double min = 1E-3;   // Parameters have to be positive
+	double max = 10000.;
+	
+	// Loop over eta and phi bins
+	for(int j = par_->GetNumberOfTowerParameters() + i; 
+	    j <  par_->GetNumberOfParameters(); 
+	    j += par_->GetNumberOfJetParametersPerBin()) {
+	  if( j < par_->GetNumberOfParameters() )
+	    par_limits.push_back(ParameterLimit(j,min,max,limits.at(0)));
+	} // End of loop over eta and phi bins
+      } // End of loop over parameters in one bin
+    }
   }
+
   // Catch wrong syntax in config file
   else if(limits.size() > 1) {
     std::cout << "wrong number of arguments for Jet Parameter Limits:" 

@@ -19,7 +19,7 @@
 //!
 //!  \author Matthias Schroeder
 //!  \date 2009/07/22
-//!  $Id: EventWeightProcessor.h,v 1.3 2010/01/29 20:53:14 mschrode Exp $
+//!  $Id: EventWeightProcessor.h,v 1.3 2010/04/13 13:47:36 mschrode Exp $
 // -----------------------------------------------------------------
 
 #ifndef EVENT_WEIGHT_PROCESSOR_H

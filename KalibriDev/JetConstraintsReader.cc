@@ -4,7 +4,7 @@
 //    This class add user defined jet constraints
 //
 //    first version: Hartmut Stadie 2008/12/12
-//    $Id: JetConstraintsReader.cc,v 1.8 2009/11/26 18:24:41 stadie Exp $
+//    $Id: JetConstraintsReader.cc,v 1.10 2010/01/28 16:07:27 stadie Exp $
 //   
 
 #include "JetConstraintsReader.h"
@@ -44,14 +44,17 @@ int JetConstraintsReader::readEvents(std::vector<Event*>& data)
     std::cout << "adding constraint for jets " << ic->mineta << " to " << ic->maxeta
 	      << " for Et=" << ic->Et << " with weight w=" << ic->weight << "\n";
     //constrain average jet response
-    int njets= (ic->maxeta - ic->mineta + 1) * 72;
-    if((ic->maxeta  > 0) && (ic->mineta < 0)) njets -= 72;
-    JetConstraintEvent* jce = new JetConstraintEvent(ic->Et,ic->weight);
+    JetConstraintEvent* jce = new JetConstraintEvent(ic->weight * 1e06);
     for(int ideta = ic->mineta ; ideta <= ic->maxeta  ; ++ideta) {
       if(ideta == 0) ideta = 1;
-      jce->addJet(new  Jet(ic->Et,0,ic->Et,0,ic->Et,0,0,0.13,Jet::uds,ic->Et,0,
-			   new CorFactors(1,1,1,1,1,1,1),par_->jet_function(ideta,1),
-			   jet_error_param,Function(&Parametrization::correctedJetEt,0,0,0,0,cp),0));
+      for(double emf = 0 ; emf <= 1.0 ; emf += 0.01) 
+	{
+	  jce->addJet(new Jet(ic->Et,emf * ic->Et,(1 - emf) * ic->Et,0,ic->Et,
+			      0,0,0.13,0.13,Jet::uds,ic->Et,0,
+			      new CorFactors(1,1,1,1,1,1,1),
+			      par_->jet_function(ideta,1),
+			      jet_error_param,Function(&Parametrization::correctedJetEt,0,0,0,0,cp),0));
+	}
     }
     data.push_back(jce);
   }

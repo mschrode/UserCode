@@ -3,6 +3,7 @@
 #include "Jet.h"
 
 #include <iostream>
+#include <string>
 
 
 int caliber(int argc, char *argv[])
@@ -10,6 +11,7 @@ int caliber(int argc, char *argv[])
   std::cout << "The University Hamburg Calorimeter Calibration Tool, 2007/08/15." << std::endl;
   
   Kalibri* Calibration;
+
   if (argc>1)
     Calibration = new Kalibri( argv[1] );
   else  

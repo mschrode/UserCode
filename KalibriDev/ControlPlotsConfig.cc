@@ -1,4 +1,4 @@
-// $Id: ControlPlotsConfig.cc,v 1.1 2010/01/04 17:04:51 mschrode Exp $
+// $Id: ControlPlotsConfig.cc,v 1.6 2010/04/01 16:29:17 stadie Exp $
 
 #include "ControlPlotsConfig.h"
 
@@ -7,6 +7,7 @@
 #include <sstream>
 
 #include "TFile.h"
+#include "TSystem.h"
 
 #include "ConfigFile.h"
 
@@ -401,6 +402,7 @@ void ControlPlotsConfig::init() {
 
   // Store directory name for output
   outDirName_ = config_->read<std::string>("plots output directory","controlPlots");
+  gSystem->MakeDirectory(outDirName_.c_str()); 
 
   // Define style for different correction types
   // This should become configurable via config file
@@ -482,6 +484,20 @@ std::string ControlPlotsConfig::varTitle(const std::string &varName) const {
   
   if( varName == "Eta" )
     title = "#eta";
+  if( varName == "JetPt" )
+    title = "p_{T}";
+  else if( varName == "momentPhiPhi" ) 
+    title = "#sigma_{#phi#phi}";
+  else if( varName == "scaledPhiPhi" ) 
+    title = "#sigma_{#phi#phi} ln(p_{T}/GeV)";
+  else if( varName == "scaledEtaEta" ) 
+    title = "#sigma_{#eta#eta} ln(p_{T}/GeV)";
+  else if( varName == "momentEtaEta" ) 
+    title = "#sigma_{#eta#eta}";
+  else if( varName == "Flavor" )
+    title = "Flavor gluon = 0, uds = 1";
+  else if ( varName == "EMF" ) 
+    title = "emf";
   else if( varName == "GenJetPt" )
     title = "p^{gen}_{T}";
   else if( varName == "GenJetResponse" )

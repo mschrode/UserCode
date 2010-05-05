@@ -1,4 +1,4 @@
-// $Id: ToyMC.cc,v 1.5 2010/02/25 15:28:19 mschrode Exp $
+// $Id: ToyMC.cc,v 1.43 2010/04/18 14:39:34 mschrode Exp $
 
 #include "ToyMC.h"
 
@@ -790,6 +790,79 @@ int ToyMC::generateDiJetTree(TTree* CalibTree, int nevents)
   float mphi = 0;
   float msum = 0;
 
+  // Dummies to please the EventReader
+  unsigned int runNumber = 0;
+  unsigned int luminosityBlockNumber = 0;
+  unsigned int eventNumber = 0;
+  bool hltPhysicsDeclared = false;
+  int vtxNTracks = 0;
+  float vtxPosX = 0.;
+  float vtxPosY = 0.;
+  float vtxPosZ = 0.;
+  float vtxNormalizedChi2 = 0.;
+  float vtxNDof = 0.;
+  bool vtxIsFake = false;
+  unsigned int numBadEcalCells[kMAX];
+  unsigned int numBadHcalCells[kMAX];
+  unsigned int numProblematicEcalCells[kMAX];
+  unsigned int numProblematicHcalCells[kMAX];
+  unsigned int numRecoveredEcalCells[kMAX];
+  unsigned int numRecoveredHcalCells[kMAX];
+  for(int i = 0; i < kMAX; ++i) {
+    numBadEcalCells[i] = 0;
+    numBadHcalCells[i] = 0;
+    numProblematicEcalCells[i] = 0;
+    numProblematicHcalCells[i] = 0;
+    numRecoveredEcalCells[i] = 0;
+    numRecoveredHcalCells[i] = 0;
+  }
+  int n90Hits[kjMAX];
+  float fHad[kjMAX];
+  float fEMF[kjMAX];
+  float fHPD[kjMAX];
+  float fRBX[kjMAX];
+  float jetEtWeightedSigmaPhi[kjMAX];
+  float jetEtWeightedSigmaEta[kjMAX];
+  float jetgenjetDeltaR[kjMAX];
+  float genpartpt_algo[kjMAX];
+  float genpartphi_algo[kjMAX];
+  float genparteta_algo[kjMAX];
+  float genpartet_algo[kjMAX];
+  float genparte_algo[kjMAX];
+  float genpartm_algo[kjMAX];
+  int   genpartid_algo[kjMAX];
+  float genpartpt_phys[kjMAX];
+  float genpartphi_phys[kjMAX];
+  float genparteta_phys[kjMAX];
+  float genpartet_phys[kjMAX];
+  float genparte_phys[kjMAX];
+  float genpartm_phys[kjMAX];
+  int   genpartid_phys[kjMAX];
+  for(int i = 0; i < kjMAX; ++i) {
+    fHad[i] = 0.;
+    fEMF[i] = 0.;
+    fHPD[i] = 0.;
+    fRBX[i] = 0.;
+    jetEtWeightedSigmaPhi[i] = 0.;
+    jetEtWeightedSigmaEta[i] = 0.;
+    jetgenjetDeltaR[i] = 0.;
+    genpartpt_algo[i] = 0.;
+    genpartphi_algo[i] = 0.;
+    genparteta_algo[i] = 0.;
+    genpartet_algo[i] = 0.;
+    genparte_algo[i] = 0.;
+    genpartm_algo[i] = 0.;
+    genpartid_algo[i] = 0;
+    genpartpt_phys[i] = 0.;
+    genpartphi_phys[i] = 0.;
+    genparteta_phys[i] = 0.;
+    genpartet_phys[i] = 0.;
+    genparte_phys[i] = 0.;
+    genpartm_phys[i] = 0.;
+    genpartid_phys[i] = 0;
+  }
+
+
   // CaloTower branches
   CalibTree->Branch("NobjTow",&NobjTow,"NobjTow/I");
   CalibTree->Branch("TowId",towid,"TowId[NobjTow]/I");
@@ -806,6 +879,13 @@ int ToyMC::generateDiJetTree(TTree* CalibTree, int nevents)
   CalibTree->Branch("TowHadTrue",towhdtrue,"TowHadTrue[NobjTow]/F");
   CalibTree->Branch("TowOETrue",towoetrue,"TowOETrue[NobjTow]/F");
   CalibTree->Branch("Tow_jetidx",tow_jetidx,"Tow_jetidx[NobjTow]/I");
+  CalibTree->Branch("TowNumBadEcalCells",numBadEcalCells,"TowNumBadEcalCells[NobjTow]/i");
+  CalibTree->Branch("TowNumBadHcalCells",numBadHcalCells,"TowNumBadHcalCells[NobjTow]/i");
+  CalibTree->Branch("TowNumProblematicEcalCells",numProblematicEcalCells,"TowNumProblematicEcalCells[NobjTow]/i");
+  CalibTree->Branch("TowNumProblematicHcalCells",numProblematicHcalCells,"TowNumProblematicHcalCells[NobjTow]/i");
+  CalibTree->Branch("TowNumRecoveredEcalCells",numRecoveredEcalCells,"TowNumRecoveredEcalCells[NobjTow]/i");
+  CalibTree->Branch("TowNumRecoveredHcalCells",numRecoveredHcalCells,"TowNumRecoveredHcalCells[NobjTow]/i");
+
 
   // track branches
   CalibTree->Branch("NobjTrack",&NobjTrack,"NobjTrack/I");
@@ -847,6 +927,14 @@ int ToyMC::generateDiJetTree(TTree* CalibTree, int nevents)
   CalibTree->Branch("GenJetE",jetgene,"GenJetE[NobjJet]/F"  );
   CalibTree->Branch("GenJetEta",jetgeneta,"GenJetEta[NobjJet]/F" );
   CalibTree->Branch("GenJetPhi",jetgenphi,"GenJetPhi[NobjJet]/F" );
+  CalibTree->Branch("JetN90Hits",n90Hits,"JetN90Hits[NobjJet]/I");
+  CalibTree->Branch("JetHad",fHad,"JetHad[NobjJet]/F");  
+  CalibTree->Branch("JetEMF",fEMF,"JetEMF[NobjJet]/F");  
+  CalibTree->Branch("JetFHPD",fHPD,"JetFHPD[NobjJet]/F");
+  CalibTree->Branch("JetFRBX",fRBX,"JetFRBX[NobjJet]/F");
+  CalibTree->Branch("JetEtWeightedSigmaPhi",jetEtWeightedSigmaPhi,"JetEtWeightedSigmaPhi[NobjJet]/F" );
+  CalibTree->Branch("JetEtWeightedSigmaEta",jetEtWeightedSigmaEta,"JetEtWeightedSigmaEta[NobjJet]/F" );
+  CalibTree->Branch("JetGenJetDeltaR",jetgenjetDeltaR,"JetGenJetDeltaR[NobjJet]/F");
 
   // Correction factors
   CalibTree->Branch( "JetCorrZSP",     jscaleZSP, "JetCorrZSP[NobjJet]/F" );
@@ -873,6 +961,41 @@ int ToyMC::generateDiJetTree(TTree* CalibTree, int nevents)
   CalibTree->Branch("Met",&mmet,"Met/F");
   CalibTree->Branch("MetPhi",&mphi,"MetPhi/F");
   CalibTree->Branch("MetSum",&msum,"MetSum/F");
+
+  // Event info
+  CalibTree->Branch("RunNumber",&runNumber,"RunNumber/i");
+  CalibTree->Branch("LumiBlockNumber",&luminosityBlockNumber,"LumiBlockNumber/i");
+  CalibTree->Branch("EventNumber",&eventNumber,"EventNumber/i");
+
+  CalibTree->Branch("HltPhysicsDelcared",&hltPhysicsDeclared,"HltPhysicsDelcared/O");
+
+  CalibTree->Branch("VtxNTracks",&vtxNTracks,"VtxNTracks/I");
+  CalibTree->Branch("VtxPosX",&vtxPosX,"VtxPosX/F");
+  CalibTree->Branch("VtxPosY",&vtxPosY,"VtxPosY/F");
+  CalibTree->Branch("VtxPosZ",&vtxPosZ,"VtxPosZ/F");
+  CalibTree->Branch("VtxNormalizedChi2",&vtxNormalizedChi2,"VtxNormalizedChi2/F");
+  CalibTree->Branch("VtxNDof",&vtxNDof,"VtxNDof/F");
+  CalibTree->Branch("VtxIsFake",&vtxIsFake,"VtxIsFake/O");
+
+  // Matched gen particles
+  // Alogrithmic matching
+  // GenPart_algo branches        );
+  CalibTree->Branch( "GenPartPt_algo", genpartpt_algo, "GenPartPt_algo[NobjJet]/F" );
+  CalibTree->Branch( "GenPartPhi_algo",genpartphi_algo,"GenPartPhi_algo[NobjJet]/F");
+  CalibTree->Branch( "GenPartEta_algo",genparteta_algo,"GenPartEta_algo[NobjJet]/F");
+  CalibTree->Branch( "GenPartEt_algo", genpartet_algo, "GenPartEt_algo[NobjJet]/F" );
+  CalibTree->Branch( "GenPartE_algo",  genparte_algo,  "GenPartE_algo[NobjJet]/F"  );
+  CalibTree->Branch( "GenPartM_algo",  genpartm_algo,  "GenPartM_algo[NobjJet]/F"  );
+  CalibTree->Branch( "GenPartId_algo", genpartid_algo, "GenPartId_algo[NobjJet]/I" );
+  // Physical matching
+  // GenPart_phys branches        );
+  CalibTree->Branch( "GenPartPt_phys", genpartpt_phys, "GenPartPt_phys[NobjJet]/F" );
+  CalibTree->Branch( "GenPartPhi_phys",genpartphi_phys,"GenPartPhi_phys[NobjJet]/F");
+  CalibTree->Branch( "GenPartEta_phys",genparteta_phys,"GenPartEta_phys[NobjJet]/F");
+  CalibTree->Branch( "GenPartEt_phys", genpartet_phys, "GenPartEt_phys[NobjJet]/F" );
+  CalibTree->Branch( "GenPartE_phys",  genparte_phys,  "GenPartE_phys[NobjJet]/F"  );
+  CalibTree->Branch( "GenPartM_phys",  genpartm_phys,  "GenPartM_phys[NobjJet]/F"  );
+  CalibTree->Branch( "GenPartId_phys", genpartid_phys, "GenPartId_phys[NobjJet]/I" );
 
 
   // Generate events
@@ -908,7 +1031,12 @@ int ToyMC::generateDiJetTree(TTree* CalibTree, int nevents)
     if( gluonRadiation_ ) {
       genjet[0].SetPtEtaPhiM(jetgenpt[1],jetgeneta[1],jetgenphi[1],0.);
       double dPhi = random_->Uniform() > 0.5 ? dPhi_ : -dPhi_;
-      double dPt = random_->Uniform()*dPt_;
+      double dPt = 0.;
+      double sig = dPt_/sqrt(genjet[0].Pt());
+      do {
+	dPt = random_->Gaus(0.,sig);
+      } while( dPt < 0. || dPt > 5.*sig ); 
+	//(random_->Uniform()*dPt_;
       splitLorentzVector(genjet[0],dPt,dPhi,genjet[2],genjet[1]);
       for(int i = 1; i < 3; i++) {
 	jetgenpt[i]  = genjet[i].Pt();
