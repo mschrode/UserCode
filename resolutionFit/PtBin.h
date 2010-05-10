@@ -41,6 +41,7 @@ namespace resolutionFit {
     TString maxPtStr() const { char str[10]; sprintf(str,"%.0f",maxPt()); return str; }
 
     TH1 *getHistPtGen(const TString &newName) const { return getHist("hPtGen",newName); }
+    TH1 *getHistPtGenJet1(const TString &newName) const { return getHist("hPtGenJet1",newName); }
     TH1 *getHistPdfPtTrue(const TString &newName) const { return getHist("hPdfPtTrue",newName); }
     TH1 *getHistResGen(const TString &newName) const { return getHist("hResGen",newName); }
     TH1 *getHistPdfRes(const TString &newName) const { return getHist("hPdfRes",newName); }
@@ -64,6 +65,7 @@ namespace resolutionFit {
     Uncertainty *uncert_;
 
     TH1* hPtGen_;
+    TH1* hPtGenJet1_;
     TH1* hPdfPtTrue_;
     TH1* hResGen_;
     TH1* hPdfRes_;

@@ -7,6 +7,7 @@
 #include "TF1.h" 
 #include "TGraph.h"
 #include "TGraphAsymmErrors.h"
+#include "TPad.h"
 #include "TPaveText.h"
 #include "TString.h"
 
@@ -183,6 +184,8 @@ namespace resolutionFit {
     TCanvas *can = new TCanvas("CanExtrapolatedResolution","Extrapolated Resolution",500,500);
     can->cd();
 
+
+    // ----- Plot relative resolution sigma / pt -----
     // Draw a frame
     double xMin = 0.8*meanPt(0);
     double xMax = 1.1*meanPt(nPtBins()-1);
@@ -215,10 +218,52 @@ namespace resolutionFit {
     // Write canvas to file
     can->SaveAs(outNamePrefix_+"ExtrapolatedResolution.eps","eps");
 
+
+    // ----- Plot relative deviation (sigma(fit)-sigma(true) ) / sigma(true)  -----
+
+    // Frame
+    for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
+      h->SetBinContent(bin,1.);
+    }
+    h->SetLineStyle(2);
+    h->SetLineColor(4);
+    h->GetYaxis()->SetTitle("#sigma_{fit} / #sigma_{MC}");
+    h->GetYaxis()->SetRangeUser(0.85,1.3);
+    h->Draw();
+
+    // Fitted resolution function
+    TH1 *hTrueRes = trueRes_->GetHistogram();
+    TH1 *hFittedRatio = fittedRes_->GetHistogram();
+    hFittedRatio->Divide(hTrueRes);
+    hFittedRatio->Draw("same");
+
+    // Draw graph with statistical uncertainties
+    TGraphAsymmErrors *gStatRatio = getTGraphOfResolution("Statistic");
+    for(int i = 0; i < gStatRatio->GetN(); ++i) {
+      double x = gStatRatio->GetX()[i];
+      double y = gStatRatio->GetY()[i];
+      double yTrue = trueRes_->Eval(x);
+      double exh = gStatRatio->GetEXhigh()[i];
+      double exl = gStatRatio->GetEXlow()[i];
+      double eyh = gStatRatio->GetEYhigh()[i];
+      double eyl = gStatRatio->GetEYlow()[i];	
+      gStatRatio->SetPoint(i,x,y/yTrue);
+      gStatRatio->SetPointError(i,exl,exh,eyl/yTrue,eyh/yTrue);
+    }
+    gStatRatio->Draw("PE1same");
+
+    // Add a legend
+    leg->Draw("same");
+
+    // Write canvas to file
+    can->SaveAs(outNamePrefix_+"ExtrapolatedResolutionRatio.eps","eps");
+
+
     // Clean up
     delete h;
     //    delete gSyst;
     delete gStat;
+    delete gStatRatio;
     delete leg;
     delete can;
   }
@@ -236,43 +281,44 @@ namespace resolutionFit {
       TCanvas *can = new TCanvas(name,name,500,500);
       can->cd();
 
-      // Draw MC truth spectrum
+      // Draw MC truth spectra
       name = "PlotPtGenPtBin";
       name += bin;
       TH1 *hPtGen = (*it)->getHistPtGen(name);
       hPtGen->UseCurrentStyle();
-      hPtGen->SetMarkerStyle(20);
       hPtGen->SetLineWidth(1);
-      hPtGen->SetXTitle("p_{T}(particleJet)  (GeV)");
+      hPtGen->SetXTitle("p_{T}  (GeV)");
       hPtGen->SetYTitle("1 / N  dN / dp_{T}  1 / (GeV)");
       hPtGen->GetYaxis()->SetRangeUser(0.,2.4*hPtGen->GetMaximum());
+      hPtGen->SetMarkerStyle(24);
       hPtGen->Draw("PE1");
+
+      name = "PlotPtGenJet1PtBin";
+      name += bin;
+      TH1 *hPtGenJet1 = (*it)->getHistPtGenJet1(name);
+      hPtGenJet1->SetMarkerStyle(20);
+      hPtGenJet1->Draw("PE1same");
 
       // Draw pdf
       name = "PlotPdfPtTrueBin";
       name += bin;
       TH1 *hPdfPtTrue = (*it)->getHistPdfPtTrue(name);
       hPdfPtTrue->Draw("Lsame");
-      hPtGen->Draw("PE1same");
+      gPad->RedrawAxis();
 
       // Labels
-      TPaveText *txt = util::LabelFactory::createPaveText(1,1.,0.06);
+      TPaveText *txt = util::LabelFactory::createPaveText(1,-0.7,0.06);
       name = (*it)->minPtStr();
-      name += " < p_{T} < ";
+      name += " < p^{recoJet}_{T} < ";
       name += (*it)->maxPtStr();
       name += " GeV";
       txt->AddText(name);
       txt->Draw("same");
 
-      TLegend *leg = util::LabelFactory::createLegend(3,1.,0.09,0.06);
-      leg->AddEntry(hPtGen,"MC truth","L");
-      leg->AddEntry(hPdfPtTrue,"Spectrum #tilde{f}(p_{T})","L");
-      char entry[100];
-      sprintf(entry,"#frac{#sigma_{MC}(p_{T})}{p_{T}} = #frac{%.3f}{#sqrt{p_{T} / GeV}} #oplus %.3f",
-	      trueRes_->GetParameter(1),trueRes_->GetParameter(2));
-      TH1 *hDummy = new TH1D("hDummy","",10,0,1);
-      hDummy->SetLineColor(0);
-      leg->AddEntry(hDummy,entry,"L");
+      TLegend *leg = util::LabelFactory::createLegend(3,-0.6,0.07,0.07);
+      leg->AddEntry(hPtGenJet1,"MC truth: p^{particleJet}_{T,1}","P");
+      leg->AddEntry(hPtGen,"MC truth: p^{particleJet}_{T,1+2}","P");
+      leg->AddEntry(hPdfPtTrue,"Spectrum  #tilde{f}(p_{T})","L");
       leg->Draw("same");
 
       // Write Canvas to fiel
@@ -284,8 +330,8 @@ namespace resolutionFit {
 
       // Clean up
       delete hPtGen;
+      delete hPtGenJet1;
       delete hPdfPtTrue;
-      delete hDummy;
       delete txt;
       delete leg;
       delete can;

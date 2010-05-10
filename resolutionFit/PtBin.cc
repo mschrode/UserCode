@@ -1,4 +1,4 @@
-// $Id: PtBin.cc,v 1.6 2010/04/01 11:00:02 mschrode Exp $
+// $Id: PtBin.cc,v 1.7 2010/05/04 19:19:48 mschrode Exp $
 
 #include "PtBin.h"
 
@@ -67,16 +67,19 @@ namespace resolutionFit {
 
     // Store spectrum and response histograms
     if( verbose_ == 2 ) std::cout << "Storing spectrum and resolution histograms... " << std::flush;
-    TString name = "hPtGen_MinPt";
+    TString name = "hPtGen_PtBin";
     name += PtBin::nPtBins;
     hPtGen_ = parserStdSel->hist("hPtGen",name);
-    name = "hPdfPtTrue_MinPt";
+    name = "hPtGen_PtBinJet1";
+    name += PtBin::nPtBins;
+    hPtGenJet1_ = parserStdSel->hist("hPtGenJet1",name);
+    name = "hPdfPtTrue_PtBin";
     name += minPt_;
     hPdfPtTrue_ = parserStdSel->hist("hTruthPDF",name);
-    name = "hResGen_MinPt";
+    name = "hResGen_PtBin";
     name += minPt_;
     hResGen_ = parserStdSel->hist("hRespMeas_0",name);
-    name = "hPdfRes_MinPt";
+    name = "hPdfRes_PtBin";
     name += minPt_;
     hPdfRes_ = parserStdSel->hist("hRespFit_0",name);
     if( verbose_ == 2 ) std::cout << "ok" << std::endl;
@@ -97,6 +100,7 @@ namespace resolutionFit {
     delete cutVar_;
     delete uncert_;
     delete hPtGen_;
+    delete hPtGenJet1_;
     delete hPdfPtTrue_;
     delete hResGen_;
     delete hPdfRes_;
@@ -106,6 +110,7 @@ namespace resolutionFit {
   TH1 *PtBin::getHist(const TString &name, const TString &newName) const {
     TH1 *h = 0;
     if( name == "hPtGen" ) h = static_cast<TH1D*>(hPtGen_->Clone(newName));
+    else if( name == "hPtGenJet1" ) h = static_cast<TH1D*>(hPtGenJet1_->Clone(newName));
     else if( name == "hPdfPtTrue" ) h = static_cast<TH1D*>(hPdfPtTrue_->Clone(newName));
     else if( name == "hResGen" ) h = static_cast<TH1D*>(hResGen_->Clone(newName));
     else if( name == "hPdfRes" ) h = static_cast<TH1D*>(hPdfRes_->Clone(newName));

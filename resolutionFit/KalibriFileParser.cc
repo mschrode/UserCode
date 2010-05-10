@@ -1,4 +1,4 @@
-// $Id: KalibriFileParser.cc,v 1.2 2010/03/22 19:45:08 mschrode Exp $
+// $Id: KalibriFileParser.cc,v 1.3 2010/05/04 19:19:48 mschrode Exp $
 
 #include "KalibriFileParser.h"
 
@@ -22,6 +22,7 @@ namespace resolutionFit {
     : verbose_(verbose) {
     // Histograms to be read from file
     hists_["hPtGen"] = 0;
+    hists_["hPtGenJet1"] = 0;
     hists_["hPtDijet"] = 0;
     hists_["hTruthPDF"] = 0;
     hists_["hRespMeas_0"] = 0;
@@ -180,6 +181,11 @@ namespace resolutionFit {
 	meanPdfPtTrue_ = it->second->GetMean();
 	meanPdfPtTrueUncert_ = it->second->GetMeanError();
       }
+    }
+
+    if( verbose_ == 2 ) {
+      std::cout << "  meanPtGen_      =  " << meanPtGen_ << std::endl;
+      std::cout << "  meanPdfPtTrue_  =  " << meanPdfPtTrue_ << std::endl;
     }
   }
 }
