@@ -18,7 +18,8 @@ namespace util {
     double margin = 0.04;
     double x0 = gStyle->GetPadLeftMargin()+margin;
     double x1 = 1.-(gStyle->GetPadRightMargin()+margin);
-    x0 = x0 + (1.-width)*(x1-x0);
+    if( width > 0. ) x0 = x0 + (1.-width)*(x1-x0);
+    else x1 = x1 - (1.+width)*(x1-x0);
     double y1 = 1.-(gStyle->GetPadTopMargin()+margin+0.02+yOffset);
     double height = lineHeight();
     if( lineHgt > 0 ) height = lineHgt;
@@ -35,7 +36,8 @@ namespace util {
     double margin = 0.04;
     double x0 = gStyle->GetPadLeftMargin()+margin;
     double x1 = 1.-(gStyle->GetPadRightMargin()+margin);
-    x0 = x0 + (1.-width)*(x1-x0);
+    if( width > 0. ) x0 = x0 + (1.-width)*(x1-x0);
+    else x1 = x1 - (1.+width)*(x1-x0);
     double y1 = 1.-(gStyle->GetPadTopMargin()+margin+0.02);
     double height = lineHeight();
     if( lineHgt > 0 ) height = lineHgt;
