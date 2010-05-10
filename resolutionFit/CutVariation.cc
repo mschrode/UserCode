@@ -1,8 +1,9 @@
-// $Id: CutVariation.cc,v 1.4 2010/03/23 20:00:06 mschrode Exp $
+// $Id: CutVariation.cc,v 1.5 2010/05/04 19:19:48 mschrode Exp $
 
 #include "CutVariation.h"
 #include "KalibriFileParser.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include "TF1.h"
@@ -33,7 +34,9 @@ namespace resolutionFit {
       }
       // Create value at cut variation i
       double relSigma = parser->value()/meanPt_;
-      Uncertainty *uncert = new Uncertainty("Statistical uncertainty",parser->statUncert()/meanPt_);
+      double statUncert = parser->statUncert()/meanPt_;
+      statUncert = sqrt( statUncert*statUncert + mcStatUncert_*mcStatUncert_ );
+      Uncertainty *uncert = new Uncertainty("Statistical uncertainty",statUncert);
       delete parser;
       varPoints_[i] = new VariationPoint(relSigma,uncert,cutValues[i]);
     }
@@ -81,7 +84,9 @@ namespace resolutionFit {
 
   TH1 *CutVariation::getFrame(const TString &name) const { 
     TH1 *hFrame = new TH1D(name,";p^{3}_{T,rel};#sigma / p_{T}",1000,0.,1.4*maxCutValue());
-    hFrame->GetYaxis()->SetRangeUser(0.8*relSigma(0),1.2*relSigma(nCutValues()-1));
+    std::vector<double> yVal(graph_->GetY(),graph_->GetY()+graph_->GetN());
+    std::sort(yVal.begin(),yVal.end());
+    hFrame->GetYaxis()->SetRangeUser(0.8*yVal.front(),1.2*yVal.back());
     return hFrame;
   }
 
@@ -94,10 +99,7 @@ namespace resolutionFit {
       graph_->Fit(fit_,"0Q");
       // Replace extrapolated value with fit results
       delete extrapolatedPoint_;
-      double statUncert = fit_->GetParError(0);
-      // Add uncertainty from MC statistics
-      statUncert = sqrt( statUncert*statUncert + mcStatUncert_*mcStatUncert_ );
-      Uncertainty *uncert = new Uncertainty("Extrapolation",statUncert);
+      Uncertainty *uncert = new Uncertainty("Extrapolation",fit_->GetParError(0));
       extrapolatedPoint_ = new VariationPoint(fit_->GetParameter(0),uncert,0.);
     } else {
       std::cerr << "  WARNING: Less than 2 cut variations" << std::endl;
