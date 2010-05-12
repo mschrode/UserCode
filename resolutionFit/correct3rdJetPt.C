@@ -1,4 +1,4 @@
-// $Id: correct3rdJetPt.C,v 1.3 2010/03/30 16:17:29 mschrode Exp $
+// $Id: correct3rdJetPt.C,v 1.4 2010/04/01 10:58:59 mschrode Exp $
 
 #include <cmath>
 #include <iomanip>
@@ -11,6 +11,7 @@
 #include "TH1D.h"
 #include "TH1I.h"
 #include "TLegend.h"
+#include "TPaveText.h"
 #include "TRandom3.h"
 #include "TROOT.h"
 #include "TString.h"
@@ -305,7 +306,10 @@ namespace correct3rdJetPt {
     can2->cd();
     hSigmaMC->Draw("PE1");
     fSigmaMC->Draw("same");
-    TLegend *leg = util::LabelFactory::createLegend(nPt3Bins+1,0.5,0.07);
+    TPaveText *label = util::LabelFactory::createPaveText(1,0.8,0.07);
+    label->AddText("Toy MC study");
+    label->Draw("same");
+    TLegend *leg = util::LabelFactory::createLegend(nPt3Bins+1,0.5,0.07,0.07);
     leg->AddEntry(hSigmaMC,"MC truth","L");
     for(int pt3bin = 0; pt3bin < nPt3Bins; ++pt3bin) {
       hSigmaMeanT[pt3bin]->Draw("PE1same");
@@ -407,7 +411,7 @@ namespace correct3rdJetPt {
     // Fitting mean resolution
     for(int ptIdx = 0; ptIdx < nPtBins; ++ptIdx) {
       for(int pt3Idx = 0; pt3Idx < nPt3Bins; ++pt3Idx) {
-	hReso[ptIdx][pt3Idx]->Fit("gaus","0QIL");
+	hReso[ptIdx][pt3Idx]->Fit("gaus","0QI");
 	TF1 *fit = hReso[ptIdx][pt3Idx]->GetFunction("gaus");
 	hXtrapol[ptIdx]->SetBinContent(1+pt3Idx,fit->GetParameter(2));
 	hXtrapol[ptIdx]->SetBinError(1+pt3Idx,fit->GetParError(2));
