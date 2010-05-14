@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.6 2010/05/04 19:20:08 mschrode Exp $
+// $Id: run.cc,v 1.7 2010/05/10 10:21:38 mschrode Exp $
 
 #include <cassert>
 #include <iostream>
@@ -13,7 +13,7 @@
 int main(int argc, char *argv[]) {
 
   if( argc > 1 ) {
-    TString outNamePrefix;
+    TString outNamePrefix = "ResFit_Spring10QCDFlat_Gauss_";
     TString baseNameStdSel;
     TString baseMCStat;
     std::vector<TString> baseCutVars;
@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
       ptBinEdges.clear();
       trueResPar.clear();
 
-      outNamePrefix = "ResFit_QCD_Gauss_Eta0_";
+      outNamePrefix += "Eta0_";
       baseNameStdSel = "~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta0_";
       baseMCStat = "~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta0_Flat_";
  
@@ -63,12 +63,15 @@ int main(int argc, char *argv[]) {
       ptBinEdges.push_back(200.);
       ptBinEdges.push_back(250.);
       ptBinEdges.push_back(300.);
+      ptBinEdges.push_back(350.);
       ptBinEdges.push_back(400.);
+      ptBinEdges.push_back(500.);
       ptBinEdges.push_back(600.);
+      ptBinEdges.push_back(800.);
       ptBinEdges.push_back(1000.);
 
       start = 0; 
-      end  = 9;
+      end  = 12;
 
       trueResPar.push_back(1.88);
       trueResPar.push_back(1.205);
@@ -84,7 +87,7 @@ int main(int argc, char *argv[]) {
       ptBinEdges.clear();
       trueResPar.clear();
 
-      outNamePrefix = "ResFit_QCD_Gauss_Eta1_";
+      outNamePrefix += "Eta1_";
       baseNameStdSel = "~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta1_";
       baseMCStat = "~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta1_Flat_";
  
@@ -118,6 +121,44 @@ int main(int argc, char *argv[]) {
       trueResPar.push_back(2.51);
       trueResPar.push_back(0.968);
       trueResPar.push_back(0.0483);
+
+    } else if( atoi(argv[1]) == 2 ) {
+
+      baseCutVars.clear();
+      ptCuts.clear();
+      baseSystUp.clear();
+      baseSystDown.clear();
+      labelSyst.clear();
+      ptBinEdges.clear();
+      trueResPar.clear();
+
+      outNamePrefix += "Eta2_";
+      baseNameStdSel = "~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta2_";
+      baseMCStat = "~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta2_Flat_";
+ 
+      baseCutVars.push_back("~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta2_Rel3rdJet008_");
+      baseCutVars.push_back("~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta2_");
+      baseCutVars.push_back("~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta2_Rel3rdJet012_");
+      baseCutVars.push_back("~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta2_Rel3rdJet015_");
+      baseCutVars.push_back("~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta2_Rel3rdJet020_");
+
+      ptCuts.push_back(0.08);
+      ptCuts.push_back(0.1);
+      ptCuts.push_back(0.12);
+      ptCuts.push_back(0.15);
+      ptCuts.push_back(0.20);
+
+      //ptBinEdges.push_back(60.);
+      ptBinEdges.push_back(80.);
+      ptBinEdges.push_back(100.);
+      ptBinEdges.push_back(150.);
+
+      start = 1; 
+      end  = 2;
+
+      trueResPar.push_back(1.68);
+      trueResPar.push_back(0.757);
+      trueResPar.push_back(0.0348);
 
     } else {
       std::cerr << "ERROR: '" << argv[1] << "' is not a valid argument.\n";
@@ -168,6 +209,7 @@ int main(int argc, char *argv[]) {
     // Plot extrapolated resolution
     fit->plotResolution();
     fit->plotResolutionBins();
+    fit->plotPtAsymmetryBins();
     fit->plotSpectra();
     fit->plotSystematicUncertainties();
     
