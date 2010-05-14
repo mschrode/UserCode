@@ -1,4 +1,4 @@
-// $Id: CutVariation.cc,v 1.5 2010/05/04 19:19:48 mschrode Exp $
+// $Id: CutVariation.cc,v 1.6 2010/05/10 10:23:03 mschrode Exp $
 
 #include "CutVariation.h"
 #include "KalibriFileParser.h"
@@ -83,10 +83,9 @@ namespace resolutionFit {
   }
 
   TH1 *CutVariation::getFrame(const TString &name) const { 
-    TH1 *hFrame = new TH1D(name,";p^{3}_{T,rel};#sigma / p_{T}",1000,0.,1.4*maxCutValue());
-    std::vector<double> yVal(graph_->GetY(),graph_->GetY()+graph_->GetN());
-    std::sort(yVal.begin(),yVal.end());
-    hFrame->GetYaxis()->SetRangeUser(0.8*yVal.front(),1.2*yVal.back());
+    TH1 *hFrame = new TH1D(name,";p^{3}_{T,rel} cut;#sigma / p_{T}",1000,0.,1.4*maxCutValue());
+    double max = *(std::max_element(graph_->GetY(),graph_->GetY()+graph_->GetN()));
+    hFrame->GetYaxis()->SetRangeUser(0.8*max,1.2*max);
     return hFrame;
   }
 
