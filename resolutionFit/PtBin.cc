@@ -1,4 +1,4 @@
-// $Id: PtBin.cc,v 1.7 2010/05/04 19:19:48 mschrode Exp $
+// $Id: PtBin.cc,v 1.8 2010/05/10 10:24:22 mschrode Exp $
 
 #include "PtBin.h"
 
@@ -82,6 +82,13 @@ namespace resolutionFit {
     name = "hPdfRes_PtBin";
     name += minPt_;
     hPdfRes_ = parserStdSel->hist("hRespFit_0",name);
+    name = "hPtAsym_PtBin";
+    name += minPt_;
+    hPtAsym_ = parserStdSel->hist("hPtAsym_0",name);
+    name = "hPdfPtAsym_PtBin";
+    name += minPt_;
+    hPdfPtAsym_ = parserStdSel->hist("hFitPtAsym_0",name);
+
     if( verbose_ == 2 ) std::cout << "ok" << std::endl;
 
     delete parserStdSel;
@@ -104,6 +111,8 @@ namespace resolutionFit {
     delete hPdfPtTrue_;
     delete hResGen_;
     delete hPdfRes_;
+    delete hPtAsym_;
+    delete hPdfPtAsym_;
   }
 
   
@@ -114,6 +123,8 @@ namespace resolutionFit {
     else if( name == "hPdfPtTrue" ) h = static_cast<TH1D*>(hPdfPtTrue_->Clone(newName));
     else if( name == "hResGen" ) h = static_cast<TH1D*>(hResGen_->Clone(newName));
     else if( name == "hPdfRes" ) h = static_cast<TH1D*>(hPdfRes_->Clone(newName));
+    else if( name == "hPtAsym" ) h = static_cast<TH1D*>(hPtAsym_->Clone(newName));
+    else if( name == "hPdfPtAsym" ) h = static_cast<TH1D*>(hPdfPtAsym_->Clone(newName));
     else {
       std::cerr << "ERROR PtBin::getHist: No histogram of name '" << name << "'" << std::endl;
       exit(-1);

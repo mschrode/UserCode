@@ -45,6 +45,8 @@ namespace resolutionFit {
     TH1 *getHistPdfPtTrue(const TString &newName) const { return getHist("hPdfPtTrue",newName); }
     TH1 *getHistResGen(const TString &newName) const { return getHist("hResGen",newName); }
     TH1 *getHistPdfRes(const TString &newName) const { return getHist("hPdfRes",newName); }
+    TH1 *getHistPtAsym(const TString &newName) const { return getHist("hPtAsym",newName); }
+    TH1 *getHistPdfPtAsym(const TString &newName) const { return getHist("hPdfPtAsym",newName); }
 
     TF1 *getTF1OfVariation(const TString &name) const { return cutVar_->getTF1(name); }
     TGraphAsymmErrors *getTGraphOfVariation() const { return cutVar_->getTGraph(); }
@@ -69,6 +71,8 @@ namespace resolutionFit {
     TH1* hPdfPtTrue_;
     TH1* hResGen_;
     TH1* hPdfRes_;
+    TH1* hPtAsym_;
+    TH1* hPdfPtAsym_;
 
     TH1 *getHist(const TString &name, const TString &newName) const;
   };
