@@ -1,5 +1,6 @@
 #include "FittedResolution.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include "TCanvas.h"
@@ -40,9 +41,10 @@ namespace resolutionFit {
     // total uncertainty
     TGraphAsymmErrors *gStat = getTGraphOfResolution("Statistic");
     fittedRes_ = new TF1("FittedResolution::fittedRes_",
-			 "sqrt([0]*[0]/x + [1]*[1])",//"sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2])",
+			 //"sqrt([0]*[0]/x + [1]*[1])",
+			 "sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2])",
 			 xMin,xMax);
-    //fittedRes_->SetParameter(0,0.);
+    fittedRes_->SetParameter(0,2.);
     fittedRes_->SetParameter(0,1.);
     fittedRes_->SetParameter(0,0.03);
     fittedRes_->SetLineColor(2);
@@ -80,7 +82,6 @@ namespace resolutionFit {
       name = "FrameExtrapolationPtBin";
       name += bin;
       TH1 *h = (*it)->getFrameOfVariation(name);
-      h->SetXTitle("p^{3}_{T,rel} - Schnitt");
       h->Draw();
 
       // Draw graph and extrapolation
@@ -95,7 +96,7 @@ namespace resolutionFit {
       // Draw label
       TPaveText *txt = util::LabelFactory::createPaveText(1,1.,0.06);
       name = (*it)->minPtStr();
-      name += " < p_{T} < ";
+      name += " < p^{recoJet}_{T} < ";
       name += (*it)->maxPtStr();
       name += " GeV";
       txt->AddText(name);
@@ -135,9 +136,10 @@ namespace resolutionFit {
       name += bin;
       TH1 *hResGen = (*it)->getHistResGen(name);
       hResGen->UseCurrentStyle();
+      hResGen->SetMarkerStyle(20);
       hResGen->GetXaxis()->SetRangeUser(0.4,1.6);
       hResGen->GetYaxis()->SetRangeUser(0.,1.8*hResGen->GetMaximum());
-      hResGen->Draw();
+      hResGen->Draw("PE1");
 
       // Draw pdf
       name = "PlotPdfResolutionBin";
@@ -149,18 +151,20 @@ namespace resolutionFit {
       // Labels
       TPaveText *txt = util::LabelFactory::createPaveText(1,0.9);
       name = (*it)->minPtStr();
-      name += " < p_{T} < ";
+      name += " < p^{recoJet}_{T} < ";
       name += (*it)->maxPtStr();
       name += " GeV";
       txt->AddText(name);
       txt->Draw("same");
 
-      TLegend *leg = util::LabelFactory::createLegend(2,0.9,util::LabelFactory::lineHeight(),util::LabelFactory::lineHeight());
-      leg->AddEntry(hResGen,"MC truth","L");
+      TLegend *leg = util::LabelFactory::createLegend(2,1.,util::LabelFactory::lineHeight(),util::LabelFactory::lineHeight());
+      leg->AddEntry(hResGen,"MC truth","P");
       char entry[100];
-      sprintf(entry,"Fit #sigma/p_{T}, p_{T} = %.1f GeV",(*it)->meanPt());
+      sprintf(entry,"Fitted #sigma/p^{true}_{T}, p^{true}_{T} = %.1f GeV",(*it)->meanPt());
       leg->AddEntry(hPdfRes,entry,"L");
       leg->Draw("same");
+
+      gPad->RedrawAxis();
 
       // Write Canvas to fiel
       name = outNamePrefix_;
@@ -172,6 +176,70 @@ namespace resolutionFit {
       // Clean up
       delete hResGen;
       delete hPdfRes;
+      delete txt;
+      delete leg;
+      delete can;
+    }
+  }
+
+
+  void FittedResolution::plotPtAsymmetryBins() const {
+    // Loop over ptbins
+    for(std::vector<PtBin*>::const_iterator it = ptBins_.begin();
+	it != ptBins_.end(); it++) {
+      int bin = (it-ptBins_.begin());
+
+      // Create Canvas
+      TString name = "PlotPtAsymmetryPtBin";
+      name += bin;
+      TCanvas *can = new TCanvas(name,name,500,500);
+      can->cd();
+
+      // Draw MC truth resolution
+      name = "PlotPtAsymmetryBin";
+      name += bin;
+      TH1 *hPtAsym = (*it)->getHistPtAsym(name);
+      hPtAsym->UseCurrentStyle();
+      hPtAsym->SetMarkerStyle(20);
+      hPtAsym->GetXaxis()->SetRangeUser(0.4,1.6);
+      hPtAsym->GetYaxis()->SetRangeUser(0.,1.8*hPtAsym->GetMaximum());
+      hPtAsym->GetYaxis()->SetTitle("1 / N  dN / dA");
+      hPtAsym->Draw("PE1");
+
+      // Draw pdf
+      name = "PlotPdfPtAsymmetryBin";
+      name += bin;
+      TH1 *hPdfPtAsym = (*it)->getHistPdfPtAsym(name);
+      hPdfPtAsym->Draw("Lsame");
+
+      // Labels
+      TPaveText *txt = util::LabelFactory::createPaveText(1,0.9);
+      name = (*it)->minPtStr();
+      name += " < p^{recoJet}_{T} < ";
+      name += (*it)->maxPtStr();
+      name += " GeV";
+      txt->AddText(name);
+      txt->Draw("same");
+
+      TLegend *leg = util::LabelFactory::createLegend(2,1.,util::LabelFactory::lineHeight(),util::LabelFactory::lineHeight());
+      leg->AddEntry(hPtAsym,"MC truth","P");
+      char entry[100];
+      sprintf(entry,"Fitted  #sqrt{2}#sigma/p^{true}_{T}, p^{true}_{T} = %.1f GeV",(*it)->meanPt());
+      leg->AddEntry(hPdfPtAsym,entry,"L");
+      leg->Draw("same");
+
+      gPad->RedrawAxis();
+
+      // Write Canvas to fiel
+      name = outNamePrefix_;
+      name += "PtAsymmetry_PtBin";
+      name += bin;
+      name += ".eps";
+      can->SaveAs(name,"eps");
+
+      // Clean up
+      delete hPtAsym;
+      delete hPdfPtAsym;
       delete txt;
       delete leg;
       delete can;
@@ -191,7 +259,7 @@ namespace resolutionFit {
     double xMax = 1.1*meanPt(nPtBins()-1);
     TH1 *h = new TH1D("FrameExtrapolatedResolution",";p_{T} (GeV);#sigma / p_{T}",
 		       1000,xMin,xMax);
-    h->GetYaxis()->SetRangeUser(0.7*relSigma(nPtBins()-1),0.185);
+    h->GetYaxis()->SetRangeUser(0.7*relSigma(nPtBins()-1),1.2*relSigma(0));
     h->Draw();
 
 //     // Draw systematic uncertainty band
@@ -200,42 +268,33 @@ namespace resolutionFit {
 
     // Draw true and fitted resolution functions
     trueRes_->Draw("same");
-    fittedRes_->Draw("same");
+    //fittedRes_->Draw("same");
 
     // Draw graph with statistical uncertainties
     TGraphAsymmErrors *gStat = getTGraphOfResolution("Statistic");
     gStat->Draw("PE1same");
 
     // Add a legend
-    TLegend *leg = util::LabelFactory::createLegend(4);
+    TLegend *leg = util::LabelFactory::createLegend(2);
     leg->AddEntry(gStat,"Extrapolated #bar{#sigma} (p^{3}_{T,rel} #rightarrow 0)","P");
-    leg->AddEntry(gStat,"Statistical uncertainty","L");
+    //leg->AddEntry(gStat,"Statistical uncertainty","L");
     //leg->AddEntry(gSyst,"Uncertainty from spectrum","F");
-    leg->AddEntry(trueRes_,"MC truth","L");
-    leg->AddEntry(fittedRes_,"Fit #sigma(p_{T}) to #bar{#sigma}","L");
+    leg->AddEntry(trueRes_,"MC truth resolution","L");
+    //    leg->AddEntry(fittedRes_,"Fit #sigma(p_{T}) to #bar{#sigma}","L");
     leg->Draw("same");
 
     // Write canvas to file
+    gPad->RedrawAxis();
     can->SaveAs(outNamePrefix_+"ExtrapolatedResolution.eps","eps");
 
 
     // ----- Plot relative deviation (sigma(fit)-sigma(true) ) / sigma(true)  -----
 
-    // Frame
-    for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
-      h->SetBinContent(bin,1.);
-    }
-    h->SetLineStyle(2);
-    h->SetLineColor(4);
-    h->GetYaxis()->SetTitle("#sigma_{fit} / #sigma_{MC}");
-    h->GetYaxis()->SetRangeUser(0.85,1.3);
-    h->Draw();
-
     // Fitted resolution function
     TH1 *hTrueRes = trueRes_->GetHistogram();
     TH1 *hFittedRatio = fittedRes_->GetHistogram();
     hFittedRatio->Divide(hTrueRes);
-    hFittedRatio->Draw("same");
+    //hFittedRatio->Draw("Lsame");
 
     // Draw graph with statistical uncertainties
     TGraphAsymmErrors *gStatRatio = getTGraphOfResolution("Statistic");
@@ -250,12 +309,27 @@ namespace resolutionFit {
       gStatRatio->SetPoint(i,x,y/yTrue);
       gStatRatio->SetPointError(i,exl,exh,eyl/yTrue,eyh/yTrue);
     }
+
+    // Frame
+    for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
+      h->SetBinContent(bin,1.);
+    }
+    h->SetLineStyle(2);
+    h->SetLineColor(4);
+    h->GetYaxis()->SetTitle("#sigma_{fit} / #sigma_{MC}");
+    h->GetYaxis()->SetRangeUser(0.65,1.75);
+    
+    double maxRatio = *(std::max_element(gStatRatio->GetY(),gStatRatio->GetY()+gStat->GetN()));
+    if( maxRatio > 1.45 ) h->GetYaxis()->SetRangeUser(0.65,1.25*maxRatio);
+    h->Draw();
+
     gStatRatio->Draw("PE1same");
 
     // Add a legend
     leg->Draw("same");
 
     // Write canvas to file
+    gPad->RedrawAxis();
     can->SaveAs(outNamePrefix_+"ExtrapolatedResolutionRatio.eps","eps");
 
 
@@ -287,17 +361,22 @@ namespace resolutionFit {
       TH1 *hPtGen = (*it)->getHistPtGen(name);
       hPtGen->UseCurrentStyle();
       hPtGen->SetLineWidth(1);
-      hPtGen->SetXTitle("p_{T}  (GeV)");
-      hPtGen->SetYTitle("1 / N  dN / dp_{T}  1 / (GeV)");
+      hPtGen->SetXTitle("p^{gen}_{T}  (GeV)");
+      hPtGen->SetYTitle("1 / N  dN / dp^{gen}_{T}  1 / (GeV)");
       hPtGen->GetYaxis()->SetRangeUser(0.,2.4*hPtGen->GetMaximum());
       hPtGen->SetMarkerStyle(24);
-      hPtGen->Draw("PE1");
+      //hPtGen->Draw("PE1");
 
       name = "PlotPtGenJet1PtBin";
       name += bin;
       TH1 *hPtGenJet1 = (*it)->getHistPtGenJet1(name);
+      hPtGenJet1->UseCurrentStyle();
+      hPtGenJet1->SetLineWidth(1);
+      hPtGenJet1->SetXTitle("p^{gen}_{T,1}  (GeV)");
+      hPtGenJet1->SetYTitle("1 / N  dN / dp^{gen}_{T,1}  1 / (GeV)");
+      hPtGenJet1->GetYaxis()->SetRangeUser(0.,2.*hPtGenJet1->GetMaximum());
       hPtGenJet1->SetMarkerStyle(20);
-      hPtGenJet1->Draw("PE1same");
+      hPtGenJet1->Draw("PE1");
 
       // Draw pdf
       name = "PlotPdfPtTrueBin";
@@ -315,10 +394,10 @@ namespace resolutionFit {
       txt->AddText(name);
       txt->Draw("same");
 
-      TLegend *leg = util::LabelFactory::createLegend(3,-0.6,0.07,0.07);
-      leg->AddEntry(hPtGenJet1,"MC truth: p^{particleJet}_{T,1}","P");
-      leg->AddEntry(hPtGen,"MC truth: p^{particleJet}_{T,1+2}","P");
-      leg->AddEntry(hPdfPtTrue,"Spectrum  #tilde{f}(p_{T})","L");
+      TLegend *leg = util::LabelFactory::createLegend(2,-0.6,0.07,0.07);
+      leg->AddEntry(hPtGenJet1,"MC truth: p^{gen}_{T,1}","P");
+      //leg->AddEntry(hPtGen,"MC truth: p^{particleJet}_{T,1+2}","P");
+      leg->AddEntry(hPdfPtTrue,"Spectrum  f(p_{T})","L");
       leg->Draw("same");
 
       // Write Canvas to fiel
@@ -412,6 +491,7 @@ namespace resolutionFit {
     for(size_t bin = 0; bin < nPtBins(); bin++) {
       std::cout << bin << ": " << meanPt(bin) << std::flush;
       std::cout << " (" << minPt(bin) << " - " << maxPt(bin) << "): " << std::flush;
+      std::cout << relSigma(bin)*meanPt(bin) << ", " << std::flush;
       std::cout << relSigma(bin) << " (" << uncertStat(bin) << std::flush;
       std::cout << ", +" << uncertSystUp(bin) << ", -" << uncertSystDown(bin) << std::flush;
       std::cout << "),  " << fittedRes_->Eval(meanPt(bin)) << std::flush;
