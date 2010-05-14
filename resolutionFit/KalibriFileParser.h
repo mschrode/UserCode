@@ -1,4 +1,4 @@
-// $Id: KalibriFileParser.h,v 1.2 2010/03/22 19:45:08 mschrode Exp $
+// $Id: KalibriFileParser.h,v 1.3 2010/05/04 19:19:48 mschrode Exp $
 
 #ifndef KALIBRI_FILE_PARSER_H
 #define KALIBRI_FILE_PARSER_H
@@ -36,7 +36,7 @@ namespace resolutionFit {
   //!
   //! \author Matthias Schroeder
   //! \date 2009/03/05
-  //! $Id: KalibriFileParser.h,v 1.2 2010/03/22 19:45:08 mschrode Exp $
+  //! $Id: KalibriFileParser.h,v 1.3 2010/05/04 19:19:48 mschrode Exp $
   // --------------------------------------------
   class KalibriFileParser {
   public:
@@ -54,7 +54,7 @@ namespace resolutionFit {
     //! Returns pt mean value to be used
     double meanPt() const { return meanPdfPtTrue(); }
     //! Returns uncertainty on pt mean value to be used
-    double meanPtUncert() const { return 0.; }//meanPdfPtTrueUncert(); }
+    double meanPtUncert() const { return 0.; }
     //! Returns mean value of the ptGen distribution
     double meanPtGen() const { return meanPtGen_; }
     //! Returns uncertainty on mean value of the ptGen distribution
@@ -67,7 +67,7 @@ namespace resolutionFit {
     double meanPdfPtTrue() const { return meanPdfPtTrue_; }
     //! Returns uncertainty on mean value of the ptTrue pdf assumed in the fit
     double meanPdfPtTrueUncert() const { return meanPdfPtTrueUncert_; }
-    //! Returns the specified histogram filled by \p ControlPlotsJetSmearing
+    //! Returns the specified histogram filled by \p ControlPlotsJetSmearingc
     TH1 *hist(const TString &name, const TString &newName) const;
 
   private:
@@ -90,6 +90,7 @@ namespace resolutionFit {
     int parse(const TString &fileName);
     //! Set the mean values (attributes) from the corresponding distributions
     void setMeanPt();
+    double standardDeviation(const TH1 *h) const;
   };
 }
 #endif

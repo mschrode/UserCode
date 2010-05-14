@@ -1,7 +1,8 @@
-// $Id: KalibriFileParser.cc,v 1.3 2010/05/04 19:19:48 mschrode Exp $
+// $Id: KalibriFileParser.cc,v 1.4 2010/05/10 10:24:22 mschrode Exp $
 
 #include "KalibriFileParser.h"
 
+#include <cmath>
 #include <iostream>
 
 #include "TFile.h"
@@ -27,6 +28,8 @@ namespace resolutionFit {
     hists_["hTruthPDF"] = 0;
     hists_["hRespMeas_0"] = 0;
     hists_["hRespFit_0"] = 0;
+    hists_["hPtAsym_0"] = 0;
+    hists_["hFitPtAsym_0"] = 0;
 
     // Parse file
     if( parse(fileName) ) exit(-1);
@@ -179,7 +182,7 @@ namespace resolutionFit {
 	meanPtDijetUncert_ = it->second->GetMeanError();
       } else if( it->first == "hTruthPDF" ) {
 	meanPdfPtTrue_ = it->second->GetMean();
-	meanPdfPtTrueUncert_ = it->second->GetMeanError();
+	meanPdfPtTrueUncert_ = standardDeviation(it->second);
       }
     }
 
@@ -187,5 +190,28 @@ namespace resolutionFit {
       std::cout << "  meanPtGen_      =  " << meanPtGen_ << std::endl;
       std::cout << "  meanPdfPtTrue_  =  " << meanPdfPtTrue_ << std::endl;
     }
+  }
+
+
+  
+  double KalibriFileParser::standardDeviation(const TH1 *h) const {
+    double sigma = 0.;
+    double integral = h->Integral("width");
+    if( integral ) {
+      double meanX = 0.;
+      double meanX2 = 0.;
+      for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
+	double x = h->GetBinCenter(bin);
+	meanX += x*h->GetBinContent(bin);
+	meanX2 += x*x*h->GetBinContent(bin);
+      }
+      meanX *= h->GetBinWidth(1);
+      meanX2 *= h->GetBinWidth(1);
+      meanX /= integral;
+      meanX2 /= integral;
+
+      sigma = sqrt(meanX2 - meanX*meanX);
+    }
+    return sigma;
   }
 }
