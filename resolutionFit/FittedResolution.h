@@ -6,6 +6,7 @@
 
 #include "TString.h"
 
+#include "Parameters.h"
 #include "PtBin.h"
 
 class TF1;
@@ -14,14 +15,14 @@ class TGraphAsymmErrors;
 namespace resolutionFit {
   class FittedResolution {
   public:
-    FittedResolution(const std::vector<PtBin*> &ptBins, const std::vector<double> &trueResPar, const TString &outNamePrefix = "");
+    FittedResolution(const std::vector<PtBin*> &ptBins, const Parameters *par);
     ~FittedResolution();
 
     int nPtBins() const { return static_cast<int>(ptBins_.size()); }
-    double minPt() const { return ptBins_.front()->minPt(); }
-    double maxPt() const { return ptBins_.back()->maxPt(); }
-    double minPt(int i) const { assert( i>=0 && i < nPtBins() ); return ptBins_[i]->minPt(); }
-    double maxPt(int i) const { assert( i>=0 && i < nPtBins() ); return ptBins_[i]->maxPt(); }
+    double ptMin() const { return ptBins_.front()->ptMin(); }
+    double ptMax() const { return ptBins_.back()->ptMax(); }
+    double ptMin(int i) const { return par_->ptMin(i); }
+    double ptMax(int i) const { return par_->ptMax(i); }
     double meanPt(int i) const { assert( i>=0 && i < nPtBins() ); return ptBins_[i]->meanPt(); }
     double relSigma(int i) const { assert( i>=0 && i < nPtBins() ); return ptBins_[i]->relSigma(); }
     double uncertStat(int i) const { assert( i>=0 && i < nPtBins() ); return ptBins_[i]->uncertStatDown(); }
@@ -39,10 +40,9 @@ namespace resolutionFit {
     void print() const;
 
   private:
-    const bool verbose_;
-    const TString outNamePrefix_;
+    const Parameters *par_;
+    const std::vector<PtBin*> ptBins_;
 
-    std::vector<PtBin*> ptBins_;
     TF1 *trueRes_;
     TF1 *fittedRes_;
 

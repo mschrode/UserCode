@@ -1,4 +1,4 @@
-// $Id: CutVariation.cc,v 1.6 2010/05/10 10:23:03 mschrode Exp $
+// $Id: CutVariation.cc,v 1.7 2010/05/14 09:02:10 mschrode Exp $
 
 #include "CutVariation.h"
 #include "KalibriFileParser.h"
@@ -12,21 +12,19 @@
 #include "TH1D.h"
 
 namespace resolutionFit {
-  int CutVariation::nObjs = 0;
-
-  CutVariation::CutVariation(const std::vector<TString> &fileNames, const std::vector<double> &cutValues, const TString &fileNameMCStatUncert, int verbose)
-    : verbose_(verbose) {
+  CutVariation::CutVariation(const Parameters::PtBinParameters *par)
+    : par_(par) {
     // Read uncertainty from MC statistics
     mcStatUncert_ = 0.;
-    if( fileNameMCStatUncert != "" ) {
-      KalibriFileParser *parser = new KalibriFileParser(fileNameMCStatUncert,verbose_);
+    if( par_->hasMCStatUncert() ) {
+      KalibriFileParser *parser = new KalibriFileParser(par_->fileNameMCStatUncert(),par_->verbosity());
       mcStatUncert_ = parser->statUncert();
       delete parser;
     }
     // Read values from file
-    varPoints_ = std::vector<VariationPoint*>(fileNames.size());
+    varPoints_ = std::vector<VariationPoint*>(nCutValues());
     for(int i = 0; i < nCutValues(); i++) {
-      KalibriFileParser *parser = new KalibriFileParser(fileNames[i],verbose_);
+      KalibriFileParser *parser = new KalibriFileParser(par_->fileNamePt3CutVariations(i),par_->verbosity());
       // Mean pt for all varied cuts (set only once)
       if( i == 0 ) {
 	meanPt_ = parser->meanPt();
@@ -38,7 +36,7 @@ namespace resolutionFit {
       statUncert = sqrt( statUncert*statUncert + mcStatUncert_*mcStatUncert_ );
       Uncertainty *uncert = new Uncertainty("Statistical uncertainty",statUncert);
       delete parser;
-      varPoints_[i] = new VariationPoint(relSigma,uncert,cutValues[i]);
+      varPoints_[i] = new VariationPoint(relSigma,uncert,cutValue(i));
     }
     // Create graph of varied values
     createTGraph();
@@ -46,14 +44,11 @@ namespace resolutionFit {
     extrapolatedPoint_ = new VariationPoint();
     // Initialize fit function
     TString name = "resolutionFit::CutVariationFit";
-    name += CutVariation::nObjs;
+    name += par_->idx();
     fit_ = new TF1(name,"pol1",cutValue(0),cutValue(nCutValues()-1));
     fit_->SetParameter(0,0.);
     fit_->SetParameter(1,0.);
     fit_->SetLineColor(2);
-
-    // Update number of created CutVariation objects
-    CutVariation::nObjs++;
   }
 
 
@@ -90,7 +85,7 @@ namespace resolutionFit {
   }
 
   void CutVariation::extrapolate() {
-    if( verbose_ == 1 ) {
+    if( par_->verbosity() == 1 ) {
       std::cout << "CutVariation: Fitting extrapolation" << std::endl;
     }
     if( nCutValues() >= 2 ) {
@@ -107,7 +102,7 @@ namespace resolutionFit {
 
 
   void CutVariation::createTGraph() {
-    if( verbose_ == 2 ) {
+    if( par_->verbosity() == 2 ) {
       std::cout << "CutVariation: Creating graph of varied values" << std::endl;
     }
     std::vector<double> x(nCutValues());

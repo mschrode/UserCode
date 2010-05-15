@@ -17,13 +17,8 @@
 
 
 namespace resolutionFit {
-  FittedResolution::FittedResolution(const std::vector<PtBin*> &ptBins, const std::vector<double> &trueResPar, const TString &outNamePrefix)
-    : verbose_(true), outNamePrefix_(outNamePrefix) {
-    // Set ptbins
-    ptBins_ = ptBins;
-
-    // Create true resolution function
-    assert( trueResPar.size() >= 3 );
+  FittedResolution::FittedResolution(const std::vector<PtBin*> &ptBins, const Parameters *par) 
+    : par_(par), ptBins_(ptBins) {
 
     double xMin = 0.8*meanPt(0);
     double xMax = 1.1*meanPt(nPtBins()-1);
@@ -32,7 +27,7 @@ namespace resolutionFit {
 		       "sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2])",
 		       xMin,xMax);
     for(int i = 0; i < 3; i++) {
-      trueRes_->SetParameter(i,trueResPar[i]);
+      trueRes_->SetParameter(i,par_->trueGaussResPar(i));
     }
     trueRes_->SetLineColor(4);
     trueRes_->SetLineStyle(2);
@@ -57,10 +52,6 @@ namespace resolutionFit {
 
 
   FittedResolution::~FittedResolution() {
-    for(std::vector<PtBin*>::iterator it = ptBins_.begin();
-	it != ptBins_.end(); it++) {
-      delete *it;
-    }
     delete trueRes_;
     delete fittedRes_;
   }
@@ -95,15 +86,15 @@ namespace resolutionFit {
 
       // Draw label
       TPaveText *txt = util::LabelFactory::createPaveText(1,1.,0.06);
-      name = (*it)->minPtStr();
+      name = (*it)->ptMinStr();
       name += " < p^{recoJet}_{T} < ";
-      name += (*it)->maxPtStr();
+      name += (*it)->ptMaxStr();
       name += " GeV";
       txt->AddText(name);
       txt->Draw("same");
       
       // Write canvas to file
-      name = outNamePrefix_;
+      name = par_->outNamePrefix();
       name += "ExtrapolatedSigma_PtBin";
       name += bin;
       name += ".eps";
@@ -150,9 +141,9 @@ namespace resolutionFit {
 
       // Labels
       TPaveText *txt = util::LabelFactory::createPaveText(1,0.9);
-      name = (*it)->minPtStr();
+      name = (*it)->ptMinStr();
       name += " < p^{recoJet}_{T} < ";
-      name += (*it)->maxPtStr();
+      name += (*it)->ptMaxStr();
       name += " GeV";
       txt->AddText(name);
       txt->Draw("same");
@@ -167,7 +158,7 @@ namespace resolutionFit {
       gPad->RedrawAxis();
 
       // Write Canvas to fiel
-      name = outNamePrefix_;
+      name = par_->outNamePrefix();
       name += "Resolution_PtBin";
       name += bin;
       name += ".eps";
@@ -214,9 +205,9 @@ namespace resolutionFit {
 
       // Labels
       TPaveText *txt = util::LabelFactory::createPaveText(1,0.9);
-      name = (*it)->minPtStr();
+      name = (*it)->ptMinStr();
       name += " < p^{recoJet}_{T} < ";
-      name += (*it)->maxPtStr();
+      name += (*it)->ptMaxStr();
       name += " GeV";
       txt->AddText(name);
       txt->Draw("same");
@@ -231,7 +222,7 @@ namespace resolutionFit {
       gPad->RedrawAxis();
 
       // Write Canvas to fiel
-      name = outNamePrefix_;
+      name = par_->outNamePrefix();
       name += "PtAsymmetry_PtBin";
       name += bin;
       name += ".eps";
@@ -285,7 +276,7 @@ namespace resolutionFit {
 
     // Write canvas to file
     gPad->RedrawAxis();
-    can->SaveAs(outNamePrefix_+"ExtrapolatedResolution.eps","eps");
+    can->SaveAs(par_->outNamePrefix()+"ExtrapolatedResolution.eps","eps");
 
 
     // ----- Plot relative deviation (sigma(fit)-sigma(true) ) / sigma(true)  -----
@@ -330,7 +321,7 @@ namespace resolutionFit {
 
     // Write canvas to file
     gPad->RedrawAxis();
-    can->SaveAs(outNamePrefix_+"ExtrapolatedResolutionRatio.eps","eps");
+    can->SaveAs(par_->outNamePrefix()+"ExtrapolatedResolutionRatio.eps","eps");
 
 
     // Clean up
@@ -387,9 +378,9 @@ namespace resolutionFit {
 
       // Labels
       TPaveText *txt = util::LabelFactory::createPaveText(1,-0.7,0.06);
-      name = (*it)->minPtStr();
+      name = (*it)->ptMinStr();
       name += " < p^{recoJet}_{T} < ";
-      name += (*it)->maxPtStr();
+      name += (*it)->ptMaxStr();
       name += " GeV";
       txt->AddText(name);
       txt->Draw("same");
@@ -401,7 +392,7 @@ namespace resolutionFit {
       leg->Draw("same");
 
       // Write Canvas to fiel
-      name = outNamePrefix_;
+      name = par_->outNamePrefix();
       name += "Spectrum_PtBin";
       name += bin;
       name += ".eps";
@@ -472,7 +463,7 @@ namespace resolutionFit {
     leg->Draw("same");
 
     // Write canvas to file
-    can->SaveAs(outNamePrefix_+"SystematicUncertainties.eps","eps");
+    can->SaveAs(par_->outNamePrefix()+"SystematicUncertainties.eps","eps");
 
     // Clean up
     delete h;
@@ -490,7 +481,7 @@ namespace resolutionFit {
     // Loop over ptbins
     for(size_t bin = 0; bin < nPtBins(); bin++) {
       std::cout << bin << ": " << meanPt(bin) << std::flush;
-      std::cout << " (" << minPt(bin) << " - " << maxPt(bin) << "): " << std::flush;
+      std::cout << " (" << ptMin(bin) << " - " << ptMax(bin) << "): " << std::flush;
       std::cout << relSigma(bin)*meanPt(bin) << ", " << std::flush;
       std::cout << relSigma(bin) << " (" << uncertStat(bin) << std::flush;
       std::cout << ", +" << uncertSystUp(bin) << ", -" << uncertSystDown(bin) << std::flush;
@@ -501,7 +492,7 @@ namespace resolutionFit {
 
     
   TGraphAsymmErrors *FittedResolution::getTGraphOfResolution(const TString &uncertType) const {
-    if( verbose_ ) {
+    if( par_->verbosity() ) {
       std::cout << "FittedResolution: Creating graph of resolution" << std::endl;
     }
     std::vector<double> x(nPtBins());

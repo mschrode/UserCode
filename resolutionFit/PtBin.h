@@ -5,8 +5,9 @@
 
 #include "TString.h"
 
-#include "Uncertainty.h"
 #include "CutVariation.h"
+#include "Parameters.h"
+#include "Uncertainty.h"
 
 class TF1;
 class TGraphAsymmErrors;
@@ -15,14 +16,10 @@ class TH1;
 namespace resolutionFit {
   class PtBin {
   public:
-    PtBin(const TString &fileNameStdSel,
-	  const std::vector<TString> &fileNamesCutVariation, const std::vector<double> &cutValues,
-	  const TString &fileNameMCStatUncert,
-	  const std::vector<TString> &fileNamesSystUncertUp,
-	  const std::vector<TString> &fileNamesSystUncertDown,
-	  const std::vector<TString> &labelsSystUncertainties, double minPt, double maxPt, int verbose = 1);
+    PtBin(const Parameters::PtBinParameters *par);
     ~PtBin();
 
+    int ptBinIdx() const { return par_->idx(); }
     double relSigma() const { return relSigma_; }
     double uncertDown() const { return uncert_->down(); }
     double uncertUp() const { return uncert_->up(); }
@@ -35,10 +32,10 @@ namespace resolutionFit {
     int nUncertSyst() const { return uncert_->uncert(1)->nUncerts(); }
     double meanPt() const { return meanPt_; }
     double meanPtUncert() const { return meanPtUncert_; }
-    double minPt() const { return minPt_; }
-    double maxPt() const { return maxPt_; }
-    TString minPtStr() const { char str[10]; sprintf(str,"%.0f",minPt()); return str; }
-    TString maxPtStr() const { char str[10]; sprintf(str,"%.0f",maxPt()); return str; }
+    double ptMin() const { return par_->ptMin(); }
+    double ptMax() const { return par_->ptMax(); }
+    TString ptMinStr() const { char str[10]; sprintf(str,"%.0f",ptMin()); return str; }
+    TString ptMaxStr() const { char str[10]; sprintf(str,"%.0f",ptMax()); return str; }
 
     TH1 *getHistPtGen(const TString &newName) const { return getHist("hPtGen",newName); }
     TH1 *getHistPtGenJet1(const TString &newName) const { return getHist("hPtGenJet1",newName); }
@@ -54,12 +51,8 @@ namespace resolutionFit {
 
 
   private:
-    static int nPtBins;
+    const Parameters::PtBinParameters *par_;
 
-    const int verbose_;
-
-    double minPt_;
-    double maxPt_;
     double meanPt_;
     double meanPtUncert_;
     double relSigma_;

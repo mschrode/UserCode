@@ -1,4 +1,4 @@
-// $Id: PtBin.cc,v 1.8 2010/05/10 10:24:22 mschrode Exp $
+// $Id: PtBin.cc,v 1.9 2010/05/14 09:04:15 mschrode Exp $
 
 #include "PtBin.h"
 
@@ -10,55 +10,45 @@
 #include "KalibriFileParser.h"
 
 namespace resolutionFit {
-  int PtBin::nPtBins = 0;
+  PtBin::PtBin(const Parameters::PtBinParameters *par)
+    : par_(par) {
 
-  PtBin::PtBin(const TString &fileNameStdSel,
-	       const std::vector<TString> &fileNamesCutVariation, const std::vector<double> &cutValues,
-	       const TString &fileNameMCStatUncert,
-	       const std::vector<TString> &fileNamesSystUncertUp, 
-	       const std::vector<TString> &fileNamesSystUncertDown,
-	       const std::vector<TString> &labelsSystUncertainties, double minPt, double maxPt, int verbose)
-    : verbose_(verbose) {
-
-    if( verbose_ == 2 ) {
+    if( par_->verbosity() == 2 ) {
       std::cout << "\nPtBin::PtBin" << std::endl;
-      std::cout << " fileNameStdSel: '" << fileNameStdSel << "'" << std::endl;
+      std::cout << " fileNameStdSel: '" << par_->fileNameStdSel() << "'" << std::endl;
       std::cout << " fileNamesCutVar:" << std::endl;
-      for(size_t i = 0; i < fileNamesCutVariation.size(); i++) {
-	std::cout << "  " << i << ": '" << fileNamesCutVariation[i] << "'" << std::endl;
+      for(int i = 0; i < par_->nPt3CutVariations(); i++) {
+	std::cout << "  " << i << ": '" << par_->fileNamePt3CutVariations(i) << "'" << std::endl;
       }
     }
 
     // Perform cut variation and extrapolation
-    cutVar_ = new CutVariation(fileNamesCutVariation,cutValues,fileNameMCStatUncert,verbose);
+    cutVar_ = new CutVariation(par_);
     cutVar_->extrapolate();
 
     // Standard selection for reference
-    KalibriFileParser *parserStdSel = new KalibriFileParser(fileNameStdSel,verbose_);
+    KalibriFileParser *parserStdSel = new KalibriFileParser(par_->fileNameStdSel(),par_->verbosity());
 
     // Set up members
     relSigma_ = cutVar_->extrapolatedRelSigma();
-    minPt_ = minPt;
-    maxPt_ = maxPt;
     meanPt_ = parserStdSel->meanPt();
     meanPtUncert_ = parserStdSel->meanPtUncert();
 
     // Sum up systematic uncertainties
-    assert( fileNamesSystUncertDown.size() == fileNamesSystUncertUp.size() );
     Uncertainty *uncertSyst = new Uncertainty("SystematicUncertainty");
     // Reference sigma for unvaried case
     double refS = parserStdSel->value();
     // Calculate relative deviation after variation
-    for(size_t i = 0; i < fileNamesSystUncertUp.size(); i++) {
-      KalibriFileParser *parser = new KalibriFileParser(fileNamesSystUncertUp[i],verbose_);
+    for(int i = 0; i < par_->nSystUncerts(); ++i) {
+      KalibriFileParser *parser = new KalibriFileParser(par_->fileNameSystUncertUp(i),par_->verbosity());
       double dUp = parser->value() - refS;
       delete parser;
-      if( verbose_ == 2 ) {
+      if( par_->verbosity() == 2 ) {
 	std::cout << " Syst " << meanPt_ << std::flush;
 	std::cout << ":  " << dUp << std::flush;
       }
       dUp /= meanPt_;
-      uncertSyst->addUncertainty(new Uncertainty(labelsSystUncertainties[i],dUp,0.));
+      uncertSyst->addUncertainty(new Uncertainty(par_->labelSystUncert(i),dUp,0.));
     }    
     // Sum up systematic and statistic uncertainty
     uncert_ = new Uncertainty("TotalUncertainty");
@@ -66,36 +56,34 @@ namespace resolutionFit {
     uncert_->addUncertainty(uncertSyst);
 
     // Store spectrum and response histograms
-    if( verbose_ == 2 ) std::cout << "Storing spectrum and resolution histograms... " << std::flush;
+    if( par_->verbosity() == 2 ) std::cout << "Storing spectrum and resolution histograms... " << std::flush;
     TString name = "hPtGen_PtBin";
-    name += PtBin::nPtBins;
+    name += ptBinIdx();
     hPtGen_ = parserStdSel->hist("hPtGen",name);
     name = "hPtGen_PtBinJet1";
-    name += PtBin::nPtBins;
+    name += ptBinIdx();
     hPtGenJet1_ = parserStdSel->hist("hPtGenJet1",name);
     name = "hPdfPtTrue_PtBin";
-    name += minPt_;
+    name += ptBinIdx();
     hPdfPtTrue_ = parserStdSel->hist("hTruthPDF",name);
     name = "hResGen_PtBin";
-    name += minPt_;
+    name += ptBinIdx();
     hResGen_ = parserStdSel->hist("hRespMeas_0",name);
     name = "hPdfRes_PtBin";
-    name += minPt_;
+    name += ptBinIdx();
     hPdfRes_ = parserStdSel->hist("hRespFit_0",name);
     name = "hPtAsym_PtBin";
-    name += minPt_;
+    name += ptBinIdx();
     hPtAsym_ = parserStdSel->hist("hPtAsym_0",name);
     name = "hPdfPtAsym_PtBin";
-    name += minPt_;
+    name += ptBinIdx();
     hPdfPtAsym_ = parserStdSel->hist("hFitPtAsym_0",name);
 
-    if( verbose_ == 2 ) std::cout << "ok" << std::endl;
+    if( par_->verbosity() == 2 ) std::cout << "ok" << std::endl;
 
     delete parserStdSel;
 
-    PtBin::nPtBins++;
-
-    if( verbose_ == 2 ) {
+    if( par_->verbosity() == 2 ) {
       std::cout << "Is combined uncertainty: " << std::flush;
       std::cout << ( uncert_->isCombined() ? "yes" : "no" ) << std::endl;
       std::cout << "Syst uncert at " << meanPt_ << " GeV: +" << std::flush;

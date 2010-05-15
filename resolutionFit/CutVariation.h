@@ -6,6 +6,7 @@
 
 #include "TString.h"
 
+#include "Parameters.h"
 #include "Uncertainty.h"
 
 class TF1;
@@ -15,15 +16,15 @@ class TH1;
 namespace resolutionFit {
   class CutVariation {
   public:
-    CutVariation(const std::vector<TString> &fileNames, const std::vector<double> &cutValues, const TString &fileNameMCStatUncert, int verbose = 1);
+    CutVariation(const Parameters::PtBinParameters *par);
     ~CutVariation();
 
-    int nCutValues() const { return static_cast<int>(varPoints_.size()); }
-    double minCutValue() const { return varPoints_.front()->cutValue(); }
-    double maxCutValue() const { return varPoints_.back()->cutValue(); }
-    double cutValue(int i) const { assert( i>=0 && i<nCutValues() ); return varPoints_[i]->cutValue(); }
-    double relSigma(int i) const { assert( i>=0 && i<nCutValues() ); return (*varPoints_[i])(); }
-    double uncert(int i) const { assert( i>=0 && i<nCutValues() ); return varPoints_[i]->uncertUp(); }
+    int nCutValues() const { return par_->nPt3CutVariations(); }
+    double minCutValue() const { return par_->pt3CutValue(0); }
+    double maxCutValue() const { return par_->pt3CutValue(nCutValues()-1); }
+    double cutValue(int i) const { return par_->pt3CutValue(i); }
+    double relSigma(int i) const { return (*(varPoints_.at(i)))(); }
+    double uncert(int i) const { return varPoints_.at(i)->uncertUp(); }
     double extrapolatedRelSigma() const { return (*extrapolatedPoint_)(); }
     double extrapolatedUncert() const { return extrapolatedPoint_->uncertUp(); }
     double meanPt() const { return meanPt_; }
@@ -35,8 +36,6 @@ namespace resolutionFit {
     void extrapolate();
 
   private:
-    static int nObjs;
-
     class VariationPoint {
     public:
       VariationPoint();
@@ -54,7 +53,7 @@ namespace resolutionFit {
       const double cutValue_;
     };
 
-    const int verbose_;
+    const Parameters::PtBinParameters *par_;
 
     double meanPt_;    
     double mcStatUncert_;
