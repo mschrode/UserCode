@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.8 2010/05/14 09:05:39 mschrode Exp $
+// $Id: run.cc,v 1.9 2010/05/15 13:47:39 mschrode Exp $
 
 #include <cassert>
 #include <iostream>
@@ -15,7 +15,11 @@ int main(int argc, char *argv[]) {
 
   if( argc > 1 ) {
     resolutionFit::Parameters *par = 0;
-    TString outNamePrefix = "ResFit_Spring10QCDFlat_Gauss_";
+    //TString outNamePrefix = "ResFit_Spring10QCDFlat_Gauss_";
+    //TString inNamePrefix = "~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_";
+    TString outNamePrefix = "ResFit_Spring10QCDFlat_GaussUp30It0_";
+    TString inNamePrefix = "~/results/ResolutionFit/GaussUp30/Iteration0/resolutionSpring10_Gauss_";
+
     std::vector<double> ptBinEdges;
     int verbosity = 1;
     if( argc > 2 ) verbosity = atoi(argv[2]);
@@ -37,21 +41,28 @@ int main(int argc, char *argv[]) {
       ptBinEdges.push_back(600.);
       ptBinEdges.push_back(800.);
       ptBinEdges.push_back(1000.);
+      
+      inNamePrefix += "Eta0_";
 
-      par = new resolutionFit::Parameters(0.,1.2,
-					  "~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta0_",
+      par = new resolutionFit::Parameters(0.,1.2,inNamePrefix,
 					  ptBinEdges,0,12,outNamePrefix+"Eta0_",verbosity);
       par->setTrueGaussResPar(1.88,1.205,0.0342);
 	
-      par->addPt3Cut(0.06,"~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta0_Rel3rdJet006_");
-      par->addPt3Cut(0.08,"~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta0_Rel3rdJet008_");
-      par->addPt3Cut(0.10,"~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta0_");
-      par->addPt3Cut(0.12,"~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta0_Rel3rdJet012_");
-      par->addPt3Cut(0.15,"~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta0_Rel3rdJet015_");
-      par->addPt3Cut(0.20,"~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta0_Rel3rdJet020_");
+      par->addPt3Cut(0.06,inNamePrefix+"Rel3rdJet006_");
+      par->addPt3Cut(0.08,inNamePrefix+"Rel3rdJet008_");
+      par->addPt3Cut(0.10,inNamePrefix);
+      par->addPt3Cut(0.12,inNamePrefix+"Rel3rdJet012_");
+      par->addPt3Cut(0.15,inNamePrefix+"Rel3rdJet015_");
+      par->addPt3Cut(0.20,inNamePrefix+"Rel3rdJet020_");
 
-      par->addFileBaseNameMCStat("~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta0_Flat_");
-      
+      par->addFileBaseNameMCStat(inNamePrefix+"Flat_");
+
+      //par->addMCTruthBins(4,30,80,0.05);
+      //      par->fitExtrapolatedSigma();
+
+      par->addStartOffset(1.3);
+      par->fitRatio(true);
+     
     } else if( atoi(argv[1]) == 1 ) {
       std::cout << "Setting up parameters for eta bin 1" << std::endl;
       ptBinEdges.clear();
