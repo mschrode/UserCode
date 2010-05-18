@@ -1,4 +1,4 @@
-// $Id: CutVariation.cc,v 1.7 2010/05/14 09:02:10 mschrode Exp $
+// $Id: CutVariation.cc,v 1.8 2010/05/15 13:47:39 mschrode Exp $
 
 #include "CutVariation.h"
 #include "KalibriFileParser.h"
@@ -85,7 +85,7 @@ namespace resolutionFit {
   }
 
   void CutVariation::extrapolate() {
-    if( par_->verbosity() == 1 ) {
+    if( par_->verbosity() == 2 ) {
       std::cout << "CutVariation: Fitting extrapolation" << std::endl;
     }
     if( nCutValues() >= 2 ) {
