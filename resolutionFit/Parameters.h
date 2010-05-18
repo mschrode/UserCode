@@ -1,4 +1,4 @@
-// $Id:  $
+// $Id: Parameters.h,v 1.1 2010/05/15 13:47:38 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -8,14 +8,14 @@
 
 #include "TString.h"
 
-
+class TRandom3;
 namespace resolutionFit {
 
   //! \brief Store parameters like binning and file names centrally
   //!
   //! \author Matthias Schroeder
   //! \date 2010/05/15
-  //! $Id:  $
+  //! $Id: Parameters.h,v 1.1 2010/05/15 13:47:38 mschrode Exp $
   // --------------------------------------------
   class Parameters {
   public:
@@ -79,17 +79,33 @@ namespace resolutionFit {
     TString fileNameSystUncertUp(int i, int k) const { return namesSystUp_[k][i]; }
 
     double trueGaussResPar(int i) const { return trueResPar_.at(i); }
+    bool hasMCTruthBins() const { return mcTruthPtBinEdges_.size() > 0 ? true : false; }
+    int nMCTruthPtBins() const { return static_cast<int>(mcTruthPtBinEdges_.size())-1; }
+    double mcTruthPtMin(int i) const { return mcTruthPtBinEdges_.at(i); }
+    double mcTruthPtMax(int i) const { return mcTruthPtBinEdges_.at(i+1); }
+    double mcTruthPtBinCenter(int i) const { return 0.5*(mcTruthPtMin(i)+mcTruthPtMax(i)); }
+    double mcTruthPseudoMeas(int i) const { return mcTruthPseudoMeas_.at(i); }
+    double mcTruthRelUncert() const { return mcTruthRelUncert_; }
+
+    bool fitExtrapolatedSigma() const { return fitExtrapolatedSigma_; }
+    bool fitRatio() const { return fitRatio_; }
+    bool hasStartOffset() const { return startResOffset_ > 0 ? true : false; }
+    double relStartOffset() const { return startResOffset_; }
 
     int verbosity() const { return verbosity_; }
 
     void addPt3Cut(double pt3RelCutValue, const TString &fileBaseName);
     void addFileBaseNameMCStat(const TString &name) { writeFileNames(namesMCStat_,name); }
     void addSystUncert(const TString &label, const TString &fileBaseNameDown, const TString &fileBaseNameUp);
+    void addMCTruthBins(int nBins, double min, double max, double relUncert);
     void setTrueGaussResPar(double a0, double a1, double a2) {
       trueResPar_.at(0) = a0;
       trueResPar_.at(1) = a1;
       trueResPar_.at(2) = a2;
     }
+    void addStartOffset(double delta) { startResOffset_ = delta; }
+    void fitExtrapolatedSigma(bool fit) { fitExtrapolatedSigma_ = fit; }
+    void fitRatio(bool fit) { fitRatio_ = fit; }
 
 
   private:
@@ -112,7 +128,15 @@ namespace resolutionFit {
     std::vector< std::vector<TString> > namesSystUp_;  // [ uncertainty ] [ pt bin ]
 
     std::vector<double> trueResPar_;
+    std::vector<double> mcTruthPtBinEdges_;
+    std::vector<double> mcTruthPseudoMeas_;
+    double mcTruthRelUncert_;
 
+    bool fitExtrapolatedSigma_;
+    bool fitRatio_;
+    double startResOffset_;
+
+    TRandom3 *rand_;
     mutable std::list<PtBinParameters*> listOfPtBinParameters_;
     
     void writeFileNames(std::vector<TString> &names, const TString &baseName) const;

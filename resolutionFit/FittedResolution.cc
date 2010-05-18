@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "TCanvas.h"
+#include "TError.h"
 #include "TH1.h"
 #include "TF1.h" 
 #include "TGraph.h"
@@ -20,12 +21,18 @@ namespace resolutionFit {
   FittedResolution::FittedResolution(const std::vector<PtBin*> &ptBins, const Parameters *par) 
     : par_(par), ptBins_(ptBins) {
 
-    double xMin = 0.8*meanPt(0);
-    double xMax = 1.1*meanPt(nPtBins()-1);
+    // Do not print ROOT message if eps file has been created
+    gErrorIgnoreLevel = 1001;
+
+    if( par_->hasMCTruthBins() ) std::cout << "Adding pseudo gamma+jet measurement from MC truth" << std::endl;
+
+    xMin_ = 0.8*meanPt(0);
+    if( par_->hasMCTruthBins() ) xMin_ = 0.8*par_->mcTruthPtMin(0);
+    xMax_ = 1.1*meanPt(nPtBins()-1);
 
     trueRes_ = new TF1("FittedResolution::trueRes",
 		       "sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2])",
-		       xMin,xMax);
+		       xMin_,xMax_);
     for(int i = 0; i < 3; i++) {
       trueRes_->SetParameter(i,par_->trueGaussResPar(i));
     }
@@ -33,17 +40,17 @@ namespace resolutionFit {
     trueRes_->SetLineStyle(2);
 
     // Fit extrapolated resolution using
-    // total uncertainty
-    TGraphAsymmErrors *gStat = getTGraphOfResolution("Statistic");
+    // statistic uncertainty
+    TGraphAsymmErrors *gStat = getTGraphOfResolution("Statistic+MCTruth");
     fittedRes_ = new TF1("FittedResolution::fittedRes_",
-			 //"sqrt([0]*[0]/x + [1]*[1])",
 			 "sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2])",
-			 xMin,xMax);
-    fittedRes_->SetParameter(0,2.);
-    fittedRes_->SetParameter(0,1.);
-    fittedRes_->SetParameter(0,0.03);
+			 xMin_,xMax_);
+    for(int i = 0; i < 3; ++i) {
+      fittedRes_->SetParameter(i,par_->trueGaussResPar(i));
+    }
+    //    fittedRes_->FixParameter(0,par_->trueGaussResPar(0));
     fittedRes_->SetLineColor(2);
-    gStat->Fit(fittedRes_,"0R");
+    if( par_->fitExtrapolatedSigma() ) gStat->Fit(fittedRes_,"0R");
     delete gStat;
 
     // Set style
@@ -245,36 +252,46 @@ namespace resolutionFit {
 
 
     // ----- Plot relative resolution sigma / pt -----
+    // Create graph with statistical uncertainties
+    TGraphAsymmErrors *gStat = getTGraphOfResolution("Statistic");
+    TGraphAsymmErrors *gPseudo = 0;
+    if( par_->hasMCTruthBins() ) gPseudo = getTGraphOfResolution("MCTruth");
+
     // Draw a frame
-    double xMin = 0.8*meanPt(0);
-    double xMax = 1.1*meanPt(nPtBins()-1);
     TH1 *h = new TH1D("FrameExtrapolatedResolution",";p_{T} (GeV);#sigma / p_{T}",
-		       1000,xMin,xMax);
-    h->GetYaxis()->SetRangeUser(0.7*relSigma(nPtBins()-1),1.2*relSigma(0));
+		      1000,xMin_,xMax_);
+    double min = *std::min_element(gStat->GetY(),gStat->GetY()+gStat->GetN());
+    double max = *std::max_element(gStat->GetY(),gStat->GetY()+gStat->GetN());
+    if( gPseudo ) max = *std::max_element(gPseudo->GetY(),gPseudo->GetY()+gPseudo->GetN());
+    h->GetYaxis()->SetRangeUser(0.7*min,1.2*max);
     h->Draw();
 
-//     // Draw systematic uncertainty band
-//     TGraphAsymmErrors *gSyst = getTGraphOfResolution("Systematic");
-//     gSyst->Draw("E3same");
+    // Draw systematic uncertainty band
+    //TGraphAsymmErrors *gSyst = getTGraphOfResolution("Systematic");
+    //gSyst->Draw("E3same");
 
     // Draw true and fitted resolution functions
     trueRes_->Draw("same");
-    //fittedRes_->Draw("same");
+    if( par_->fitExtrapolatedSigma() ) fittedRes_->Draw("same");
 
-    // Draw graph with statistical uncertainties
-    TGraphAsymmErrors *gStat = getTGraphOfResolution("Statistic");
+    // Draw fitted mean resolution
     gStat->Draw("PE1same");
+    if( gPseudo ) gPseudo->Draw("PE1same");
 
     // Add a legend
-    TLegend *leg = util::LabelFactory::createLegend(2);
+    int nLegEntries = 2;
+    if( par_->fitExtrapolatedSigma() ) nLegEntries++;
+    if( gPseudo ) nLegEntries++;
+    TLegend *leg = util::LabelFactory::createLegend(nLegEntries);
     leg->AddEntry(gStat,"Extrapolated #bar{#sigma} (p^{3}_{T,rel} #rightarrow 0)","P");
-    //leg->AddEntry(gStat,"Statistical uncertainty","L");
     //leg->AddEntry(gSyst,"Uncertainty from spectrum","F");
+    if( gPseudo ) leg->AddEntry(gPseudo,"Pseudo #gamma+jet measurement","P");
     leg->AddEntry(trueRes_,"MC truth resolution","L");
-    //    leg->AddEntry(fittedRes_,"Fit #sigma(p_{T}) to #bar{#sigma}","L");
+    if( par_->fitExtrapolatedSigma() ) leg->AddEntry(fittedRes_,"Fit #sigma(p_{T}) to #bar{#sigma}","L");
     leg->Draw("same");
 
     // Write canvas to file
+    gPad->SetLogx();
     gPad->RedrawAxis();
     can->SaveAs(par_->outNamePrefix()+"ExtrapolatedResolution.eps","eps");
 
@@ -285,7 +302,6 @@ namespace resolutionFit {
     TH1 *hTrueRes = trueRes_->GetHistogram();
     TH1 *hFittedRatio = fittedRes_->GetHistogram();
     hFittedRatio->Divide(hTrueRes);
-    //hFittedRatio->Draw("Lsame");
 
     // Draw graph with statistical uncertainties
     TGraphAsymmErrors *gStatRatio = getTGraphOfResolution("Statistic");
@@ -301,6 +317,32 @@ namespace resolutionFit {
       gStatRatio->SetPointError(i,exl,exh,eyl/yTrue,eyh/yTrue);
     }
 
+    TF1 *lineFitRatio = new TF1("LineFitRatioExtraplolatedResolution","pol0",xMin_,xMax_);
+    lineFitRatio->SetLineWidth(2);
+    lineFitRatio->SetLineStyle(2);
+    lineFitRatio->SetLineColor(2);
+    if( par_->fitRatio() ) gStatRatio->Fit(lineFitRatio,"0QR");
+
+    TF1 *lineStartRes = static_cast<TF1*>(lineFitRatio->Clone("LineStartResExtrapolatedResolution"));
+    lineStartRes->SetLineColor(8);
+    lineStartRes->SetParameter(0,par_->relStartOffset());
+
+    TGraphAsymmErrors *gPseudoRatio = 0;
+    if( gPseudo ) {
+      gPseudoRatio = getTGraphOfResolution("MCTruth");
+      for(int i = 0; i < gPseudoRatio->GetN(); ++i) {
+	double x = gPseudoRatio->GetX()[i];
+	double y = gPseudoRatio->GetY()[i];
+	double yTrue = trueRes_->Eval(x);
+	double exh = gPseudoRatio->GetEXhigh()[i];
+	double exl = gPseudoRatio->GetEXlow()[i];
+	double eyh = gPseudoRatio->GetEYhigh()[i];
+	double eyl = gPseudoRatio->GetEYlow()[i];	
+	gPseudoRatio->SetPoint(i,x,y/yTrue);
+	gPseudoRatio->SetPointError(i,exl,exh,eyl/yTrue,eyh/yTrue);
+      }
+    }
+
     // Frame
     for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
       h->SetBinContent(bin,1.);
@@ -310,16 +352,34 @@ namespace resolutionFit {
     h->GetYaxis()->SetTitle("#sigma_{fit} / #sigma_{MC}");
     h->GetYaxis()->SetRangeUser(0.65,1.75);
     
-    double maxRatio = *(std::max_element(gStatRatio->GetY(),gStatRatio->GetY()+gStat->GetN()));
-    if( maxRatio > 1.45 ) h->GetYaxis()->SetRangeUser(0.65,1.25*maxRatio);
+    max = *(std::max_element(gStatRatio->GetY(),gStatRatio->GetY()+gStat->GetN()));
+    if( max > 1.45 ) h->GetYaxis()->SetRangeUser(0.65,1.25*max);
     h->Draw();
-
+    if( par_->fitExtrapolatedSigma() ) hFittedRatio->Draw("Lsame");
+    if( par_->fitRatio() ) lineFitRatio->Draw("same");
+    if( par_->hasStartOffset() ) lineStartRes->Draw("same");
     gStatRatio->Draw("PE1same");
+    if( gPseudoRatio ) gPseudoRatio->Draw("PE1same");
 
     // Add a legend
+    delete leg;
+    nLegEntries = 2;
+    if( par_->fitExtrapolatedSigma() ) nLegEntries++;
+    if( gPseudo ) nLegEntries++;
+    if( par_->fitRatio() ) nLegEntries++;
+    if( par_->hasStartOffset() ) nLegEntries++;
+    leg = util::LabelFactory::createLegend(nLegEntries);
+    leg->AddEntry(gStat,"Extrapolated #bar{#sigma} (p^{3}_{T,rel} #rightarrow 0)","P");
+    //leg->AddEntry(gSyst,"Uncertainty from spectrum","F");
+    if( gPseudo ) leg->AddEntry(gPseudo,"Pseudo #gamma+jet measurement","P");
+    leg->AddEntry(trueRes_,"MC truth resolution","L");
+    if( par_->fitRatio() ) leg->AddEntry(lineFitRatio,"Mean deviation","L");
+    if( par_->hasStartOffset() ) leg->AddEntry(lineStartRes,"Resolution in spectrum","L");
+    if( par_->fitExtrapolatedSigma() ) leg->AddEntry(fittedRes_,"Fit #sigma(p_{T}) to #bar{#sigma}","L");
     leg->Draw("same");
 
     // Write canvas to file
+    gPad->SetLogx();
     gPad->RedrawAxis();
     can->SaveAs(par_->outNamePrefix()+"ExtrapolatedResolutionRatio.eps","eps");
 
@@ -328,7 +388,11 @@ namespace resolutionFit {
     delete h;
     //    delete gSyst;
     delete gStat;
+    if( gPseudo ) delete gPseudo;
+    if( gPseudoRatio ) delete gPseudoRatio;
     delete gStatRatio;
+    delete lineFitRatio;
+    delete lineStartRes;
     delete leg;
     delete can;
   }
@@ -491,41 +555,53 @@ namespace resolutionFit {
   }
 
     
-  TGraphAsymmErrors *FittedResolution::getTGraphOfResolution(const TString &uncertType) const {
-    if( par_->verbosity() ) {
+  TGraphAsymmErrors *FittedResolution::getTGraphOfResolution(const TString &type) const {
+    if( par_->verbosity() == 2 ) {
       std::cout << "FittedResolution: Creating graph of resolution" << std::endl;
     }
-    std::vector<double> x(nPtBins());
-    std::vector<double> ex(nPtBins());
-    std::vector<double> y(nPtBins());
-    std::vector<double> eyDown(nPtBins());
-    std::vector<double> eyUp(nPtBins());
-    for(int i = 0; i < nPtBins(); i++) {
-      x[i] = ptBins_[i]->meanPt();
-      ex[i] = ptBins_[i]->meanPtUncert();
-      y[i] = ptBins_[i]->relSigma();
-      if( uncertType == "Total" ) {
-	eyDown[i] = ptBins_[i]->uncertDown();
-	eyUp[i] = ptBins_[i]->uncertUp();
-      } else if( uncertType == "Statistic" ) {
-	eyDown[i] = ptBins_[i]->uncertStatDown();
-	eyUp[i] = ptBins_[i]->uncertStatUp();
-      } else if( uncertType == "Systematic" ) {
-	eyDown[i] = ptBins_[i]->uncertSystDown();
-	eyUp[i] = ptBins_[i]->uncertSystUp();
-      } else {
-	eyDown[i] = 0.;
-	eyUp[i] = 0.;
-	std::cerr << "WARNING (FittedResolution): Unknown uncertainty type '" << uncertType << "'" << std::endl;
+    std::vector<double> x;
+    std::vector<double> ex;
+    std::vector<double> y;
+    std::vector<double> eyDown;
+    std::vector<double> eyUp;
+
+    if( type == "MCTruth" || type == "Statistic+MCTruth" ) {
+      for(int i = 0; i < par_->nMCTruthPtBins(); ++i) {
+	x.push_back(par_->mcTruthPtBinCenter(i));
+	ex.push_back(0.);
+	y.push_back( (trueRes_->Eval(x[i]))*(par_->mcTruthPseudoMeas(i)) );
+	eyDown.push_back(y[i]*par_->mcTruthRelUncert());
+	eyUp.push_back(y[i]*par_->mcTruthRelUncert());
       }
-    }   
-    TGraphAsymmErrors *graph = new TGraphAsymmErrors(nPtBins(),&(x.front()),&(y.front()),
+    }
+    if( type != "MCTruth" ) {
+      for(int i = 0; i < nPtBins(); ++i) {
+	x.push_back(ptBins_[i]->meanPt());
+	ex.push_back(ptBins_[i]->meanPtUncert());
+	y.push_back(ptBins_[i]->relSigma());
+	if( type == "Total" ) {
+	  eyDown.push_back(ptBins_[i]->uncertDown());
+	  eyUp.push_back(ptBins_[i]->uncertUp());
+	} else if( type == "Statistic" || type == "Statistic+MCTruth" ) {
+	  eyDown.push_back(ptBins_[i]->uncertStatDown());
+	  eyUp.push_back(ptBins_[i]->uncertStatUp());
+	} else if( type == "Systematic" ) {
+	  eyDown.push_back(ptBins_[i]->uncertSystDown());
+	  eyUp.push_back(ptBins_[i]->uncertSystUp());
+	}
+      }   
+    }
+    TGraphAsymmErrors *graph = new TGraphAsymmErrors(x.size(),&(x.front()),&(y.front()),
 						     &(ex.front()),&(ex.front()),
 						     &(eyDown.front()),&(eyUp.front()));
     graph->SetMarkerStyle(20);
-    if( uncertType == "Systematic" ) {
+    if( type == "Systematic" ) {
       graph->SetFillColor(43);
       graph->SetLineColor(43);
+    } else if( type == "MCTruth" ) {
+      graph->SetMarkerStyle(24);
+      graph->SetMarkerColor(14);
+      graph->SetLineColor(14);
     }
     return graph;
   }

@@ -1,8 +1,10 @@
-// $Id:  $
+// $Id: Parameters.cc,v 1.1 2010/05/15 13:47:38 mschrode Exp $
 
 #include "Parameters.h"
 
 #include <cassert>
+
+#include "TRandom3.h"
 
 
 namespace resolutionFit {
@@ -13,6 +15,11 @@ namespace resolutionFit {
 
     ptBinEdges_ = ptBinEdges;
     trueResPar_ = std::vector<double>(3,0.);
+    rand_ = new TRandom3(0);
+
+    fitExtrapolatedSigma_ = false;
+    fitRatio_ = false;
+    startResOffset_ = -1.;
 
     writeFileNames(namesStdSel_,fileBaseNameStdSel);
 
@@ -25,6 +32,7 @@ namespace resolutionFit {
 	it != listOfPtBinParameters_.end(); ++it) {
       delete *it;
     }
+    delete rand_;
   }
 
 
@@ -50,6 +58,18 @@ namespace resolutionFit {
     namesSystDown_.push_back(names);
     writeFileNames(names,fileBaseNameUp);
     namesSystUp_.push_back(names);
+  }
+
+
+  void Parameters::addMCTruthBins(int nBins, double min, double max, double relUncert) {
+    mcTruthRelUncert_ = relUncert;
+    double dPt = (max-min)/nBins;
+    for(int i = 0; i <= nBins; ++i) {
+      mcTruthPtBinEdges_.push_back(min+i*dPt);
+    }
+    for(int i = 0; i < nBins; ++i) {
+      mcTruthPseudoMeas_.push_back(rand_->Gaus(1.,relUncert));
+    }
   }
 
 

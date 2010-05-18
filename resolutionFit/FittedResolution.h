@@ -43,6 +43,9 @@ namespace resolutionFit {
     const Parameters *par_;
     const std::vector<PtBin*> ptBins_;
 
+    double xMin_;
+    double xMax_;
+
     TF1 *trueRes_;
     TF1 *fittedRes_;
 
