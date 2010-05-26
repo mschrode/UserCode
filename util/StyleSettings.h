@@ -14,6 +14,8 @@ namespace util {
   public:
     static void screen() { setStyle("Screen",true); }
     static void screenNoTitle() { setStyle("Screen",false); }
+    static void paper() { setStyle("Paper",true); }
+    static void paperNoTitle() { setStyle("Paper",false); }
     static void presentation() { setStyle("Presentation",true); }
     static void presentationNoTitle() { setStyle("Presentation",false); }
     static int color(int i);
@@ -91,6 +93,8 @@ namespace util {
     //  For the statistics box:
     if( mode == "Presentation" ) {
       gStyle->SetOptStat(0);
+    } else if( mode == "Paper" ) {
+      gStyle->SetOptStat(0);
     } else {
       gStyle->SetOptStat("eMR");
       gStyle->SetStatColor(kWhite);
@@ -139,19 +143,19 @@ namespace util {
       gStyle->SetTitleSize(0.06,"XYZ");
       gStyle->SetTitleXOffset(1.2);
       if( spaceForTitle ) gStyle->SetTitleYOffset(2.0);
-      else                 gStyle->SetTitleYOffset(1.5);
+      else                gStyle->SetTitleYOffset(1.5);
     } else {
       // For the axis labels:
       gStyle->SetLabelFont(42,"XYZ");
       gStyle->SetLabelOffset(0.007,"XYZ");
-      gStyle->SetLabelSize(0.04,"XYZ");
+      gStyle->SetLabelSize(0.035,"XYZ");
       
       // For the axis titles:
       gStyle->SetTitleFont(42,"XYZ");
       gStyle->SetTitleSize(0.04,"XYZ");
       gStyle->SetTitleXOffset(1.5);
       if( spaceForTitle ) gStyle->SetTitleYOffset(2.1);
-      else                 gStyle->SetTitleYOffset(1.6);
+      else                gStyle->SetTitleYOffset(1.6);
     }
 
     //  For the legend
@@ -190,6 +194,7 @@ namespace util {
 
     std::cout << "Adjusted gStyle for " << std::flush;
     if( mode == "Screen" ) std::cout << "screen viewing" << std::flush;
+    else if( mode == "Paper" ) std::cout << "papers" << std::flush;
     else std::cout << "presentations" << std::flush;
     std::cout << " and " << std::flush;
     if( spaceForTitle ) std::cout << "histograms with title." << std::endl;
