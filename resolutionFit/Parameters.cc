@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.1 2010/05/15 13:47:38 mschrode Exp $
+// $Id: Parameters.cc,v 1.2 2010/05/18 12:05:43 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -8,10 +8,10 @@
 
 
 namespace resolutionFit {
-  Parameters::Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, int verbosity)
+  Parameters::Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, Parameters::ResponseFunction respFunc, int verbosity)
     : etaMin_(etaMin), etaMax_(etaMax),
       startIdx_(startIdx), endIdx_(endIdx),
-      outNamePrefix_(outNamePrefix), verbosity_(verbosity) {
+      outNamePrefix_(outNamePrefix), respFunc_(respFunc), verbosity_(verbosity) {
 
     ptBinEdges_ = ptBinEdges;
     trueResPar_ = std::vector<double>(3,0.);
@@ -80,5 +80,71 @@ namespace resolutionFit {
       names.back() += bin;
       names.back() += "/jsResponse.root";
     }
+  }
+
+
+  int Parameters::nFittedPars() const {
+    int n = 0;
+    if( respFunc() == Gauss ) n = 1;
+    else if( respFunc() == CrystalBall ) n = 3;
+
+    return n;
+  }
+
+
+  bool Parameters::isRelParValue(int parIdx) const {
+    assert( parIdx >=0 && parIdx < nFittedPars() );
+    
+    bool isRelVal = true;
+    if( respFunc() == CrystalBall && parIdx > 0 ) isRelVal = false;
+
+    return isRelVal;
+  }
+
+  
+  TString Parameters::parLabel(int parIdx) const {
+    assert( parIdx >=0 && parIdx < nFittedPars() );
+
+    TString label = "";
+    if( parIdx == 0 ) label = "#sigma / p_{T}";
+    else if( parIdx == 1 ) label = "#alpha";
+    else if( parIdx == 2 ) label = "n";
+
+    return label;
+  }
+
+
+  TString Parameters::parAxisLabel(int parIdx) const {
+    assert( parIdx >=0 && parIdx < nFittedPars() );
+
+    TString label = "";
+    if( parIdx == 0 ) label = "#sigma / p_{T}";
+    else if( parIdx == 1 ) label = "Start  of  tail  #alpha";
+    else if( parIdx == 2 ) label = "Slope  of  tail  n";
+
+    return label;
+  }
+
+
+  TString Parameters::labelEtaBin() const {
+    char label[50];
+    if( etaMin() == 0. ) sprintf(label,"|#eta| < %.1f",etaMax());
+    else sprintf(label,"%.1f < |#eta| < %.1f",etaMin(),etaMax());
+    
+    return label;
+  }
+
+
+  TString Parameters::labelJetAlgo() const {
+    return "anti-k_{T} d = 0.5";
+  }
+
+  
+  TString Parameters::labelPtBin(int ptBin, int type) const {
+    char label[50];
+    if( type == 0 )      sprintf(label,"%.0f < p^{reco}_{T} < %.0f GeV",ptMin(ptBin),ptMax(ptBin));
+    else if( type == 1 ) sprintf(label,"%.0f < p^{particle}_{T} < %.0f GeV",ptMin(ptBin),ptMax(ptBin));
+    
+    return label;
   }
 }

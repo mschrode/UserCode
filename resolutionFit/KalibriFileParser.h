@@ -1,4 +1,4 @@
-// $Id: KalibriFileParser.h,v 1.3 2010/05/04 19:19:48 mschrode Exp $
+// $Id: KalibriFileParser.h,v 1.4 2010/05/14 09:03:54 mschrode Exp $
 
 #ifndef KALIBRI_FILE_PARSER_H
 #define KALIBRI_FILE_PARSER_H
@@ -36,7 +36,7 @@ namespace resolutionFit {
   //!
   //! \author Matthias Schroeder
   //! \date 2009/03/05
-  //! $Id: KalibriFileParser.h,v 1.3 2010/05/04 19:19:48 mschrode Exp $
+  //! $Id: KalibriFileParser.h,v 1.4 2010/05/14 09:03:54 mschrode Exp $
   // --------------------------------------------
   class KalibriFileParser {
   public:
@@ -48,9 +48,9 @@ namespace resolutionFit {
     //! Returns number of fitted parameters
     int nValues() const { return static_cast<int>(values_.size()); }
     //! Returns value of the i-th fitted parameter
-    double value(int i = 0) const { assert( i>=0 && i < nValues() ); return values_[i]; }
+    double value(int i) const { assert( i>=0 && i < nValues() ); return values_[i]; }
     //! Returns statistical uncertainty of the i-th parameter
-    double statUncert(int i = 0) const { assert( i>=0 && i < nValues() ); return statUncert_[i]; }
+    double statUncert(int i) const { assert( i>=0 && i < nValues() ); return statUncert_[i]; }
     //! Returns pt mean value to be used
     double meanPt() const { return meanPdfPtTrue(); }
     //! Returns uncertainty on pt mean value to be used

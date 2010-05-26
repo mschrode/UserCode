@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.1 2010/05/15 13:47:38 mschrode Exp $
+// $Id: Parameters.h,v 1.2 2010/05/18 12:05:43 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -15,48 +15,62 @@ namespace resolutionFit {
   //!
   //! \author Matthias Schroeder
   //! \date 2010/05/15
-  //! $Id: Parameters.h,v 1.1 2010/05/15 13:47:38 mschrode Exp $
+  //! $Id: Parameters.h,v 1.2 2010/05/18 12:05:43 mschrode Exp $
   // --------------------------------------------
   class Parameters {
   public:
+
+    enum ResponseFunction { Gauss, CrystalBall };
     
     class PtBinParameters {
     public:
-      PtBinParameters(int idx, const Parameters *par)
-	: idx_(idx), par_(par) {};
+      PtBinParameters(int ptBinIdx, const Parameters *par)
+	: ptBinIdx_(ptBinIdx), par_(par) {};
       ~PtBinParameters() {};
 
-      int idx() const { return idx_; }
-      double ptMin() const { return par_->ptMin(idx()); }
-      double ptMax() const { return par_->ptMax(idx()); }
+      Parameters::ResponseFunction respFunc() const { return par_->respFunc(); }
+      int nFittedPars() const { return par_->nFittedPars(); }
+      bool isRelParValue(int parIdx) const { return par_->isRelParValue(parIdx); }
+      TString parLabel(int parIdx) const { return par_->parLabel(parIdx); }
+      TString parAxisLabel(int parIdx) const { return par_->parAxisLabel(parIdx); }
+    
+      int ptBinIdx() const { return ptBinIdx_; }
+      double ptMin() const { return par_->ptMin(ptBinIdx()); }
+      double ptMax() const { return par_->ptMax(ptBinIdx()); }
       double etaMin() const { return par_->etaMin(); }
       double etaMax() const { return par_->etaMax(); }
-      TString fileNameStdSel() const { return par_->fileNameStdSel(idx()); }
+      TString fileNameStdSel() const { return par_->fileNameStdSel(ptBinIdx()); }
       
       bool hasMCStatUncert() const { return par_->hasMCStatUncert(); }
-      TString fileNameMCStatUncert() const { return par_->fileNameMCStatUncert(idx()); }
+      TString fileNameMCStatUncert() const { return par_->fileNameMCStatUncert(ptBinIdx()); }
       
       int nPt3CutVariations() const { return par_->nPt3CutVariations(); }
       double pt3CutValue(int k) const { return par_->pt3CutValue(k); }
-      TString fileNamePt3CutVariations(int k) const { return par_->fileNamePt3CutVariations(idx(),k); }
+      TString fileNamePt3CutVariations(int k) const { return par_->fileNamePt3CutVariations(ptBinIdx(),k); }
 
       int nSystUncerts() const { return par_->nSystUncerts(); }
       TString labelSystUncert(int k) const { return par_->labelSystUncert(k); }
-      TString fileNameSystUncertDown(int k) const { return par_->fileNameSystUncertDown(idx(),k); }
-      TString fileNameSystUncertUp(int k) const { return par_->fileNameSystUncertUp(idx(),k); }
+      TString fileNameSystUncertDown(int k) const { return par_->fileNameSystUncertDown(ptBinIdx(),k); }
+      TString fileNameSystUncertUp(int k) const { return par_->fileNameSystUncertUp(ptBinIdx(),k); }
 
       int verbosity() const { return par_->verbosity(); }
       
     private:
-      const int idx_;
+      const int ptBinIdx_;
       const Parameters *par_;
     };
 
     
-    Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, int verbosity);
+    Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, Parameters::ResponseFunction respFunc, int verbosity);
     ~Parameters();
 
     const PtBinParameters *createPtBinParameters(int ptBinIdx) const;
+
+    Parameters::ResponseFunction respFunc() const { return respFunc_; }
+    int nFittedPars() const;
+    bool isRelParValue(int parIdx) const;
+    TString parLabel(int parIdx) const;
+    TString parAxisLabel(int parIdx) const;
 
     double etaMin() const { return etaMin_; }
     double etaMax() const { return etaMax_; }
@@ -77,6 +91,10 @@ namespace resolutionFit {
     TString labelSystUncert(int k) const { return labelSyst_.at(k); }
     TString fileNameSystUncertDown(int i, int k) const { return namesSystDown_[k][i]; }
     TString fileNameSystUncertUp(int i, int k) const { return namesSystUp_[k][i]; }
+
+    TString labelEtaBin() const;
+    TString labelJetAlgo() const;
+    TString labelPtBin(int ptBin, int type) const;
 
     double trueGaussResPar(int i) const { return trueResPar_.at(i); }
     bool hasMCTruthBins() const { return mcTruthPtBinEdges_.size() > 0 ? true : false; }
@@ -114,6 +132,7 @@ namespace resolutionFit {
     const int startIdx_;
     const int endIdx_;
     const TString outNamePrefix_;
+    const Parameters::ResponseFunction respFunc_;
     const int verbosity_;
 
     std::vector<double> ptBinEdges_;

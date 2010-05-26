@@ -1,4 +1,4 @@
-// $Id: CutVariation.cc,v 1.8 2010/05/15 13:47:39 mschrode Exp $
+// $Id: CutVariation.cc,v 1.9 2010/05/18 12:04:45 mschrode Exp $
 
 #include "CutVariation.h"
 #include "KalibriFileParser.h"
@@ -12,13 +12,13 @@
 #include "TH1D.h"
 
 namespace resolutionFit {
-  CutVariation::CutVariation(const Parameters::PtBinParameters *par)
-    : par_(par) {
+  CutVariation::CutVariation(const Parameters::PtBinParameters *par, int parIndex)
+    : par_(par), parIdx_(parIndex) {
     // Read uncertainty from MC statistics
     mcStatUncert_ = 0.;
     if( par_->hasMCStatUncert() ) {
       KalibriFileParser *parser = new KalibriFileParser(par_->fileNameMCStatUncert(),par_->verbosity());
-      mcStatUncert_ = parser->statUncert();
+      mcStatUncert_ = parser->statUncert(parIdx());
       delete parser;
     }
     // Read values from file
@@ -28,23 +28,29 @@ namespace resolutionFit {
       // Mean pt for all varied cuts (set only once)
       if( i == 0 ) {
 	meanPt_ = parser->meanPt();
-	mcStatUncert_ /= meanPt_;
+	if( isRelValue() ) mcStatUncert_ /= meanPt_;
       }
       // Create value at cut variation i
-      double relSigma = parser->value()/meanPt_;
-      double statUncert = parser->statUncert()/meanPt_;
+      double fittedValue = parser->value(parIdx());
+      double statUncert = parser->statUncert(parIdx());
+      if( isRelValue() ) {
+	fittedValue /= meanPt_;
+	statUncert /= meanPt_;
+      }
       statUncert = sqrt( statUncert*statUncert + mcStatUncert_*mcStatUncert_ );
       Uncertainty *uncert = new Uncertainty("Statistical uncertainty",statUncert);
       delete parser;
-      varPoints_[i] = new VariationPoint(relSigma,uncert,cutValue(i));
+      varPoints_[i] = new VariationPoint(fittedValue,uncert,cutValue(i));
     }
     // Create graph of varied values
     createTGraph();
     // Default value for extrapolation
     extrapolatedPoint_ = new VariationPoint();
     // Initialize fit function
-    TString name = "resolutionFit::CutVariationFit";
-    name += par_->idx();
+    TString name = "resolutionFit::CutVariationFit_PtBin";
+    name += par_->ptBinIdx();
+    name += "_Par";
+    name += parIdx();
     fit_ = new TF1(name,"pol1",cutValue(0),cutValue(nCutValues()-1));
     fit_->SetParameter(0,0.);
     fit_->SetParameter(1,0.);
@@ -78,9 +84,29 @@ namespace resolutionFit {
   }
 
   TH1 *CutVariation::getFrame(const TString &name) const { 
-    TH1 *hFrame = new TH1D(name,";p^{3}_{T,rel} cut;#sigma / p_{T}",1000,0.,1.4*maxCutValue());
-    double max = *(std::max_element(graph_->GetY(),graph_->GetY()+graph_->GetN()));
-    hFrame->GetYaxis()->SetRangeUser(0.8*max,1.2*max);
+    double xMin = 0.;
+    double xMax = 1.4*maxCutValue();
+    double yMin = fit_->GetParameter(0);
+    double yMax = fit_->GetParameter(1)*xMax + fit_->GetParameter(0);
+    if( fit_->GetParameter(1) < 0 ) {
+      yMin = fit_->GetParameter(1)*xMax + fit_->GetParameter(0);
+      yMax = fit_->GetParameter(0);
+    }
+
+    double gMin = *(std::min_element(graph_->GetY(),graph_->GetY()+graph_->GetN()));
+    if( gMin < yMin ) yMin = gMin;
+    double gMax = *(std::max_element(graph_->GetY(),graph_->GetY()+graph_->GetN()));
+    if( gMax > yMax ) yMax = gMax;    
+
+    double deltaY = yMax - yMin;
+    yMin -= 0.2*deltaY;
+    if( yMin < 0. ) yMin = 0.;
+    yMax += 0.8*deltaY;
+
+    TH1 *hFrame = new TH1D(name,";p^{rel}_{T,3} cut;",1000,xMin,xMax);
+    hFrame->SetYTitle(par_->parAxisLabel(parIdx()));
+    hFrame->GetYaxis()->SetRangeUser(yMin,yMax);
+    hFrame->SetNdivisions(505);
     return hFrame;
   }
 
@@ -111,7 +137,7 @@ namespace resolutionFit {
     std::vector<double> ey(nCutValues());
     for(int i = 0; i < nCutValues(); i++) {
       x[i] = cutValue(i);
-      y[i] = relSigma(i);
+      y[i] = fittedValue(i);
       ey[i] = uncert(i);
     }   
     graph_ = new TGraphAsymmErrors(nCutValues(),&(x.front()),&(y.front()),
@@ -121,11 +147,11 @@ namespace resolutionFit {
   }
 
 
-  CutVariation::VariationPoint::VariationPoint(double val, const Uncertainty *uncert, double cutValue)
-    : relSigma_(val), uncert_(uncert), cutValue_(cutValue) {};
+  CutVariation::VariationPoint::VariationPoint(double fitValue, const Uncertainty *uncert, double cutValue)
+    : fitValue_(fitValue), uncert_(uncert), cutValue_(cutValue) {};
 
   CutVariation::VariationPoint::VariationPoint()
-    : relSigma_(0.), uncert_(new Uncertainty()), cutValue_(0.) {};
+    : fitValue_(0.), uncert_(new Uncertainty()), cutValue_(0.) {};
 
   CutVariation::VariationPoint::~VariationPoint() {
     delete uncert_;

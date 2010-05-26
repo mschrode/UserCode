@@ -16,16 +16,19 @@ class TH1;
 namespace resolutionFit {
   class CutVariation {
   public:
-    CutVariation(const Parameters::PtBinParameters *par);
+    CutVariation(const Parameters::PtBinParameters *par, int parIndex);
     ~CutVariation();
 
     int nCutValues() const { return par_->nPt3CutVariations(); }
     double minCutValue() const { return par_->pt3CutValue(0); }
     double maxCutValue() const { return par_->pt3CutValue(nCutValues()-1); }
     double cutValue(int i) const { return par_->pt3CutValue(i); }
-    double relSigma(int i) const { return (*(varPoints_.at(i)))(); }
+
+    int parIdx() const { return parIdx_; }
+    bool isRelValue() const { return par_->isRelParValue(parIdx()); }
+    double fittedValue(int i) const { return (*(varPoints_.at(i)))(); }
     double uncert(int i) const { return varPoints_.at(i)->uncertUp(); }
-    double extrapolatedRelSigma() const { return (*extrapolatedPoint_)(); }
+    double extrapolatedValue() const { return (*extrapolatedPoint_)(); }
     double extrapolatedUncert() const { return extrapolatedPoint_->uncertUp(); }
     double meanPt() const { return meanPt_; }
 
@@ -39,21 +42,22 @@ namespace resolutionFit {
     class VariationPoint {
     public:
       VariationPoint();
-      VariationPoint(double relSigma, const Uncertainty *uncert, double cutValue);
+      VariationPoint(double fitValue, const Uncertainty *uncert, double cutValue);
       ~VariationPoint();
       
-      double operator()() const { return relSigma_; }
+      double operator()() const { return fitValue_; }
       double uncertDown() const { return uncert_->down(); }
       double uncertUp() const { return uncert_->up(); }
       double cutValue() const { return cutValue_; }
       
     private:
-      const double relSigma_;
+      const double fitValue_;
       const Uncertainty *uncert_;
       const double cutValue_;
     };
 
     const Parameters::PtBinParameters *par_;
+    const int parIdx_;
 
     double meanPt_;    
     double mcStatUncert_;

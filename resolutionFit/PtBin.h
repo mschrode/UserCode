@@ -19,17 +19,17 @@ namespace resolutionFit {
     PtBin(const Parameters::PtBinParameters *par);
     ~PtBin();
 
-    int ptBinIdx() const { return par_->idx(); }
-    double relSigma() const { return relSigma_; }
-    double uncertDown() const { return uncert_->down(); }
-    double uncertUp() const { return uncert_->up(); }
-    double uncertStatDown() const { return uncert_->down(0); }
-    double uncertStatUp() const { return uncert_->up(0); }
-    const Uncertainty *uncertStat() const { return uncert_->uncert(0); }
-    double uncertSystDown() const { return uncert_->down(1); }
-    double uncertSystUp() const { return uncert_->up(1); }
-    const Uncertainty *uncertSyst() const { return uncert_->uncert(1); }
-    int nUncertSyst() const { return uncert_->uncert(1)->nUncerts(); }
+    int ptBinIdx() const { return par_->ptBinIdx(); }
+    double extrapolatedValue(int parIdx) const { return extrapolatedVal_.at(parIdx); }
+    double uncertDown(int parIdx) const { return uncert_.at(parIdx)->down(); }
+    double uncertUp(int parIdx) const { return uncert_.at(parIdx)->up(); }
+    double uncertStatDown(int parIdx) const { return uncert_.at(parIdx)->down(0); }
+    double uncertStatUp(int parIdx) const { return uncert_.at(parIdx)->up(0); }
+    const Uncertainty *uncertStat(int parIdx) const { return uncert_.at(parIdx)->uncert(0); }
+    double uncertSystDown(int parIdx) const { return uncert_.at(parIdx)->down(1); }
+    double uncertSystUp(int parIdx) const { return uncert_.at(parIdx)->up(1); }
+    const Uncertainty *uncertSyst(int parIdx) const { return uncert_.at(parIdx)->uncert(1); }
+    int nUncertSyst(int parIdx) const { return uncert_.at(parIdx)->uncert(1)->nUncerts(); }
     double meanPt() const { return meanPt_; }
     double meanPtUncert() const { return meanPtUncert_; }
     double ptMin() const { return par_->ptMin(); }
@@ -45,9 +45,9 @@ namespace resolutionFit {
     TH1 *getHistPtAsym(const TString &newName) const { return getHist("hPtAsym",newName); }
     TH1 *getHistPdfPtAsym(const TString &newName) const { return getHist("hPdfPtAsym",newName); }
 
-    TF1 *getTF1OfVariation(const TString &name) const { return cutVar_->getTF1(name); }
-    TGraphAsymmErrors *getTGraphOfVariation() const { return cutVar_->getTGraph(); }
-    TH1 *getFrameOfVariation(const TString &name) const { return cutVar_->getFrame(name); }
+    TF1 *getTF1OfVariation(int parIdx, const TString &name) const { return cutVar_.at(parIdx)->getTF1(name); }
+    TGraphAsymmErrors *getTGraphOfVariation(int parIdx) const { return cutVar_.at(parIdx)->getTGraph(); }
+    TH1 *getFrameOfVariation(int parIdx, const TString &name) const { return cutVar_.at(parIdx)->getFrame(name); }
 
 
   private:
@@ -55,9 +55,9 @@ namespace resolutionFit {
 
     double meanPt_;
     double meanPtUncert_;
-    double relSigma_;
-    CutVariation *cutVar_;
-    Uncertainty *uncert_;
+    std::vector<double> extrapolatedVal_;
+    std::vector<CutVariation*> cutVar_;
+    std::vector<Uncertainty*> uncert_;
 
     TH1* hPtGen_;
     TH1* hPtGenJet1_;

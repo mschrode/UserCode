@@ -1,4 +1,4 @@
-// $Id: PtBin.cc,v 1.9 2010/05/14 09:04:15 mschrode Exp $
+// $Id: PtBin.cc,v 1.10 2010/05/15 13:47:39 mschrode Exp $
 
 #include "PtBin.h"
 
@@ -23,37 +23,43 @@ namespace resolutionFit {
     }
 
     // Perform cut variation and extrapolation
-    cutVar_ = new CutVariation(par_);
-    cutVar_->extrapolate();
+    // of fitted values
+    for(int parIdx = 0; parIdx < par_->nFittedPars(); ++parIdx) {
+      cutVar_.push_back(new CutVariation(par_,parIdx));
+      cutVar_[parIdx]->extrapolate();
+      extrapolatedVal_.push_back(cutVar_[parIdx]->extrapolatedValue());
+    }
 
     // Standard selection for reference
     KalibriFileParser *parserStdSel = new KalibriFileParser(par_->fileNameStdSel(),par_->verbosity());
 
-    // Set up members
-    relSigma_ = cutVar_->extrapolatedRelSigma();
+    // Mean pt of this bin
     meanPt_ = parserStdSel->meanPt();
     meanPtUncert_ = parserStdSel->meanPtUncert();
 
-    // Sum up systematic uncertainties
-    Uncertainty *uncertSyst = new Uncertainty("SystematicUncertainty");
-    // Reference sigma for unvaried case
-    double refS = parserStdSel->value();
-    // Calculate relative deviation after variation
-    for(int i = 0; i < par_->nSystUncerts(); ++i) {
-      KalibriFileParser *parser = new KalibriFileParser(par_->fileNameSystUncertUp(i),par_->verbosity());
-      double dUp = parser->value() - refS;
-      delete parser;
-      if( par_->verbosity() == 2 ) {
-	std::cout << " Syst " << meanPt_ << std::flush;
-	std::cout << ":  " << dUp << std::flush;
-      }
-      dUp /= meanPt_;
-      uncertSyst->addUncertainty(new Uncertainty(par_->labelSystUncert(i),dUp,0.));
-    }    
-    // Sum up systematic and statistic uncertainty
-    uncert_ = new Uncertainty("TotalUncertainty");
-    uncert_->addUncertainty(new Uncertainty("StatisticUncertainty",cutVar_->extrapolatedUncert()));
-    uncert_->addUncertainty(uncertSyst);
+    for(int parIdx = 0; parIdx < par_->nFittedPars(); ++parIdx) { // Loop over paramters
+      // Reference sigma for unvaried case
+      double refS = parserStdSel->value(parIdx);
+      // Sum up systematic uncertainties
+      Uncertainty *uncertSyst = new Uncertainty("SystematicUncertainty");
+      // Calculate relative deviation after variation
+      for(int i = 0; i < par_->nSystUncerts(); ++i) {
+	KalibriFileParser *parser = new KalibriFileParser(par_->fileNameSystUncertUp(i),par_->verbosity());
+	double dUp = parser->value(parIdx) - refS;
+	delete parser;
+	if( par_->verbosity() == 2 ) {
+	  std::cout << " Syst " << meanPt_ << std::flush;
+	  std::cout << ":  " << dUp << std::flush;
+	}
+	if( par_->isRelParValue(parIdx) ) dUp /= meanPt_;
+	uncertSyst->addUncertainty(new Uncertainty(par_->labelSystUncert(i),dUp,0.));
+      }  
+      // Sum up systematic and statistic uncertainty
+      uncert_.push_back(new Uncertainty("TotalUncertainty"));
+      uncert_[parIdx]->addUncertainty(new Uncertainty("StatisticUncertainty",
+						      cutVar_[parIdx]->extrapolatedUncert()));
+      uncert_[parIdx]->addUncertainty(uncertSyst);
+    } // End of loop over paramters
 
     // Store spectrum and response histograms
     if( par_->verbosity() == 2 ) std::cout << "Storing spectrum and resolution histograms... " << std::flush;
@@ -84,16 +90,20 @@ namespace resolutionFit {
     delete parserStdSel;
 
     if( par_->verbosity() == 2 ) {
-      std::cout << "Is combined uncertainty: " << std::flush;
-      std::cout << ( uncert_->isCombined() ? "yes" : "no" ) << std::endl;
-      std::cout << "Syst uncert at " << meanPt_ << " GeV: +" << std::flush;
-      std::cout << uncertSystUp() << ", -" << uncertSystDown() << std::endl;
+      for(int parIdx = 0; parIdx < par_->nFittedPars(); ++parIdx) {
+	std::cout << "Is combined uncertainty: " << std::flush;
+	std::cout << ( uncert_[parIdx]->isCombined() ? "yes" : "no" ) << std::endl;
+	std::cout << "Syst uncert at " << meanPt_ << " GeV: +" << std::flush;
+	std::cout << uncertSystUp(parIdx) << ", -" << uncertSystDown(parIdx) << std::endl;
+      }
     }
   }
 
   PtBin::~PtBin() {
-    delete cutVar_;
-    delete uncert_;
+    for(int parIdx = 0; parIdx < par_->nFittedPars(); ++parIdx) {
+      delete cutVar_[parIdx];
+      delete uncert_[parIdx];
+    }
     delete hPtGen_;
     delete hPtGenJet1_;
     delete hPdfPtTrue_;

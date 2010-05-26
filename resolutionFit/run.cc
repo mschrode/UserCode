@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.10 2010/05/18 12:05:52 mschrode Exp $
+// $Id: run.cc,v 1.11 2010/05/26 16:43:44 mschrode Exp $
 
 #include <cassert>
 #include <iostream>
@@ -13,119 +13,134 @@
 
 int main(int argc, char *argv[]) {
 
-  if( argc > 1 ) {
+  if( argc > 2 ) {
     resolutionFit::Parameters *par = 0;
-    TString outNamePrefix = "ResFit_Spring10QCDFlat_Gauss_";
-    TString inNamePrefix = "~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_";
-
-//     TString outNamePrefix = "ResFit_Spring10QCDFlat_GaussDown30It0_";
-//     TString inNamePrefix = "~/results/ResolutionFit/GaussDown30/Iteration0/resolutionSpring10_Gauss_";
-
-//     TString outNamePrefix = "ResFit_Spring10QCDFlat_GaussUp30It0_";
-//     TString inNamePrefix = "~/results/ResolutionFit/GaussUp30/Iteration0/resolutionSpring10_Gauss_";
-//     TString outNamePrefix = "ResFit_Spring10QCDFlat_GaussUp30It1_";
-//     TString inNamePrefix = "~/results/ResolutionFit/GaussUp30/Iteration1/resolutionSpring10_Gauss_";
-
-//     TString outNamePrefix = "ResFit_Spring10QCDFlat_GaussPar1Up30It0_";
-//     TString inNamePrefix = "~/results/ResolutionFit/GaussPar1Up30/Iteration0/resolutionSpring10_Gauss_";
-
-
+    TString outNamePrefix;
+    TString inNamePrefix;
     std::vector<double> ptBinEdges;
     int verbosity = 1;
-    if( argc > 2 ) verbosity = atoi(argv[2]);
+    if( argc > 3 ) verbosity = atoi(argv[3]);
+    
+    TString respType = argv[1];
+    int etaBin = atoi(argv[2]);
+    if( respType == "Gauss" ) {
+      outNamePrefix = "ResFit_Spring10QCDFlat_Gauss_";
+      inNamePrefix = "~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_";
 
-    if( atoi(argv[1]) == 0 ) {
-      std::cout << "Setting up parameters for eta bin 0" << std::endl;
-      ptBinEdges.clear();
-      ptBinEdges.push_back(80.);
-      ptBinEdges.push_back(100.);
-      ptBinEdges.push_back(120.);
-      ptBinEdges.push_back(140.);
-      ptBinEdges.push_back(170.);
-      ptBinEdges.push_back(200.);
-      ptBinEdges.push_back(250.);
-      ptBinEdges.push_back(300.);
-      ptBinEdges.push_back(350.);
-      ptBinEdges.push_back(400.);
-      ptBinEdges.push_back(500.);
-      ptBinEdges.push_back(600.);
-      ptBinEdges.push_back(800.);
-      ptBinEdges.push_back(1000.);
+      // outNamePrefix = "ResFit_Spring10QCDFlat_GaussDown30It0_";
+      // inNamePrefix = "~/results/ResolutionFit/GaussDown30/Iteration0/resolutionSpring10_Gauss_";
+
+      // outNamePrefix = "ResFit_Spring10QCDFlat_GaussUp30It0_";
+      // inNamePrefix = "~/results/ResolutionFit/GaussUp30/Iteration0/resolutionSpring10_Gauss_";
+      // outNamePrefix = "ResFit_Spring10QCDFlat_GaussUp30It1_";
+      // inNamePrefix = "~/results/ResolutionFit/GaussUp30/Iteration1/resolutionSpring10_Gauss_";
+
+      // outNamePrefix = "ResFit_Spring10QCDFlat_GaussPar1Up30It0_";
+      // inNamePrefix = "~/results/ResolutionFit/GaussPar1Up30/Iteration0/resolutionSpring10_Gauss_";
+
+
+      if( etaBin == 0 ) {
+	std::cout << "Setting up parameters for eta bin " << etaBin << std::endl;
+	ptBinEdges.clear();
+	ptBinEdges.push_back(80.);
+	ptBinEdges.push_back(100.);
+	ptBinEdges.push_back(120.);
+	ptBinEdges.push_back(140.);
+	ptBinEdges.push_back(170.);
+	ptBinEdges.push_back(200.);
+	ptBinEdges.push_back(250.);
+	ptBinEdges.push_back(300.);
+	ptBinEdges.push_back(350.);
+	ptBinEdges.push_back(400.);
+	ptBinEdges.push_back(500.);
+	ptBinEdges.push_back(600.);
+	ptBinEdges.push_back(800.);
+	ptBinEdges.push_back(1000.);
       
-      inNamePrefix += "Eta0_";
+	inNamePrefix += "Eta0_";
 
-      par = new resolutionFit::Parameters(0.,1.2,inNamePrefix,
-					  ptBinEdges,0,12,outNamePrefix+"Eta0_",verbosity);
-      par->setTrueGaussResPar(1.88,1.205,0.0342);
+	par = new resolutionFit::Parameters(0.,1.2,inNamePrefix,ptBinEdges,0,12,outNamePrefix+"Eta0_",
+					    resolutionFit::Parameters::Gauss,verbosity);
+	par->setTrueGaussResPar(1.88,1.205,0.0342);
 	
-      par->addPt3Cut(0.06,inNamePrefix+"Rel3rdJet006_");
-      par->addPt3Cut(0.08,inNamePrefix+"Rel3rdJet008_");
-      par->addPt3Cut(0.10,inNamePrefix);
-      par->addPt3Cut(0.12,inNamePrefix+"Rel3rdJet012_");
-      par->addPt3Cut(0.15,inNamePrefix+"Rel3rdJet015_");
-      par->addPt3Cut(0.20,inNamePrefix+"Rel3rdJet020_");
+	par->addPt3Cut(0.06,inNamePrefix+"Rel3rdJet006_");
+	par->addPt3Cut(0.08,inNamePrefix+"Rel3rdJet008_");
+	par->addPt3Cut(0.10,inNamePrefix);
+	par->addPt3Cut(0.12,inNamePrefix+"Rel3rdJet012_");
+	par->addPt3Cut(0.15,inNamePrefix+"Rel3rdJet015_");
+	par->addPt3Cut(0.20,inNamePrefix+"Rel3rdJet020_");
 
-      par->addFileBaseNameMCStat(inNamePrefix+"Flat_");
+	par->addFileBaseNameMCStat(inNamePrefix+"Flat_");
 
-      //par->addMCTruthBins(4,30,100,0.05);
-      //par->fitExtrapolatedSigma(true);
+	//par->addMCTruthBins(4,30,100,0.05);
+	//par->fitExtrapolatedSigma(true);
 
-//       par->addStartOffset(0.7);
-//       par->fitRatio(true);
+	//       par->addStartOffset(0.7);
+	par->fitRatio(true);
      
-    } else if( atoi(argv[1]) == 1 ) {
-      std::cout << "Setting up parameters for eta bin 1" << std::endl;
-      ptBinEdges.clear();
-//       ptBinEdges.push_back(60.);
-//       ptBinEdges.push_back(80.);
-      ptBinEdges.push_back(100.);
-      ptBinEdges.push_back(120.);
-      ptBinEdges.push_back(150.);
-      ptBinEdges.push_back(200.);
-      ptBinEdges.push_back(300.);
-      ptBinEdges.push_back(500.);
-      ptBinEdges.push_back(700.);
+      } else if( etaBin == 1 ) {
+	std::cout << "Setting up parameters for eta bin " << etaBin << std::endl;
+	ptBinEdges.clear();
+	//       ptBinEdges.push_back(60.);
+	//       ptBinEdges.push_back(80.);
+	ptBinEdges.push_back(100.);
+	ptBinEdges.push_back(120.);
+	ptBinEdges.push_back(150.);
+	ptBinEdges.push_back(200.);
+	ptBinEdges.push_back(300.);
+	ptBinEdges.push_back(500.);
+	ptBinEdges.push_back(700.);
 
-      par = new resolutionFit::Parameters(1.2,2.6,
-					  "~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta1_",
-					  ptBinEdges,2,7,outNamePrefix+"Eta1_",verbosity);
-      par->setTrueGaussResPar(2.51,0.968,0.0483);
+	inNamePrefix += "Eta1_";
+
+	par = new resolutionFit::Parameters(1.2,2.6,inNamePrefix,ptBinEdges,2,7,outNamePrefix+"Eta1_",
+					    resolutionFit::Parameters::Gauss,verbosity);
+	par->setTrueGaussResPar(2.51,0.968,0.0483);
 	
-      par->addPt3Cut(0.06,"~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta1_Rel3rdJet006_");
-      par->addPt3Cut(0.08,"~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta1_Rel3rdJet008_");
-      par->addPt3Cut(0.10,"~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta1_");
-      par->addPt3Cut(0.12,"~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta1_Rel3rdJet012_");
-      par->addPt3Cut(0.15,"~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta1_Rel3rdJet015_");
-      par->addPt3Cut(0.20,"~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta1_Rel3rdJet020_");
+	par->addPt3Cut(0.06,inNamePrefix+"Rel3rdJet006_");
+	par->addPt3Cut(0.08,inNamePrefix+"Rel3rdJet008_");
+	par->addPt3Cut(0.10,inNamePrefix);
+	par->addPt3Cut(0.12,inNamePrefix+"Rel3rdJet012_");
+	par->addPt3Cut(0.15,inNamePrefix+"Rel3rdJet015_");
+	par->addPt3Cut(0.20,inNamePrefix+"Rel3rdJet020_");
 
-      par->addFileBaseNameMCStat("~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta1_Flat_");
+	par->addFileBaseNameMCStat(inNamePrefix+"Flat_");
 
-      //par->addMCTruthBins(4,30,100,0.05);
-      par->fitExtrapolatedSigma(true);
+	//par->addMCTruthBins(4,30,100,0.05);
+	par->fitExtrapolatedSigma(true);
 
-    } else if( atoi(argv[1]) == 2 ) {
-      std::cout << "Setting up parameters for eta bin 2" << std::endl;
-      ptBinEdges.clear();
-      ptBinEdges.push_back(80.);
-      ptBinEdges.push_back(100.);
-      ptBinEdges.push_back(150.);
+      } else {
+	std::cerr << "ERROR: '" << etaBin << "' is not a valid eta bin for '" << respType << "' response.\n";
+	exit(1);
+      }
+    } else if( respType == "CrystalBall" ) {
 
-      par = new resolutionFit::Parameters(2.6,3.2,
-					  "~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta2_",
-					  ptBinEdges,1,3,outNamePrefix+"Eta2_",verbosity);
-      par->setTrueGaussResPar(1.68,0.757,0.0348);
+      outNamePrefix = "ResFit_Spring10QCDFlat_CB_";
+      inNamePrefix = "~/results/ResolutionFit/CrystalBall/Iteration1/resolutionSpring10_CB_";
+
+      if( etaBin == 0 ) {
+	std::cout << "Setting up parameters for eta bin " << etaBin << std::endl;
+	ptBinEdges.clear();
+	ptBinEdges.push_back(120.);
+	ptBinEdges.push_back(140.);
+      
+	inNamePrefix += "Eta0_";
+
+	par = new resolutionFit::Parameters(0.,1.2,inNamePrefix,ptBinEdges,2,2,outNamePrefix+"Eta0_",
+					    resolutionFit::Parameters::CrystalBall,verbosity);
+	par->setTrueGaussResPar(1.88,1.205,0.0342);
 	
-      par->addPt3Cut(0.06,"~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta2_Rel3rdJet006_");
-      par->addPt3Cut(0.08,"~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta2_Rel3rdJet008_");
-      par->addPt3Cut(0.10,"~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta2_");
-      par->addPt3Cut(0.12,"~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta2_Rel3rdJet012_");
-      par->addPt3Cut(0.15,"~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta2_Rel3rdJet015_");
-      par->addPt3Cut(0.20,"~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta2_Rel3rdJet020_");
-
-      par->addFileBaseNameMCStat("~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta2_Flat_");
-
+	par->addPt3Cut(0.06,inNamePrefix+"Rel3rdJet006_");
+	par->addPt3Cut(0.08,inNamePrefix+"Rel3rdJet008_");
+	par->addPt3Cut(0.10,inNamePrefix);
+	par->addPt3Cut(0.15,inNamePrefix+"Rel3rdJet015_");
+	par->addPt3Cut(0.20,inNamePrefix+"Rel3rdJet020_");
+      } else {
+	std::cerr << "ERROR: '" << etaBin << "' is not a valid eta bin for '" << respType << "' response.\n";
+	exit(1);
+      }
     } else {
-      std::cerr << "ERROR: '" << argv[1] << "' is not a valid argument.\n";
+      std::cerr << "ERROR: '" << respType << "' is not a valid response function.\n";
       exit(1);
     }
 
@@ -138,11 +153,9 @@ int main(int argc, char *argv[]) {
     std::cout << "Creating fit" << std::endl;
     resolutionFit::FittedResolution *fit = new resolutionFit::FittedResolution(ptBins,par);
 
-    // Plot extrapolation per bin
+    // Plots
     fit->plotExtrapolation();
-    
-    // Plot extrapolated resolution
-    fit->plotResolution();
+    if( respType == "Gauss" ) fit->plotResolution();
     fit->plotResolutionBins();
     fit->plotPtAsymmetryBins();
     fit->plotSpectra();
@@ -162,7 +175,7 @@ int main(int argc, char *argv[]) {
 
   } else {
     std::cerr << "ERROR: Wrong number of arguments.\n";
-    std::cerr << "Usage: 'run <Eta bin number> [<verbosity>]'\n";
+    std::cerr << "Usage: 'run <Response function> <Eta bin number> [<verbosity>]'\n";
     exit(1);
   }
     

@@ -21,14 +21,29 @@ namespace resolutionFit {
     int nPtBins() const { return static_cast<int>(ptBins_.size()); }
     double ptMin() const { return ptBins_.front()->ptMin(); }
     double ptMax() const { return ptBins_.back()->ptMax(); }
-    double ptMin(int i) const { return par_->ptMin(i); }
-    double ptMax(int i) const { return par_->ptMax(i); }
-    double meanPt(int i) const { assert( i>=0 && i < nPtBins() ); return ptBins_[i]->meanPt(); }
-    double relSigma(int i) const { assert( i>=0 && i < nPtBins() ); return ptBins_[i]->relSigma(); }
-    double uncertStat(int i) const { assert( i>=0 && i < nPtBins() ); return ptBins_[i]->uncertStatDown(); }
-    int nUncertSyst() const { return ptBins_[0]->nUncertSyst(); }
-    double uncertSystDown(int i) const { assert( i>=0 && i < nPtBins() ); return ptBins_[i]->uncertSystDown(); }
-    double uncertSystUp(int i) const { assert( i>=0 && i < nPtBins() ); return ptBins_[i]->uncertSystUp(); }
+    double ptMin(int ptBin) const { return par_->ptMin(ptBin); }
+    double ptMax(int ptBin) const { return par_->ptMax(ptBin); }
+    double meanPt(int ptBin) const {
+      assert( ptBin>=0 && ptBin<nPtBins() );
+      return ptBins_[ptBin]->meanPt();
+    }
+    double extrapolatedValue(int ptBin, int parIdx) const {
+      assert( ptBin>=0 && ptBin<nPtBins() );
+      return ptBins_[ptBin]->extrapolatedValue(parIdx);
+    }
+    double uncertStat(int ptBin, int parIdx) const {
+      assert( ptBin>=0 && ptBin<nPtBins() );
+      return ptBins_[ptBin]->uncertStatDown(parIdx);
+    }
+    int nUncertSyst(int parIdx) const { return ptBins_[0]->nUncertSyst(parIdx); }
+    double uncertSystDown(int ptBin, int parIdx) const {
+      assert( ptBin>=0 && ptBin<nPtBins() );
+      return ptBins_[ptBin]->uncertSystDown(parIdx);
+    }
+    double uncertSystUp(int ptBin, int parIdx) const {
+      assert( ptBin>=0 && ptBin<nPtBins() );
+      return ptBins_[ptBin]->uncertSystUp(parIdx);
+    }
 
 
     void plotExtrapolation() const;
@@ -43,8 +58,8 @@ namespace resolutionFit {
     const Parameters *par_;
     const std::vector<PtBin*> ptBins_;
 
-    double xMin_;
-    double xMax_;
+    double ptMin_;
+    double ptMax_;
 
     TF1 *trueRes_;
     TF1 *fittedRes_;
