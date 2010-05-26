@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.9 2010/05/15 13:47:39 mschrode Exp $
+// $Id: run.cc,v 1.10 2010/05/18 12:05:52 mschrode Exp $
 
 #include <cassert>
 #include <iostream>
@@ -15,10 +15,20 @@ int main(int argc, char *argv[]) {
 
   if( argc > 1 ) {
     resolutionFit::Parameters *par = 0;
-    //TString outNamePrefix = "ResFit_Spring10QCDFlat_Gauss_";
-    //TString inNamePrefix = "~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_";
-    TString outNamePrefix = "ResFit_Spring10QCDFlat_GaussUp30It0_";
-    TString inNamePrefix = "~/results/ResolutionFit/GaussUp30/Iteration0/resolutionSpring10_Gauss_";
+    TString outNamePrefix = "ResFit_Spring10QCDFlat_Gauss_";
+    TString inNamePrefix = "~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_";
+
+//     TString outNamePrefix = "ResFit_Spring10QCDFlat_GaussDown30It0_";
+//     TString inNamePrefix = "~/results/ResolutionFit/GaussDown30/Iteration0/resolutionSpring10_Gauss_";
+
+//     TString outNamePrefix = "ResFit_Spring10QCDFlat_GaussUp30It0_";
+//     TString inNamePrefix = "~/results/ResolutionFit/GaussUp30/Iteration0/resolutionSpring10_Gauss_";
+//     TString outNamePrefix = "ResFit_Spring10QCDFlat_GaussUp30It1_";
+//     TString inNamePrefix = "~/results/ResolutionFit/GaussUp30/Iteration1/resolutionSpring10_Gauss_";
+
+//     TString outNamePrefix = "ResFit_Spring10QCDFlat_GaussPar1Up30It0_";
+//     TString inNamePrefix = "~/results/ResolutionFit/GaussPar1Up30/Iteration0/resolutionSpring10_Gauss_";
+
 
     std::vector<double> ptBinEdges;
     int verbosity = 1;
@@ -57,17 +67,17 @@ int main(int argc, char *argv[]) {
 
       par->addFileBaseNameMCStat(inNamePrefix+"Flat_");
 
-      //par->addMCTruthBins(4,30,80,0.05);
-      //      par->fitExtrapolatedSigma();
+      //par->addMCTruthBins(4,30,100,0.05);
+      //par->fitExtrapolatedSigma(true);
 
-      par->addStartOffset(1.3);
-      par->fitRatio(true);
+//       par->addStartOffset(0.7);
+//       par->fitRatio(true);
      
     } else if( atoi(argv[1]) == 1 ) {
       std::cout << "Setting up parameters for eta bin 1" << std::endl;
       ptBinEdges.clear();
-      ptBinEdges.push_back(60.);
-      ptBinEdges.push_back(80.);
+//       ptBinEdges.push_back(60.);
+//       ptBinEdges.push_back(80.);
       ptBinEdges.push_back(100.);
       ptBinEdges.push_back(120.);
       ptBinEdges.push_back(150.);
@@ -78,7 +88,7 @@ int main(int argc, char *argv[]) {
 
       par = new resolutionFit::Parameters(1.2,2.6,
 					  "~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta1_",
-					  ptBinEdges,0,7,outNamePrefix+"Eta1_",verbosity);
+					  ptBinEdges,2,7,outNamePrefix+"Eta1_",verbosity);
       par->setTrueGaussResPar(2.51,0.968,0.0483);
 	
       par->addPt3Cut(0.06,"~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta1_Rel3rdJet006_");
@@ -89,6 +99,9 @@ int main(int argc, char *argv[]) {
       par->addPt3Cut(0.20,"~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta1_Rel3rdJet020_");
 
       par->addFileBaseNameMCStat("~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_Eta1_Flat_");
+
+      //par->addMCTruthBins(4,30,100,0.05);
+      par->fitExtrapolatedSigma(true);
 
     } else if( atoi(argv[1]) == 2 ) {
       std::cout << "Setting up parameters for eta bin 2" << std::endl;
