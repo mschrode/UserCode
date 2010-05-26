@@ -260,10 +260,11 @@ namespace resolutionFit {
     // Draw a frame
     TH1 *h = new TH1D("FrameExtrapolatedResolution",";p_{T} (GeV);#sigma / p_{T}",
 		      1000,xMin_,xMax_);
-    double min = *std::min_element(gStat->GetY(),gStat->GetY()+gStat->GetN());
-    double max = *std::max_element(gStat->GetY(),gStat->GetY()+gStat->GetN());
-    if( gPseudo ) max = *std::max_element(gPseudo->GetY(),gPseudo->GetY()+gPseudo->GetN());
-    h->GetYaxis()->SetRangeUser(0.7*min,1.2*max);
+    h->SetNdivisions(510);
+    double min = 0.7*(*std::min_element(gStat->GetY(),gStat->GetY()+gStat->GetN()));
+    double max = 1.2*(*std::max_element(gStat->GetY(),gStat->GetY()+gStat->GetN()));
+    if( gPseudo ) max = 1.8*(*std::max_element(gPseudo->GetY(),gPseudo->GetY()+gPseudo->GetN()));
+    h->GetYaxis()->SetRangeUser(min,max);
     h->Draw();
 
     // Draw systematic uncertainty band
@@ -321,7 +322,11 @@ namespace resolutionFit {
     lineFitRatio->SetLineWidth(2);
     lineFitRatio->SetLineStyle(2);
     lineFitRatio->SetLineColor(2);
-    if( par_->fitRatio() ) gStatRatio->Fit(lineFitRatio,"0QR");
+    if( par_->fitRatio() ) {
+      gStatRatio->Fit(lineFitRatio,"0QR");
+      std::cout << "Fitted ratio " << lineFitRatio->GetParameter(0) << std::flush;
+      std::cout << " +/- " << lineFitRatio->GetParError(0) << std::endl;
+    }
 
     TF1 *lineStartRes = static_cast<TF1*>(lineFitRatio->Clone("LineStartResExtrapolatedResolution"));
     lineStartRes->SetLineColor(8);
@@ -373,7 +378,7 @@ namespace resolutionFit {
     //leg->AddEntry(gSyst,"Uncertainty from spectrum","F");
     if( gPseudo ) leg->AddEntry(gPseudo,"Pseudo #gamma+jet measurement","P");
     leg->AddEntry(trueRes_,"MC truth resolution","L");
-    if( par_->fitRatio() ) leg->AddEntry(lineFitRatio,"Mean deviation","L");
+    if( par_->fitRatio() ) leg->AddEntry(lineFitRatio,"Mean fitted #bar{#sigma}","L");
     if( par_->hasStartOffset() ) leg->AddEntry(lineStartRes,"Resolution in spectrum","L");
     if( par_->fitExtrapolatedSigma() ) leg->AddEntry(fittedRes_,"Fit #sigma(p_{T}) to #bar{#sigma}","L");
     leg->Draw("same");
@@ -541,6 +546,13 @@ namespace resolutionFit {
 
 
   void FittedResolution::print() const {
+    std::cout << std::endl;
+    for(int k = 0; k < fittedRes_->GetNpar(); ++k) {
+      std::cout << " & $" << fittedRes_->GetParameter(k) << " \\pm " << fittedRes_->GetParError(k) << "$" << std::flush;
+    }
+    std::cout << " \\\\" << std::endl;
+
+
     std::cout << "\n\nFITTED RESOLUTION\n";
     // Loop over ptbins
     for(size_t bin = 0; bin < nPtBins(); bin++) {
