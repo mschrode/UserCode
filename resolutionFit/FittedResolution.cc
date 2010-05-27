@@ -13,6 +13,8 @@
 #include "TPaveText.h"
 #include "TString.h"
 
+#include "ResponseFunction.h"
+
 #include "../util/LabelFactory.h"
 #include "../util/StyleSettings.h"
 
@@ -524,6 +526,96 @@ namespace resolutionFit {
 //     delete leg;
 //     delete can;
   }
+
+
+  void FittedResolution::plotMCClosure() const {
+    if( par_->hasMCClosure() ) {
+      // Loop over ptbins
+      for(std::vector<PtBin*>::const_iterator it = ptBins_.begin();
+	  it != ptBins_.end(); it++) {
+	int bin = (it-ptBins_.begin());
+	
+	bool logY = par_->respFuncType() == ResponseFunction::CrystalBall ? true : false;
+	double rMin = 0.;
+	double rMax = 2.;
+	double yMin = logY ? 6E-4 : 0.;
+	double yMax = logY ? 8E2 : 12.;
+
+	// Create Canvas
+	TCanvas *can = new TCanvas("PlotMCClosure","PlotMCClosure",500,500);
+	can->cd();
+	
+	// Draw MC truth resolution
+	TH1 *hMCRes = (*it)->getHistMCRes("PlotMCClosureMCRes");
+	hMCRes->UseCurrentStyle();
+	hMCRes->SetMarkerStyle(20);
+	hMCRes->SetXTitle("Response R = p^{reco}_{T} / p^{particle}_{T}");
+	hMCRes->SetYTitle("1 / N  dN / dR");
+	hMCRes->GetXaxis()->SetRangeUser(rMin,rMax);
+	hMCRes->GetYaxis()->SetRangeUser(yMin,yMax);
+	hMCRes->Draw("PE1");
+	
+	// Fill histogram of extrapolated response
+	TH1 *hFitRes = new TH1D("PlotMCClosureFitRes","",500,rMin,rMax);
+	hFitRes->SetLineWidth(1);
+	hFitRes->SetLineColor(2);
+	std::vector<double> pars;
+	for(int parIdx = 0; parIdx < par_->nFittedPars(); ++parIdx) {
+	  pars.push_back((*it)->extrapolatedValue(parIdx));
+	}
+
+	TH1 *hFitResCore = 0;
+	if( par_->respFuncType() == ResponseFunction::CrystalBall ) {
+	  hFitResCore = static_cast<TH1D*>(hFitRes->Clone("PlotMCClosureFitResCore"));
+	  hFitResCore->SetLineStyle(2);
+	}
+	for(int rBin = 1; rBin <= hFitRes->GetNbinsX(); ++rBin) {
+	  double res = hFitRes->GetBinCenter(rBin);
+	  hFitRes->SetBinContent(rBin,(*(par_->respFunc()))(res,pars));
+	  if( hFitResCore ) {
+	    hFitResCore->SetBinContent(rBin,par_->respFunc()->pdfGauss(res,1.,pars[0]));
+	  }
+	}
+	if( hFitResCore ) hFitResCore->Draw("Lsame");
+	hFitRes->Draw("Lsame");	
+	
+	
+	// Labels
+	TPaveText *txt = util::LabelFactory::createPaveText(2);
+	txt->AddText("PYTHIA, #sqrt{s} = 7 TeV, L = 50 pb^{-1}");
+	txt->AddText("Anti-k_{T} d = 0.5 jets, "+par_->labelEtaBin());
+	txt->Draw("same");
+
+	TLegend *leg = util::LabelFactory::createLegend(2,1.,
+							util::LabelFactory::lineHeight(),
+							2*util::LabelFactory::lineHeight());
+	leg->AddEntry(hMCRes,"MC truth, "+par_->labelPtBin(bin,1),"P");
+	leg->AddEntry(hFitRes,"Fit result, "+par_->labelPtBin(bin,0),"L");
+	leg->Draw("same");
+	
+	gPad->RedrawAxis();
+	if( logY ) gPad->SetLogy();
+	
+	// Write Canvas to fiel
+	TString name = par_->outNamePrefix();
+	name += "MCClosure_PtBin";
+	name += bin;
+	name += ".eps";
+	can->SaveAs(name,"eps");
+	
+	// Clean up
+	delete hMCRes;
+	delete hFitRes;
+	if( hFitResCore ) delete hFitResCore;
+	delete txt;
+	delete leg;
+	delete can;
+      }
+    } else {
+      std::cerr << "No MCClosure response distribution available." << std::endl;
+    }
+  }
+
 
 
   void FittedResolution::print() const {

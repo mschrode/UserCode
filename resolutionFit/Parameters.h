@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.2 2010/05/18 12:05:43 mschrode Exp $
+// $Id: Parameters.h,v 1.3 2010/05/26 21:56:34 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -8,6 +8,8 @@
 
 #include "TString.h"
 
+#include "ResponseFunction.h"
+
 class TRandom3;
 namespace resolutionFit {
 
@@ -15,20 +17,17 @@ namespace resolutionFit {
   //!
   //! \author Matthias Schroeder
   //! \date 2010/05/15
-  //! $Id: Parameters.h,v 1.2 2010/05/18 12:05:43 mschrode Exp $
+  //! $Id: Parameters.h,v 1.3 2010/05/26 21:56:34 mschrode Exp $
   // --------------------------------------------
   class Parameters {
   public:
-
-    enum ResponseFunction { Gauss, CrystalBall };
-    
     class PtBinParameters {
     public:
       PtBinParameters(int ptBinIdx, const Parameters *par)
 	: ptBinIdx_(ptBinIdx), par_(par) {};
       ~PtBinParameters() {};
 
-      Parameters::ResponseFunction respFunc() const { return par_->respFunc(); }
+      ResponseFunction::Type respFuncType() const { return par_->respFuncType(); }
       int nFittedPars() const { return par_->nFittedPars(); }
       bool isRelParValue(int parIdx) const { return par_->isRelParValue(parIdx); }
       TString parLabel(int parIdx) const { return par_->parLabel(parIdx); }
@@ -48,6 +47,9 @@ namespace resolutionFit {
       double pt3CutValue(int k) const { return par_->pt3CutValue(k); }
       TString fileNamePt3CutVariations(int k) const { return par_->fileNamePt3CutVariations(ptBinIdx(),k); }
 
+      bool hasMCClosure() const { return par_->hasMCClosure(); }
+      TString fileNameMCClosure() const { return par_->fileNameMCClosure(ptBinIdx()); }
+
       int nSystUncerts() const { return par_->nSystUncerts(); }
       TString labelSystUncert(int k) const { return par_->labelSystUncert(k); }
       TString fileNameSystUncertDown(int k) const { return par_->fileNameSystUncertDown(ptBinIdx(),k); }
@@ -61,13 +63,14 @@ namespace resolutionFit {
     };
 
     
-    Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, Parameters::ResponseFunction respFunc, int verbosity);
+    Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, ResponseFunction::Type type, int verbosity);
     ~Parameters();
 
     const PtBinParameters *createPtBinParameters(int ptBinIdx) const;
 
-    Parameters::ResponseFunction respFunc() const { return respFunc_; }
-    int nFittedPars() const;
+    ResponseFunction::Type respFuncType() const { return respFunc_->type(); }
+    const ResponseFunction *respFunc() const { return respFunc_; }
+    int nFittedPars() const { respFunc_->nPars(); }
     bool isRelParValue(int parIdx) const;
     TString parLabel(int parIdx) const;
     TString parAxisLabel(int parIdx) const;
@@ -92,6 +95,9 @@ namespace resolutionFit {
     TString fileNameSystUncertDown(int i, int k) const { return namesSystDown_[k][i]; }
     TString fileNameSystUncertUp(int i, int k) const { return namesSystUp_[k][i]; }
 
+    bool hasMCClosure() const { namesMCClosure_.size() > 0 ? true : false; }
+    TString fileNameMCClosure(int ptBin) const { return namesMCClosure_.at(ptBin); }
+
     TString labelEtaBin() const;
     TString labelJetAlgo() const;
     TString labelPtBin(int ptBin, int type) const;
@@ -114,6 +120,7 @@ namespace resolutionFit {
 
     void addPt3Cut(double pt3RelCutValue, const TString &fileBaseName);
     void addFileBaseNameMCStat(const TString &name) { writeFileNames(namesMCStat_,name); }
+    void addFileBaseNameMCClosure(const TString &name) { writeFileNames(namesMCClosure_,name); }
     void addSystUncert(const TString &label, const TString &fileBaseNameDown, const TString &fileBaseNameUp);
     void addMCTruthBins(int nBins, double min, double max, double relUncert);
     void setTrueGaussResPar(double a0, double a1, double a2) {
@@ -132,12 +139,12 @@ namespace resolutionFit {
     const int startIdx_;
     const int endIdx_;
     const TString outNamePrefix_;
-    const Parameters::ResponseFunction respFunc_;
     const int verbosity_;
 
     std::vector<double> ptBinEdges_;
     std::vector<TString> namesStdSel_;
     std::vector<TString> namesMCStat_;
+    std::vector<TString> namesMCClosure_;
 
     std::vector<double> pt3RelCutValues_;
     std::vector< std::vector<TString> > namesCutVars_;  // [ cut variation ] [ pt bin ]
@@ -155,7 +162,9 @@ namespace resolutionFit {
     bool fitRatio_;
     double startResOffset_;
 
+    ResponseFunction *respFunc_;
     TRandom3 *rand_;
+
     mutable std::list<PtBinParameters*> listOfPtBinParameters_;
     
     void writeFileNames(std::vector<TString> &names, const TString &baseName) const;

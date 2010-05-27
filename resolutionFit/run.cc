@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.11 2010/05/26 16:43:44 mschrode Exp $
+// $Id: run.cc,v 1.12 2010/05/26 21:56:36 mschrode Exp $
 
 #include <cassert>
 #include <iostream>
@@ -6,10 +6,10 @@
 
 #include "TString.h"
 
+#include "FittedResolution.h"
 #include "Parameters.h"
 #include "PtBin.h"
-#include "FittedResolution.h"
-
+#include "ResponseFunction.h"
 
 int main(int argc, char *argv[]) {
 
@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
 	inNamePrefix += "Eta0_";
 
 	par = new resolutionFit::Parameters(0.,1.2,inNamePrefix,ptBinEdges,0,12,outNamePrefix+"Eta0_",
-					    resolutionFit::Parameters::Gauss,verbosity);
+					    resolutionFit::ResponseFunction::Gauss,verbosity);
 	par->setTrueGaussResPar(1.88,1.205,0.0342);
 	
 	par->addPt3Cut(0.06,inNamePrefix+"Rel3rdJet006_");
@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
 	inNamePrefix += "Eta1_";
 
 	par = new resolutionFit::Parameters(1.2,2.6,inNamePrefix,ptBinEdges,2,7,outNamePrefix+"Eta1_",
-					    resolutionFit::Parameters::Gauss,verbosity);
+					    resolutionFit::ResponseFunction::Gauss,verbosity);
 	par->setTrueGaussResPar(2.51,0.968,0.0483);
 	
 	par->addPt3Cut(0.06,inNamePrefix+"Rel3rdJet006_");
@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
 	inNamePrefix += "Eta0_";
 
 	par = new resolutionFit::Parameters(0.,1.2,inNamePrefix,ptBinEdges,2,2,outNamePrefix+"Eta0_",
-					    resolutionFit::Parameters::CrystalBall,verbosity);
+					    resolutionFit::ResponseFunction::CrystalBall,verbosity);
 	par->setTrueGaussResPar(1.88,1.205,0.0342);
 	
 	par->addPt3Cut(0.06,inNamePrefix+"Rel3rdJet006_");
@@ -135,6 +135,8 @@ int main(int argc, char *argv[]) {
 	par->addPt3Cut(0.10,inNamePrefix);
 	par->addPt3Cut(0.15,inNamePrefix+"Rel3rdJet015_");
 	par->addPt3Cut(0.20,inNamePrefix+"Rel3rdJet020_");
+
+	par->addFileBaseNameMCClosure("~/results/ResolutionFit/CrystalBall/MCClosure/resolutionSpring10_CB_Eta0_MCClosure_");
       } else {
 	std::cerr << "ERROR: '" << etaBin << "' is not a valid eta bin for '" << respType << "' response.\n";
 	exit(1);
@@ -160,6 +162,7 @@ int main(int argc, char *argv[]) {
     fit->plotPtAsymmetryBins();
     fit->plotSpectra();
     fit->plotSystematicUncertainties();
+    fit->plotMCClosure();
     
     // Print
     fit->print();

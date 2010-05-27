@@ -1,4 +1,4 @@
-// $Id: PtBin.cc,v 1.10 2010/05/15 13:47:39 mschrode Exp $
+// $Id: PtBin.cc,v 1.11 2010/05/26 21:56:36 mschrode Exp $
 
 #include "PtBin.h"
 
@@ -85,9 +85,17 @@ namespace resolutionFit {
     name += ptBinIdx();
     hPdfPtAsym_ = parserStdSel->hist("hFitPtAsym_0",name);
 
-    if( par_->verbosity() == 2 ) std::cout << "ok" << std::endl;
-
     delete parserStdSel;
+
+    if( par_->hasMCClosure() ) {
+      KalibriFileParser *parserMCClosure = new KalibriFileParser(par_->fileNameMCClosure(),par_->verbosity());
+      name = "hMCRes_PtBin";
+      name += ptBinIdx();
+      hMCRes_ = parserMCClosure->hist("hRespMeas_0",name);
+      delete parserMCClosure;
+    }
+
+    if( par_->verbosity() == 2 ) std::cout << "ok" << std::endl;
 
     if( par_->verbosity() == 2 ) {
       for(int parIdx = 0; parIdx < par_->nFittedPars(); ++parIdx) {
@@ -123,6 +131,7 @@ namespace resolutionFit {
     else if( name == "hPdfRes" ) h = static_cast<TH1D*>(hPdfRes_->Clone(newName));
     else if( name == "hPtAsym" ) h = static_cast<TH1D*>(hPtAsym_->Clone(newName));
     else if( name == "hPdfPtAsym" ) h = static_cast<TH1D*>(hPdfPtAsym_->Clone(newName));
+    else if( name == "hMCRes" ) h = static_cast<TH1D*>(hMCRes_->Clone(newName));
     else {
       std::cerr << "ERROR PtBin::getHist: No histogram of name '" << name << "'" << std::endl;
       exit(-1);

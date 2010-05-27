@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.2 2010/05/18 12:05:43 mschrode Exp $
+// $Id: Parameters.cc,v 1.3 2010/05/26 21:56:35 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -8,10 +8,12 @@
 
 
 namespace resolutionFit {
-  Parameters::Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, Parameters::ResponseFunction respFunc, int verbosity)
+  Parameters::Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, ResponseFunction::Type type, int verbosity)
     : etaMin_(etaMin), etaMax_(etaMax),
       startIdx_(startIdx), endIdx_(endIdx),
-      outNamePrefix_(outNamePrefix), respFunc_(respFunc), verbosity_(verbosity) {
+      outNamePrefix_(outNamePrefix), verbosity_(verbosity) {
+
+    respFunc_ = new ResponseFunction(type);
 
     ptBinEdges_ = ptBinEdges;
     trueResPar_ = std::vector<double>(3,0.);
@@ -32,6 +34,7 @@ namespace resolutionFit {
 	it != listOfPtBinParameters_.end(); ++it) {
       delete *it;
     }
+    delete respFunc_;
     delete rand_;
   }
 
@@ -83,20 +86,11 @@ namespace resolutionFit {
   }
 
 
-  int Parameters::nFittedPars() const {
-    int n = 0;
-    if( respFunc() == Gauss ) n = 1;
-    else if( respFunc() == CrystalBall ) n = 3;
-
-    return n;
-  }
-
-
   bool Parameters::isRelParValue(int parIdx) const {
     assert( parIdx >=0 && parIdx < nFittedPars() );
     
     bool isRelVal = true;
-    if( respFunc() == CrystalBall && parIdx > 0 ) isRelVal = false;
+    if( respFuncType() == ResponseFunction::CrystalBall && parIdx > 0 ) isRelVal = false;
 
     return isRelVal;
   }

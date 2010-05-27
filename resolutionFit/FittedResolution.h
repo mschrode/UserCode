@@ -52,6 +52,7 @@ namespace resolutionFit {
     void plotResolutionBins() const;
     void plotSpectra() const;
     void plotSystematicUncertainties() const;
+    void plotMCClosure() const;
     void print() const;
 
   private:
