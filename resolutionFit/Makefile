@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.4 2010/05/15 13:47:39 mschrode Exp $
+# $Id: Makefile,v 1.5 2010/05/27 08:56:12 mschrode Exp $
 
 ROOTLIBS   = $(shell root-config --libs) -lMinuit
 ROOTCFLAGS = $(shell root-config --cflags)
@@ -42,10 +42,10 @@ run.o: run.cc PtBin.h FittedResolution.h Parameters.h ResponseFunction.h
 
 
 clean:
-	@rm *.o 
-	@rm run
-	@rm *~
-	@rm *#
-	@rm *.ps
-	@rm *.eps
+	@rm -f *.o 
+	@rm -f run
+	@rm -f *~
+	@rm -f *#
+	@rm -f *.ps
+	@rm -f *.eps
 	@rm -f .#*
