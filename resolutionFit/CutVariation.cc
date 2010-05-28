@@ -1,4 +1,4 @@
-// $Id: CutVariation.cc,v 1.9 2010/05/18 12:04:45 mschrode Exp $
+// $Id: CutVariation.cc,v 1.10 2010/05/26 21:56:34 mschrode Exp $
 
 #include "CutVariation.h"
 #include "KalibriFileParser.h"
@@ -101,12 +101,12 @@ namespace resolutionFit {
     double deltaY = yMax - yMin;
     yMin -= 0.2*deltaY;
     if( yMin < 0. ) yMin = 0.;
-    yMax += 0.8*deltaY;
+    yMax += 0.2*deltaY;
 
     TH1 *hFrame = new TH1D(name,";p^{rel}_{T,3} cut;",1000,xMin,xMax);
     hFrame->SetYTitle(par_->parAxisLabel(parIdx()));
     hFrame->GetYaxis()->SetRangeUser(yMin,yMax);
-    hFrame->SetNdivisions(505);
+
     return hFrame;
   }
 

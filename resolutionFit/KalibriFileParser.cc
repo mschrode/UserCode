@@ -1,4 +1,4 @@
-// $Id: KalibriFileParser.cc,v 1.4 2010/05/10 10:24:22 mschrode Exp $
+// $Id: KalibriFileParser.cc,v 1.5 2010/05/14 09:03:54 mschrode Exp $
 
 #include "KalibriFileParser.h"
 
@@ -154,6 +154,7 @@ namespace resolutionFit {
 	  ioError = -2;
 	} else {
 	  h->SetDirectory(0);
+	  h->UseCurrentStyle();
 	  it->second = h;
 	}
       }

@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.3 2010/05/26 21:56:34 mschrode Exp $
+// $Id: Parameters.h,v 1.4 2010/05/27 08:56:12 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -17,7 +17,7 @@ namespace resolutionFit {
   //!
   //! \author Matthias Schroeder
   //! \date 2010/05/15
-  //! $Id: Parameters.h,v 1.3 2010/05/26 21:56:34 mschrode Exp $
+  //! $Id: Parameters.h,v 1.4 2010/05/27 08:56:12 mschrode Exp $
   // --------------------------------------------
   class Parameters {
   public:
@@ -64,6 +64,8 @@ namespace resolutionFit {
 
     
     Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, ResponseFunction::Type type, int verbosity);
+    Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, const std::vector<int> fileNameIdx, const TString &outNamePrefix, ResponseFunction::Type type, int verbosity);
+
     ~Parameters();
 
     const PtBinParameters *createPtBinParameters(int ptBinIdx) const;
@@ -136,11 +138,10 @@ namespace resolutionFit {
   private:
     const double etaMin_;
     const double etaMax_;
-    const int startIdx_;
-    const int endIdx_;
     const TString outNamePrefix_;
     const int verbosity_;
 
+    std::vector<int> fileNameIdx_;
     std::vector<double> ptBinEdges_;
     std::vector<TString> namesStdSel_;
     std::vector<TString> namesMCStat_;
@@ -167,6 +168,7 @@ namespace resolutionFit {
 
     mutable std::list<PtBinParameters*> listOfPtBinParameters_;
     
+    void init(const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, ResponseFunction::Type type);
     void writeFileNames(std::vector<TString> &names, const TString &baseName) const;
   };
 }

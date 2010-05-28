@@ -1,19 +1,36 @@
-// $Id: run.cc,v 1.12 2010/05/26 21:56:36 mschrode Exp $
+// $Id: run.cc,v 1.13 2010/05/27 08:56:12 mschrode Exp $
+
+#ifndef RUN_RESOLUTION_FIT
+#define RUN_RESOLUTION_FIT
 
 #include <cassert>
 #include <iostream>
 #include <vector>
 
+#include "TError.h"
+#include "TROOT.h"
 #include "TString.h"
+#include "TSystem.h"
 
 #include "FittedResolution.h"
 #include "Parameters.h"
 #include "PtBin.h"
 #include "ResponseFunction.h"
 
+#include "../util/StyleSettings.h"
+
 int main(int argc, char *argv[]) {
 
   if( argc > 2 ) {
+    // Set style
+    //util::StyleSettings::presentationNoTitle();
+    util::StyleSettings::paperNoTitle();
+
+    gErrorIgnoreLevel = 1001;        // Do not print ROOT message if eps file has been created
+    gSystem->Load("libHistPainter"); // Remove 'Warning in <TClass::TClass>: no dictionary for class TPaletteAxis is available'
+    gROOT->ForceStyle();
+
+
     resolutionFit::Parameters *par = 0;
     TString outNamePrefix;
     TString inNamePrefix;
@@ -27,16 +44,19 @@ int main(int argc, char *argv[]) {
       outNamePrefix = "ResFit_Spring10QCDFlat_Gauss_";
       inNamePrefix = "~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_";
 
-      // outNamePrefix = "ResFit_Spring10QCDFlat_GaussDown30It0_";
-      // inNamePrefix = "~/results/ResolutionFit/GaussDown30/Iteration0/resolutionSpring10_Gauss_";
+//       outNamePrefix = "ResFit_Spring10QCDFlat_GaussDown30It0_";
+//       inNamePrefix = "~/results/ResolutionFit/GaussDown30/Iteration0/resolutionSpring10_Gauss_";
 
-      // outNamePrefix = "ResFit_Spring10QCDFlat_GaussUp30It0_";
-      // inNamePrefix = "~/results/ResolutionFit/GaussUp30/Iteration0/resolutionSpring10_Gauss_";
-      // outNamePrefix = "ResFit_Spring10QCDFlat_GaussUp30It1_";
-      // inNamePrefix = "~/results/ResolutionFit/GaussUp30/Iteration1/resolutionSpring10_Gauss_";
+//        outNamePrefix = "ResFit_Spring10QCDFlat_GaussUp30It0_";
+//        inNamePrefix = "~/results/ResolutionFit/GaussUp30/Iteration0/resolutionSpring10_Gauss_";
+//       outNamePrefix = "ResFit_Spring10QCDFlat_GaussUp30It1_";
+//       inNamePrefix = "~/results/ResolutionFit/GaussUp30/Iteration1/resolutionSpring10_Gauss_";
+//       outNamePrefix = "ResFit_Spring10QCDFlat_GaussUp30It2_";
+//       inNamePrefix = "~/results/ResolutionFit/GaussUp30/Iteration2/resolutionSpring10_Gauss_";
 
-      // outNamePrefix = "ResFit_Spring10QCDFlat_GaussPar1Up30It0_";
-      // inNamePrefix = "~/results/ResolutionFit/GaussPar1Up30/Iteration0/resolutionSpring10_Gauss_";
+
+//       outNamePrefix = "ResFit_Spring10QCDFlat_GaussPar1Up30It0_";
+//       inNamePrefix = "~/results/ResolutionFit/GaussPar1Up30/Iteration0/resolutionSpring10_Gauss_";
 
 
       if( etaBin == 0 ) {
@@ -75,8 +95,8 @@ int main(int argc, char *argv[]) {
 	//par->addMCTruthBins(4,30,100,0.05);
 	//par->fitExtrapolatedSigma(true);
 
-	//       par->addStartOffset(0.7);
-	par->fitRatio(true);
+	//	par->addStartOffset(1.005);
+	//par->fitRatio(true);
      
       } else if( etaBin == 1 ) {
 	std::cout << "Setting up parameters for eta bin " << etaBin << std::endl;
@@ -115,26 +135,35 @@ int main(int argc, char *argv[]) {
       }
     } else if( respType == "CrystalBall" ) {
 
-      outNamePrefix = "ResFit_Spring10QCDFlat_CB_";
+      outNamePrefix = "ResFit_Spring10QCDFlat_CB6_";
       inNamePrefix = "~/results/ResolutionFit/CrystalBall/Iteration1/resolutionSpring10_CB_";
 
       if( etaBin == 0 ) {
 	std::cout << "Setting up parameters for eta bin " << etaBin << std::endl;
 	ptBinEdges.clear();
-	ptBinEdges.push_back(120.);
-	ptBinEdges.push_back(140.);
-      
+
+//   	ptBinEdges.push_back(120.);
+//   	ptBinEdges.push_back(140.);
+
+//  	ptBinEdges.push_back(170.);
+//  	ptBinEdges.push_back(200.);
+
+ 	ptBinEdges.push_back(250.);
+ 	ptBinEdges.push_back(300.);
+
 	inNamePrefix += "Eta0_";
 
-	par = new resolutionFit::Parameters(0.,1.2,inNamePrefix,ptBinEdges,2,2,outNamePrefix+"Eta0_",
+	par = new resolutionFit::Parameters(0.,1.2,inNamePrefix,ptBinEdges,6,6,outNamePrefix+"Eta0_",
 					    resolutionFit::ResponseFunction::CrystalBall,verbosity);
 	par->setTrueGaussResPar(1.88,1.205,0.0342);
 	
 	par->addPt3Cut(0.06,inNamePrefix+"Rel3rdJet006_");
-	par->addPt3Cut(0.08,inNamePrefix+"Rel3rdJet008_");
+	//par->addPt3Cut(0.08,inNamePrefix+"Rel3rdJet008_");
 	par->addPt3Cut(0.10,inNamePrefix);
 	par->addPt3Cut(0.15,inNamePrefix+"Rel3rdJet015_");
 	par->addPt3Cut(0.20,inNamePrefix+"Rel3rdJet020_");
+
+	par->addFileBaseNameMCStat(inNamePrefix+"Flat_");
 
 	par->addFileBaseNameMCClosure("~/results/ResolutionFit/CrystalBall/MCClosure/resolutionSpring10_CB_Eta0_MCClosure_");
       } else {
@@ -185,3 +214,4 @@ int main(int argc, char *argv[]) {
 
   return 0;
 }
+#endif

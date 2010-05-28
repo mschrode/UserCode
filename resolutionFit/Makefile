@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.5 2010/05/27 08:56:12 mschrode Exp $
+# $Id: Makefile,v 1.6 2010/05/28 14:25:21 mschrode Exp $
 
 ROOTLIBS   = $(shell root-config --libs) -lMinuit
 ROOTCFLAGS = $(shell root-config --cflags)
@@ -36,7 +36,7 @@ ResponseFunction.o: ResponseFunction.h ResponseFunction.cc
 Uncertainty.o: Uncertainty.h Uncertainty.cc
 	g++ $(CFLAG) -c Uncertainty.cc
 
-run.o: run.cc PtBin.h FittedResolution.h Parameters.h ResponseFunction.h
+run.o: run.cc PtBin.h FittedResolution.h Parameters.h ResponseFunction.h $(UTIL)
 	g++ $(CFLAG) -c run.cc
 
 

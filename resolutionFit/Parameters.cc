@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.3 2010/05/26 21:56:35 mschrode Exp $
+// $Id: Parameters.cc,v 1.4 2010/05/27 08:56:12 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -10,24 +10,43 @@
 namespace resolutionFit {
   Parameters::Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, ResponseFunction::Type type, int verbosity)
     : etaMin_(etaMin), etaMax_(etaMax),
-      startIdx_(startIdx), endIdx_(endIdx),
       outNamePrefix_(outNamePrefix), verbosity_(verbosity) {
 
-    respFunc_ = new ResponseFunction(type);
+    for(int i = startIdx; i <= endIdx; ++i) {
+      fileNameIdx_.push_back(i);
+    }
+    init(fileBaseNameStdSel, ptBinEdges, type);
 
+    assert( nPtBins() > 0 );
+    assert( static_cast<int>(fileNameIdx_.size()) == nPtBins() );
+  }
+
+  Parameters::Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, const std::vector<int> fileNameIdx, const TString &outNamePrefix, ResponseFunction::Type type, int verbosity)
+    : etaMin_(etaMin), etaMax_(etaMax),
+      outNamePrefix_(outNamePrefix), verbosity_(verbosity) {
+    
+    fileNameIdx_ = fileNameIdx;
+    init(fileBaseNameStdSel, ptBinEdges, type);
+
+    assert( nPtBins() > 0 );
+    assert( static_cast<int>(fileNameIdx_.size()) == nPtBins() );
+  }
+
+
+  void Parameters::init(const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, ResponseFunction::Type type) {
+    respFunc_ = new ResponseFunction(type);
+    
     ptBinEdges_ = ptBinEdges;
     trueResPar_ = std::vector<double>(3,0.);
     rand_ = new TRandom3(0);
-
+    
     fitExtrapolatedSigma_ = false;
     fitRatio_ = false;
     startResOffset_ = -1.;
-
+    
     writeFileNames(namesStdSel_,fileBaseNameStdSel);
-
-    assert( nPtBins() > 0 );
-    assert( (endIdx-startIdx) == nPtBins()-1 );
   }
+
 
   Parameters::~Parameters() {
     for(std::list<PtBinParameters*>::iterator it = listOfPtBinParameters_.begin();
@@ -78,9 +97,10 @@ namespace resolutionFit {
 
   void Parameters::writeFileNames(std::vector<TString> &names, const TString &baseName) const {
     names.clear();
-    for(int bin = startIdx_; bin <= endIdx_; ++bin) {
+    for(std::vector<int>::const_iterator it = fileNameIdx_.begin();
+	it != fileNameIdx_.end(); ++it) {
       names.push_back(baseName);
-      names.back() += bin;
+      names.back() += *it;
       names.back() += "/jsResponse.root";
     }
   }

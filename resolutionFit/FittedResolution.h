@@ -65,6 +65,9 @@ namespace resolutionFit {
     TF1 *trueRes_;
     TF1 *fittedRes_;
 
+    int lineWidth_;
+    double lineHeight_;
+
     TGraphAsymmErrors *getTGraphOfResolution(const TString &uncertType) const;
   };
 }
