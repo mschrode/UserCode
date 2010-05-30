@@ -1,0 +1,53 @@
+% $Id: $
+
+
+\section{Description of the Method}
+
+The underlying assumptions of the presented method are
+\begin{itemize}
+\item an ideal dijet event configuration with exactly two jets of the
+  same true transverse momentum, \pttrue;
+\item measured jet transverse momenta, \ptmeasi{i}, resulting from
+  independent fluctuations of the calorimeter measurement.
+\end{itemize}
+Based on these, the probability density, \textit{pdf}, of a measured dijet event configuration is defined as
+\begin{equation}
+  \label{eq:resFit:dijetPdf}
+  f_{\vec{b}}\left(\ptmeasi{1},\ptmeasi{2}\right) \propto \int^{\infty}_{0}\dif{\pttrue}\,f\left(\pttrue\right)
+  \cdot f_{\vec{b}}\left(\ptmeasi{1}|\pttrue\right)
+  \cdot f_{\vec{b}}\left(\ptmeasi{2}|\pttrue\right),
+\end{equation}
+with
+\begin{itemize}
+\item $f(\pttrue)$, the pdf of the true \pt in the dijet event i.e. the
+  spectrum and
+\item $f_{\vec{b}}(\ptmeasi{i}|\pttrue)$, the pdf of the measured \pt
+  of the $i$-th jet.
+\end{itemize}
+It is important to note that knowledge of \pttrue is not required as it is integrated out.
+However, the pdfs $f(\pttrue)$ and $f_{\vec{b}}(\ptmeasi{i}|\pttrue)$ have to be provided.
+In the following, the spectrum $f(\pttrue)$ is assumed to be known (comp. e.g. Fig.~\ref{fig:resFit:qcd:dijetspectrum:subA}) while $f_{\vec{b}}(\ptmeasi{i}|\pttrue)$ is parameterised in an apropriate way using the parameter set $\vec{b}$.
+
+If $f(\pttrue)$ and $f_{\vec{b}}(\ptmeasi{i}|\pttrue)$ are properly normalised in the considered interval \mbox{$t_{0} < \pttrue < t_{1}$} such that
+\begin{eqnarray*}
+  1 & = & \int^{t_{1}}_{t_{0}}\dif{\pttrue}\,f\left(\pttrue\right) \\
+  1 & = & \int^{\infty}_{0}\dif{\ptmeasi{i}}\,f_{\vec{b}}\left(\ptmeasi{i}|\pttrue\right)
+\end{eqnarray*}
+then also the dijet pdf is properly normalised to
+\begin{equation*}
+  1 = \int^{\infty}_{0}\dif{\ptmeasi{1}}\,\int^{\infty}_{0}\dif{\ptmeasi{2}}\, f_{\vec{b}}\left(\ptmeasi{1},\ptmeasi{2}\right),
+\end{equation*}
+provided the integration order of $\ptmeasi{i}$ and $\pttrue$ can be switched.
+
+Then, for a sample of $N$ dijet events, a likelihood is defined as
+\begin{equation}
+  \label{eq:resFit:likelihood}
+  \mathcal{L}\left(\vec{b}\right) = \prod^{N}_{k=1} f_{\vec{b},k}\left(\ptmeasi{1},\ptmeasi{2}\right).
+\end{equation}
+Maximisation of $\mathcal{L}(\vec{b})$ results in the optimal values of the parameters $\vec{b}$ and thus the optimal functional form of the pdf of measured \pt, $f_{\vec{b}}(\ptmeasi{i}|\pttrue)$.
+
+The pdf $f_{\vec{b}}(r_{i}|\pttrue)$ of the jet energy resolution \mbox{$r_{i} = \ptmeasi{i} / \pttrue$} is obtained from this by parameter substitution
+\begin{equation*}
+  f_{\vec{b}}\left(r_{i}|\pttrue\right) =
+  f_{\vec{b}}\left(\ptmeasi{i}\left(r_{i}\right)|\pttrue\right)\cdot\left|\frac{\dif{r_{i}}}{\dif{\ptmeasi{i}}}\right|.
+\end{equation*}
