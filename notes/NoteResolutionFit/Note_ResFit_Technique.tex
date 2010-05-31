@@ -1,4 +1,4 @@
-% $Id: $
+% $Id: Note_ResFit_Technique.tex,v 1.1 2010/05/30 19:43:08 mschrode Exp $
 
 
 \section{Description of the Method}
@@ -46,8 +46,8 @@ Then, for a sample of $N$ dijet events, a likelihood is defined as
 \end{equation}
 Maximisation of $\mathcal{L}(\vec{b})$ results in the optimal values of the parameters $\vec{b}$ and thus the optimal functional form of the pdf of measured \pt, $f_{\vec{b}}(\ptmeasi{i}|\pttrue)$.
 
-The pdf $f_{\vec{b}}(r_{i}|\pttrue)$ of the jet energy resolution \mbox{$r_{i} = \ptmeasi{i} / \pttrue$} is obtained from this by parameter substitution
+The pdf $f_{\vec{b}}(r_{i}|\pttrue)$ of the jet \pt response \mbox{$r_{i} = \ptmeasi{i} / \pttrue$} is obtained by parameter transformation
 \begin{equation*}
   f_{\vec{b}}\left(r_{i}|\pttrue\right) =
-  f_{\vec{b}}\left(\ptmeasi{i}\left(r_{i}\right)|\pttrue\right)\cdot\left|\frac{\dif{r_{i}}}{\dif{\ptmeasi{i}}}\right|.
+  f_{\vec{b}}\left(\ptmeasi{i}\left(r_{i}\right)|\pttrue\right)\cdot\left|\frac{\dif{\ptmeasi{i}}{\dif{r_{i}}}}\right|.
 \end{equation*}
