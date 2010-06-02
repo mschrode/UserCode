@@ -25,7 +25,7 @@ namespace util {
       double x1 = 0.;
       double y1 = 0.;
       cornerCoordinates(nEntries,width,lineHgt>0 ? lineHgt : lineHeight(),x0,y0,x1,y1);
-      TLegend *leg = new TLegend(x0,y0-1.15*lineHeight()*yOffset,x1,y1-1.15*lineHeight()*yOffset);
+      TLegend *leg = new TLegend(x0,y0-1.16*lineHeight()*yOffset,x1,y1-1.16*lineHeight()*yOffset);
       leg->SetBorderSize(0);
       leg->SetFillColor(0);
       leg->SetTextFont(42);
