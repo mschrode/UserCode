@@ -1,6 +1,8 @@
 #ifndef STYLE_SETTINGS_H
 #define STYLE_SETTINGS_H
 
+#include <iostream>
+
 #include "TString.h"
 #include "TStyle.h"
 
@@ -93,10 +95,10 @@ namespace util {
 	}
       } else {
 	if( spaceForTitle ) {
-	  gStyle->SetPadTopMargin(0.09);
-	  gStyle->SetPadBottomMargin(0.14);
+	  gStyle->SetPadTopMargin(0.1);
+	  gStyle->SetPadBottomMargin(0.23);
 	  gStyle->SetPadLeftMargin(0.19);
-	  gStyle->SetPadRightMargin(0.04);
+	  gStyle->SetPadRightMargin(0.14);
 	} else {
 	  gStyle->SetPadTopMargin(0.05);
 	  gStyle->SetPadBottomMargin(0.14);
