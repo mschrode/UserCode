@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <fstream>
 
 #include "TCanvas.h"
 #include "TH1.h"
@@ -377,6 +378,36 @@ namespace resolutionFit {
     can->SaveAs(par_->outNamePrefix()+"ExtrapolatedResolutionRatio.eps","eps");
 
 
+    // ----- Plot quadratic difference sigma(fit) - sigma(MC) -----
+
+    TGraphAsymmErrors *gStatDiff = getTGraphOfResolution("Statistic");
+    for(int i = 0; i < gStatDiff->GetN(); ++i) {
+      double x = gStatDiff->GetX()[i];
+      double y = gStatDiff->GetY()[i];
+      double yTrue = trueRes_->Eval(x);
+      y = sqrt( y*y - yTrue*yTrue );
+      double exh = gStatDiff->GetEXhigh()[i];
+      double exl = gStatDiff->GetEXlow()[i];
+//       double eyh = gStatDiff->GetEYhigh()[i];
+//       double eyl = gStatDiff->GetEYlow()[i];	
+      gStatDiff->SetPoint(i,x,y);
+      gStatDiff->SetPointError(i,exl,exh,0.,0.);
+    }
+    gStatDiff->SetMarkerStyle(21);
+
+    h->Reset();
+    h->GetYaxis()->SetRangeUser(0.,0.2);
+    h->Draw();
+    gStatDiff->Draw("PE1same");
+    gStat->Draw("PE1same");
+    trueRes_->Draw("same");
+
+    // Write canvas to file
+    gPad->SetLogx();
+    can->SaveAs(par_->outNamePrefix()+"ExtrapolatedResolutionDifference.eps","eps");
+
+
+
     // Clean up
     delete h;
     //    delete gSyst;
@@ -384,6 +415,7 @@ namespace resolutionFit {
     if( gPseudo ) delete gPseudo;
     if( gPseudoRatio ) delete gPseudoRatio;
     delete gStatRatio;
+    delete gStatDiff;
     delete lineFitRatio;
     delete lineStartRes;
     delete leg;
@@ -412,28 +444,30 @@ namespace resolutionFit {
       hPtGen->SetYTitle("1 / N  dN / dp^{gen}_{T}  1 / (GeV)");
       hPtGen->GetYaxis()->SetRangeUser(yMin,yMax);
       hPtGen->SetMarkerStyle(24);
-      //hPtGen->Draw("PE1");
 
       TH1 *hPtGenJet1 = (*it)->getHistPtGenJet1("PlotPtGenJet1");
       hPtGenJet1->SetXTitle("p^{particle}_{T}  (GeV)");
       hPtGenJet1->SetYTitle("1 / N  dN / dp^{particle}_{T}  1 / (GeV)");
       hPtGenJet1->GetYaxis()->SetRangeUser(yMin,yMax);
       hPtGenJet1->SetMarkerStyle(20);
-      hPtGenJet1->Draw("PE1");
 
       // Draw pdf
       TH1 *hPdfPtTrue = (*it)->getHistPdfPtTrue("PlotPdfPtTrue");
       hPdfPtTrue->SetLineColor(2);
       hPdfPtTrue->SetLineWidth(lineWidth_);
-      hPdfPtTrue->Draw("Lsame");
+      hPdfPtTrue->SetXTitle("p^{gen}_{T}  (GeV)");
+      hPdfPtTrue->SetYTitle("1 / N  dN / dp^{gen}_{T}  1 / (GeV)");
+      hPdfPtTrue->GetYaxis()->SetRangeUser(yMin,yMax);
+      hPdfPtTrue->Draw("L");
       hPtGenJet1->Draw("PE1same");
 
       // Labels
-      TPaveText *txt = util::LabelFactory::createPaveText(1);
+      TPaveText *txt = util::LabelFactory::createPaveText(2);
       txt->AddText(par_->labelPtBin(bin,0));
+      txt->AddText(par_->labelEtaBin()+",  p^{rel}_{T,3} < 0.1");
       txt->Draw("same");
 
-      TLegend *leg = util::LabelFactory::createLegend(2,1,1);
+      TLegend *leg = util::LabelFactory::createLegend(2,1,2);
       leg->AddEntry(hPtGenJet1,"MC truth: p^{particle}_{T}","P");
       //leg->AddEntry(hPtGen,"MC truth: p^{particleJet}_{T,1+2}","P");
       leg->AddEntry(hPdfPtTrue,"Spectrum  #tilde{f}(p_{T})","L");
@@ -537,12 +571,12 @@ namespace resolutionFit {
 	double rMin = 0.;
 	double rMax = 2.;
 	double yMin = logY ? 6E-4 : 0.;
-	double yMax = logY ? 8E2 : 12.;
+	double yMax = logY ? 4E3 : 12.;
 
 	// Create Canvas
 	TCanvas *can = new TCanvas("PlotMCClosure","PlotMCClosure",500,500);
 	can->cd();
-	
+
 	// Draw MC truth resolution
 	TH1 *hMCRes = (*it)->getHistMCRes("PlotMCClosureMCRes");
 	hMCRes->SetMarkerStyle(20);
@@ -560,6 +594,10 @@ namespace resolutionFit {
 	for(int parIdx = 0; parIdx < par_->nFittedPars(); ++parIdx) {
 	  pars.push_back((*it)->extrapolatedValue(parIdx));
 	}
+	hFitRes->SetXTitle("Response R = p^{reco}_{T} / p^{particle}_{T}");
+	hFitRes->SetYTitle("1 / N  dN / dR");
+ 	hFitRes->GetXaxis()->SetRangeUser(rMin,rMax);
+ 	hFitRes->GetYaxis()->SetRangeUser(yMin,yMax);
 
 	TH1 *hFitResCore = 0;
 	if( par_->respFuncType() == ResponseFunction::CrystalBall ) {
@@ -569,12 +607,12 @@ namespace resolutionFit {
 	for(int rBin = 1; rBin <= hFitRes->GetNbinsX(); ++rBin) {
 	  double res = hFitRes->GetBinCenter(rBin);
 	  hFitRes->SetBinContent(rBin,(*(par_->respFunc()))(res,pars));
-	  if( hFitResCore ) {
-	    hFitResCore->SetBinContent(rBin,par_->respFunc()->pdfGauss(res,1.,pars[0]));
-	  }
+	  if( hFitResCore ) hFitResCore->SetBinContent(rBin,par_->respFunc()->pdfGauss(res,1.,pars[0]));
 	}
 	if( hFitResCore ) hFitResCore->Draw("Lsame");
 	hFitRes->Draw("Lsame");	
+	
+	gPad->RedrawAxis(); // Leads to slightly thicker font!!
 	
 	
 	// Labels
@@ -588,7 +626,6 @@ namespace resolutionFit {
 	leg->AddEntry(hFitRes,"Fit result, "+par_->labelPtBin(bin,0),"L");
 	leg->Draw("same");
 	
-	hMCRes->Draw("PE1same");
 	if( logY ) gPad->SetLogy();
 	
 	// Write Canvas to fiel
@@ -634,6 +671,74 @@ namespace resolutionFit {
 	else std::cout << std::endl;
       }
     } 
+  }
+
+
+  void FittedResolution::createSlides() const {
+    // Open file
+    TString name = par_->outNamePrefix();
+    name += "SlidesMCClosure.tex";
+    std::ofstream oFile(name);
+
+    // Create slides with MC closure plots
+    oFile << "% ----- MC closure plots ---------------------------" << std::endl;
+    int nSlides = nPtBins()/6;
+    if( nPtBins()%6 > 0 ) nSlides++;
+    for(int slide = 0; slide < nSlides; ++slide) {
+      oFile << "\n% --------------------------------------------------\n";
+      oFile << "\\begin{frame}\n";
+      oFile << "  \\frametitle{MC closure in various \\pt bins (" << slide << ")}\n";
+      oFile << "  \\vskip-0.7cm\n";
+      oFile << "  \\begin{columns}[t] \n";
+      for(int col = 0; col < 3; ++col) {
+	oFile << "    \\begin{column}{0.3333\\textwidth} \n";
+	oFile << "      \\begin{center} \n";
+	for(int row = 0; row < 2; ++row) {
+	  int ptBin = 6*slide + 3*row + col;
+	  if( ptBin < nPtBins() ) {
+	    oFile << "        \\includegraphics[width=\\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_MCClosure_PtBin" << ptBin << "}\\\\ \n";
+	  }
+	}
+	oFile << "      \\end{center} \n";
+	oFile << "    \\end{column} \n";
+      }
+      oFile << "  \\end{columns} \n";
+      oFile << "\\end{frame} \n";
+    }
+    oFile.close();
+
+    if( par_->respFuncType() == ResponseFunction::CrystalBall ) {
+      // Create slides of all fit results
+      name = par_->outNamePrefix();
+      name += "SlidesAllResults.tex";
+      std::ofstream oFile(name);
+
+      oFile << "\n\n\n% ----- Fit result plots ---------------------------" << std::endl;
+      for(std::vector<PtBin*>::const_iterator it = ptBins_.begin();
+	  it != ptBins_.end(); it++) {
+	int ptBin = (it-ptBins_.begin());
+	oFile << "\n% --------------------------------------------------\n";
+	oFile << "\\begin{frame}\n";
+	oFile << "  \\frametitle{Fit results and MC closure $" << (*it)->ptMinStr() << " < \\pt < " << (*it)->ptMaxStr() << "\\gev$}\n";
+	oFile << "  \\vskip-0.5cm\n";
+	oFile << "  \\begin{columns}[t]\n";
+	for(int col = 0; col < 3; ++col) {
+	  oFile << "    \\begin{column}{0.3333\\textwidth}\n";
+	  oFile << "      \\begin{center}\n";
+	  oFile << "        \\includegraphics[width=\\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar" << col << "_PtBin" << ptBin << "}\\\\ \n";
+	  if( col == 0 ) {
+	    oFile << "        \\includegraphics[width=\\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_Spectrum_PtBin" << ptBin << "} \n";
+	  } else if( col == 1 ) {
+	    oFile << "        \\includegraphics[width=\\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_MCClosure_PtBin" << ptBin << "} \n";
+	  }
+	  oFile << "      \\end{center} \n";
+	  oFile << "    \\end{column} \n";
+	}
+	oFile << "  \\end{columns} \n";
+	oFile << "\\end{frame} \n";
+      }
+      oFile.close();
+    }
   }
 
     

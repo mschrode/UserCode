@@ -54,17 +54,17 @@ namespace resolutionFit {
     void plotSystematicUncertainties() const;
     void plotMCClosure() const;
     void print() const;
+    void createSlides() const;
 
   private:
     const Parameters *par_;
     const std::vector<PtBin*> ptBins_;
 
-    double ptMin_;
-    double ptMax_;
-
     TF1 *trueRes_;
     TF1 *fittedRes_;
 
+    double ptMin_;
+    double ptMax_;
     int lineWidth_;
     double lineHeight_;
 

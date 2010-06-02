@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.13 2010/05/27 08:56:12 mschrode Exp $
+// $Id: run.cc,v 1.14 2010/05/28 18:52:29 mschrode Exp $
 
 #ifndef RUN_RESOLUTION_FIT
 #define RUN_RESOLUTION_FIT
@@ -23,8 +23,8 @@ int main(int argc, char *argv[]) {
 
   if( argc > 2 ) {
     // Set style
-    //util::StyleSettings::presentationNoTitle();
-    util::StyleSettings::paperNoTitle();
+    util::StyleSettings::presentationNoTitle();
+    //util::StyleSettings::paperNoTitle();
 
     gErrorIgnoreLevel = 1001;        // Do not print ROOT message if eps file has been created
     gSystem->Load("libHistPainter"); // Remove 'Warning in <TClass::TClass>: no dictionary for class TPaletteAxis is available'
@@ -41,8 +41,8 @@ int main(int argc, char *argv[]) {
     TString respType = argv[1];
     int etaBin = atoi(argv[2]);
     if( respType == "Gauss" ) {
-      outNamePrefix = "ResFit_Spring10QCDFlat_Gauss_";
-      inNamePrefix = "~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_";
+//       outNamePrefix = "ResFit_Spring10QCDFlat_Gauss_";
+//       inNamePrefix = "~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_";
 
 //       outNamePrefix = "ResFit_Spring10QCDFlat_GaussDown30It0_";
 //       inNamePrefix = "~/results/ResolutionFit/GaussDown30/Iteration0/resolutionSpring10_Gauss_";
@@ -54,9 +54,11 @@ int main(int argc, char *argv[]) {
 //       outNamePrefix = "ResFit_Spring10QCDFlat_GaussUp30It2_";
 //       inNamePrefix = "~/results/ResolutionFit/GaussUp30/Iteration2/resolutionSpring10_Gauss_";
 
-
 //       outNamePrefix = "ResFit_Spring10QCDFlat_GaussPar1Up30It0_";
 //       inNamePrefix = "~/results/ResolutionFit/GaussPar1Up30/Iteration0/resolutionSpring10_Gauss_";
+
+      outNamePrefix = "ResFit_Spring10QCDFlat_GaussGenJetOrdered_";
+      inNamePrefix = "~/results/ResolutionFit/GaussGenJetOrdered/resolutionSpring10_Gauss_";
 
 
       if( etaBin == 0 ) {
@@ -135,31 +137,34 @@ int main(int argc, char *argv[]) {
       }
     } else if( respType == "CrystalBall" ) {
 
-      outNamePrefix = "ResFit_Spring10QCDFlat_CB6_";
-      inNamePrefix = "~/results/ResolutionFit/CrystalBall/Iteration1/resolutionSpring10_CB_";
+      outNamePrefix = "ResFit_Spring10QCDFlat_CB_";
+      inNamePrefix = "~/results/ResolutionFit/CrystalBall/Iteration1/resolutionSpring10_CB_Eta0_It1_";
 
       if( etaBin == 0 ) {
 	std::cout << "Setting up parameters for eta bin " << etaBin << std::endl;
 	ptBinEdges.clear();
 
-//   	ptBinEdges.push_back(120.);
-//   	ptBinEdges.push_back(140.);
+	ptBinEdges.push_back(120.);
+	ptBinEdges.push_back(140.);
+	ptBinEdges.push_back(170.);
+	ptBinEdges.push_back(200.);
+	ptBinEdges.push_back(250.);
+	ptBinEdges.push_back(300.);
+	ptBinEdges.push_back(350.);
+	ptBinEdges.push_back(400.);
+	ptBinEdges.push_back(500.);
+	ptBinEdges.push_back(600.);
+	ptBinEdges.push_back(800.);
+	ptBinEdges.push_back(1000.);
 
-//  	ptBinEdges.push_back(170.);
-//  	ptBinEdges.push_back(200.);
-
- 	ptBinEdges.push_back(250.);
- 	ptBinEdges.push_back(300.);
-
-	inNamePrefix += "Eta0_";
-
-	par = new resolutionFit::Parameters(0.,1.2,inNamePrefix,ptBinEdges,6,6,outNamePrefix+"Eta0_",
+	par = new resolutionFit::Parameters(0.,1.2,inNamePrefix,ptBinEdges,0,10,outNamePrefix+"Eta0_",
 					    resolutionFit::ResponseFunction::CrystalBall,verbosity);
 	par->setTrueGaussResPar(1.88,1.205,0.0342);
 	
 	par->addPt3Cut(0.06,inNamePrefix+"Rel3rdJet006_");
-	//par->addPt3Cut(0.08,inNamePrefix+"Rel3rdJet008_");
+	par->addPt3Cut(0.08,inNamePrefix+"Rel3rdJet008_");
 	par->addPt3Cut(0.10,inNamePrefix);
+	par->addPt3Cut(0.12,inNamePrefix+"Rel3rdJet012_");
 	par->addPt3Cut(0.15,inNamePrefix+"Rel3rdJet015_");
 	par->addPt3Cut(0.20,inNamePrefix+"Rel3rdJet020_");
 
@@ -187,14 +192,15 @@ int main(int argc, char *argv[]) {
     // Plots
     fit->plotExtrapolation();
     if( respType == "Gauss" ) fit->plotResolution();
-    fit->plotResolutionBins();
-    fit->plotPtAsymmetryBins();
+    //fit->plotResolutionBins();
+    //fit->plotPtAsymmetryBins();
     fit->plotSpectra();
-    fit->plotSystematicUncertainties();
+    //fit->plotSystematicUncertainties();
     fit->plotMCClosure();
     
     // Print
     fit->print();
+    fit->createSlides();
 
     // Clean up
     std::cout << "Cleaning up" << std::endl;

@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.6 2010/05/28 14:25:21 mschrode Exp $
+# $Id: Makefile,v 1.7 2010/05/28 18:52:29 mschrode Exp $
 
 ROOTLIBS   = $(shell root-config --libs) -lMinuit
 ROOTCFLAGS = $(shell root-config --cflags)
@@ -49,3 +49,4 @@ clean:
 	@rm -f *.ps
 	@rm -f *.eps
 	@rm -f .#*
+	@rm -f *.tex
