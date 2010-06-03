@@ -1,6 +1,7 @@
 #ifndef LABEL_FACTORY_H
 #define LABEL_FACTORY_H
 
+#include <cmath>
 #include <iostream>
 
 #include "TLegend.h"
@@ -19,13 +20,19 @@ namespace util {
       return height;
     }
 
-    static TLegend *createLegend(int nEntries, double width = 1., int yOffset = 0, double lineHgt = -1) {
+    static TLegend *createLegend(int nEntries, double width = 1., double yOffset = 0., double lineHgt = -1.) {
       double x0 = 0.;
       double y0 = 0.;
       double x1 = 0.;
       double y1 = 0.;
       cornerCoordinates(nEntries,width,lineHgt>0 ? lineHgt : lineHeight(),x0,y0,x1,y1);
-      TLegend *leg = new TLegend(x0,y0-1.16*lineHeight()*yOffset,x1,y1-1.16*lineHeight()*yOffset);
+      double yOff = 0.;
+      if( yOffset > 0 ) {
+	yOff = 1.16*(lineHgt>0 ? lineHgt : lineHeight())*floor(yOffset);
+      } else {
+	yOff = -yOffset;
+      }
+      TLegend *leg = new TLegend(x0,y0-yOff,x1,y1-yOff);
       leg->SetBorderSize(0);
       leg->SetFillColor(0);
       leg->SetTextFont(42);
