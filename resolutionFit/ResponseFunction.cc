@@ -55,6 +55,11 @@ namespace resolutionFit {
   }
 
 
+  double ResponseFunction::sigmaGauss(double pt, const std::vector<double> &par) const {
+    return sqrt( par[0]*par[0]/pt/pt + par[1]*par[1]/pt + par[2]*par[2]);
+  }
+
+
   double ResponseFunction::crystalBallInt(double mean, double sigma, double alpha, double n, double min, double max) const {
     double m = n - 1.;
     double c = mean - alpha*sigma;

@@ -20,6 +20,9 @@ namespace resolutionFit {
     ~PtBin();
 
     int ptBinIdx() const { return par_->ptBinIdx(); }
+    int nCutValues() const { return cutVar_.at(0)->nCutValues(); }
+    double cutValue(int cutVarIdx) const { return cutVar_.at(0)->cutValue(cutVarIdx); }
+    double fittedValue(int parIdx, int cutVarIdx) const { return cutVar_.at(parIdx)->fittedValue(cutVarIdx); }
     double extrapolatedValue(int parIdx) const { return extrapolatedVal_.at(parIdx); }
     double uncertDown(int parIdx) const { return uncert_.at(parIdx)->down(); }
     double uncertUp(int parIdx) const { return uncert_.at(parIdx)->up(); }

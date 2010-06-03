@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.14 2010/05/28 18:52:29 mschrode Exp $
+// $Id: run.cc,v 1.15 2010/06/02 13:48:21 mschrode Exp $
 
 #ifndef RUN_RESOLUTION_FIT
 #define RUN_RESOLUTION_FIT
@@ -86,13 +86,13 @@ int main(int argc, char *argv[]) {
 	par->setTrueGaussResPar(1.88,1.205,0.0342);
 	
 	par->addPt3Cut(0.06,inNamePrefix+"Rel3rdJet006_");
-	par->addPt3Cut(0.08,inNamePrefix+"Rel3rdJet008_");
+	//	par->addPt3Cut(0.08,inNamePrefix+"Rel3rdJet008_");
 	par->addPt3Cut(0.10,inNamePrefix);
-	par->addPt3Cut(0.12,inNamePrefix+"Rel3rdJet012_");
+	//	par->addPt3Cut(0.12,inNamePrefix+"Rel3rdJet012_");
 	par->addPt3Cut(0.15,inNamePrefix+"Rel3rdJet015_");
-	par->addPt3Cut(0.20,inNamePrefix+"Rel3rdJet020_");
+	//	par->addPt3Cut(0.20,inNamePrefix+"Rel3rdJet020_");
 
-	par->addFileBaseNameMCStat(inNamePrefix+"Flat_");
+	//	par->addFileBaseNameMCStat(inNamePrefix+"Flat_");
 
 	//par->addMCTruthBins(4,30,100,0.05);
 	//par->fitExtrapolatedSigma(true);
@@ -166,11 +166,11 @@ int main(int argc, char *argv[]) {
 	par->addPt3Cut(0.10,inNamePrefix);
 	par->addPt3Cut(0.12,inNamePrefix+"Rel3rdJet012_");
 	par->addPt3Cut(0.15,inNamePrefix+"Rel3rdJet015_");
-	par->addPt3Cut(0.20,inNamePrefix+"Rel3rdJet020_");
+	//par->addPt3Cut(0.20,inNamePrefix+"Rel3rdJet020_");
 
 	par->addFileBaseNameMCStat(inNamePrefix+"Flat_");
 
-	par->addFileBaseNameMCClosure("~/results/ResolutionFit/CrystalBall/MCClosure/resolutionSpring10_CB_Eta0_MCClosure_");
+	par->addFileBaseNameMCClosure("~/results/ResolutionFit/MCClosure/resolutionSpring10_CB_Eta0_MCClosure_");
       } else {
 	std::cerr << "ERROR: '" << etaBin << "' is not a valid eta bin for '" << respType << "' response.\n";
 	exit(1);
@@ -197,6 +197,7 @@ int main(int argc, char *argv[]) {
     fit->plotSpectra();
     //fit->plotSystematicUncertainties();
     fit->plotMCClosure();
+    fit->plotCrystalBallTest();
     
     // Print
     fit->print();

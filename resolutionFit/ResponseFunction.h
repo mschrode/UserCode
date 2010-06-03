@@ -18,6 +18,8 @@ namespace resolutionFit {
     double pdfGauss(double x, double mean, double sigma) const;
     double pdfCrystalBall(double x, double mean, double sigma, double alpha, double n) const;
 
+    double sigmaGauss(double pt, const std::vector<double> &par) const;
+
 
   private:
     Type type_;

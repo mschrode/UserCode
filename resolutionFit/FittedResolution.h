@@ -53,6 +53,7 @@ namespace resolutionFit {
     void plotSpectra() const;
     void plotSystematicUncertainties() const;
     void plotMCClosure() const;
+    void plotCrystalBallTest() const;
     void print() const;
     void createSlides() const;
 

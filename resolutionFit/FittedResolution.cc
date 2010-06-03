@@ -150,7 +150,7 @@ namespace resolutionFit {
       txt->AddText(name);
       txt->Draw("same");
 
-      TLegend *leg = util::LabelFactory::createLegend(2,1,1);
+      TLegend *leg = util::LabelFactory::createLegendWithOffset(2,1);
       leg->AddEntry(hResGen,"MC truth","P");
       char entry[100];
       sprintf(entry,"Fitted #sigma/p^{true}_{T}, p^{true}_{T} = %.1f GeV",(*it)->meanPt());
@@ -209,7 +209,7 @@ namespace resolutionFit {
       txt->AddText(name);
       txt->Draw("same");
 
-      TLegend *leg = util::LabelFactory::createLegend(2,1,1);
+      TLegend *leg = util::LabelFactory::createLegendWithOffset(2,1);
       leg->AddEntry(hPtAsym,"MC truth","P");
       char entry[100];
       sprintf(entry,"Fitted  #sqrt{2}#sigma/p^{true}_{T}, p^{true}_{T} = %.1f GeV",(*it)->meanPt());
@@ -467,7 +467,7 @@ namespace resolutionFit {
       txt->AddText(par_->labelEtaBin()+",  p^{rel}_{T,3} < 0.1");
       txt->Draw("same");
 
-      TLegend *leg = util::LabelFactory::createLegend(2,1,2);
+      TLegend *leg = util::LabelFactory::createLegendWithOffset(2,2.5*lineHeight_);
       leg->AddEntry(hPtGenJet1,"MC truth: p^{particle}_{T}","P");
       //leg->AddEntry(hPtGen,"MC truth: p^{particleJet}_{T,1+2}","P");
       leg->AddEntry(hPdfPtTrue,"Spectrum  #tilde{f}(p_{T})","L");
@@ -621,7 +621,7 @@ namespace resolutionFit {
 	txt->AddText("Anti-k_{T} d = 0.5 jets, "+par_->labelEtaBin());
 	txt->Draw("same");
 
-	TLegend *leg = util::LabelFactory::createLegend(2,1.,2);
+	TLegend *leg = util::LabelFactory::createLegendWithOffset(2,2);
 	leg->AddEntry(hMCRes,"MC truth, "+par_->labelPtBin(bin,1),"P");
 	leg->AddEntry(hFitRes,"Fit result, "+par_->labelPtBin(bin,0),"L");
 	leg->Draw("same");
@@ -645,6 +645,108 @@ namespace resolutionFit {
       }
     } else {
       std::cerr << "No MCClosure response distribution available." << std::endl;
+    }
+  }
+
+
+  void FittedResolution::plotCrystalBallTest() const {
+    if( par_->respFuncType() == ResponseFunction::CrystalBall ) {
+      if( par_->hasMCClosure() ) {
+	// Loop over ptbins
+	for(std::vector<PtBin*>::const_iterator it = ptBins_.begin();
+	    it != ptBins_.end(); it++) {
+	  int bin = (it-ptBins_.begin());
+	
+	  double rMin = 0.;
+	  double rMax = 2.;
+	  double yMin = 6E-4;
+	  double yMax = 4E5;
+
+	  // Create Canvas
+	  TCanvas *can = new TCanvas("PlotCrystalBallTest","PlotCrystalBallTest",500,500);
+	  can->cd();
+
+	  // Draw MC truth resolution
+	  TH1 *hMCRes = (*it)->getHistMCRes("PlotCrystalBallTestMCRes");
+	  hMCRes->SetMarkerStyle(20);
+	  hMCRes->SetXTitle("Response R = p^{reco}_{T} / p^{particle}_{T}");
+	  hMCRes->SetYTitle("1 / N  dN / dR");
+	  hMCRes->GetXaxis()->SetRangeUser(rMin,rMax);
+	  hMCRes->GetYaxis()->SetRangeUser(yMin,yMax);
+	  hMCRes->Draw("PE1");
+	
+	  // Fill histogram of extrapolated response
+	  TH1 *hExRes = new TH1D("PlotCrystalBallTestExRes","",500,rMin,rMax);
+	  hExRes->SetLineWidth(lineWidth_);
+	  hExRes->SetLineStyle(2);
+	  hExRes->SetLineColor(1);
+	  std::vector<double> pars;
+	  for(int parIdx = 0; parIdx < par_->nFittedPars(); ++parIdx) {
+	    pars.push_back((*it)->extrapolatedValue(parIdx));
+	  }
+	  for(int rBin = 1; rBin <= hExRes->GetNbinsX(); ++rBin) {
+	    double res = hExRes->GetBinCenter(rBin);
+	    hExRes->SetBinContent(rBin,(*(par_->respFunc()))(res,pars));
+	  }
+	  hExRes->Draw("Lsame");	
+
+	  std::vector<TH1*> hCutVarRes;
+	  for(int c = 0; c < (*it)->nCutValues(); ++c) {
+	    pars[1] = (*it)->fittedValue(1,c);
+	    pars[2] = (*it)->fittedValue(2,c);
+
+	    TH1 *h = static_cast<TH1D*>(hExRes->Clone("PlotCrystalBallTestH"));
+	    h->Reset();
+	    h->SetLineStyle(1);
+	    h->SetLineColor(util::StyleSettings::color(c));
+	    for(int rBin = 1; rBin <= hExRes->GetNbinsX(); ++rBin) {
+	      double res = h->GetBinCenter(rBin);
+	      h->SetBinContent(rBin,(*(par_->respFunc()))(res,pars));
+	    }
+	    h->Draw("Lsame");
+	    hCutVarRes.push_back(h);	  
+	  }
+	
+	  gPad->RedrawAxis(); // Leads to slightly thicker font!!
+		
+	  // Labels
+	  TPaveText *txt = util::LabelFactory::createPaveText(1,1.,0.04);
+	  txt->AddText((*it)->ptMinStr()+" < p_{T} < "+(*it)->ptMaxStr()+" GeV,  "+par_->labelEtaBin());
+	  txt->Draw("same");
+
+	  TLegend *leg = util::LabelFactory::createLegendWithOffset((*it)->nCutValues()+2,0.05,0.038);
+	  leg->AddEntry(hMCRes,"MC truth","P");
+	  leg->AddEntry(hExRes,"Full extrapolation","L");
+	  for(int c = 0; c < (*it)->nCutValues(); ++c) {
+	    char entry[50];
+	    sprintf(entry,"p^{rel}_{T,3} < %.2f",(*it)->cutValue(c));
+	    leg->AddEntry(hCutVarRes[c],entry,"L");
+	  }
+	  leg->Draw("same");
+	
+	  gPad->SetLogy();
+	
+	  // Write Canvas to fiel
+	  TString name = par_->outNamePrefix();
+	  name += "CrystalBallTest_PtBin";
+	  name += bin;
+	  name += ".eps";
+	  can->SaveAs(name,"eps");
+	
+	  // Clean up
+	  delete hMCRes;
+	  delete hExRes;
+	  for(std::vector<TH1*>::iterator it = hCutVarRes.begin();
+	      it != hCutVarRes.end(); ++it) {
+	    delete *it;
+	  }
+	  delete txt;
+	  delete leg;
+	  delete can;
+	}
+      } else {
+	std::cerr << "No MCClosure response distribution available." << std::endl;
+      }
     }
   }
 
