@@ -20,23 +20,38 @@ namespace util {
       return height;
     }
 
-    static TLegend *createLegend(int nEntries, double width = 1., double yOffset = 0., double lineHgt = -1.) {
+    static TLegend *createLegend(int nEntries, double width, double yOffset, double lineHgt) {
       double x0 = 0.;
       double y0 = 0.;
       double x1 = 0.;
       double y1 = 0.;
-      cornerCoordinates(nEntries,width,lineHgt>0 ? lineHgt : lineHeight(),x0,y0,x1,y1);
-      double yOff = 0.;
-      if( yOffset > 0 ) {
-	yOff = 1.16*(lineHgt>0 ? lineHgt : lineHeight())*floor(yOffset);
-      } else {
-	yOff = -yOffset;
-      }
-      TLegend *leg = new TLegend(x0,y0-yOff,x1,y1-yOff);
+      cornerCoordinates(nEntries,width,lineHgt,x0,y0,x1,y1);
+      TLegend *leg = new TLegend(x0,y0-yOffset,x1,y1-yOffset);
       leg->SetBorderSize(0);
       leg->SetFillColor(0);
       leg->SetTextFont(42);
       return leg;
+    }
+    static TLegend *createLegend(int nEntries) {
+      return createLegend(nEntries,1.,0.,lineHeight());
+    }
+    static TLegend *createLegend(int nEntries, double lineHgt) {
+      return createLegend(nEntries,1.,0.,lineHgt);
+    }
+    static TLegend *createLegendWithOffset(int nEntries, int yOffset) {
+      return createLegend(nEntries,1.,1.16*lineHeight()*yOffset,lineHeight());
+    }
+    static TLegend *createLegendWithOffset(int nEntries, double yOffset) {
+      return createLegend(nEntries,1.,yOffset,lineHeight());
+    }
+    static TLegend *createLegendWithOffset(int nEntries, double yOffset, double lineHgt) {
+      return createLegend(nEntries,1.,yOffset,lineHgt);
+    }
+    static TLegend *createLegendCol(int nEntries, double width) {
+      return createLegend(nEntries,width,0.,lineHeight());
+    }
+    static TLegend *createLegendCol(int nEntries, double width, double lineHgt) {
+      return createLegend(nEntries,width,0.,lineHgt);
     }
 
     static TPaveText *createPaveText(int nEntries, double width = 1., double lineHgt = -1) {
