@@ -40,7 +40,7 @@ namespace resolutionFit {
     }
     trueRes_->SetLineWidth(lineWidth_);
     trueRes_->SetLineColor(4);
-    trueRes_->SetLineStyle(2);
+    trueRes_->SetLineStyle(1);
 
     // Fit extrapolated resolution using
     // statistic uncertainty
@@ -93,7 +93,7 @@ namespace resolutionFit {
 
 	// Draw label
 	TPaveText *txt = util::LabelFactory::createPaveText(2,1.);
-	txt->AddText(par_->labelEtaBin());
+	txt->AddText(par_->labelLumi()+", "+par_->labelEtaBin());
 	txt->AddText(par_->labelPtBin(ptBin,0));
 	txt->Draw("same");
       
@@ -129,6 +129,8 @@ namespace resolutionFit {
 
       // Draw MC truth resolution
       TH1 *hResGen = (*it)->getHistResGen("PlotResolution");
+      hResGen->SetXTitle(par_->xAxisTitleResponse());
+      hResGen->SetYTitle(par_->yAxisTitleResponse());
       hResGen->SetMarkerStyle(20);
       hResGen->GetXaxis()->SetRangeUser(0.4,1.6);
       hResGen->GetYaxis()->SetRangeUser(0.,(1.4+3.*lineHeight_)*hResGen->GetMaximum());
@@ -144,7 +146,9 @@ namespace resolutionFit {
       // Labels
       TPaveText *txt = util::LabelFactory::createPaveText(1);
       TString name = (*it)->ptMinStr();
-      name += " < p^{recoJet}_{T} < ";
+      name += " < p^{";
+      name += par_->labelMeas();
+      name += "}_{T} < ";
       name += (*it)->ptMaxStr();
       name += " GeV";
       txt->AddText(name);
@@ -203,7 +207,9 @@ namespace resolutionFit {
       // Labels
       TPaveText *txt = util::LabelFactory::createPaveText(1);
       TString name = (*it)->ptMinStr();
-      name += " < p^{recoJet}_{T} < ";
+      name += " < p^{";
+      name += par_->labelMeas();
+      name += "}_{T} < ";
       name += (*it)->ptMaxStr();
       name += " GeV";
       txt->AddText(name);
@@ -251,11 +257,12 @@ namespace resolutionFit {
     int nLegEntries = 2;
     if( par_->fitExtrapolatedSigma() ) nLegEntries++;
     if( gPseudo ) nLegEntries++;
-    TH1 *h = new TH1D("FrameExtrapolatedResolution",";p_{T} (GeV);#sigma / p_{T}",
-		      1000,ptMin_,ptMax_);
+    TH1 *h = new TH1D("FrameExtrapolatedResolution","",1000,ptMin_,ptMax_);
+    h->SetXTitle("p^{"+par_->labelTruth()+"}_{T} (GeV)");
+    h->SetYTitle("#sigma / p^{"+par_->labelTruth()+"}_{T}");
     h->SetNdivisions(510);
     double min = 0.7*(*std::min_element(gStat->GetY(),gStat->GetY()+gStat->GetN()));
-    double max = 1.3*(*std::max_element(gStat->GetY(),gStat->GetY()+gStat->GetN()));
+    double max = 1.4*(*std::max_element(gStat->GetY(),gStat->GetY()+gStat->GetN()));
     if( gPseudo ) max = 1.8*(*std::max_element(gPseudo->GetY(),gPseudo->GetY()+gPseudo->GetN()));
     h->GetYaxis()->SetRangeUser(min,max);
     h->Draw();
@@ -272,8 +279,19 @@ namespace resolutionFit {
     gStat->Draw("PE1same");
     if( gPseudo ) gPseudo->Draw("PE1same");
 
-    // Add a legend
-    TLegend *leg = util::LabelFactory::createLegend(nLegEntries);
+    // Add labels
+    TPaveText *txt = 0;
+    if( par_->extendedLegend() ) {
+      txt = util::LabelFactory::createPaveText(2);
+      txt->AddText("PYTHIA, #sqrt{s} = 7 TeV, "+par_->labelLumi());
+      txt->AddText("Anti-k_{T} d = 0.5 jets, "+par_->labelEtaBin());
+    } else {
+      txt = util::LabelFactory::createPaveText(1);
+      txt->AddText(par_->labelLumi()+", "+par_->labelEtaBin());
+    }
+    txt->Draw("same");
+
+    TLegend *leg = util::LabelFactory::createLegendWithOffset(nLegEntries,txt->GetSize());
     leg->AddEntry(gStat,"Extrapolated #bar{#sigma} (p^{3}_{T,rel} #rightarrow 0)","P");
     //leg->AddEntry(gSyst,"Uncertainty from spectrum","F");
     if( gPseudo ) leg->AddEntry(gPseudo,"Pseudo #gamma+jet measurement","P");
@@ -341,8 +359,8 @@ namespace resolutionFit {
     for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
       h->SetBinContent(bin,1.);
     }
-    h->SetLineStyle(2);
-    h->SetLineColor(4);
+    h->SetLineStyle(trueRes_->GetLineStyle());
+    h->SetLineColor(trueRes_->GetLineColor());
     h->GetYaxis()->SetTitle("#sigma_{fit} / #sigma_{MC}");
     h->GetYaxis()->SetRangeUser(0.65,1.45+0.8*nLegEntries*lineHeight_);
 
@@ -353,7 +371,7 @@ namespace resolutionFit {
     if( par_->hasStartOffset() ) nLegEntries++;
     
     max = *(std::max_element(gStatRatio->GetY(),gStatRatio->GetY()+gStat->GetN()));
-    if( max > 1.4 ) h->GetYaxis()->SetRangeUser(0.65,1.75+1.1*nLegEntries*lineHeight_);
+    if( max > 1.4 ) h->GetYaxis()->SetRangeUser(0.75,1.65+1.1*nLegEntries*lineHeight_);
     h->Draw();
     if( par_->fitExtrapolatedSigma() ) hFittedRatio->Draw("Lsame");
     if( par_->fitRatio() ) lineFitRatio->Draw("same");
@@ -361,9 +379,10 @@ namespace resolutionFit {
     gStatRatio->Draw("PE1same");
     if( gPseudoRatio ) gPseudoRatio->Draw("PE1same");
 
-    // Add a legend
+    // Add labels
+    txt->Draw("same");
     delete leg;
-    leg = util::LabelFactory::createLegend(nLegEntries);
+    leg = util::LabelFactory::createLegendWithOffset(nLegEntries,txt->GetSize());
     leg->AddEntry(gStat,"Extrapolated #bar{#sigma} (p^{3}_{T,rel} #rightarrow 0)","P");
     //leg->AddEntry(gSyst,"Uncertainty from spectrum","F");
     if( gPseudo ) leg->AddEntry(gPseudo,"Pseudo #gamma+jet measurement","P");
@@ -419,6 +438,7 @@ namespace resolutionFit {
     delete lineFitRatio;
     delete lineStartRes;
     delete leg;
+    delete txt;
     delete can;
   }
 
@@ -436,18 +456,14 @@ namespace resolutionFit {
 
       // Draw MC truth spectra
       TH1 *hPtGen = (*it)->getHistPtGen("PlotPtGen");
-
-      double yMin = logY ? 6E-6 : 0.;
-      double yMax = logY ? 8E1 : (1.6+2*lineHeight_)*hPtGen->GetMaximum();
-
-      hPtGen->SetXTitle("p^{gen}_{T}  (GeV)");
-      hPtGen->SetYTitle("1 / N  dN / dp^{gen}_{T}  1 / (GeV)");
-      hPtGen->GetYaxis()->SetRangeUser(yMin,yMax);
       hPtGen->SetMarkerStyle(24);
 
+      double yMin = logY ? 6E-6 : 0.;
+      double yMax = logY ? 8E1 : (1.8+4*lineHeight_)*hPtGen->GetMaximum();
+
       TH1 *hPtGenJet1 = (*it)->getHistPtGenJet1("PlotPtGenJet1");
-      hPtGenJet1->SetXTitle("p^{particle}_{T}  (GeV)");
-      hPtGenJet1->SetYTitle("1 / N  dN / dp^{particle}_{T}  1 / (GeV)");
+      hPtGenJet1->SetXTitle("p^{"+par_->labelTruth()+"}_{T}  (GeV)");
+      hPtGenJet1->SetYTitle("1 / N  dN / dp^{"+par_->labelTruth()+"}_{T}  1 / (GeV)");
       hPtGenJet1->GetYaxis()->SetRangeUser(yMin,yMax);
       hPtGenJet1->SetMarkerStyle(20);
 
@@ -455,8 +471,8 @@ namespace resolutionFit {
       TH1 *hPdfPtTrue = (*it)->getHistPdfPtTrue("PlotPdfPtTrue");
       hPdfPtTrue->SetLineColor(2);
       hPdfPtTrue->SetLineWidth(lineWidth_);
-      hPdfPtTrue->SetXTitle("p^{gen}_{T}  (GeV)");
-      hPdfPtTrue->SetYTitle("1 / N  dN / dp^{gen}_{T}  1 / (GeV)");
+      hPdfPtTrue->SetXTitle("p^{"+par_->labelTruth()+"}_{T}  (GeV)");
+      hPdfPtTrue->SetYTitle("1 / N  dN / dp^{"+par_->labelTruth()+"}_{T}  1 / (GeV)");
       hPdfPtTrue->GetYaxis()->SetRangeUser(yMin,yMax);
       hPdfPtTrue->Draw("L");
       hPtGenJet1->Draw("PE1same");
@@ -468,9 +484,9 @@ namespace resolutionFit {
       txt->Draw("same");
 
       TLegend *leg = util::LabelFactory::createLegendWithOffset(2,2.5*lineHeight_);
-      leg->AddEntry(hPtGenJet1,"MC truth: p^{particle}_{T}","P");
-      //leg->AddEntry(hPtGen,"MC truth: p^{particleJet}_{T,1+2}","P");
-      leg->AddEntry(hPdfPtTrue,"Spectrum  #tilde{f}(p_{T})","L");
+      leg->AddEntry(hPtGenJet1,"MC truth","P");
+      //leg->AddEntry(hPtGen,"MC truth: p^{"+par_->labelTruth()+"}_{T,1+2}","P");
+      leg->AddEntry(hPdfPtTrue,"Spectrum  #tilde{f}(p^{true}_{T})","L");
       leg->Draw("same");
 
       if( logY ) gPad->SetLogy();
@@ -566,62 +582,87 @@ namespace resolutionFit {
       for(std::vector<PtBin*>::const_iterator it = ptBins_.begin();
 	  it != ptBins_.end(); it++) {
 	int bin = (it-ptBins_.begin());
+
+	TH1 *hMCRes = (*it)->getHistMCRes("PlotMCClosureMCRes");
 	
 	bool logY = par_->respFuncType() == ResponseFunction::CrystalBall ? true : false;
-	double rMin = 0.;
-	double rMax = 2.;
+	double rMin = 0.4;
+	double rMax = 1.6;
+	if( logY ) {
+	  rMin = 0.;
+	  rMax = 2.;
+	}
 	double yMin = logY ? 6E-4 : 0.;
-	double yMax = logY ? 4E3 : 12.;
+	double yMax = logY ? 4E3 : hMCRes->GetMaximum()+2.5;
+	if( par_->extendedLegend() ) {
+	  yMin = logY ? 6E-4 : 0.;
+	  yMax = logY ? 7E2 : hMCRes->GetMaximum()+3.5;
+	}
 
 	// Create Canvas
 	TCanvas *can = new TCanvas("PlotMCClosure","PlotMCClosure",500,500);
 	can->cd();
 
 	// Draw MC truth resolution
-	TH1 *hMCRes = (*it)->getHistMCRes("PlotMCClosureMCRes");
 	hMCRes->SetMarkerStyle(20);
-	hMCRes->SetXTitle("Response R = p^{reco}_{T} / p^{particle}_{T}");
-	hMCRes->SetYTitle("1 / N  dN / dR");
-	hMCRes->GetXaxis()->SetRangeUser(rMin,rMax);
-	hMCRes->GetYaxis()->SetRangeUser(yMin,yMax);
-	hMCRes->Draw("PE1");
+// 	hMCRes->SetXTitle(par_->xAxisTitleResponse());
+// 	hMCRes->SetYTitle(par_->yAxisTitleResponse());
+// 	hMCRes->GetXaxis()->SetRangeUser(rMin,rMax);
+// 	hMCRes->GetYaxis()->SetRangeUser(yMin,yMax);
 	
 	// Fill histogram of extrapolated response
 	TH1 *hFitRes = new TH1D("PlotMCClosureFitRes","",500,rMin,rMax);
 	hFitRes->SetLineWidth(lineWidth_);
 	hFitRes->SetLineColor(2);
-	std::vector<double> pars;
-	for(int parIdx = 0; parIdx < par_->nFittedPars(); ++parIdx) {
-	  pars.push_back((*it)->extrapolatedValue(parIdx));
+	hFitRes->SetXTitle(par_->xAxisTitleResponse());
+	hFitRes->SetYTitle(par_->yAxisTitleResponse());
+	if( par_->styleMode() == "CMS" ) {
+	  char title[10];
+	  sprintf(title,"1 / N  Events / %.2f",hMCRes->GetBinWidth(1));
+	  hFitRes->SetYTitle(title);
 	}
-	hFitRes->SetXTitle("Response R = p^{reco}_{T} / p^{particle}_{T}");
-	hFitRes->SetYTitle("1 / N  dN / dR");
- 	hFitRes->GetXaxis()->SetRangeUser(rMin,rMax);
- 	hFitRes->GetYaxis()->SetRangeUser(yMin,yMax);
-
+	hFitRes->GetXaxis()->SetRangeUser(rMin,rMax);
+	hFitRes->GetYaxis()->SetRangeUser(yMin,yMax);
 	TH1 *hFitResCore = 0;
 	if( par_->respFuncType() == ResponseFunction::CrystalBall ) {
 	  hFitResCore = static_cast<TH1D*>(hFitRes->Clone("PlotMCClosureFitResCore"));
 	  hFitResCore->SetLineStyle(2);
+	}
+	std::vector<double> pars;
+	for(int parIdx = 0; parIdx < par_->nFittedPars(); ++parIdx) {
+	  pars.push_back((*it)->extrapolatedValue(parIdx));
 	}
 	for(int rBin = 1; rBin <= hFitRes->GetNbinsX(); ++rBin) {
 	  double res = hFitRes->GetBinCenter(rBin);
 	  hFitRes->SetBinContent(rBin,(*(par_->respFunc()))(res,pars));
 	  if( hFitResCore ) hFitResCore->SetBinContent(rBin,par_->respFunc()->pdfGauss(res,1.,pars[0]));
 	}
-	if( hFitResCore ) hFitResCore->Draw("Lsame");
-	hFitRes->Draw("Lsame");	
+	hFitRes->Draw("L");	
+	//if( hFitResCore ) hFitResCore->Draw("Lsame");
+	if( par_->styleMode() == "CMS" ) hMCRes->Draw("PEsame");
+	else hMCRes->Draw("PE1same");
+
 	
-	gPad->RedrawAxis(); // Leads to slightly thicker font!!
+	//gPad->RedrawAxis(); // Leads to slightly thicker font!!
 	
 	
 	// Labels
-	TPaveText *txt = util::LabelFactory::createPaveText(2);
-	txt->AddText("PYTHIA, #sqrt{s} = 7 TeV, L = 50 pb^{-1}");
-	txt->AddText("Anti-k_{T} d = 0.5 jets, "+par_->labelEtaBin());
+	TPaveText *txt = 0;
+	if( par_->extendedLegend() ) {
+	  txt = util::LabelFactory::createPaveText(2);
+	  txt->AddText("PYTHIA, #sqrt{s} = 7 TeV, "+par_->labelLumi());
+	  txt->AddText("Anti-k_{T} d = 0.5 jets, "+par_->labelEtaBin());
+	} else if( par_->styleMode() == "CMS" ) {
+	  txt = util::LabelFactory::createPaveText(2);
+	  txt->AddText("CMS preliminary");
+	  txt->AddText("PYTHIA, #sqrt{s} = 7 TeV, "+par_->labelLumi()+", "+par_->labelEtaBin());
+	} else {
+	  txt = util::LabelFactory::createPaveText(1);
+	  txt->AddText(par_->labelLumi()+", "+par_->labelEtaBin());
+	}
 	txt->Draw("same");
 
-	TLegend *leg = util::LabelFactory::createLegendWithOffset(2,2);
+	TLegend *leg = util::LabelFactory::createLegendWithOffset(2,txt->GetSize(),0.06);
 	leg->AddEntry(hMCRes,"MC truth, "+par_->labelPtBin(bin,1),"P");
 	leg->AddEntry(hFitRes,"Fit result, "+par_->labelPtBin(bin,0),"L");
 	leg->Draw("same");

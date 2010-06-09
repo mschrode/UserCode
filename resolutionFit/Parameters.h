@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.4 2010/05/27 08:56:12 mschrode Exp $
+// $Id: Parameters.h,v 1.5 2010/05/28 18:52:29 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -17,7 +17,7 @@ namespace resolutionFit {
   //!
   //! \author Matthias Schroeder
   //! \date 2010/05/15
-  //! $Id: Parameters.h,v 1.4 2010/05/27 08:56:12 mschrode Exp $
+  //! $Id: Parameters.h,v 1.5 2010/05/28 18:52:29 mschrode Exp $
   // --------------------------------------------
   class Parameters {
   public:
@@ -100,9 +100,16 @@ namespace resolutionFit {
     bool hasMCClosure() const { namesMCClosure_.size() > 0 ? true : false; }
     TString fileNameMCClosure(int ptBin) const { return namesMCClosure_.at(ptBin); }
 
+    TString labelMeas() const;
+    TString labelTruth() const;
     TString labelEtaBin() const;
     TString labelJetAlgo() const;
+    TString labelLumi() const;
     TString labelPtBin(int ptBin, int type) const;
+    TString xAxisTitleResponse() const;
+    TString yAxisTitleResponse() const;
+    bool extendedLegend() const { return extendedLegend_; }
+
 
     double trueGaussResPar(int i) const { return trueResPar_.at(i); }
     bool hasMCTruthBins() const { return mcTruthPtBinEdges_.size() > 0 ? true : false; }
@@ -118,7 +125,9 @@ namespace resolutionFit {
     bool hasStartOffset() const { return startResOffset_ > 0 ? true : false; }
     double relStartOffset() const { return startResOffset_; }
 
+    TString styleMode() const { return styleMode_; }
     int verbosity() const { return verbosity_; }
+
 
     void addPt3Cut(double pt3RelCutValue, const TString &fileBaseName);
     void addFileBaseNameMCStat(const TString &name) { writeFileNames(namesMCStat_,name); }
@@ -134,11 +143,14 @@ namespace resolutionFit {
     void fitExtrapolatedSigma(bool fit) { fitExtrapolatedSigma_ = fit; }
     void fitRatio(bool fit) { fitRatio_ = fit; }
 
+    void extendedLegend(bool ext) { extendedLegend_ = ext; }
+
 
   private:
     const double etaMin_;
     const double etaMax_;
     const TString outNamePrefix_;
+    const TString styleMode_;
     const int verbosity_;
 
     std::vector<int> fileNameIdx_;
@@ -162,6 +174,8 @@ namespace resolutionFit {
     bool fitExtrapolatedSigma_;
     bool fitRatio_;
     double startResOffset_;
+
+    bool extendedLegend_;
 
     ResponseFunction *respFunc_;
     TRandom3 *rand_;

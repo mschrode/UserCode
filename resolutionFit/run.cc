@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.15 2010/06/02 13:48:21 mschrode Exp $
+// $Id: run.cc,v 1.16 2010/06/03 15:15:56 mschrode Exp $
 
 #ifndef RUN_RESOLUTION_FIT
 #define RUN_RESOLUTION_FIT
@@ -23,8 +23,9 @@ int main(int argc, char *argv[]) {
 
   if( argc > 2 ) {
     // Set style
-    util::StyleSettings::presentationNoTitle();
+    //util::StyleSettings::presentationNoTitle();
     //util::StyleSettings::paperNoTitle();
+    util::StyleSettings::cms();
 
     gErrorIgnoreLevel = 1001;        // Do not print ROOT message if eps file has been created
     gSystem->Load("libHistPainter"); // Remove 'Warning in <TClass::TClass>: no dictionary for class TPaletteAxis is available'
@@ -41,8 +42,8 @@ int main(int argc, char *argv[]) {
     TString respType = argv[1];
     int etaBin = atoi(argv[2]);
     if( respType == "Gauss" ) {
-//       outNamePrefix = "ResFit_Spring10QCDFlat_Gauss_";
-//       inNamePrefix = "~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_";
+      //outNamePrefix = "ResFit_Spring10QCDFlat_Gauss_";
+      //inNamePrefix = "~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_";
 
 //       outNamePrefix = "ResFit_Spring10QCDFlat_GaussDown30It0_";
 //       inNamePrefix = "~/results/ResolutionFit/GaussDown30/Iteration0/resolutionSpring10_Gauss_";
@@ -58,8 +59,8 @@ int main(int argc, char *argv[]) {
 //       inNamePrefix = "~/results/ResolutionFit/GaussPar1Up30/Iteration0/resolutionSpring10_Gauss_";
 
       outNamePrefix = "ResFit_Spring10QCDFlat_GaussGenJetOrdered_";
-      inNamePrefix = "~/results/ResolutionFit/GaussGenJetOrdered/resolutionSpring10_Gauss_";
-
+//       //inNamePrefix = "~/results/ResolutionFit/GaussGenJetOrdered/resolutionSpring10_Gauss_";
+      inNamePrefix = "~/Work0/controlPlots/resolutionSpring10_Gauss_";
 
       if( etaBin == 0 ) {
 	std::cout << "Setting up parameters for eta bin " << etaBin << std::endl;
@@ -81,24 +82,27 @@ int main(int argc, char *argv[]) {
       
 	inNamePrefix += "Eta0_";
 
-	par = new resolutionFit::Parameters(0.,1.2,inNamePrefix,ptBinEdges,0,12,outNamePrefix+"Eta0_",
+	par = new resolutionFit::Parameters(0.,1.2,inNamePrefix,ptBinEdges,0,8,outNamePrefix+"Eta0_",
 					    resolutionFit::ResponseFunction::Gauss,verbosity);
 	par->setTrueGaussResPar(1.88,1.205,0.0342);
 	
 	par->addPt3Cut(0.06,inNamePrefix+"Rel3rdJet006_");
-	//	par->addPt3Cut(0.08,inNamePrefix+"Rel3rdJet008_");
+	par->addPt3Cut(0.08,inNamePrefix+"Rel3rdJet008_");
 	par->addPt3Cut(0.10,inNamePrefix);
 	//	par->addPt3Cut(0.12,inNamePrefix+"Rel3rdJet012_");
 	par->addPt3Cut(0.15,inNamePrefix+"Rel3rdJet015_");
-	//	par->addPt3Cut(0.20,inNamePrefix+"Rel3rdJet020_");
+	par->addPt3Cut(0.20,inNamePrefix+"Rel3rdJet020_");
 
-	//	par->addFileBaseNameMCStat(inNamePrefix+"Flat_");
+	//par->addFileBaseNameMCStat(inNamePrefix+"Flat_");
 
 	//par->addMCTruthBins(4,30,100,0.05);
 	//par->fitExtrapolatedSigma(true);
 
 	//	par->addStartOffset(1.005);
 	//par->fitRatio(true);
+
+	//par->addFileBaseNameMCClosure("~/results/ResolutionFit/MCClosure/resolutionSpring10_Gauss_Eta0_MCClosure_");
+
      
       } else if( etaBin == 1 ) {
 	std::cout << "Setting up parameters for eta bin " << etaBin << std::endl;
@@ -190,14 +194,14 @@ int main(int argc, char *argv[]) {
     resolutionFit::FittedResolution *fit = new resolutionFit::FittedResolution(ptBins,par);
 
     // Plots
-    fit->plotExtrapolation();
+    //fit->plotExtrapolation();
     if( respType == "Gauss" ) fit->plotResolution();
     //fit->plotResolutionBins();
     //fit->plotPtAsymmetryBins();
-    fit->plotSpectra();
+    //fit->plotSpectra();
     //fit->plotSystematicUncertainties();
     fit->plotMCClosure();
-    fit->plotCrystalBallTest();
+    //fit->plotCrystalBallTest();
     
     // Print
     fit->print();
