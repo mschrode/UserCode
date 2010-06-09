@@ -18,6 +18,7 @@ namespace util {
     static void paperNoTitle() { setStyle("Paper",false); }
     static void presentation() { setStyle("Presentation",true); }
     static void presentationNoTitle() { setStyle("Presentation",false); }
+    static void cms() { setStyle("CMS",false); }
     static int color(int i) {
       int col[5] = { 1, 2, 4, 7, 8 };
       return (i>=0 && i<5) ? col[i] : 1;
@@ -145,8 +146,13 @@ namespace util {
       gStyle->SetAxisColor(1,"XYZ");
       gStyle->SetTickLength(0.03,"XYZ");
       gStyle->SetNdivisions(510,"XYZ");
-      gStyle->SetPadTickX(1);  // To get tick marks on the opposite side of the frame
-      gStyle->SetPadTickY(1);
+      if( mode == "CMS" ) {
+	gStyle->SetPadTickX(0);
+	gStyle->SetPadTickY(0);
+      } else {
+	gStyle->SetPadTickX(1);
+	gStyle->SetPadTickY(1);
+      }
       gStyle->SetStripDecimals(kFALSE);
     
       //  For the axis labels and titles
@@ -164,7 +170,7 @@ namespace util {
 	gStyle->SetTitleXOffset(1.2);
 	if( spaceForTitle ) gStyle->SetTitleYOffset(2.0);
 	else                gStyle->SetTitleYOffset(1.5);
-      } else if ( mode == "Paper" ) {
+      } else if ( mode == "Paper" || mode == "CMS" ) {
 	// For the axis labels:
 	gStyle->SetLabelFont(42,"XYZ");
 	gStyle->SetLabelOffset(0.007,"XYZ");
@@ -228,6 +234,7 @@ namespace util {
       std::cout << "Adjusted gStyle for " << std::flush;
       if( mode == "Screen" ) std::cout << "screen viewing" << std::flush;
       else if( mode == "Paper" ) std::cout << "papers" << std::flush;
+      else if( mode == "CMS" ) std::cout << "CMS PAS" << std::flush;
       else std::cout << "presentations" << std::flush;
       std::cout << " and " << std::flush;
       if( spaceForTitle ) std::cout << "histograms with title." << std::endl;
