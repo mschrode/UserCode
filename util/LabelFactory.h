@@ -2,7 +2,6 @@
 #define LABEL_FACTORY_H
 
 #include <cmath>
-#include <iostream>
 
 #include "TLegend.h"
 #include "TPaveText.h"
@@ -44,6 +43,9 @@ namespace util {
     static TLegend *createLegendWithOffset(int nEntries, double yOffset) {
       return createLegend(nEntries,1.,yOffset,lineHeight());
     }
+    static TLegend *createLegendWithOffset(int nEntries, int yOffset, double lineHgt) {
+      return createLegend(nEntries,1.,1.16*lineHeight()*yOffset,lineHgt);
+    }
     static TLegend *createLegendWithOffset(int nEntries, double yOffset, double lineHgt) {
       return createLegend(nEntries,1.,yOffset,lineHgt);
     }
@@ -76,8 +78,7 @@ namespace util {
       if( width > 0. ) x0 = x0 + (1.-width)*(x1-x0);
       else x1 = x1 - (1.+width)*(x1-x0);
       y1 = 1.-(gStyle->GetPadTopMargin()+margin+0.02);
-      double height = lineHeight();
-      height = lineHgt;
+      double height = lineHgt;
       y0 = y1 - nEntries*height;
     }
   };
