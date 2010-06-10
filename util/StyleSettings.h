@@ -82,7 +82,7 @@ namespace util {
 	  gStyle->SetPadLeftMargin(0.19);
 	  gStyle->SetPadRightMargin(0.04);
 	}
-      } else if( mode == "Paper" ) {
+      } else if( mode == "Paper" || mode == "CMS"  ) {
 	if( spaceForTitle ) {
 	  gStyle->SetPadTopMargin(0.10);
 	  gStyle->SetPadBottomMargin(0.14);
