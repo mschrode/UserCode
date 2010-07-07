@@ -1,13 +1,102 @@
-% $Id: $
+% $Id: Note_ResFit_QCDMC.tex,v 1.1 2010/05/30 19:43:08 mschrode Exp $
 
 
-\section{Study with a QCD Monte Carlo Simulation}
+\section{Study with a QCD Monte Carlo Simulation}\label{sec:ResFit:QCDMC}
+
+The method is also tested on a sample of simulated QCD multijet events in $pp$ collisions at 7\tev center-of-mass energy.
+They have been generated with PYTHIA and processed through the full CMS detector simulation application based on GEANT4\footnote{The used dataset is \texttt{/QCDFlat\_Pt15to3000/Spring10-START3X\_V26\_S09-v1/GEN-SIM-RECO}}.
+The events are weighted corresponding to an integrated luminosity of 50\pbinv.
 
 
-\subsection{Gaussian resolution from Monte Carlo truth information}
+\subsection{Event selection}\label{sec:ResFit:QCDMC:EvtSel}
+
+Jets are reconstructed from calorimeter towers using the anti-$k_{T}$ jet clustering algorithm~\cite{bib:akj} with parameter size $d=0.5$.
+Jet energy corrections~\cite{bib:cmspas:jec} are applied to remove the $\eta$ and \pt dependence of the jet energy scale.
+Dijet events are selected in the following way:
+\begin{enumerate}
+\item The third jet is required to have small \pt compared to the leading two jets by imposing \mbox{$\ptrel < x$}, with \mbox{$\ptrel = \frac{2\pti{3}}{\pti{1} + \pti{2}}$}, in order to ensure a dijet topology.
+  The value of $x$ is varied in course of the analysis as discussed in Section~\ref{sec:ResFit:QCDMC:AddJetAct}.
+\item Both leading jets are required to be in the same pseudorapidity bin, which are defined in Table~\ref{tab:ResFit:QCDMC:EtaBinning}.
+  This accounts for the dependence of the jet \pt response on $\eta$ due to
+  \begin{itemize}
+  \item different calorimeter geometries and material budgets in front of the calorimeters in different pseudorapidity regions;
+  \item the fact that the intrinsic calorimeter resolution is energy rather than \pt dependent.
+  \end{itemize}
+\item In order to reject jets clustered from noise in the hadronic calorimeter component, the fraction $f_{\text{em}}$ of energy deposited in the electromagnetic component is required to be \mbox{$f_{\text{em}} > 0.01$} for both leading jets~\cite{bib:cmspas:jetid}.
+\end{enumerate}
 
 
-\subsection{Event selection}
+\subsection{Gaussian resolution from Monte Carlo truth information}\label{sec:ResFit:QCDMC:MCTruthReso}
+
+The jet \pt resolution is determined from Monte Carlo truth information, first, as a reference to compare the measured resolution to, and second, as an input $r_{0}$ in~\eqref{eq:ResFit:Method:ModifiedSpectrum} to incorporate the the selection bias into the dijet likelihood (comp. Section~\ref{sec:ResFit:Method:Biases}).
+\begin{figure}[ht]
+  \begin{center}
+     \includegraphics[width=0.45\textwidth]{figures/resFit_QCD_MCTruthResolution}
+   \end{center}
+   \caption{Relative Gaussian jet \pt resolution $\sigma/\pt$ derived from Monte Carlo truth as a function of \pt in different $\eta$ bins.}
+   \label{fig:ResFit:ToyMC:Sample:Spectrum}
+\end{figure}
+The determination follows closely~\cite{}:
+In each event, the two jets with highest particle level jet \pt, \ptparticle, are selected and the response distributions \mbox{$\ptmeas / \ptparticle$} are recorded in different bins of \ptparticle and $\eta$ (the $\eta$ binning is listed in Table~\ref{tab:ResFit:QCDMC:EtaBinning}).
+The central part of each distribution --- defined by the interval of 1.5 standard deviations around the mean --- is fitted with a Gaussian.
+In each $\eta$ bin, the fitted Gaussian widths $\sigma$ are interpolated for different \pt by the usual parametrisation function~\eqref{eq:ResFit:ToyMC:Sigma}; the fitted parameter values are listed in Table~\ref{tab:ResFit:QCDMC:MCTruthReso}.
+\begin{table}[ht]
+  \caption{Parameters of the MC truth resolution $\sigma$.}
+  \begin{center}
+    \begin{tabular}[h]{cccccc}
+      \toprule
+      & $|\eta_{\text{min}}|$ & $|\eta_{\text{max}}|$ & $\xi_{0}\,(\text{Ge}\kern-0.06667em\text{V})$ & $\xi_{1}\,(\sqrt{\text{Ge}\kern-0.06667em\text{V}})$ & $\xi_{2}$ \\
+      \midrule
+      $0$ & $0$ & $1.2$ & $1.9\pm0.2$ & $1.205\pm0.006$  & $0.0342\pm0.0007$ \\
+      $1$ & $1.2$ & $2.6$ & $2.51\pm0.09$ & $0.968\pm0.009$  & $0.0483\pm0.0009$ \\
+      $2$ & $2.6$ & $3.2$ & $1.7\pm0.18$ & $0.76\pm0.02$  & $0.035\pm0.004$ \\
+      $3$ & $3.2$ & $4.7$ & $2.2\pm0.1$ & $0.2\pm0.1$  & $0.099\pm0.003$ \\
+      \bottomrule
+    \end{tabular}
+  \end{center}
+  \label{tab:ResFit:QCDMC:MCTruthReso}
+\end{table}
 
 
-\subsection{Effects from additional jet activity}
+
+
+\subsection{Effects from additional jet activity}\label{sec:ResFit:QCDMC:AddJetAct}
+
+% Resolutions are derived from Gaussian fits to the simulated distributions~\eqref{eq:qcd:resolMaxlike:toyMCRes}.
+% Figure.~\ref{fig:qcd:resolMaxlike:qcd:ptDependentSigma} illustrates on the lack of closure due to the presence of a third jet. 
+
+% \begin{figure}[ht]
+%   \begin{center}
+%     \subfigure[]{
+%       \includegraphics[width=0.45\textwidth]{figures/figures_QCD_resol_maxlike/resFit_PtDependentSigma}
+%     } \subfigure[]{
+%       \includegraphics[width=0.45\textwidth]{figures/figures_QCD_resol_maxlike/resFit_QCD_3rdJetInfluence}
+%     }
+%   \end{center}
+%   \caption{(a) Gaussian jet \pt resolution in realistic jet
+% events generated with PYTHIA and processed through the CMS full simulation
+% application based on GEANT.
+% $\sigma$ from fitted parameter values (red line) is compared to the MC truth prediction (blue line).
+% (This is the result of a study on the \texttt{/QCDFlat\_Pt15to3000/Summer09-MC\_31X\_V9\_7TeV-v1/GEN-SIM-RECO} dataset. It will be updated to the Spring10 simulation but the differences are expected to be negligible.)
+% (b) Illustration using a toy simulation of the effect of three jet events on the fitted 
+% $\sigma$.}
+%       \label{fig:qcd:resolMaxlike:qcd:ptDependentSigma}
+% \end{figure}
+
+
+% \begin{figure}[ht]
+%   \centering
+%   \includegraphics[width=0.45\textwidth]{figures/resFit_PtDependentSigma}
+%   \caption{Width $\sigma$ of a Gaussian resolution in QCD dijet events. Shown is $\sigma$ from fitted parameter values (red line) in comparison to the truth from the MC simulation (blue line).}
+%   \label{fig:resFit:qcd:ptDependentSigma}
+% \end{figure}
+
+% The determination of a Gaussian resolution~\eqref{eq:resFit:toyMCRes} with a \pt dependent width $\sigma$ as in~\eqref{eq:resFit:toyMCSigma} has been performed as for the ideal sample above.
+% The results are not satisfying (comp. Fig.~\ref{fig:resFit:qcd:ptDependentSigma}).
+
+% Various test have been performed and the method appears to work fine for a moderately falling \pt spectrum.
+% In case of a realistic QCD spectrum (comp. Fig.~\ref{fig:resFit:qcd:dijetspectrum:subA}), however, the
+% determined resolution does not describe the true resolution at large \pt anymore.
+% The failure of the method is assumed to be due to the non-ideal topology of the selected dijet events, namely the presence of a third jet.
+% These effects and an extension of the presented method are under study.
+% Meanwhile a modified strategy to determine the resolution is investigated and presented in the following sections.
