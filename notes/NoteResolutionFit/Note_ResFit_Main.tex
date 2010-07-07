@@ -1,4 +1,4 @@
-% $Id: Note_ResFit_Main.tex,v 1.2 2010/06/01 17:24:50 mschrode Exp $
+% $Id: Note_ResFit_Main.tex,v 1.3 2010/07/07 09:29:40 mschrode Exp $
 
 % =====  HEADER  ========================================
 
@@ -50,610 +50,611 @@
 
 
 % ----- This should all go to external files ------------
-\section{Determination of a Gaussian resolution}
-\subsection{Conceptual studies using a simple simulation}
-The method presented in the previous section has been studied using a
-simple simulation.
-
-\begin{figure}[ht]
-  \begin{center}
-     \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_SpectrumLog}
-   \end{center}
-   \caption{Simple simulation of a sample of ideal dijet events.
-     Generated \pttrue spectrum (histogram) and the underlying pdf (solid line).}
-   \label{fig:resFit:toyMC:ptGenCuts:spectrum}
-\end{figure}
-
-\begin{figure}[ht]
-  \begin{center}
-    \subfigure[]{
-      \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_ResolutionBin1}
-   } \subfigure[]{
-      \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_ResolutionBin7}
-   }
-  \end{center}
-  \caption{Simple simulation of a sample of ideal dijet events.
-    Generated true resolution \mbox{$\ptmeas / \pttrue$} (histogram) and the resolution (solid line) from the maximum likelihood fit in two different \pttrue bins.
-    Note, here ``fit'' does not refer to a fit to the shown histogram but the maximisation of the likelihood~\eqref{eq:resFit:likelihood}.
-  }
-  \label{fig:resFit:toyMC:ptGenCuts:reso}
-\end{figure}
-
-A sample of 30000 ideal dijet events has been generated with an
-exponentially falling spectrum
-\begin{equation}
-  \label{eq:resFit:toyMCSpec}
-  f\left(\pttrue\right) \propto \exp\left(-\pttrue / \tau\right),
-  \qquad \tau = 80.
-\end{equation}
-ranging from \mbox{$50 < \pttrue < 1000\gev$} (comp. Fig.~\ref{fig:resFit:toyMC:ptGenCuts:spectrum}).
-Two independent measurements of the jet \pt have been simulated
-from a Gaussian resolution
-\begin{equation}
-  \label{eq:resFit:toyMCRes}
-  f_{\vec{b}}\left(\ptmeas|\pttrue\right) = 
-  \frac{1}{\sqrt{2\pi}\sigma}\exp\left[-\frac{1}{2}\left(\frac{\ptmeas - \pttrue}{\sigma}\right)^{2}\right]
-\end{equation}
-(Here and in the following the jet index $i$ has been omitted.)
-The width $\sigma$ has been parameterised as a function of \pttrue and
-the parameters $b_{i}$, \mbox{$i\in\left\{0,2\right\}$}, as
-\begin{equation}
-  \label{eq:resFit:toyMCSigma}
-  \sigma = b_{0}\gev
-  \oplus b_{1}\,\sqrt{\pt\gev}\oplus b_{2}\pt.
-\end{equation}
-The parameter values of the parameters $\vec{b}$ are listed in
-Tab.~\ref{tab:resFit:toyMC:ptGenCuts:fitResult}.
-An example of the simulated resolution is shown in Fig. ~\ref{fig:resFit:toyMC:ptGenCuts:reso}.
-
-\begin{table}[ht]
-  \centering
-  \begin{tabular}[ht]{lccc}
-    \hline \hline
-    $b_{i}$ & $0$ & $1$ & $2$ \\
-    \hline
-    True value & $4$           & $1.2$           & $0.05$ \\
-    Fit result & $4.5 \pm 0.7$ & $1.18 \pm 0.05$ & $0.051 \pm 0.004$ \\
-    \hline \hline
-  \end{tabular}
-  \caption{Parameter values of the width $\sigma(\pt)$ of the Gaussian
-    resolution. Listed are the true values used for the generation and
-    the fitted values. The uncertainties assigned to the fitted values
-    are the statistical uncertainties from the fit. The parameter
-    correlations are shown in Fig.~\ref{fig:resFit:toyMC:ptGenCuts:parCorr}.}
-  \label{tab:resFit:toyMC:ptGenCuts:fitResult}
-\end{table}
-
-The jet energy resolution of this dijet sample is to be fitted using the method described above.
-In order to evaluate the dijet pdf~\eqref{eq:resFit:dijetPdf}, the spectrum $f(\pttrue)$ has to be known and the resolution $f_{\vec{b}}(\ptmeasi{i}|\pttrue)$ has to be parameterised appropriately.
-The spectrum is taken directly from the simulation~\eqref{eq:resFit:toyMCSpec}.
-If the same strategy is applied in data, influences of the uncertainty on the simulated spectrum on the fitted resolution have to be considered.
-These are small as shown in Section~\ref{sec:resFit:toyMC:uncert}.
-The resolution is parameterised with a Gaussian, where the width $\sigma$ depends on \pttrue and the parameters $\vec{b}$ as in~\eqref{eq:resFit:toyMCSigma}.
-The dijet pdf is normalised to the \pttrue range of the simulation i.e. $t_{0} = 50\gev$ and $t_{1} = 1000\gev$.
-This setup corresponds to cuts on \pttrue; a more data driven approach is discussed in Section~\ref{sec:resFit:dataDrivenExt}.
-
-\begin{figure}[ht]
-  \centering
-  \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_Correlations}
-  \caption{Correlation coefficients of the fitted parameter values
-    $\vec{b}$ of the width $\sigma$ of the Gaussian
-    resolution. Parameter $3$ corresponds to the slope $\tau$ of the
-    spectrum, which is fixed during the fit, and is to be ignored.}
-  \label{fig:resFit:toyMC:ptGenCuts:parCorr}
-\end{figure}
-
-The fitted parameter values $\vec{b}$ are listed in Tab.~\ref{tab:resFit:toyMC:ptGenCuts:fitResult}.
-They agree with the true values within the statistical uncertainties.
-
-The parameters are strongly (anti-) correlated (comp. Fig.~\ref{fig:resFit:toyMC:ptGenCuts:parCorr}).
-In the present \pttrue interval from \mbox{$t_{0} = 50\gev$} to \mbox{$t_{1} = 1000\gev$}, the used parameterisation of the Gaussian width $\sigma$ is over-determined.
-The $b_{0}$ term in~\eqref{eq:resFit:toyMCSigma} is most important at very low \pt while the $b_{2}$ term dominats at very large \pt.
-Hence, omitting either the terms with $b_{0}$ and $b_{2}$ or the term with $b_{1}$ in~\eqref{eq:resFit:toyMCSigma} would have been sufficient to describe the measured events.
-
-\begin{figure}[ht]
-  \begin{center}
-    \subfigure[]{
-      \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_Sigma}
-  } \subfigure[]{
-      \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_SigmaRelDifference}
-  }
-  \end{center}
-  \caption{(a) Relative Gaussian width $\sigma(\pt)/\pt$ evaluated with the fitted
-    parameter values (solid line) in comparison to the generated width
-    (dashed line).  (b) shows
-    the relative difference of the two curves. The shaded area represents the propagated statistical
-    uncertainty on the fitted parameter values, taking into account the
-    parameter correlations.}
-  \label{fig:resFit:toyMC:ptGenCuts:sigma}
-\end{figure}
-
-The relative Gaussian width $\sigma(\pt)/\pt$ evaluated with the fitted
-parameter values is shown in Fig.~\ref{fig:resFit:toyMC:ptGenCuts:sigma}
-in comparison to the true width at generation.
-There is good agreement between the fitted and the true resolution
-within the statistical uncertainties.
-The uncertainties are about $1\%$ at low \pt rising to
-about $3\%$ at $\pt \approx 600\gev$ where there is sufficient statistics in
-the generated sample (comp. Fig~\ref{fig:resFit:toyMC:ptGenCuts:spectrum}).
-For larger \pt the uncertainties rise up to $4.5\%$.
-
-An example of the resulting resolution in comparison to the true
-resolution is shown in Fig.~\ref{fig:resFit:toyMC:ptGenCuts:reso} for
-one \pttrue bin.
-
-
-\subsection{Extension to a data driven event selection}\label{sec:resFit:dataDrivenExt}
-So far, events have been selected by cuts on the true jet \pt.
-In a more data driven approach the selection is to be applied to the measured jet \pt.
-Events are selected, if for one of the two jets
-\begin{equation*}
-  \ptmin < \ptmeas < \ptmax.
-\end{equation*}
-Each event is considered twice; once for a \pt cut on the first and once for a \pt cut on the second jet.
-In this way any bias in the selection arising e.g. from always selecting the first and thus the jet fluctuated upwards is avoided and the available statistics is doubled.
-Since the \pt of the other jet can fluctuate arbitrarily, sensitivity to the resolution and in particular the non-Gaussian tails is assured; this is not the case when cutting e.g. on \mbox{$\ptdijet = \frac{1}{2}(\pt^{1}+pt^{2})$}, the average dijet \pt, as demonstrated in Fig.~\ref{fig:resFit:ptBinning}.
-
-\begin{figure}[ht]
-  \centering
-  \includegraphics[width=0.45\textwidth]{figures/resFit_QCD_PtBinningComp}
-  \caption{Dependence of the true resolution on the definition of the quantity the cuts are applied to.
-    Cuts are applied either to \mbox{$\ptdijet = \frac{1}{2}(\pt^{1}+pt^{2})$} (open markers) or to the \pt of one of the jets while the other fluctuates arbitrarily (solid markers).
-    The non-Gaussian tails are surpressed when cutting on \ptdijet.}
-  \label{fig:resFit:ptBinning}
-\end{figure}
-
-Cutting on the measured \pt leads to migration effects at the edges of the selected \pt range due to the finite jet resolution.
-Considering the lower limit \ptmin, in an event with \mbox{$\pttrue < \ptmin$} the actually measured jet \pt might fluctuate upwards resulting in \mbox{$\ptmeas > \ptmin$} and thus false acceptance of the event.
-Similarly, events might be falsely rejected due to downward fluctuations.
-Since the dijet cross section is steeply falling with \pt, the described migration is asymmetric i.e. there is more upward than downward migration and more events are falsely accepted.
-(Analogue considerations hold true for the upper limit.)
-The described migration effects are demonstrated in Fig.~\ref{fig:resFit:toyMC:ptCuts:spectrum}.
-
-\begin{figure}[ht]
-  \begin{center}
-    \subfigure[]{
-      \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_SpectrumLog}
-    } \subfigure[]{
-      \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_SpectrumLinear}
-    }
-  \end{center}
-  \caption{Simple simulation of a sample of ideal dijet
-    events. Generated \pttrue spectrum (histogram) and the underlying pdf (solid
-    line) after cuts on measured \pt. The spectrum is shown (a) in log
-    scale and (b) in linear scale.}
-  \label{fig:resFit:toyMC:ptCuts:spectrum}
-\end{figure}
-
-\begin{figure}[ht]
-  \begin{center}
-    \subfigure[]{
-      \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_ResolutionBin1}
-   } \subfigure[]{
-      \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_ResolutionBin7}
-   }
-  \end{center}
-  \caption{Simple simulation of a sample of ideal dijet
-    events. Generated true resolution \mbox{$\ptmeas / \pttrue$} (histogram) and the fitted
-    resolution (solid line) in two different \pttrue bins after cuts on measured \pt.
-    Note the migration effects in (a): the narrow peak at the right side is due to the jet that has been cut on and hence these are jets fluctuating upwards into the \pt bin.
-    The wider peak centered around one is due to the other jet that fluctuates unconstrained.
-    (There is more upward than downward fluctuation due to the falling spectrum.)
-  }
-  \label{fig:resFit:toyMC:ptCuts:reso}
-\end{figure}
-
-\begin{figure}[ht]
-  \begin{center}
-    \subfigure[]{
-      \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_Sigma}
-  } \subfigure[]{
-      \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_SigmaRelDifference}
-  }
-  \end{center}
-  \caption{(a) Relative Gaussian width $\sigma(\pt)/\pt$ evaluated with the fitted
-    parameter values (solid line) in comparison to the generated width
-    (dashed line). The fit has been performed after cuts on measured \pt. (b) shows
-    the relative difference of the two curves. The shaded area represents the propagated statistical
-    uncertainty on the fitted parameter values, taking into account the
-    parameter correlations.}
-  \label{fig:resFit:toyMC:ptCuts:sigma}
-\end{figure}
-
-The dijet pdf~\eqref{eq:resFit:dijetPdf} is adapted to include the cuts on the measured jet \pt.
-First, the allowed range of measured \pt is restricted for the jet the \pt cut is applied to.
-In the following, it is assumed that this is the first jet; the pdfs of measured jet \pt therefore become
-\begin{eqnarray*}
-  f_{\vec{b}}\left(\ptmeasi{1}|\pttrue\right) & = & 
-  \frac{1}{\mathcal{N}_{1}}\exp\left[-\frac{1}{2}\left(\frac{\ptmeasi{1}
-        - \pttrue}{\sigma}\right)^{2}\right]
-  \cdot\theta\left(\ptmeasi{1} - \ptmin\right)
-  \cdot\theta\left(\ptmax - \ptmeasi{1}\right) \\
-  f_{\vec{b}}\left(\ptmeasi{2}|\pttrue\right) & = & 
-  \frac{1}{\mathcal{N}_{2}}\exp\left[-\frac{1}{2}\left(\frac{\ptmeasi{2}
-        - \pttrue}{\sigma}\right)^{2}\right] \\
-\end{eqnarray*}
-with the normalisation constants
-\begin{eqnarray*}
-  \mathcal{N}_{1} & = &
-  \int^{\ptmax}_{\ptmin}\dif{\ptmeasi{1}}\,f_{\vec{b}}\left(\ptmeasi{1}|\pttrue\right)
-  = \sqrt{\frac{\pi}{2}}\sigma \left[ \text{erf}\left(\frac{\ptmax -
-        \pttrue}{\sqrt{2}\sigma}\right) - \text{erf}\left(\frac{\ptmin
-        - \pttrue}{\sqrt{2}\sigma}\right)\right] \\
-  \mathcal{N}_{2} & = &
-  \int^{\infty}_{0}\dif{\ptmeasi{2}}\,f_{\vec{b}}\left(\ptmeasi{2}|\pttrue\right)
-  = \sqrt{\frac{\pi}{2}}\sigma \left[ 1 +
-    \text{erf}\left(\frac{\pttrue}{\sqrt{2}\sigma}\right)\right]
-  \approx \sqrt{2\pi}\sigma.
-\end{eqnarray*}
-Second, the pdf of the true \pt is extended to incorporate the events
-migrating into the allowed \pt range by
-\begin{equation}
-  \label{eq:resFit:toyMC:ptCuts:extendedSpectrum}
-  \tilde{f}\left(\pttrue\right) = \frac{1}{\mathcal{N}_{\tilde{f}}}
-  f\left(\pttrue\right) \int^{\ptmax}_{\ptmin}\dif{x}\,f_{\text{MC}}\left(x|\pttrue\right)
-\end{equation}
-with the normalisation
-\begin{equation*}
-  \mathcal{N}_{\tilde{f}} = \int^{\infty}_{0}\dif{\pttrue}\,
-  f\left(\pttrue\right) \int^{\ptmax}_{\ptmin}\dif{x}\,f_{\text{MC}}\left(x|\pttrue\right).
-\end{equation*}
-Here, $f(\pttrue)$ denotes the underlying spectrum~\eqref{eq:resFit:toyMCSpec} and
-$f_{\text{MC}}(x|\pttrue)$ the pdf of measured \pt.
-$f_{\text{MC}}(x|\pttrue)$ in \eqref{eq:resFit:toyMC:ptCuts:extendedSpectrum} is taken from the
-simulation and the parameters are kept fixed during the maximisation.
-Thus usage of the simulation introduces a further uncertainty but they
-are small as in case of the underlying spectrum as shown below.
-The adapted dijet pdf then becomes
-\begin{equation}
-  \label{eq:resFit:toyMC:ptCuts:pdf}
-  f_{\vec{b}}\left(\ptmeasi{1},\ptmeasi{2}\right) = \int^{\infty}_{0}\dif{\pttrue}\,\tilde{f}\left(\pttrue\right)
-  \cdot f_{\vec{b}}\left(\ptmeasi{1}|\pttrue\right)
-  \cdot f_{\vec{b}}\left(\ptmeasi{2}|\pttrue\right),
-\end{equation}
-which is properly normalised to
-\begin{equation*}
-  1 = \int^{\ptmax}_{\ptmin}\dif{\ptmeasi{1}}\,\int^{\infty}_{0}\dif{\ptmeasi{2}}\, f_{\vec{b}}\left(\ptmeasi{1},\ptmeasi{2}\right).
-\end{equation*}
-
-\begin{table}[ht]
-  \centering
-  \begin{tabular}[ht]{lccc}
-    \hline \hline
-    $b_{i}$ & $0$ & $1$ & $2$ \\
-    \hline
-    True value & $4$           & $1.2$                   & $0.05$ \\
-    Fit result   & $4 \pm 1$ & $1.20 \pm 0.07$ & $0.049 \pm 0.005$ \\
-    \hline \hline
-  \end{tabular}
-  \caption{Parameter values of the width $\sigma(\pt)$ of the Gaussian
-    resolution. Listed are the true values used for the generation and
-    the fitted values. The fit has been performed after cuts on measured \pt.
-    The uncertainties assigned to the fitted values
-    are the statistical uncertainties from the fit; correlations are not shown.}
-  \label{tab:resFit:toyMC:ptCuts:fitResult}
-\end{table}
-
-Again the sample of ideal dijet events is used to test the discussed extension of the method.
-Cuts are placed on the measured \pt at \mbox{$\ptmin = 80\gev$} and \mbox{$\ptmax = 800\gev$} (comp. Fig.~\ref{fig:resFit:toyMC:ptCuts:spectrum}).
-The jet energy resolution of the selected dijet events is fitted using the modified pdf~\eqref{eq:resFit:toyMC:ptCuts:pdf}.
-Uncertainties due to uncertainties in the description of the spectrum are discussed in Section~\ref{sec:resFit:toyMC:uncert}.
-
-The fitted parameter values $\vec{b}$ of the Gaussian width $\sigma$ are listed in Tab.~\ref{tab:resFit:toyMC:ptCuts:fitResult}.
-They agree with the true values within the statistical uncertainties.
-As expected, they feature the same correlation pattern as in case of \pttrue cuts.
-
-The relative Gaussian width $\sigma(\pt)/\pt$ evaluated with the fitted parameter values is shown in Fig.~\ref{fig:resFit:toyMC:ptCuts:sigma} in comparison to the true width at generation.
-There is good agreement between the fitted and the true resolution within the statistical uncertainties.
-As before, the uncertainties are about $1\%$ at low \pt rising to about $3\%$ at $\pt \approx 600\gev$ and up to $4.5\%$ at very large \pt.
-An example of the resulting resolution in comparison to the true resolution is shown in Fig.~\ref{fig:resFit:toyMC:ptCuts:reso} for one \pttrue bin.
-
-It can be concluded therefore that the method is working also for a data driven event selection.
-
-
-
-\subsection{Estimation of systematic uncertainties}\label{sec:resFit:toyMC:uncert}
-
-The dijet pdf discussed above contains knowledge of the actual dijet spectrum and --- in case of cuts on measured jet \pt --- also of the resolution to describe the cut-off effects.
-When applying the method to data this information would be taken from a MC simulation.
-Test have been performed to evaluate the influence of uncertainties in the MC description on the fitted resolution.
-
-\begin{figure}[ht]
-  \centering
-  \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_SigmaUncertainties}
-  \caption{Relative differences of the Gaussian widths $\sigma(\pt)$ evaluated with the fitted parameter values for different variations of the spectrum and the correct spectrum.
-    The variation has been applied to the slope parameter $\tau$ in \eqref{eq:resFit:toyMCSpec} (``Spectrum'') as well as all three parameters $b_{\text{MC},i}$ in \eqref{eq:resFit:toyMC:ptCuts:extendedSpectrum} (``Resolution'').}
-  \label{fig:resFit:toyMC:uncert:systUncertainties}
-\end{figure}
-
-\begin{table}[ht]
-  \centering
-  \begin{tabular}[ht]{lccc}
-    \hline \hline
-    $b_{i}$ & $0$ & $1$ & $2$ \\
-    \hline
-    True value         & $4$       & $1.2$           & $0.05$ \\
-    Correct            & $4 \pm 1$ & $1.20 \pm 0.07$ & $0.049 \pm 0.005$ \\
-    Spectrum $+30\%$   & $3 \pm 2$ & $1.22 \pm 0.07$ & $0.049 \pm 0.005$ \\
-    Spectrum $-30\%$   & $5 \pm 1$ & $1.19 \pm 0.08$ & $0.052 \pm 0.006$ \\
-    Resolution $+30\%$ & $5 \pm 1$ & $1.13 \pm 0.07$ & $0.054 \pm 0.004$ \\
-    Resolution $-30\%$ & $5 \pm 2$ & $1.19 \pm 0.08$ & $0.050 \pm 0.006$ \\
-    \hline \hline
-  \end{tabular}
-  \caption{Parameter values of the width $\sigma(\pt)$ of the Gaussian resolution.
-    Listed are the true values used for the generation and the fitted values for different variations of the spectrum.
-    The uncertainties assigned to the fitted values are the statistical uncertainties from the fit.}
-  \label{tab:resFit:toyMC:uncert:fitResult}
-\end{table}
-
-The fit has been repeated with the same setup as described in Section~\ref{sec:resFit:dataDrivenExt}.
-In order to evaluate the influence of the spectrum on the result the slope i.e. the parameter $\tau$ in \eqref{eq:resFit:toyMCSpec} has been varied by $\pm30\%$.
-Cut-off effects in the spectrum are described by the true resolution $f_{\text{MC}}(x|\pttrue)$ in \eqref{eq:resFit:toyMC:ptCuts:extendedSpectrum}.
-All three parameters $b_{\text{MC},i}$ of $f_{\text{MC}}(x|\pttrue)$ have been varied by $\pm30\%$ to evaluate uncertainties arising from the simulation.
-
-The fitted parameter values for each variation are listed in Tab.~\ref{tab:resFit:toyMC:uncert:fitResult} in comparion to the values obtained when using the correct spectrum.
-The relative differences of the Gaussian widths $\sigma$ calculated with these fitted parameter values to the $\sigma$ using the correct spectrum are presented in Fig.~\ref{fig:resFit:toyMC:uncert:systUncertainties} as a function of \pt for the different variations; they are below $4\%$.
-A varied spectrum predominantly results in a larger resolution.
-
-
-
-\subsection{Application to a realistic QCD simulation}\label{sec:resFit:qcdSelection}
-The method has then been applied to QCD events with 7\tev center of
-mass energy which were generated with PYTHIA and went through a full
-GEANT4 based CMS detector simulation\footnote{The used dataset is
-  \texttt{/QCDFlat\_Pt15to3000/Summer09-MC\_31X\_V9\_7TeV-v1/GEN-SIM-RECO}}.
-Jets have been reconstructed from calorimeter towers using the
-anti-$k_{T}$ algorithm with size parameter $R=0.5$.
-The jet energy scale has been corrected for $\eta$ and \pt dependence
-by the appropriate L2L3 corrections\footnote{These are the
-  \texttt{JetMETCorrections.Configuration.L2L3Corrections\_Summer09\_7TeV\_ReReco332\_cff}
-corrections.}.
-
-\begin{figure}[ht]
-  \begin{center}
-    \subfigure[]{
-      \label{fig:resFit:qcd:dijetspectrum:subA}
-      \includegraphics[width=0.45\textwidth]{figures/resFit_QCD_MCSpectrum}
-    } \subfigure[]{
-      \label{fig:resFit:qcd:dijetspectrum:subB}
-      \includegraphics[width=0.45\textwidth]{figures/resFit_QCD_MCTruthResolution}
-    }
-  \end{center}
-  \caption{(a) \ptparticle distribution and (b) MC truth resolution of the leading two jets in the selected dijet sample.
-    The solid lines are fits of the indicated functions.}
-  \label{fig:resFit:qcd:dijetspectrum}
-\end{figure}
-
-In the following jets are considered to be ordered in corrected \ptreco.
-Dijet events are selected by requiring the third jet to have small \pt compared to the leading two jets,
-\begin{enumerate}
-\item $\ptrel < 0.1$ with $\ptrel = \frac{2\ptsub{3}}{\ptsub{1} + \ptsub{2}}$.
-\end{enumerate}
-This selection cut has been adopted from~\cite{CMSAN-2008/031}.
-The additional cut on $\Delta\phi$ performed there has been dropped as it has been found to be strongly correlated to the cut on \ptrel.
-In order to reject jets clustered from calorimeter noise a cut on the electromagnetic fration of the two leading jets is applied,
-\begin{enumerate}
-\item[2.] $0.01 < f_{\text{em},i} < 0.99$ with $i\in\{1,2\}$.
-\end{enumerate}
-
-So far and in the following, the resolution is defined as a function of jet \pt.
-It is influenced for example by the magnetic solenoid field which bends charged particles out of the jet cone depending on their \pt.
-Other effects such as the intrinsic calorimeter resolution are energy $E$ dependent.
-The dependence on the difference between the $E$ and \pt is minimised by considering dijet events with both leading jets in a restricted $\eta$ region,
-\begin{enumerate}
-\item[3.] $|\eta_{i}| < 1.2$ with $i\in\{1,2\}$.
-\end{enumerate}
-It is planned to apply the method to different $\eta$ regions taking into account also those events in which the two leading jets are in different $\eta$ regions.
-
-The events are weighted corresponding to an integrated luminosity of $100\,\text{pb}^{-1}$.
-
-The resulting \ptparticle spectrum is shown in Fig.~\ref{fig:resFit:qcd:dijetspectrum:subA}.
-It is fitted with an empiric function
-\begin{equation}
-  \label{eq:resFit:qcd:ptGenSpectrum}
-  f\left(\ptparticle\right) = \sum^{2}_{i=0}\,\exp\left[-\left(a_{2i} + a_{2i+1}\ptparticle\right)\right]
-\end{equation}
-to have a first applicable parameterisation of the spectrum $f(\pttrue)$.
-The fitted parameter values $a_{i}$ are listed in Table~\ref{tab:resFit:qcd:dijetspectrum} and the resulting pdf is superimposed in Fig.~\ref{fig:resFit:qcd:dijetspectrum:subA}.
-\begin{table}[ht]
-  \centering
-  \begin{tabular}{rc}
-    \hline
-    \hline
-    $a_{i}$ & Fitted value \\
-    \hline
-    $0$ & $0.56 \pm 0.04$ \\
-    $1$ & $0.0300 \pm 0.0004$ \\
-    $2$ & $3.91 \pm 0.09$ \\
-    $3$ & $0.0152 \pm 0.0004$ \\
-    $4$ & $7.15 \pm 0.05$ \\
-    $5$ & $0.00837 \pm 0.00008$ \\
-    \hline
-    \hline
-  \end{tabular}
- \caption{Fitted parameter values of the dijet \ptparticle spectrum.}
-  \label{tab:resFit:qcd:dijetspectrum}
-\end{table}
-
-\begin{figure}[ht]
-  \centering
-  \includegraphics[width=0.45\textwidth]{figures/resFit_PtDependentSigma}
-  \caption{Width $\sigma$ of a Gaussian resolution in QCD dijet events. Shown is $\sigma$ from fitted parameter values (red line) in comparison to the truth from the MC simulation (blue line).}
-  \label{fig:resFit:qcd:ptDependentSigma}
-\end{figure}
-
-The determination of a Gaussian resolution~\eqref{eq:resFit:toyMCRes} with a \pt dependent width $\sigma$ as in~\eqref{eq:resFit:toyMCSigma} has been performed as for the ideal sample above.
-The results are not satisfying (comp. Fig.~\ref{fig:resFit:qcd:ptDependentSigma}).
-
-Various test have been performed and the method appears to work fine for a moderately falling \pt spectrum.
-In case of a realistic QCD spectrum (comp. Fig.~\ref{fig:resFit:qcd:dijetspectrum:subA}), however, the
-determined resolution does not describe the true resolution at large \pt anymore.
-The failure of the method is assumed to be due to the non-ideal topology of the selected dijet events, namely the presence of a third jet.
-These effects and an extension of the presented method are under study.
-Meanwhile a modified strategy to determine the resolution is investigated and presented in the following sections.
-
-
-\section{Determination of the mean Gaussian resolution in \pt bins}
-\subsection{Strategy}
-The mean Gaussian resolution with constant width $\bar{\sigma}$ is to be determined in bins of \pt.
-Afterwards it is interpolated between the bins with a continuous function.
-The bin size is chosen as a compromise between having small bins for a differential measurement and sufficient statistics in each bin.
-
-Dijet events are selected by the cuts described in Section~\ref{sec:resFit:qcdSelection} from the same QCD sample.
-Bins are defined by cuts on the measured jet \pt as described in Section~\ref{sec:resFit:dataDrivenExt}.
-Table~\ref{tab:resFit:qcd:ptBins} lists the chosen binning.
-
-\begin{table}[ht]
-  \centering
-  \begin{tabular}{rcc}
-    \hline
-    \hline
-    Bin & \ptmin (\gev) & \ptmax (\gev) \\
-    \hline
-    0 & 100 & 120 \\
-    1 & 120 & 140 \\
-    2 & 140 & 170 \\
-    3 & 170 & 200 \\
-    4 & 200 & 250 \\
-    5 & 250 & 300 \\
-    6 & 300 & 400 \\
-    7 & 400 & 600 \\
-    8 & 600 & 1000 \\
-    \hline
-    \hline
-  \end{tabular}
-  \caption{Definition of \pt bins for the fit of the mean Gaussian resolution.}
-  \label{tab:resFit:qcd:ptBins}
-\end{table}
-
-The modified spectrum $\tilde{f}(\pttrue)$ from~\eqref{eq:resFit:toyMC:ptCuts:extendedSpectrum} is utilised in the fit.
-The underlying spectrum $f(\pttrue)$ is described by~\eqref{eq:resFit:qcd:ptGenSpectrum} with the parameter values listed in Tab.~\ref{tab:resFit:qcd:dijetspectrum}.
-Cut-off effects are included as before using the true -- and \pt dependent -- resolution $f_{\text{MC}}(x|\pttrue)$ in $\tilde{f}(\pttrue)$.
-$f_{\text{MC}}(x|\pttrue)$ has been determined by fitting the $\ptreco/\ptparticle$ distributions in small $\ptparticle$ bins with a central Gaussian.
-The widths of the Gaussians are shown in Fig.~\ref{fig:resFit:qcd:dijetspectrum:subB}.
-They are fitted with the continous function
-\begin{equation}
-  \label{eq:resFit:qcd:sigma}
-  \frac{\sigma}{\pt} = \frac{b_{1}\sqrt{\gev}}{\sqrt{\pt}} \oplus \frac{b_{2}\gev}{\pt}.
-\end{equation}
-(In this \pt range there is no sensitivity to a third term $b_{0}$, which is why it is omitted.)
-The values $b_{i}$ of the true resolution\footnote{The fit is applied once to the presented Fig.~\ref{fig:resFit:qcd:dijetspectrum:subB} and once to an analogue plot with a logarithmic binning in \ptparticle.
-The parameters listed in Tab.~\ref{tab:resFit:qcd:resolution} are the mean values from the two fits.}
-are listed in Tab.~\ref{tab:resFit:qcd:resolution}.
-
-Figure~\ref{fig:resFit:qcd:specExBin} shows the \ptparticle spectrum in an example bin.
-It is well described by $\tilde{f}(\pttrue)$.
-
-
-\subsection{Results for a QCD simulation}
-\begin{figure}[ht]
-  \begin{center}
-    \subfigure[]{
-      \label{fig:resFit:qcd:specExBin}
-      \includegraphics[width=0.45\textwidth]{figures/resFit_QCD_Gauss_Spectrum_PtBin3}
-    } \subfigure[]{
-      \label{fig:resFit:qcd:extrapolationExBin}
-      \includegraphics[width=0.45\textwidth]{figures/resFit_QCD_Gauss_ExtrapolatedSigma_PtBin3}
-    }
-  \end{center}
-  \caption{(a) \ptparticle distribution and of the leading two jets in an example \pt bin.
-    The solid line is the spectrum $\tilde{f}(\pttrue)$.
-    (b) Fitted Gaussian mean widths $\bar{\sigma}/\pt$ for different cuts on \ptrel in the same example \pt bin.
-    The solid line is a linear fit to extrapolate $\bar{\sigma}/\pt$ for ideal dijet events.}
-\end{figure}
-
-The fit has been performed for the listed \pt bins.
-The result is affected by the presence of a third jet.
-For example, the mean resolution for jets with \mbox{$170 < \ptreco < 200\gev$} has been determined to \mbox{$\bar{\sigma}/\bar{\pt} = 0.136 \pm 0.002$} whereas the MC truth value is \mbox{$0.0933$}.
-This difference is dependent on the maximum \ptrel as demonstrated in Fig.~\ref{fig:resFit:qcd:extrapolationExBin}, which shows the fitted mean resolution for different values of \ptrel.
-There is a linear trend visible.
-In order to extrapolate to the results to the case of an ideal dijet event, the $\bar{\sigma}\/\pt$ are fitted with a linear function and the y axis intercept is considered as the correct jet energy resolution.
-
-The extrapolated Gaussian mean widths $\bar{\sigma}/\pt$ found in this way are shown for different \pt bins in Fig.~\ref{fig:resFit:qcd:extrapolation}.
-Here, the \pt values are the mean values of the assumed spectra $\tilde{f}(\pttrue)$ in each bin.
-The shown statistical uncertainties are combined from two sources.
-\begin{enumerate}
-\item The first contribution is the statistical uncertainty on the parameter of y axis intercept in the linear extrapolation (comp. Fig.~\ref{fig:resFit:qcd:extrapolationExBin}).
-\item The second contribution arises from the uncertainty due to the statistics in the used MC sample.
-  As the event weights are large for small \pt, statistical fluctations might become significant.
-  In order to roughly evaluate this uncertainty, the same fits have been performed again without event weights (for the used sample this corresponds to a flattened QCD spectrum).
-  The statistical uncertainties obtained in this case on the y axis intercept are added in quadrature to the ones in 1.
-  This procedure has to be improved to obtain a statistically correct description of the uncertainty.
-\end{enumerate}
-
-The dashed line in Fig.~\ref{fig:resFit:qcd:extrapolation} represents the MC truth resolution.
-The fitted values are in reasonable agreement with the MC truth.
-They are then fitted with the continous function \eqref{eq:resFit:qcd:sigma} (solid line).
-The parmeters of this fit are listed in Tab.~\ref{tab:resFit:qcd:resolution}.
-
-\begin{table}[ht]
-  \centering
-  \begin{tabular}[ht]{lcc}
-    \hline \hline
-    $b_{i}$ & $1$ & $2$ \\
-    \hline
-    MC truth    & $1.145 \pm 0.001$ & $0.0370 \pm 0.0006$ \\
-    Fit result  & $1.18  \pm 0.04$  & $0.032  \pm 0.007$ \\
-    \hline \hline
-  \end{tabular}
-  \caption{Parameter values of the width $\sigma(\pt)$ of the Gaussian resolution~\eqref{eq:resFit:qcd:sigma}.
-    Listed are the MC truth values and the fitted values.
-    For the fit, the mean $\bar{\sigma}/\pt$ has been fitted in different \pt bins and the result fitted again with the continous function~\eqref{eq:resFit:qcd:sigma} (comp. Fig.~\ref{fig:resFit:qcd:extrapolation}).
-    The uncertainties assigned to the fitted values are the statistical uncertainties.}
-  \label{tab:resFit:qcd:resolution}
-\end{table}
-
-\begin{figure}[ht]
-  \begin{center}
-    \subfigure[]{
-      \label{fig:resFit:qcd:extrapolation}
-      \includegraphics[width=0.45\textwidth]{figures/resFit_QCD_Gauss_ExtrapolatedResolution}
-    } \subfigure[]{
-      \label{fig:resFit:qcd:systUncert}
-      \includegraphics[width=0.45\textwidth]{figures/resFit_QCD_Gauss_SystematicUncertainties}
-    }
-  \end{center}
-  \caption{(a) Gaussian mean widths $\bar{\sigma}/\pt$ from extrapolation \mbox{$\ptrel\rightarrow0$} in different \pt bins.
-  The \pt values are the mean values of the assumed spectra $\tilde{f}(\pttrue)$ in each bin.
-  The error bars indicate the combined statistical uncertainties from the extrapolation and the MC statistics.
-  The solid line is a fit to the $\bar{\sigma}/\pt$, the dashed line shows the MC truth resolution for comparison.
-  (b) Estimation of systematic uncertainties.
-  The lines represent relative differences of the resolution for different variations of the spectrum to the correct spectrum.}
-\end{figure}
-\clearpage
-
-
-\section{Determination of a non-Gaussian resolution}
-
-\subsection{\mht spectrum from Gaussian resolution}
-In order to evaluate the influence of non-Gaussian tails in the resolution to the \mht spectrum, a simple generator level based jet smearing has been performed.
-The same dijet selection as presented in Sec.~\ref{sec:resFit:qcdSelection} has been applied.
-For this demonstration, the \ptparticle of the leading two jets has been weighted with a random number from a Gaussian resolution pdf, where $\sigma$ has been parameterised using the MC truth values listed in Tab.~\ref{tab:resFit:qcd:resolution}.
-
-\begin{figure}[ht]
-  \begin{center}
-    \subfigure[]{
-      \includegraphics[width=0.45\textwidth]{figures/MHTSpectrumGauss}
-    } \subfigure[]{
-      \includegraphics[width=0.45\textwidth]{figures/MHTRatioGauss}
-    }
-  \end{center}
-  \caption{(a) \mht from the two leading jets in a QCD dijet sample (marker) and prediction from smearing of the corresponding generator level jets with the true Gaussian resolution (line).
-    (b) Ratio of prediction and truth.}
-\label{fig:resFit:qcd:mhtGauss}
-\end{figure}
-
-In Fig.~\ref{fig:resFit:qcd:mhtGauss} the \mht spectrum resulting from
-the weighted \ptparticle of the two jets is compared to the \mht spectrum from the corresponding \ptreco.
-The actual \mht is underestimated by about $5\%$ up to 200\gev.
-Above, which are $\approx2\%$ of all the events, the \mht is underestimated by $\approx50\%$.
-This difference is explained by the presence of non-Gaussian tails in the resolution which were not considered.
-
-In conclusion, it is necessary to include the description of non-Gaussian tails of the resolution into the fit in order to accurately predict the \mht spectrum using a smearing method.
-
-
-\subsection{Parameterisation of the resolution by a Crystal Ball function}
-\textit{to be added}
+% \section{Determination of a Gaussian resolution}
+% \subsection{Conceptual studies using a simple simulation}
+% The method presented in the previous section has been studied using a
+% simple simulation.
+
+% \begin{figure}[ht]
+%   \begin{center}
+%      \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_SpectrumLog}
+%    \end{center}
+%    \caption{Simple simulation of a sample of ideal dijet events.
+%      Generated \pttrue spectrum (histogram) and the underlying pdf (solid line).}
+%    \label{fig:resFit:toyMC:ptGenCuts:spectrum}
+% \end{figure}
+
+% \begin{figure}[ht]
+%   \begin{center}
+%     \subfigure[]{
+%       \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_ResolutionBin1}
+%    } \subfigure[]{
+%       \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_ResolutionBin7}
+%    }
+%   \end{center}
+%   \caption{Simple simulation of a sample of ideal dijet events.
+%     Generated true resolution \mbox{$\ptmeas / \pttrue$} (histogram) and the resolution (solid line) from the maximum likelihood fit in two different \pttrue bins.
+%     Note, here ``fit'' does not refer to a fit to the shown histogram but the maximisation of the likelihood~\eqref{eq:resFit:likelihood}.
+%   }
+%   \label{fig:resFit:toyMC:ptGenCuts:reso}
+% \end{figure}
+
+% A sample of 30000 ideal dijet events has been generated with an
+% exponentially falling spectrum
+% \begin{equation}
+%   \label{eq:resFit:toyMCSpec}
+%   f\left(\pttrue\right) \propto \exp\left(-\pttrue / \tau\right),
+%   \qquad \tau = 80.
+% \end{equation}
+% ranging from \mbox{$50 < \pttrue < 1000\gev$} (comp. Fig.~\ref{fig:resFit:toyMC:ptGenCuts:spectrum}).
+% Two independent measurements of the jet \pt have been simulated
+% from a Gaussian resolution
+% \begin{equation}
+%   \label{eq:resFit:toyMCRes}
+%   f_{\vec{b}}\left(\ptmeas|\pttrue\right) = 
+%   \frac{1}{\sqrt{2\pi}\sigma}\exp\left[-\frac{1}{2}\left(\frac{\ptmeas - \pttrue}{\sigma}\right)^{2}\right]
+% \end{equation}
+% (Here and in the following the jet index $i$ has been omitted.)
+% The width $\sigma$ has been parameterised as a function of \pttrue and
+% the parameters $b_{i}$, \mbox{$i\in\left\{0,2\right\}$}, as
+% \begin{equation}
+%   \label{eq:resFit:toyMCSigma}
+%   \sigma = b_{0}\gev
+%   \oplus b_{1}\,\sqrt{\pt\gev}\oplus b_{2}\pt.
+% \end{equation}
+% The parameter values of the parameters $\vec{b}$ are listed in
+% Tab.~\ref{tab:resFit:toyMC:ptGenCuts:fitResult}.
+% An example of the simulated resolution is shown in Fig. ~\ref{fig:resFit:toyMC:ptGenCuts:reso}.
+
+% \begin{table}[ht]
+%   \centering
+%   \begin{tabular}[ht]{lccc}
+%     \hline \hline
+%     $b_{i}$ & $0$ & $1$ & $2$ \\
+%     \hline
+%     True value & $4$           & $1.2$           & $0.05$ \\
+%     Fit result & $4.5 \pm 0.7$ & $1.18 \pm 0.05$ & $0.051 \pm 0.004$ \\
+%     \hline \hline
+%   \end{tabular}
+%   \caption{Parameter values of the width $\sigma(\pt)$ of the Gaussian
+%     resolution. Listed are the true values used for the generation and
+%     the fitted values. The uncertainties assigned to the fitted values
+%     are the statistical uncertainties from the fit. The parameter
+%     correlations are shown in Fig.~\ref{fig:resFit:toyMC:ptGenCuts:parCorr}.}
+%   \label{tab:resFit:toyMC:ptGenCuts:fitResult}
+% \end{table}
+
+% The jet energy resolution of this dijet sample is to be fitted using the method described above.
+% In order to evaluate the dijet pdf~\eqref{eq:resFit:dijetPdf}, the spectrum $f(\pttrue)$ has to be known and the resolution $f_{\vec{b}}(\ptmeasi{i}|\pttrue)$ has to be parameterised appropriately.
+% The spectrum is taken directly from the simulation~\eqref{eq:resFit:toyMCSpec}.
+% If the same strategy is applied in data, influences of the uncertainty on the simulated spectrum on the fitted resolution have to be considered.
+% These are small as shown in Section~\ref{sec:resFit:toyMC:uncert}.
+% The resolution is parameterised with a Gaussian, where the width $\sigma$ depends on \pttrue and the parameters $\vec{b}$ as in~\eqref{eq:resFit:toyMCSigma}.
+% The dijet pdf is normalised to the \pttrue range of the simulation i.e. $t_{0} = 50\gev$ and $t_{1} = 1000\gev$.
+% This setup corresponds to cuts on \pttrue; a more data driven approach is discussed in Section~\ref{sec:resFit:dataDrivenExt}.
+
+% \begin{figure}[ht]
+%   \centering
+%   \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_Correlations}
+%   \caption{Correlation coefficients of the fitted parameter values
+%     $\vec{b}$ of the width $\sigma$ of the Gaussian
+%     resolution. Parameter $3$ corresponds to the slope $\tau$ of the
+%     spectrum, which is fixed during the fit, and is to be ignored.}
+%   \label{fig:resFit:toyMC:ptGenCuts:parCorr}
+% \end{figure}
+
+% The fitted parameter values $\vec{b}$ are listed in Tab.~\ref{tab:resFit:toyMC:ptGenCuts:fitResult}.
+% They agree with the true values within the statistical uncertainties.
+
+% The parameters are strongly (anti-) correlated (comp. Fig.~\ref{fig:resFit:toyMC:ptGenCuts:parCorr}).
+% In the present \pttrue interval from \mbox{$t_{0} = 50\gev$} to \mbox{$t_{1} = 1000\gev$}, the used parameterisation of the Gaussian width $\sigma$ is over-determined.
+% The $b_{0}$ term in~\eqref{eq:resFit:toyMCSigma} is most important at very low \pt while the $b_{2}$ term dominats at very large \pt.
+% Hence, omitting either the terms with $b_{0}$ and $b_{2}$ or the term with $b_{1}$ in~\eqref{eq:resFit:toyMCSigma} would have been sufficient to describe the measured events.
+
+% \begin{figure}[ht]
+%   \begin{center}
+%     \subfigure[]{
+%       \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_Sigma}
+%   } \subfigure[]{
+%       \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_SigmaRelDifference}
+%   }
+%   \end{center}
+%   \caption{(a) Relative Gaussian width $\sigma(\pt)/\pt$ evaluated with the fitted
+%     parameter values (solid line) in comparison to the generated width
+%     (dashed line).  (b) shows
+%     the relative difference of the two curves. The shaded area represents the propagated statistical
+%     uncertainty on the fitted parameter values, taking into account the
+%     parameter correlations.}
+%   \label{fig:resFit:toyMC:ptGenCuts:sigma}
+% \end{figure}
+
+% The relative Gaussian width $\sigma(\pt)/\pt$ evaluated with the fitted
+% parameter values is shown in Fig.~\ref{fig:resFit:toyMC:ptGenCuts:sigma}
+% in comparison to the true width at generation.
+% There is good agreement between the fitted and the true resolution
+% within the statistical uncertainties.
+% The uncertainties are about $1\%$ at low \pt rising to
+% about $3\%$ at $\pt \approx 600\gev$ where there is sufficient statistics in
+% the generated sample (comp. Fig~\ref{fig:resFit:toyMC:ptGenCuts:spectrum}).
+% For larger \pt the uncertainties rise up to $4.5\%$.
+
+% An example of the resulting resolution in comparison to the true
+% resolution is shown in Fig.~\ref{fig:resFit:toyMC:ptGenCuts:reso} for
+% one \pttrue bin.
+
+
+% \subsection{Extension to a data driven event selection}\label{sec:resFit:dataDrivenExt}
+
+% So far, events have been selected by cuts on the true jet \pt.
+% In a more data driven approach the selection is to be applied to the measured jet \pt.
+% Events are selected, if for one of the two jets
+% \begin{equation*}
+%   \ptmin < \ptmeas < \ptmax.
+% \end{equation*}
+% Each event is considered twice; once for a \pt cut on the first and once for a \pt cut on the second jet.
+% In this way any bias in the selection arising e.g. from always selecting the first and thus the jet fluctuated upwards is avoided and the available statistics is doubled.
+% Since the \pt of the other jet can fluctuate arbitrarily, sensitivity to the resolution and in particular the non-Gaussian tails is assured; this is not the case when cutting e.g. on \mbox{$\ptdijet = \frac{1}{2}(\pt^{1}+pt^{2})$}, the average dijet \pt, as demonstrated in Fig.~\ref{fig:resFit:ptBinning}.
+
+% \begin{figure}[ht]
+%   \centering
+%   \includegraphics[width=0.45\textwidth]{figures/resFit_QCD_PtBinningComp}
+%   \caption{Dependence of the true resolution on the definition of the quantity the cuts are applied to.
+%     Cuts are applied either to \mbox{$\ptdijet = \frac{1}{2}(\pt^{1}+pt^{2})$} (open markers) or to the \pt of one of the jets while the other fluctuates arbitrarily (solid markers).
+%     The non-Gaussian tails are surpressed when cutting on \ptdijet.}
+%   \label{fig:resFit:ptBinning}
+% \end{figure}
+
+% Cutting on the measured \pt leads to migration effects at the edges of the selected \pt range due to the finite jet resolution.
+% Considering the lower limit \ptmin, in an event with \mbox{$\pttrue < \ptmin$} the actually measured jet \pt might fluctuate upwards resulting in \mbox{$\ptmeas > \ptmin$} and thus false acceptance of the event.
+% Similarly, events might be falsely rejected due to downward fluctuations.
+% Since the dijet cross section is steeply falling with \pt, the described migration is asymmetric i.e. there is more upward than downward migration and more events are falsely accepted.
+% (Analogue considerations hold true for the upper limit.)
+% The described migration effects are demonstrated in Fig.~\ref{fig:resFit:toyMC:ptCuts:spectrum}.
+
+% \begin{figure}[ht]
+%   \begin{center}
+%     \subfigure[]{
+%       \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_SpectrumLog}
+%     } \subfigure[]{
+%       \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_SpectrumLinear}
+%     }
+%   \end{center}
+%   \caption{Simple simulation of a sample of ideal dijet
+%     events. Generated \pttrue spectrum (histogram) and the underlying pdf (solid
+%     line) after cuts on measured \pt. The spectrum is shown (a) in log
+%     scale and (b) in linear scale.}
+%   \label{fig:resFit:toyMC:ptCuts:spectrum}
+% \end{figure}
+
+% \begin{figure}[ht]
+%   \begin{center}
+%     \subfigure[]{
+%       \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_ResolutionBin1}
+%    } \subfigure[]{
+%       \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_ResolutionBin7}
+%    }
+%   \end{center}
+%   \caption{Simple simulation of a sample of ideal dijet
+%     events. Generated true resolution \mbox{$\ptmeas / \pttrue$} (histogram) and the fitted
+%     resolution (solid line) in two different \pttrue bins after cuts on measured \pt.
+%     Note the migration effects in (a): the narrow peak at the right side is due to the jet that has been cut on and hence these are jets fluctuating upwards into the \pt bin.
+%     The wider peak centered around one is due to the other jet that fluctuates unconstrained.
+%     (There is more upward than downward fluctuation due to the falling spectrum.)
+%   }
+%   \label{fig:resFit:toyMC:ptCuts:reso}
+% \end{figure}
+
+% \begin{figure}[ht]
+%   \begin{center}
+%     \subfigure[]{
+%       \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_Sigma}
+%   } \subfigure[]{
+%       \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_SigmaRelDifference}
+%   }
+%   \end{center}
+%   \caption{(a) Relative Gaussian width $\sigma(\pt)/\pt$ evaluated with the fitted
+%     parameter values (solid line) in comparison to the generated width
+%     (dashed line). The fit has been performed after cuts on measured \pt. (b) shows
+%     the relative difference of the two curves. The shaded area represents the propagated statistical
+%     uncertainty on the fitted parameter values, taking into account the
+%     parameter correlations.}
+%   \label{fig:resFit:toyMC:ptCuts:sigma}
+% \end{figure}
+
+% The dijet pdf~\eqref{eq:resFit:dijetPdf} is adapted to include the cuts on the measured jet \pt.
+% First, the allowed range of measured \pt is restricted for the jet the \pt cut is applied to.
+% In the following, it is assumed that this is the first jet; the pdfs of measured jet \pt therefore become
+% \begin{eqnarray*}
+%   f_{\vec{b}}\left(\ptmeasi{1}|\pttrue\right) & = & 
+%   \frac{1}{\mathcal{N}_{1}}\exp\left[-\frac{1}{2}\left(\frac{\ptmeasi{1}
+%         - \pttrue}{\sigma}\right)^{2}\right]
+%   \cdot\theta\left(\ptmeasi{1} - \ptmin\right)
+%   \cdot\theta\left(\ptmax - \ptmeasi{1}\right) \\
+%   f_{\vec{b}}\left(\ptmeasi{2}|\pttrue\right) & = & 
+%   \frac{1}{\mathcal{N}_{2}}\exp\left[-\frac{1}{2}\left(\frac{\ptmeasi{2}
+%         - \pttrue}{\sigma}\right)^{2}\right] \\
+% \end{eqnarray*}
+% with the normalisation constants
+% \begin{eqnarray*}
+%   \mathcal{N}_{1} & = &
+%   \int^{\ptmax}_{\ptmin}\dif{\ptmeasi{1}}\,f_{\vec{b}}\left(\ptmeasi{1}|\pttrue\right)
+%   = \sqrt{\frac{\pi}{2}}\sigma \left[ \text{erf}\left(\frac{\ptmax -
+%         \pttrue}{\sqrt{2}\sigma}\right) - \text{erf}\left(\frac{\ptmin
+%         - \pttrue}{\sqrt{2}\sigma}\right)\right] \\
+%   \mathcal{N}_{2} & = &
+%   \int^{\infty}_{0}\dif{\ptmeasi{2}}\,f_{\vec{b}}\left(\ptmeasi{2}|\pttrue\right)
+%   = \sqrt{\frac{\pi}{2}}\sigma \left[ 1 +
+%     \text{erf}\left(\frac{\pttrue}{\sqrt{2}\sigma}\right)\right]
+%   \approx \sqrt{2\pi}\sigma.
+% \end{eqnarray*}
+% Second, the pdf of the true \pt is extended to incorporate the events
+% migrating into the allowed \pt range by
+% \begin{equation}
+%   \label{eq:resFit:toyMC:ptCuts:extendedSpectrum}
+%   \tilde{f}\left(\pttrue\right) = \frac{1}{\mathcal{N}_{\tilde{f}}}
+%   f\left(\pttrue\right) \int^{\ptmax}_{\ptmin}\dif{x}\,f_{\text{MC}}\left(x|\pttrue\right)
+% \end{equation}
+% with the normalisation
+% \begin{equation*}
+%   \mathcal{N}_{\tilde{f}} = \int^{\infty}_{0}\dif{\pttrue}\,
+%   f\left(\pttrue\right) \int^{\ptmax}_{\ptmin}\dif{x}\,f_{\text{MC}}\left(x|\pttrue\right).
+% \end{equation*}
+% Here, $f(\pttrue)$ denotes the underlying spectrum~\eqref{eq:resFit:toyMCSpec} and
+% $f_{\text{MC}}(x|\pttrue)$ the pdf of measured \pt.
+% $f_{\text{MC}}(x|\pttrue)$ in \eqref{eq:resFit:toyMC:ptCuts:extendedSpectrum} is taken from the
+% simulation and the parameters are kept fixed during the maximisation.
+% Thus usage of the simulation introduces a further uncertainty but they
+% are small as in case of the underlying spectrum as shown below.
+% The adapted dijet pdf then becomes
+% \begin{equation}
+%   \label{eq:resFit:toyMC:ptCuts:pdf}
+%   f_{\vec{b}}\left(\ptmeasi{1},\ptmeasi{2}\right) = \int^{\infty}_{0}\dif{\pttrue}\,\tilde{f}\left(\pttrue\right)
+%   \cdot f_{\vec{b}}\left(\ptmeasi{1}|\pttrue\right)
+%   \cdot f_{\vec{b}}\left(\ptmeasi{2}|\pttrue\right),
+% \end{equation}
+% which is properly normalised to
+% \begin{equation*}
+%   1 = \int^{\ptmax}_{\ptmin}\dif{\ptmeasi{1}}\,\int^{\infty}_{0}\dif{\ptmeasi{2}}\, f_{\vec{b}}\left(\ptmeasi{1},\ptmeasi{2}\right).
+% \end{equation*}
+
+% \begin{table}[ht]
+%   \centering
+%   \begin{tabular}[ht]{lccc}
+%     \hline \hline
+%     $b_{i}$ & $0$ & $1$ & $2$ \\
+%     \hline
+%     True value & $4$           & $1.2$                   & $0.05$ \\
+%     Fit result   & $4 \pm 1$ & $1.20 \pm 0.07$ & $0.049 \pm 0.005$ \\
+%     \hline \hline
+%   \end{tabular}
+%   \caption{Parameter values of the width $\sigma(\pt)$ of the Gaussian
+%     resolution. Listed are the true values used for the generation and
+%     the fitted values. The fit has been performed after cuts on measured \pt.
+%     The uncertainties assigned to the fitted values
+%     are the statistical uncertainties from the fit; correlations are not shown.}
+%   \label{tab:resFit:toyMC:ptCuts:fitResult}
+% \end{table}
+
+% Again the sample of ideal dijet events is used to test the discussed extension of the method.
+% Cuts are placed on the measured \pt at \mbox{$\ptmin = 80\gev$} and \mbox{$\ptmax = 800\gev$} (comp. Fig.~\ref{fig:resFit:toyMC:ptCuts:spectrum}).
+% The jet energy resolution of the selected dijet events is fitted using the modified pdf~\eqref{eq:resFit:toyMC:ptCuts:pdf}.
+% Uncertainties due to uncertainties in the description of the spectrum are discussed in Section~\ref{sec:resFit:toyMC:uncert}.
+
+% The fitted parameter values $\vec{b}$ of the Gaussian width $\sigma$ are listed in Tab.~\ref{tab:resFit:toyMC:ptCuts:fitResult}.
+% They agree with the true values within the statistical uncertainties.
+% As expected, they feature the same correlation pattern as in case of \pttrue cuts.
+
+% The relative Gaussian width $\sigma(\pt)/\pt$ evaluated with the fitted parameter values is shown in Fig.~\ref{fig:resFit:toyMC:ptCuts:sigma} in comparison to the true width at generation.
+% There is good agreement between the fitted and the true resolution within the statistical uncertainties.
+% As before, the uncertainties are about $1\%$ at low \pt rising to about $3\%$ at $\pt \approx 600\gev$ and up to $4.5\%$ at very large \pt.
+% An example of the resulting resolution in comparison to the true resolution is shown in Fig.~\ref{fig:resFit:toyMC:ptCuts:reso} for one \pttrue bin.
+
+% It can be concluded therefore that the method is working also for a data driven event selection.
+
+
+
+% \subsection{Estimation of systematic uncertainties}\label{sec:resFit:toyMC:uncert}
+
+% The dijet pdf discussed above contains knowledge of the actual dijet spectrum and --- in case of cuts on measured jet \pt --- also of the resolution to describe the cut-off effects.
+% When applying the method to data this information would be taken from a MC simulation.
+% Test have been performed to evaluate the influence of uncertainties in the MC description on the fitted resolution.
+
+% \begin{figure}[ht]
+%   \centering
+%   \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_SigmaUncertainties}
+%   \caption{Relative differences of the Gaussian widths $\sigma(\pt)$ evaluated with the fitted parameter values for different variations of the spectrum and the correct spectrum.
+%     The variation has been applied to the slope parameter $\tau$ in \eqref{eq:resFit:toyMCSpec} (``Spectrum'') as well as all three parameters $b_{\text{MC},i}$ in \eqref{eq:resFit:toyMC:ptCuts:extendedSpectrum} (``Resolution'').}
+%   \label{fig:resFit:toyMC:uncert:systUncertainties}
+% \end{figure}
+
+% \begin{table}[ht]
+%   \centering
+%   \begin{tabular}[ht]{lccc}
+%     \hline \hline
+%     $b_{i}$ & $0$ & $1$ & $2$ \\
+%     \hline
+%     True value         & $4$       & $1.2$           & $0.05$ \\
+%     Correct            & $4 \pm 1$ & $1.20 \pm 0.07$ & $0.049 \pm 0.005$ \\
+%     Spectrum $+30\%$   & $3 \pm 2$ & $1.22 \pm 0.07$ & $0.049 \pm 0.005$ \\
+%     Spectrum $-30\%$   & $5 \pm 1$ & $1.19 \pm 0.08$ & $0.052 \pm 0.006$ \\
+%     Resolution $+30\%$ & $5 \pm 1$ & $1.13 \pm 0.07$ & $0.054 \pm 0.004$ \\
+%     Resolution $-30\%$ & $5 \pm 2$ & $1.19 \pm 0.08$ & $0.050 \pm 0.006$ \\
+%     \hline \hline
+%   \end{tabular}
+%   \caption{Parameter values of the width $\sigma(\pt)$ of the Gaussian resolution.
+%     Listed are the true values used for the generation and the fitted values for different variations of the spectrum.
+%     The uncertainties assigned to the fitted values are the statistical uncertainties from the fit.}
+%   \label{tab:resFit:toyMC:uncert:fitResult}
+% \end{table}
+
+% The fit has been repeated with the same setup as described in Section~\ref{sec:resFit:dataDrivenExt}.
+% In order to evaluate the influence of the spectrum on the result the slope i.e. the parameter $\tau$ in \eqref{eq:resFit:toyMCSpec} has been varied by $\pm30\%$.
+% Cut-off effects in the spectrum are described by the true resolution $f_{\text{MC}}(x|\pttrue)$ in \eqref{eq:resFit:toyMC:ptCuts:extendedSpectrum}.
+% All three parameters $b_{\text{MC},i}$ of $f_{\text{MC}}(x|\pttrue)$ have been varied by $\pm30\%$ to evaluate uncertainties arising from the simulation.
+
+% The fitted parameter values for each variation are listed in Tab.~\ref{tab:resFit:toyMC:uncert:fitResult} in comparion to the values obtained when using the correct spectrum.
+% The relative differences of the Gaussian widths $\sigma$ calculated with these fitted parameter values to the $\sigma$ using the correct spectrum are presented in Fig.~\ref{fig:resFit:toyMC:uncert:systUncertainties} as a function of \pt for the different variations; they are below $4\%$.
+% A varied spectrum predominantly results in a larger resolution.
+
+
+
+% \subsection{Application to a realistic QCD simulation}\label{sec:resFit:qcdSelection}
+% The method has then been applied to QCD events with 7\tev center of
+% mass energy which were generated with PYTHIA and went through a full
+% GEANT4 based CMS detector simulation\footnote{The used dataset is
+%   \texttt{/QCDFlat\_Pt15to3000/Summer09-MC\_31X\_V9\_7TeV-v1/GEN-SIM-RECO}}.
+% Jets have been reconstructed from calorimeter towers using the
+% anti-$k_{T}$ algorithm with size parameter $R=0.5$.
+% The jet energy scale has been corrected for $\eta$ and \pt dependence
+% by the appropriate L2L3 corrections\footnote{These are the
+%   \texttt{JetMETCorrections.Configuration.L2L3Corrections\_Summer09\_7TeV\_ReReco332\_cff}
+% corrections.}.
+
+% \begin{figure}[ht]
+%   \begin{center}
+%     \subfigure[]{
+%       \label{fig:resFit:qcd:dijetspectrum:subA}
+%       \includegraphics[width=0.45\textwidth]{figures/resFit_QCD_MCSpectrum}
+%     } \subfigure[]{
+%       \label{fig:resFit:qcd:dijetspectrum:subB}
+%       \includegraphics[width=0.45\textwidth]{figures/resFit_QCD_MCTruthResolution}
+%     }
+%   \end{center}
+%   \caption{(a) \ptparticle distribution and (b) MC truth resolution of the leading two jets in the selected dijet sample.
+%     The solid lines are fits of the indicated functions.}
+%   \label{fig:resFit:qcd:dijetspectrum}
+% \end{figure}
+
+% In the following jets are considered to be ordered in corrected \ptreco.
+% Dijet events are selected by requiring the third jet to have small \pt compared to the leading two jets,
+% \begin{enumerate}
+% \item $\ptrel < 0.1$ with $\ptrel = \frac{2\ptsub{3}}{\ptsub{1} + \ptsub{2}}$.
+% \end{enumerate}
+% This selection cut has been adopted from~\cite{CMSAN-2008/031}.
+% The additional cut on $\Delta\phi$ performed there has been dropped as it has been found to be strongly correlated to the cut on \ptrel.
+% In order to reject jets clustered from calorimeter noise a cut on the electromagnetic fration of the two leading jets is applied,
+% \begin{enumerate}
+% \item[2.] $0.01 < f_{\text{em},i} < 0.99$ with $i\in\{1,2\}$.
+% \end{enumerate}
+
+% So far and in the following, the resolution is defined as a function of jet \pt.
+% It is influenced for example by the magnetic solenoid field which bends charged particles out of the jet cone depending on their \pt.
+% Other effects such as the intrinsic calorimeter resolution are energy $E$ dependent.
+% The dependence on the difference between the $E$ and \pt is minimised by considering dijet events with both leading jets in a restricted $\eta$ region,
+% \begin{enumerate}
+% \item[3.] $|\eta_{i}| < 1.2$ with $i\in\{1,2\}$.
+% \end{enumerate}
+% It is planned to apply the method to different $\eta$ regions taking into account also those events in which the two leading jets are in different $\eta$ regions.
+
+% The events are weighted corresponding to an integrated luminosity of $100\,\text{pb}^{-1}$.
+
+% The resulting \ptparticle spectrum is shown in Fig.~\ref{fig:resFit:qcd:dijetspectrum:subA}.
+% It is fitted with an empiric function
+% \begin{equation}
+%   \label{eq:resFit:qcd:ptGenSpectrum}
+%   f\left(\ptparticle\right) = \sum^{2}_{i=0}\,\exp\left[-\left(a_{2i} + a_{2i+1}\ptparticle\right)\right]
+% \end{equation}
+% to have a first applicable parameterisation of the spectrum $f(\pttrue)$.
+% The fitted parameter values $a_{i}$ are listed in Table~\ref{tab:resFit:qcd:dijetspectrum} and the resulting pdf is superimposed in Fig.~\ref{fig:resFit:qcd:dijetspectrum:subA}.
+% \begin{table}[ht]
+%   \centering
+%   \begin{tabular}{rc}
+%     \hline
+%     \hline
+%     $a_{i}$ & Fitted value \\
+%     \hline
+%     $0$ & $0.56 \pm 0.04$ \\
+%     $1$ & $0.0300 \pm 0.0004$ \\
+%     $2$ & $3.91 \pm 0.09$ \\
+%     $3$ & $0.0152 \pm 0.0004$ \\
+%     $4$ & $7.15 \pm 0.05$ \\
+%     $5$ & $0.00837 \pm 0.00008$ \\
+%     \hline
+%     \hline
+%   \end{tabular}
+%  \caption{Fitted parameter values of the dijet \ptparticle spectrum.}
+%   \label{tab:resFit:qcd:dijetspectrum}
+% \end{table}
+
+% \begin{figure}[ht]
+%   \centering
+%   \includegraphics[width=0.45\textwidth]{figures/resFit_PtDependentSigma}
+%   \caption{Width $\sigma$ of a Gaussian resolution in QCD dijet events. Shown is $\sigma$ from fitted parameter values (red line) in comparison to the truth from the MC simulation (blue line).}
+%   \label{fig:resFit:qcd:ptDependentSigma}
+% \end{figure}
+
+% The determination of a Gaussian resolution~\eqref{eq:resFit:toyMCRes} with a \pt dependent width $\sigma$ as in~\eqref{eq:resFit:toyMCSigma} has been performed as for the ideal sample above.
+% The results are not satisfying (comp. Fig.~\ref{fig:resFit:qcd:ptDependentSigma}).
+
+% Various test have been performed and the method appears to work fine for a moderately falling \pt spectrum.
+% In case of a realistic QCD spectrum (comp. Fig.~\ref{fig:resFit:qcd:dijetspectrum:subA}), however, the
+% determined resolution does not describe the true resolution at large \pt anymore.
+% The failure of the method is assumed to be due to the non-ideal topology of the selected dijet events, namely the presence of a third jet.
+% These effects and an extension of the presented method are under study.
+% Meanwhile a modified strategy to determine the resolution is investigated and presented in the following sections.
+
+
+% \section{Determination of the mean Gaussian resolution in \pt bins}
+% \subsection{Strategy}
+% The mean Gaussian resolution with constant width $\bar{\sigma}$ is to be determined in bins of \pt.
+% Afterwards it is interpolated between the bins with a continuous function.
+% The bin size is chosen as a compromise between having small bins for a differential measurement and sufficient statistics in each bin.
+
+% Dijet events are selected by the cuts described in Section~\ref{sec:resFit:qcdSelection} from the same QCD sample.
+% Bins are defined by cuts on the measured jet \pt as described in Section~\ref{sec:resFit:dataDrivenExt}.
+% Table~\ref{tab:resFit:qcd:ptBins} lists the chosen binning.
+
+% \begin{table}[ht]
+%   \centering
+%   \begin{tabular}{rcc}
+%     \hline
+%     \hline
+%     Bin & \ptmin (\gev) & \ptmax (\gev) \\
+%     \hline
+%     0 & 100 & 120 \\
+%     1 & 120 & 140 \\
+%     2 & 140 & 170 \\
+%     3 & 170 & 200 \\
+%     4 & 200 & 250 \\
+%     5 & 250 & 300 \\
+%     6 & 300 & 400 \\
+%     7 & 400 & 600 \\
+%     8 & 600 & 1000 \\
+%     \hline
+%     \hline
+%   \end{tabular}
+%   \caption{Definition of \pt bins for the fit of the mean Gaussian resolution.}
+%   \label{tab:resFit:qcd:ptBins}
+% \end{table}
+
+% The modified spectrum $\tilde{f}(\pttrue)$ from~\eqref{eq:resFit:toyMC:ptCuts:extendedSpectrum} is utilised in the fit.
+% The underlying spectrum $f(\pttrue)$ is described by~\eqref{eq:resFit:qcd:ptGenSpectrum} with the parameter values listed in Tab.~\ref{tab:resFit:qcd:dijetspectrum}.
+% Cut-off effects are included as before using the true -- and \pt dependent -- resolution $f_{\text{MC}}(x|\pttrue)$ in $\tilde{f}(\pttrue)$.
+% $f_{\text{MC}}(x|\pttrue)$ has been determined by fitting the $\ptreco/\ptparticle$ distributions in small $\ptparticle$ bins with a central Gaussian.
+% The widths of the Gaussians are shown in Fig.~\ref{fig:resFit:qcd:dijetspectrum:subB}.
+% They are fitted with the continous function
+% \begin{equation}
+%   \label{eq:resFit:qcd:sigma}
+%   \frac{\sigma}{\pt} = \frac{b_{1}\sqrt{\gev}}{\sqrt{\pt}} \oplus \frac{b_{2}\gev}{\pt}.
+% \end{equation}
+% (In this \pt range there is no sensitivity to a third term $b_{0}$, which is why it is omitted.)
+% The values $b_{i}$ of the true resolution\footnote{The fit is applied once to the presented Fig.~\ref{fig:resFit:qcd:dijetspectrum:subB} and once to an analogue plot with a logarithmic binning in \ptparticle.
+% The parameters listed in Tab.~\ref{tab:resFit:qcd:resolution} are the mean values from the two fits.}
+% are listed in Tab.~\ref{tab:resFit:qcd:resolution}.
+
+% Figure~\ref{fig:resFit:qcd:specExBin} shows the \ptparticle spectrum in an example bin.
+% It is well described by $\tilde{f}(\pttrue)$.
+
+
+% \subsection{Results for a QCD simulation}
+% \begin{figure}[ht]
+%   \begin{center}
+%     \subfigure[]{
+%       \label{fig:resFit:qcd:specExBin}
+%       \includegraphics[width=0.45\textwidth]{figures/resFit_QCD_Gauss_Spectrum_PtBin3}
+%     } \subfigure[]{
+%       \label{fig:resFit:qcd:extrapolationExBin}
+%       \includegraphics[width=0.45\textwidth]{figures/resFit_QCD_Gauss_ExtrapolatedSigma_PtBin3}
+%     }
+%   \end{center}
+%   \caption{(a) \ptparticle distribution and of the leading two jets in an example \pt bin.
+%     The solid line is the spectrum $\tilde{f}(\pttrue)$.
+%     (b) Fitted Gaussian mean widths $\bar{\sigma}/\pt$ for different cuts on \ptrel in the same example \pt bin.
+%     The solid line is a linear fit to extrapolate $\bar{\sigma}/\pt$ for ideal dijet events.}
+% \end{figure}
+
+% The fit has been performed for the listed \pt bins.
+% The result is affected by the presence of a third jet.
+% For example, the mean resolution for jets with \mbox{$170 < \ptreco < 200\gev$} has been determined to \mbox{$\bar{\sigma}/\bar{\pt} = 0.136 \pm 0.002$} whereas the MC truth value is \mbox{$0.0933$}.
+% This difference is dependent on the maximum \ptrel as demonstrated in Fig.~\ref{fig:resFit:qcd:extrapolationExBin}, which shows the fitted mean resolution for different values of \ptrel.
+% There is a linear trend visible.
+% In order to extrapolate to the results to the case of an ideal dijet event, the $\bar{\sigma}\/\pt$ are fitted with a linear function and the y axis intercept is considered as the correct jet energy resolution.
+
+% The extrapolated Gaussian mean widths $\bar{\sigma}/\pt$ found in this way are shown for different \pt bins in Fig.~\ref{fig:resFit:qcd:extrapolation}.
+% Here, the \pt values are the mean values of the assumed spectra $\tilde{f}(\pttrue)$ in each bin.
+% The shown statistical uncertainties are combined from two sources.
+% \begin{enumerate}
+% \item The first contribution is the statistical uncertainty on the parameter of y axis intercept in the linear extrapolation (comp. Fig.~\ref{fig:resFit:qcd:extrapolationExBin}).
+% \item The second contribution arises from the uncertainty due to the statistics in the used MC sample.
+%   As the event weights are large for small \pt, statistical fluctations might become significant.
+%   In order to roughly evaluate this uncertainty, the same fits have been performed again without event weights (for the used sample this corresponds to a flattened QCD spectrum).
+%   The statistical uncertainties obtained in this case on the y axis intercept are added in quadrature to the ones in 1.
+%   This procedure has to be improved to obtain a statistically correct description of the uncertainty.
+% \end{enumerate}
+
+% The dashed line in Fig.~\ref{fig:resFit:qcd:extrapolation} represents the MC truth resolution.
+% The fitted values are in reasonable agreement with the MC truth.
+% They are then fitted with the continous function \eqref{eq:resFit:qcd:sigma} (solid line).
+% The parmeters of this fit are listed in Tab.~\ref{tab:resFit:qcd:resolution}.
+
+% \begin{table}[ht]
+%   \centering
+%   \begin{tabular}[ht]{lcc}
+%     \hline \hline
+%     $b_{i}$ & $1$ & $2$ \\
+%     \hline
+%     MC truth    & $1.145 \pm 0.001$ & $0.0370 \pm 0.0006$ \\
+%     Fit result  & $1.18  \pm 0.04$  & $0.032  \pm 0.007$ \\
+%     \hline \hline
+%   \end{tabular}
+%   \caption{Parameter values of the width $\sigma(\pt)$ of the Gaussian resolution~\eqref{eq:resFit:qcd:sigma}.
+%     Listed are the MC truth values and the fitted values.
+%     For the fit, the mean $\bar{\sigma}/\pt$ has been fitted in different \pt bins and the result fitted again with the continous function~\eqref{eq:resFit:qcd:sigma} (comp. Fig.~\ref{fig:resFit:qcd:extrapolation}).
+%     The uncertainties assigned to the fitted values are the statistical uncertainties.}
+%   \label{tab:resFit:qcd:resolution}
+% \end{table}
+
+% \begin{figure}[ht]
+%   \begin{center}
+%     \subfigure[]{
+%       \label{fig:resFit:qcd:extrapolation}
+%       \includegraphics[width=0.45\textwidth]{figures/resFit_QCD_Gauss_ExtrapolatedResolution}
+%     } \subfigure[]{
+%       \label{fig:resFit:qcd:systUncert}
+%       \includegraphics[width=0.45\textwidth]{figures/resFit_QCD_Gauss_SystematicUncertainties}
+%     }
+%   \end{center}
+%   \caption{(a) Gaussian mean widths $\bar{\sigma}/\pt$ from extrapolation \mbox{$\ptrel\rightarrow0$} in different \pt bins.
+%   The \pt values are the mean values of the assumed spectra $\tilde{f}(\pttrue)$ in each bin.
+%   The error bars indicate the combined statistical uncertainties from the extrapolation and the MC statistics.
+%   The solid line is a fit to the $\bar{\sigma}/\pt$, the dashed line shows the MC truth resolution for comparison.
+%   (b) Estimation of systematic uncertainties.
+%   The lines represent relative differences of the resolution for different variations of the spectrum to the correct spectrum.}
+% \end{figure}
+% \clearpage
+
+
+% \section{Determination of a non-Gaussian resolution}
+
+% \subsection{\mht spectrum from Gaussian resolution}
+% In order to evaluate the influence of non-Gaussian tails in the resolution to the \mht spectrum, a simple generator level based jet smearing has been performed.
+% The same dijet selection as presented in Sec.~\ref{sec:resFit:qcdSelection} has been applied.
+% For this demonstration, the \ptparticle of the leading two jets has been weighted with a random number from a Gaussian resolution pdf, where $\sigma$ has been parameterised using the MC truth values listed in Tab.~\ref{tab:resFit:qcd:resolution}.
+
+% \begin{figure}[ht]
+%   \begin{center}
+%     \subfigure[]{
+%       \includegraphics[width=0.45\textwidth]{figures/MHTSpectrumGauss}
+%     } \subfigure[]{
+%       \includegraphics[width=0.45\textwidth]{figures/MHTRatioGauss}
+%     }
+%   \end{center}
+%   \caption{(a) \mht from the two leading jets in a QCD dijet sample (marker) and prediction from smearing of the corresponding generator level jets with the true Gaussian resolution (line).
+%     (b) Ratio of prediction and truth.}
+% \label{fig:resFit:qcd:mhtGauss}
+% \end{figure}
+
+% In Fig.~\ref{fig:resFit:qcd:mhtGauss} the \mht spectrum resulting from
+% the weighted \ptparticle of the two jets is compared to the \mht spectrum from the corresponding \ptreco.
+% The actual \mht is underestimated by about $5\%$ up to 200\gev.
+% Above, which are $\approx2\%$ of all the events, the \mht is underestimated by $\approx50\%$.
+% This difference is explained by the presence of non-Gaussian tails in the resolution which were not considered.
+
+% In conclusion, it is necessary to include the description of non-Gaussian tails of the resolution into the fit in order to accurately predict the \mht spectrum using a smearing method.
+
+
+% \subsection{Parameterisation of the resolution by a Crystal Ball function}
+% \textit{to be added}
 
 
 

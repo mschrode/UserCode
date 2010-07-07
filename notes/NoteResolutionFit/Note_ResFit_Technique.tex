@@ -1,4 +1,4 @@
-% $Id: Note_ResFit_Technique.tex,v 1.3 2010/05/31 13:10:51 mschrode Exp $
+% $Id: Note_ResFit_Technique.tex,v 1.4 2010/07/07 09:29:40 mschrode Exp $
 
 
 \section{Description of the Method}\label{sec:ResFit:Method}
@@ -15,7 +15,7 @@ The underlying assumptions of the presented method are
 \end{itemize}
 Based on these, the pdf of a measured dijet event configuration is defined as
 \begin{equation}
-  \label{eq:resFit:DijetPdf}
+  \label{eq:ResFit:DijetPdf}
   g_{\mathbf{\xi}}\left(\ptmeasi{1},\ptmeasi{2}\right) \propto \int^{\infty}_{0}\dif{\pttrue}\,f\left(\pttrue\right)
   \cdot r_{\mathbf{\xi}}\left(\ptmeasi{1}|\pttrue\right)
   \cdot r_{\mathbf{\xi}}\left(\ptmeasi{2}|\pttrue\right).
@@ -70,4 +70,31 @@ The pdf of the jet \pt response \mbox{$R_{i}\equiv\ptmeasi{i} / \pttrue$} is obt
 
 \subsection{Description of selection biases in a data driven event selection}\label{sec:ResFit:Method:Biases}
 
-\textit{To be copied from RA2 note}
+The method described above is not entirely data driven in the sense that the binning is performed in terms
+of the jet $\pttrue$.
+This quantity is not known for Collider data and has to be replaced by a measurable quantity. 
+
+Binning in terms of the jet \ptmeas leads to a measurement bias due to migration effects at the edges of 
+the selected \pt range, referred to as (\textit{selection bias}) in the following.
+The source of the bias is a combination of the steeply falling dijet \pt spectrum and a finite jet energy resolution:
+First, there are jets that fluctuate into the selected \pt interval, and second, there are more jets that fluctuate high than jets that fluctuate low in \pt.
+The selected sample would therefore be biased toward jets of lower $\pttrue$ that fluctuated high in the detector.
+
+The dijet probability density function in ~\eqref{eq:ResFit:DijetPdf} is modified in order to avoid the described selection bias.
+For reasons of simple mathematical description, events are selected for a particular interval if the \pt of either the leading or the second leading jet satisfies $\ptmin < \ptmeas < \ptmax$.
+If the condition is met by both jets, they enter the histogram twice.
+In order to include a description of this selection into the dijet probability density function, first, the allowed range of measured \pt is restricted for the jet the \pt cut is applied to.
+Second, the probability density function of the true \pt is extended to incorporate the events migrating into the allowed \pt range:
+\begin{equation}
+  \label{eq:ResFit:Method:ModifiedSpectrum}
+  \tilde{f}\left(\pttrue\right) = \frac{1}{\mathcal{N}_{\tilde{f}}}
+  f\left(\pttrue\right) \int^{\ptmax}_{\ptmin}\dif{x}\,r_{0}\left(x|\pttrue\right) \; ,
+\end{equation}
+where $r_{0}(x|\pttrue)$ is the jet \pt response function that is taken from the Monte Carlo simulation here.
+The influence of the assumed response $r_{0}(x|\pttrue)$ on the measured response $r(\ptmeas|\pttrue)$ is small (Section~\ref{}) and considered as a systematic uncertainty (Section~\ref{}).
+
+Two things are worth noting about the data driven event selection discussed above:
+First, had the selection criterion always been applied to the first jet, i.e. the jet with the highest \ptmeas, an additional bias would have been introduced by the fact that the first jet has usually been fluctuating upwards.
+This bias is not described by the modified probablitity density function~\eqref{eq:ResFit:Method:ModifiedSpectrum}.
+Second, the binning could also have been done in terms of the average dijet \pt.
+In that case the modification of the probability density function, however, would have been more complicated as the selection depends on the \pt of both jets.
