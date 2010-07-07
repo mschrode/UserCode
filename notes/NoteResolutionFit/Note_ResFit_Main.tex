@@ -1,4 +1,4 @@
-% $Id: Note_ResFit_Main.tex,v 1.1 2010/05/30 19:43:08 mschrode Exp $
+% $Id: Note_ResFit_Main.tex,v 1.2 2010/06/01 17:24:50 mschrode Exp $
 
 % =====  HEADER  ========================================
 
@@ -12,6 +12,7 @@
 
 % ----- Additional packages -----------------------------
 \usepackage{subfigure}
+\usepackage{booktabs}
 
 
 % ----- pdflatex setup ----------------------------------
@@ -418,7 +419,7 @@ corrections.}.
       \includegraphics[width=0.45\textwidth]{figures/resFit_QCD_MCTruthResolution}
     }
   \end{center}
-  \caption{(a) \ptpart distribution and (b) MC truth resolution of the leading two jets in the selected dijet sample.
+  \caption{(a) \ptparticle distribution and (b) MC truth resolution of the leading two jets in the selected dijet sample.
     The solid lines are fits of the indicated functions.}
   \label{fig:resFit:qcd:dijetspectrum}
 \end{figure}
@@ -446,11 +447,11 @@ It is planned to apply the method to different $\eta$ regions taking into accoun
 
 The events are weighted corresponding to an integrated luminosity of $100\,\text{pb}^{-1}$.
 
-The resulting \ptpart spectrum is shown in Fig.~\ref{fig:resFit:qcd:dijetspectrum:subA}.
+The resulting \ptparticle spectrum is shown in Fig.~\ref{fig:resFit:qcd:dijetspectrum:subA}.
 It is fitted with an empiric function
 \begin{equation}
   \label{eq:resFit:qcd:ptGenSpectrum}
-  f\left(\ptpart\right) = \sum^{2}_{i=0}\,\exp\left[-\left(a_{2i} + a_{2i+1}\ptpart\right)\right]
+  f\left(\ptparticle\right) = \sum^{2}_{i=0}\,\exp\left[-\left(a_{2i} + a_{2i+1}\ptparticle\right)\right]
 \end{equation}
 to have a first applicable parameterisation of the spectrum $f(\pttrue)$.
 The fitted parameter values $a_{i}$ are listed in Table~\ref{tab:resFit:qcd:dijetspectrum} and the resulting pdf is superimposed in Fig.~\ref{fig:resFit:qcd:dijetspectrum:subA}.
@@ -470,7 +471,7 @@ The fitted parameter values $a_{i}$ are listed in Table~\ref{tab:resFit:qcd:dije
     \hline
     \hline
   \end{tabular}
- \caption{Fitted parameter values of the dijet \ptpart spectrum.}
+ \caption{Fitted parameter values of the dijet \ptparticle spectrum.}
   \label{tab:resFit:qcd:dijetspectrum}
 \end{table}
 
@@ -528,7 +529,7 @@ Table~\ref{tab:resFit:qcd:ptBins} lists the chosen binning.
 The modified spectrum $\tilde{f}(\pttrue)$ from~\eqref{eq:resFit:toyMC:ptCuts:extendedSpectrum} is utilised in the fit.
 The underlying spectrum $f(\pttrue)$ is described by~\eqref{eq:resFit:qcd:ptGenSpectrum} with the parameter values listed in Tab.~\ref{tab:resFit:qcd:dijetspectrum}.
 Cut-off effects are included as before using the true -- and \pt dependent -- resolution $f_{\text{MC}}(x|\pttrue)$ in $\tilde{f}(\pttrue)$.
-$f_{\text{MC}}(x|\pttrue)$ has been determined by fitting the $\ptreco/\ptpart$ distributions in small $\ptpart$ bins with a central Gaussian.
+$f_{\text{MC}}(x|\pttrue)$ has been determined by fitting the $\ptreco/\ptparticle$ distributions in small $\ptparticle$ bins with a central Gaussian.
 The widths of the Gaussians are shown in Fig.~\ref{fig:resFit:qcd:dijetspectrum:subB}.
 They are fitted with the continous function
 \begin{equation}
@@ -536,11 +537,11 @@ They are fitted with the continous function
   \frac{\sigma}{\pt} = \frac{b_{1}\sqrt{\gev}}{\sqrt{\pt}} \oplus \frac{b_{2}\gev}{\pt}.
 \end{equation}
 (In this \pt range there is no sensitivity to a third term $b_{0}$, which is why it is omitted.)
-The values $b_{i}$ of the true resolution\footnote{The fit is applied once to the presented Fig.~\ref{fig:resFit:qcd:dijetspectrum:subB} and once to an analogue plot with a logarithmic binning in \ptpart.
+The values $b_{i}$ of the true resolution\footnote{The fit is applied once to the presented Fig.~\ref{fig:resFit:qcd:dijetspectrum:subB} and once to an analogue plot with a logarithmic binning in \ptparticle.
 The parameters listed in Tab.~\ref{tab:resFit:qcd:resolution} are the mean values from the two fits.}
 are listed in Tab.~\ref{tab:resFit:qcd:resolution}.
 
-Figure~\ref{fig:resFit:qcd:specExBin} shows the \ptpart spectrum in an example bin.
+Figure~\ref{fig:resFit:qcd:specExBin} shows the \ptparticle spectrum in an example bin.
 It is well described by $\tilde{f}(\pttrue)$.
 
 
@@ -555,7 +556,7 @@ It is well described by $\tilde{f}(\pttrue)$.
       \includegraphics[width=0.45\textwidth]{figures/resFit_QCD_Gauss_ExtrapolatedSigma_PtBin3}
     }
   \end{center}
-  \caption{(a) \ptpart distribution and of the leading two jets in an example \pt bin.
+  \caption{(a) \ptparticle distribution and of the leading two jets in an example \pt bin.
     The solid line is the spectrum $\tilde{f}(\pttrue)$.
     (b) Fitted Gaussian mean widths $\bar{\sigma}/\pt$ for different cuts on \ptrel in the same example \pt bin.
     The solid line is a linear fit to extrapolate $\bar{\sigma}/\pt$ for ideal dijet events.}
@@ -627,7 +628,7 @@ The parmeters of this fit are listed in Tab.~\ref{tab:resFit:qcd:resolution}.
 \subsection{\mht spectrum from Gaussian resolution}
 In order to evaluate the influence of non-Gaussian tails in the resolution to the \mht spectrum, a simple generator level based jet smearing has been performed.
 The same dijet selection as presented in Sec.~\ref{sec:resFit:qcdSelection} has been applied.
-For this demonstration, the \ptpart of the leading two jets has been weighted with a random number from a Gaussian resolution pdf, where $\sigma$ has been parameterised using the MC truth values listed in Tab.~\ref{tab:resFit:qcd:resolution}.
+For this demonstration, the \ptparticle of the leading two jets has been weighted with a random number from a Gaussian resolution pdf, where $\sigma$ has been parameterised using the MC truth values listed in Tab.~\ref{tab:resFit:qcd:resolution}.
 
 \begin{figure}[ht]
   \begin{center}
@@ -642,7 +643,8 @@ For this demonstration, the \ptpart of the leading two jets has been weighted wi
 \label{fig:resFit:qcd:mhtGauss}
 \end{figure}
 
-In Fig.~\ref{fig:resFit:qcd:mhtGauss} the \mht spectrum resulting from the weighted \ptpart of the two jets is compared to the \mht spectrum from the corresponding \ptreco.
+In Fig.~\ref{fig:resFit:qcd:mhtGauss} the \mht spectrum resulting from
+the weighted \ptparticle of the two jets is compared to the \mht spectrum from the corresponding \ptreco.
 The actual \mht is underestimated by about $5\%$ up to 200\gev.
 Above, which are $\approx2\%$ of all the events, the \mht is underestimated by $\approx50\%$.
 This difference is explained by the presence of non-Gaussian tails in the resolution which were not considered.
