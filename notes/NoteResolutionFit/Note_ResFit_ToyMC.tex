@@ -1,4 +1,4 @@
-% $Id: Note_ResFit_ToyMC.tex,v 1.2 2010/07/07 09:29:40 mschrode Exp $
+% $Id: Note_ResFit_ToyMC.tex,v 1.3 2010/07/07 13:56:17 mschrode Exp $
 
 
 \section{Study with a Toy Monte Carlo Simulation}\label{sec:ResFit:ToyMC}
@@ -43,12 +43,11 @@ Tab.~\ref{tab:ResFit:ToyMC:PtGenCuts:FitResult}.
 An example of a simulated response distribution is shown in Fig. ~\ref{fig:ResFit:ToyMC:PtGenCuts:Response}.
 
 \begin{figure}[ht]
-  \begin{center}
-     \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_SpectrumLog}
-   \end{center}
-   \caption{Toy Monte Carlo simulation of a sample of ideal dijet events.
-     Generated \pttrue spectrum (circular markers) and the underlying pdf (solid line).}
-   \label{fig:ResFit:ToyMC:Sample:Spectrum}
+  \centering
+  \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_SpectrumLog}
+  \caption{Toy Monte Carlo simulation of a sample of ideal dijet events.
+    Generated \pttrue spectrum (circular markers) and the underlying pdf (solid line).}
+  \label{fig:ResFit:ToyMC:Sample:Spectrum}
 \end{figure}
 
 
@@ -64,20 +63,19 @@ depend on \pttrue and the parameters $\mathbf{\xi}$ as
 in~\eqref{eq:ResFit:ToyMC:Sigma}.
 
 \begin{figure}[ht]
-  \begin{center}
-    \begin{tabular}{cc}
-      \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_ResolutionBin1} &
-      \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_ResolutionBin7} \\      
-    \end{tabular}
-  \end{center}
-  \caption{Simple simulation of a sample of ideal dijet events.
-    Generated true response \mbox{$\ptmeas / \pttrue$} (histogram) and
-    the response (solid line) from the maximum likelihood fit in two
-    different \pttrue bins.
-    The latter has been evaluated for the mean \pttrue in these bins.
-    Note, here ``fit'' does not refer to a fit to the shown histogram but the maximisation of the likelihood~\eqref{eq:ResFit:Likelihood}.
-  }
-  \label{fig:ResFit:ToyMC:PtGenCuts:Response}
+\centering
+\begin{tabular}{cc}
+  \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_ResolutionBin1} &
+  \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_ResolutionBin7} \\      
+\end{tabular}
+\caption{Simple simulation of a sample of ideal dijet events.
+  Generated true response \mbox{$\ptmeas / \pttrue$} (histogram) and
+  the response (solid line) from the maximum likelihood fit in two
+  different \pttrue bins.
+  The latter has been evaluated for the mean \pttrue in these bins.
+  Note, here ``fit'' does not refer to a fit to the shown histogram but the maximisation of the likelihood~\eqref{eq:ResFit:Likelihood}.
+}
+\label{fig:ResFit:ToyMC:PtGenCuts:Response}
 \end{figure}
 
 
@@ -89,17 +87,16 @@ in~\eqref{eq:ResFit:ToyMC:Sigma}.
     The uncertainties assigned to the fitted values
     are the statistical uncertainties from the fit.
     The parameter correlations are shown in Fig.~\ref{fig:ResFit:ToyMC:PtGenCuts:ParCorr}.}
-  \begin{center}
-    \begin{tabular}[ht]{lccc}
-      \toprule
-      $\xi_{i}$ & $0$ & $1$ & $2$ \\
-      \midrule
-      True value & $4$           & $1.2$           & $0.05$ \\
-      Fit result & $4.5 \pm 0.7$ & $1.18 \pm 0.05$ & $0.051 \pm 0.004$ \\
-      \bottomrule
-    \end{tabular}
-  \end{center}
- \label{tab:ResFit:ToyMC:PtGenCuts:FitResult}
+  \centering
+  \begin{tabular}[ht]{lccc}
+    \toprule
+    $\xi_{i}$ & $0$ & $1$ & $2$ \\
+    \midrule
+    True value & $4$           & $1.2$           & $0.05$ \\
+    Fit result & $4.5 \pm 0.7$ & $1.18 \pm 0.05$ & $0.051 \pm 0.004$ \\
+    \bottomrule
+  \end{tabular}
+  \label{tab:ResFit:ToyMC:PtGenCuts:FitResult}
 \end{table}
 
 
@@ -123,12 +120,11 @@ Hence, omitting either the terms with $\xi_{0}$ and $\xi_{2}$ or the
 term with $\xi_{1}$ would have been sufficient to describe the measured events.
 
 \begin{figure}[ht]
-  \begin{center}
-    \begin{tabular}{cc}
-     \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_Sigma} &
-     \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_SigmaRelDifference} \\
-   \end{tabular}
- \end{center}
+  \centering
+  \begin{tabular}{cc}
+    \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_Sigma} &
+    \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_SigmaRelDifference} \\
+  \end{tabular}
   \caption{(\textit{Left}) Relative Gaussian resolution $\sigma(\pt)/\pt$ evaluated with the fitted
     parameter values (solid line) in comparison to the true resolution
     (dashed line) and (\textit{right}) the relative difference
@@ -166,12 +162,11 @@ first\footnote{This is that one jet of the two leading jets the
 meet \mbox{$\ptmin = 80 < \ptmeasi{1} < \ptmax = 800\gev$} (comp. Fig.~\ref{fig:ResFit:ToyMC:PtCuts:Spectrum}).
 
 \begin{figure}[ht]
-  \begin{center}
-    \begin{tabular}{cc}
-     \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_SpectrumLog} &
-     \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_SpectrumLinear} \\
-   \end{tabular}
- \end{center}
+  \centering
+  \begin{tabular}{cc}
+    \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_SpectrumLog} &
+    \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_SpectrumLinear} \\
+  \end{tabular}
   \caption{Demonstration of the migration effects caused by a data
     driven event selection.
     Shown is the \pttrue spectrum (circular markers) after
@@ -186,12 +181,11 @@ meet \mbox{$\ptmin = 80 < \ptmeasi{1} < \ptmax = 800\gev$} (comp. Fig.~\ref{fig:
 
 
 \begin{figure}[ht]
-  \begin{center}
-    \begin{tabular}{cc}
-     \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_ResolutionBin1} &
-     \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_ResolutionBin7} \\
-   \end{tabular}
- \end{center}
+  \centering
+  \begin{tabular}{cc}
+    \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_ResolutionBin1} &
+    \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_ResolutionBin7} \\
+  \end{tabular}
   \caption{Generated Gaussian response \mbox{$\ptmeas / \pttrue$}
     (circular markers) and the fitted
     response (solid line) in two different \pttrue bins after
@@ -207,12 +201,11 @@ meet \mbox{$\ptmin = 80 < \ptmeasi{1} < \ptmax = 800\gev$} (comp. Fig.~\ref{fig:
 \end{figure}
 
 \begin{figure}[ht]
-  \begin{center}
-    \begin{tabular}{cc}
-     \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_Sigma} &
-     \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_SigmaRelDifference} \\
-   \end{tabular}
- \end{center}
+  \centering
+  \begin{tabular}{cc}
+    \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_Sigma} &
+    \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_SigmaRelDifference} \\
+  \end{tabular}
   \caption{(\textit{Left}) Relative Gaussian resolution $\sigma(\pt)/\pt$ evaluated with the fitted
     parameter values (solid line) in comparison to the true resolution
     (dashed line) and (\textit{right}) the relative difference
@@ -233,16 +226,15 @@ meet \mbox{$\ptmin = 80 < \ptmeasi{1} < \ptmax = 800\gev$} (comp. Fig.~\ref{fig:
     The uncertainties assigned to the fitted values
     are the statistical uncertainties from the fit.
     The fit has been performed with dijet events selected by requiring \mbox{$80 < \ptmeas < 800\gev$}.}
-  \begin{center}
-    \begin{tabular}[ht]{lccc}
-      \toprule
-      $b_{i}$ & $0$ & $1$ & $2$ \\
-      \midrule
-      True value & $4$           & $1.2$                   & $0.05$ \\
-      Fit result   & $4 \pm 1$ & $1.20 \pm 0.07$ & $0.049 \pm 0.005$ \\
-      \bottomrule
+  \centering
+  \begin{tabular}[ht]{lccc}
+    \toprule
+    $b_{i}$ & $0$ & $1$ & $2$ \\
+    \midrule
+    True value & $4$           & $1.2$                   & $0.05$ \\
+    Fit result   & $4 \pm 1$ & $1.20 \pm 0.07$ & $0.049 \pm 0.005$ \\
+    \bottomrule
    \end{tabular}
-  \end{center}
  \label{tab:ResFit:ToyMC:PtCuts:FitResult}
 \end{table}
 

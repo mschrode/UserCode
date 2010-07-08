@@ -1,4 +1,4 @@
-% $Id: Note_ResFit_Technique.tex,v 1.4 2010/07/07 09:29:40 mschrode Exp $
+% $Id: Note_ResFit_Technique.tex,v 1.5 2010/07/07 13:56:17 mschrode Exp $
 
 
 \section{Description of the Method}\label{sec:ResFit:Method}
@@ -26,7 +26,7 @@ Here,
   i.e. the particle level differential dijet cross section.
   In the following it is assumed to be known
   and taken from the Monte Carlo simulation
-  (comp. e.g. Fig.~\ref{fig:resFit:qcd:dijetspectrum:subA}).
+  (comp. e.g. Fig.~\ref{fig:ResFit:QCDMC:MCTruthReso} (\textit{left})).
   Uncertainties on the simulated cross section have to be propagated to
   the measured resolution and added as a systematic uncertainty of the
   method, which is in fact small as shown in Section~\ref{};
@@ -68,7 +68,7 @@ The pdf of the jet \pt response \mbox{$R_{i}\equiv\ptmeasi{i} / \pttrue$} is obt
 
 
 
-\subsection{Description of selection biases in a data driven event selection}\label{sec:ResFit:Method:Biases}
+\subsection{Description of the selection bias in a data driven event selection}\label{sec:ResFit:Method:Biases}
 
 The method described above is not entirely data driven in the sense that the binning is performed in terms
 of the jet $\pttrue$.
@@ -91,7 +91,7 @@ Second, the probability density function of the true \pt is extended to incorpor
   f\left(\pttrue\right) \int^{\ptmax}_{\ptmin}\dif{x}\,r_{0}\left(x|\pttrue\right) \; ,
 \end{equation}
 where $r_{0}(x|\pttrue)$ is the jet \pt response function that is taken from the Monte Carlo simulation here.
-The influence of the assumed response $r_{0}(x|\pttrue)$ on the measured response $r(\ptmeas|\pttrue)$ is small (Section~\ref{}) and considered as a systematic uncertainty (Section~\ref{}).
+The influence of the assumed response $r_{0}(x|\pttrue)$ on the measured response $r(\ptmeas|\pttrue)$ is small (Section~\ref{sec:ResFit:QCDMC:Gauss}) and considered as a systematic uncertainty (Section~\ref{}).
 
 Two things are worth noting about the data driven event selection discussed above:
 First, had the selection criterion always been applied to the first jet, i.e. the jet with the highest \ptmeas, an additional bias would have been introduced by the fact that the first jet has usually been fluctuating upwards.
