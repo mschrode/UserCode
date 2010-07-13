@@ -1,4 +1,4 @@
-% $Id: Note_ResFit_QCDMC_Extrapolation.tex,v 1.3 2010/07/08 14:32:36 mschrode Exp $
+% $Id: Note_ResFit_QCDMC_Extrapolation.tex,v 1.4 2010/07/09 13:52:43 mschrode Exp $
 
 
 \subsection{Extrapolation to the Two Jet Final State Topology}\label{sec:ResFit:QCDMC:Extrapolation}
@@ -162,7 +162,7 @@ which are measured by maximisation of the likelihood~\eqref{eq:ResFit:Likelihood
 \caption{(\textit{Left}) The parameterisation of the realistic particle jet \pt spectrum in one \pt bin as used in the dijet likelihood (solid line) in comparison to the prediction from Monte Carlo truth (full circles).
   Migration effects are modeled assuming a Crystal Ball response function. 
   (\textit{Right}) Response distribution of a dijet sample selected with Monte Carlo truth information (compare the description in the text) in one \pt bin (full circles); non-Gaussian tails are visible.
-  It is compared to a Crystal Ball response function (solid line) evaluated with the extrapolated parameters $\bar{\sigma}$, $\alpha$, $n$ from the maximum likelihood method.}
+  It is compared to a Crystal Ball response function (solid line) and the Gaussian core part (dashed line) evaluated with the extrapolated parameters $\bar{\sigma}$, $\alpha$, $n$ from the maximum likelihood method.}
 \label{fig:ResFit:QCDMC:Extrapolation:CB:ExBin:SpectrumAndMCClosure}
 \end{figure}
 
@@ -191,13 +191,9 @@ For $\alpha$ and $n$ the start values 2 and 4, respectively, are used and the li
 The resulting assumption~$\tilde{f}(\pttrue)$ for the particle level jet \pt spectrum agrees well with the Monte Carlo truth, as demonstrated in Fig.~\ref{fig:ResFit:QCDMC:Extrapolation:CB:ExBin:SpectrumAndMCClosure} (\textit{left}) for one \pt bin (the spectra for all \pt bins are shown in Appendix~\ref{sec:ResFit:App:AllResults:CrystalBall}).
 
 In order to validate the fit result, the response functions in each \pt bin, computed with the extrapolated parameter values, are compared to the Monte Carlo truth response distributions.
-The latter are composed out of dijet events from a different selection that is based on the Monte Carlo truth information: events have been binned in particle level jet \pt to avoid distortions to due migration effects.
+The latter are composed out of dijet events from a different selection that is based on the Monte Carlo truth information: events have been selected in bins of particle level jet \pt to avoid distortions to due migration effects.
 (In contrast, the dijet events entering the fit have been selected in a data driven way and selection biases have been explicitly considered in the likelihood.)
 Figure~\ref{fig:ResFit:QCDMC:Extrapolation:CB:ExBin:SpectrumAndMCClosure} (\textit{right}) shows the closure in one \pt bin, other \pt bins are shown in Appendix~\ref{sec:ResFit:App:AllResults:CrystalBall}.
-
-
-
-
-
-In order to extrapolate the measurements to the case of a two jet only event, the $\bar{\sigma}/\pt$ are fitted with a linear function --- shown as a solid line --- and the $y$ axis intercept is taken as the corrected jet \pt resolution.
-
+The Gaussian core component of the response distribution is well described.
+The measuremenet is also clearly sensitive to the non-Gaussian component of the response distribution and the tail is reasonably well described by the Crystal Ball powerlaw tail.
+However, the structure of the Monte Carlo truth distribution features more structure than a simple monotonic decrease of the same curvature which can consequently not be modeled by the Crystal Ball function.
