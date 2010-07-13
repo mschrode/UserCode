@@ -1,4 +1,4 @@
-% $Id: Note_ResFit_ToyMC.tex,v 1.3 2010/07/07 13:56:17 mschrode Exp $
+% $Id: Note_ResFit_ToyMC.tex,v 1.4 2010/07/08 14:32:36 mschrode Exp $
 
 
 \section{Study with a Toy Monte Carlo Simulation}\label{sec:ResFit:ToyMC}
@@ -31,7 +31,7 @@ weighting \pttrue with random numbers drawn from a Gaussian response
   \frac{1}{\sqrt{2\pi}\sigma}\exp\left[-\frac{1}{2}\left(\frac{\ptmeas - \pttrue}{\sigma}\right)^{2}\right]
 \end{equation}
 (Here and in the following the jet index $i$ has been omitted.)
-The standard deviation, i.e. the jet resolution, $\sigma$ has been parameterised as a function of \pttrue and
+The standard deviation, i.e. the jet resolution, $\sigma$ has been parametrised as a function of \pttrue and
 the parameters $\xi_{i}$, \mbox{$i\in [0,2]$}, as
 \begin{equation}
   \label{eq:ResFit:ToyMC:Sigma}
@@ -114,8 +114,8 @@ The fitted parameter values $\mathbf{\xi}$ are listed in Tab.~\ref{tab:ResFit:To
 they agree with the true values within the statistical uncertainties.
 
 The parameters are strongly (anti-) correlated (comp. Fig.~\ref{fig:ResFit:ToyMC:PtGenCuts:ParCorr}).
-In the present \pttrue interval from \mbox{$\ptmin = 50\gev$} to \mbox{$\ptmax = 1000\gev$}, the used parameterisation of the Gaussian resolution $\sigma$ is over-determined.
-The $\xi_{0}$ term in~\eqref{eq:ResFit:ToyMC:Sigma} is most important at very low \pt while the $\xi_{2}$ term dominats at very large \pt.
+In the present \pttrue interval from \mbox{$\ptmin = 50\gev$} to \mbox{$\ptmax = 1000\gev$}, the used parametrisation of the Gaussian resolution $\sigma$ is over-determined.
+The $\xi_{0}$ term in~\eqref{eq:ResFit:ToyMC:Sigma} is most important at very low \pt while the $\xi_{2}$ term dominates at very large \pt.
 Hence, omitting either the terms with $\xi_{0}$ and $\xi_{2}$ or the
 term with $\xi_{1}$ would have been sufficient to describe the measured events.
 
@@ -192,7 +192,7 @@ meet \mbox{$\ptmin = 80 < \ptmeasi{1} < \ptmax = 800\gev$} (comp. Fig.~\ref{fig:
     requiring \mbox{$80 < \ptmeas < 800\gev$}.
     Note the migration effects (\textit{left}): the narrow peak at the
     right side is populated by the first jets in each event, i.e. that have been cut on, and hence these are jets fluctuating upwards into the \pt bin.
-    The wider peak centered around 1 is populated by the unconstrained
+    The wider peak centred around 1 is populated by the unconstrained
     second jet.
     (There is more upward than downward fluctuation due to the falling
     \pttrue spectrum.)
