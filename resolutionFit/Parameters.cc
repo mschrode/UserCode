@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.5 2010/05/28 18:52:29 mschrode Exp $
+// $Id: Parameters.cc,v 1.6 2010/06/09 17:50:59 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -190,6 +190,7 @@ namespace resolutionFit {
     TString title = "";
     if( extendedLegend() ) title += "Response ";
     title += "R = p^{" + labelMeas() + "}_{T} / p^{" + labelTruth() + "}_{T}";
+    if( styleMode() == "CMS" ) title = "p^{" + labelMeas() + "}_{T} / p^{" + labelTruth() + "}_{T}";
     return title;
   }
 
