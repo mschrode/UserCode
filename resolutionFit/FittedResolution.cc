@@ -181,61 +181,177 @@ namespace resolutionFit {
 
 
   void FittedResolution::plotPtAsymmetryBins() const {
+    bool isGauss = ( par_->respFuncType() == ResponseFunction::Gauss );
+    bool hasGaussCore = ( par_->respFuncType() == ResponseFunction::CrystalBall );
+
+    std::vector<double> meanPt;
+    std::vector<double> meanPtErr;
+    std::vector<double> predAsym;
+    std::vector<double> predAsymErr;
+
     // Loop over ptbins
     for(std::vector<PtBin*>::const_iterator it = ptBins_.begin();
 	it != ptBins_.end(); it++) {
       int bin = (it-ptBins_.begin());
 
-      // Create Canvas
-      TCanvas *can = new TCanvas("PlotPtAsymmetry","PlotPtAsymmetry",500,500);
-      can->cd();
-
-      // Draw MC truth resolution
-      TH1 *hPtAsym = (*it)->getHistPtAsym("PlotPtAsymmetry");
+      // Measured asymmetry distribution
+      // for default cut on pt3rel
+      TH1 *hPtAsym = (*it)->getHistPtAsym("plotPtAsymmetryBins:PtAsymmetry");
       hPtAsym->SetMarkerStyle(20);
-      hPtAsym->GetXaxis()->SetRangeUser(0.4,1.6);
-      hPtAsym->GetYaxis()->SetRangeUser(0.,(1.4+3.*lineHeight_)*hPtAsym->GetMaximum());
+      double xMin = -0.6;
+      double xMax = 0.6;
+      double yMin = 0.;
+      double yMinLog = 3E-4;
+      double yMax = (1.4+3.*lineHeight_)*hPtAsym->GetMaximum();
+      double yMaxLog = 50.*hPtAsym->GetMaximum();
+      hPtAsym->GetXaxis()->SetRangeUser(xMin,xMax);
+      hPtAsym->GetYaxis()->SetRangeUser(yMin,yMax);
       hPtAsym->GetYaxis()->SetTitle("1 / N  dN / dA");
-      hPtAsym->Draw("PE1");
 
-      // Draw pdf
-      TH1 *hPdfPtAsym = (*it)->getHistPdfPtAsym("PlotPdfPtAsymmetry");
-      hPdfPtAsym->SetLineColor(2);
-      hPdfPtAsym->SetLineWidth(lineWidth_);
-      hPdfPtAsym->Draw("Lsame");
+      // Simulate asymmetry from fitted response
+      TH1 *hAsymPred = new TH1D("hPtAsymPredBin",";p_{T} asymmetry;1 / N  dN / dA",
+				100,xMin,xMax);
+      hAsymPred->SetLineColor(2);
+      hAsymPred->SetLineWidth(lineWidth_);
+      TH1 *hAsymPredGauss = static_cast<TH1D*>(hAsymPred->Clone("hPtAsymPredGauss"));
+      if( hasGaussCore ) hAsymPredGauss->SetLineStyle(2);
+      TH1 *hAsymPredGaussRatio = static_cast<TH1D*>(hAsymPred->Clone("hPtAsymPredGaussRatio"));
+      hAsymPredGaussRatio->SetYTitle("Prediction / Measurement");
+      TH1 *hPdfPtTrue = (*it)->getHistPdfPtTrue("plotAsymmetryBins:hPdfPtTrue");
+      TH1 *hPtGenAsym = (*it)->getHistPtGenAsym("plotAsymmetryBins:hPtGenAsym");
+      hPtGenAsym->Fit("gaus","0QI");
+      double sigPtGen = sqrt(2.)*hPtGenAsym->GetRMS();//GetFunction("gaus")->GetParameter(2);
+      double sigResp = 0.;
+      if( isGauss || hasGaussCore ) {
+	sigResp = ((*it)->extrapolatedValue(0))*((*it)->meanPt());
+      }
+      for(int n = 0; n < 100000; ++n) {
+	double ptTrue = hPdfPtTrue->GetRandom();
+	if( isGauss || hasGaussCore ) {
+	  double ptTrue1 = ptTrue*par_->respFunc()->randomGauss(1.,sigPtGen);
+	  double ptMeas1 = par_->respFunc()->randomGauss(ptTrue1,sigResp);
+	  double ptTrue2 = ptTrue*par_->respFunc()->randomGauss(1.,sigPtGen);
+	  double ptMeas2 = par_->respFunc()->randomGauss(ptTrue2,sigResp);
+	  if( ptMeas1+ptMeas2 != 0. )
+	    hAsymPredGauss->Fill( (ptMeas1-ptMeas2) / (ptMeas1+ptMeas2) );
+	}
+	if( !isGauss ) {
+// 	  double ptMeas1 = hFittedResp->GetRandom();
+// 	  double ptMeas2 = hFittedResp->GetRandom();
+// 	  if( ptMeas1+ptMeas2 != 0. )
+// 	    hAsymPred->Fill( (ptMeas1-ptMeas2) / (ptMeas1+ptMeas2) );
+	}
+      }
+
+      if( isGauss ) {
+	meanPt.push_back((*it)->meanPt());
+	meanPtErr.push_back(0.);
+	hAsymPredGauss->Fit("gaus","0QI");
+	hPtAsym->Fit("gaus","0QI");
+	double sPred = hAsymPredGauss->GetFunction("gaus")->GetParameter(2);
+	double sMeas = hPtAsym->GetFunction("gaus")->GetParameter(2);
+	double sPredErr = hAsymPredGauss->GetFunction("gaus")->GetParError(2);
+	double sMeasErr = hPtAsym->GetFunction("gaus")->GetParError(2);
+	predAsym.push_back(sPred/sMeas);
+	predAsymErr.push_back(sqrt( sPredErr*sPredErr/sMeas/sMeas + 
+				    sPred*sPred*sMeasErr*sMeasErr/sMeas/sMeas/sMeas/sMeas));
+      }
+      if( hAsymPred->Integral() )
+	hAsymPred->Scale(1./hAsymPred->Integral("width"));
+      if( hAsymPredGauss->Integral() )
+	hAsymPredGauss->Scale(1./hAsymPredGauss->Integral("width"));
 
       // Labels
       TPaveText *txt = util::LabelFactory::createPaveText(1);
-      TString name = (*it)->ptMinStr();
-      name += " < p^{";
-      name += par_->labelMeas();
-      name += "}_{T} < ";
-      name += (*it)->ptMaxStr();
-      name += " GeV";
-      txt->AddText(name);
-      txt->Draw("same");
-
+      txt->AddText(par_->labelPtBin(bin,0));
       TLegend *leg = util::LabelFactory::createLegendWithOffset(2,1);
-      leg->AddEntry(hPtAsym,"MC truth","P");
-      char entry[100];
-      sprintf(entry,"Fitted  #sqrt{2}#sigma/p^{true}_{T}, p^{true}_{T} = %.1f GeV",(*it)->meanPt());
-      leg->AddEntry(hPdfPtAsym,entry,"L");
-      leg->Draw("same");
+      leg->AddEntry(hPtAsym,"Measurement","P");
+      leg->AddEntry(hAsymPred,"Prediction","L");
 
+      // Create Canvas and write to file
+      TCanvas *can = new TCanvas("PlotPtAsymmetry","PlotPtAsymmetry",500,500);
+      can->cd();
+
+      // Linear y axis scale
+      hAsymPred->GetYaxis()->SetRangeUser(yMin,yMax);
+      hAsymPredGauss->GetYaxis()->SetRangeUser(yMin,yMax);
+      if( isGauss ) {
+	hAsymPredGauss->Draw("L");
+      } else {
+	hAsymPred->Draw("Lsame");
+      }
       hPtAsym->Draw("PE1same");
-
-      // Write Canvas to fiel
-      name = par_->outNamePrefix();
+      txt->Draw("same");
+      leg->Draw("same");
+      TString name = par_->outNamePrefix();
       name += "PtAsymmetry_PtBin";
+      name += bin;
+      name += ".eps";
+      can->SaveAs(name,"eps");
+
+      // Log y axis scale
+      can->Clear();
+      hPtAsym->GetYaxis()->SetRangeUser(yMinLog,yMaxLog);
+      hAsymPred->GetYaxis()->SetRangeUser(yMinLog,yMaxLog);
+      hAsymPredGauss->GetYaxis()->SetRangeUser(yMinLog,yMaxLog);
+      if( isGauss ) {
+	hAsymPredGauss->Draw("L");
+      } else {
+	hAsymPred->Draw("L");
+	if( hasGaussCore ) hAsymPredGauss->Draw("Lsame");
+      }
+      hPtAsym->Draw("PE1same");
+      txt->Draw("same");
+      leg->Draw("same");
+      can->SetLogy();
+      name = par_->outNamePrefix();
+      name += "PtAsymmetryLog_PtBin";
       name += bin;
       name += ".eps";
       can->SaveAs(name,"eps");
 
       // Clean up
       delete hPtAsym;
-      delete hPdfPtAsym;
+      delete hPdfPtTrue;
+      delete hPtGenAsym;
+      delete hAsymPred;
+      delete hAsymPredGauss;
+      delete hAsymPredGaussRatio;
       delete txt;
       delete leg;
+      delete can;
+    }
+
+    // For Gaussian response, sigma of asymmetry
+    // prediction over measurement
+    if( isGauss ) {
+      TGraphAsymmErrors *gPredAsymSigmaRatio
+	= new TGraphAsymmErrors(predAsym.size(),&(meanPt.front()),&(predAsym.front()),
+				&(meanPtErr.front()),&(meanPtErr.front()),
+				&(predAsymErr.front()),&(predAsymErr.front()));
+      gPredAsymSigmaRatio->SetMarkerStyle(20);
+
+      TH1 *hFrame = new TH1D("plotPtAsymmetryBins:hFrame",
+			     ";p_{T} (GeV);Prediction / Measurement  #sigma_{A}",
+			     100,ptMin(),ptMax());
+      for(int xBin = 1; xBin <= hFrame->GetNbinsX(); ++xBin) {
+	hFrame->SetBinContent(xBin,1.);
+      }
+      hFrame->SetLineStyle(2);
+      hFrame->SetLineWidth(lineWidth_);
+      hFrame->GetYaxis()->SetRangeUser(0.6,1.4);
+
+      TCanvas *can = new TCanvas("PlotPtAsymmetry","PlotPtAsymmetry",500,500);
+      can->cd();
+      hFrame->Draw("L");
+      gPredAsymSigmaRatio->Draw("PE1same");
+      can->SetLogx();
+      TString name = par_->outNamePrefix();
+      name += "PtAsymmetrySigmaRatio.eps";
+      can->SaveAs(name,"eps");
+   
+      delete hFrame;
+      delete gPredAsymSigmaRatio;
       delete can;
     }
   }
@@ -593,7 +709,8 @@ namespace resolutionFit {
 	  rMax = 2.;
 	}
 	double yMin = logY ? 6E-4 : 0.;
-	double yMax = logY ? 4E3 : hMCRes->GetMaximum()+2.5;
+	//	double yMax = logY ? 4E3 : hMCRes->GetMaximum()+2.5;
+	double yMax = logY ? 3E2 : hMCRes->GetMaximum()+2.5;
 	if( par_->extendedLegend() ) {
 	  yMin = logY ? 6E-4 : 0.;
 	  yMax = logY ? 7E2 : hMCRes->GetMaximum()+3.5;
@@ -647,26 +764,68 @@ namespace resolutionFit {
 	
 	
 	// Labels
-	TPaveText *txt = 0;
-	if( par_->extendedLegend() ) {
-	  txt = util::LabelFactory::createPaveText(2);
-	  txt->AddText("PYTHIA, #sqrt{s} = 7 TeV, "+par_->labelLumi());
-	  txt->AddText("Anti-k_{T} d = 0.5 jets, "+par_->labelEtaBin());
-	} else if( par_->styleMode() == "CMS" ) {
-	  txt = util::LabelFactory::createPaveText(2);
-	  txt->AddText("CMS preliminary");
-	  txt->AddText("PYTHIA, #sqrt{s} = 7 TeV, "+par_->labelLumi()+", "+par_->labelEtaBin());
-	} else {
-	  txt = util::LabelFactory::createPaveText(1);
-	  txt->AddText(par_->labelLumi()+", "+par_->labelEtaBin());
-	}
+// 	TPaveText *txt = 0;
+// 	if( par_->extendedLegend() ) {
+// 	  txt = util::LabelFactory::createPaveText(2);
+// 	  txt->AddText("PYTHIA, #sqrt{s} = 7 TeV, "+par_->labelLumi());
+// 	  txt->AddText("Anti-k_{T} d = 0.5 jets, "+par_->labelEtaBin());
+// 	} else if( par_->styleMode() == "CMS" ) {
+// 	  txt = util::LabelFactory::createPaveText(2);
+// 	  txt->AddText("CMS preliminary");
+// 	  txt->AddText("PYTHIA, #sqrt{s} = 7 TeV, "+par_->labelLumi()+", "+par_->labelEtaBin());
+// 	} else {
+// 	  txt = util::LabelFactory::createPaveText(1);
+// 	  txt->AddText(par_->labelLumi()+", "+par_->labelEtaBin());
+// 	}
+	//txt->Draw("same");
+
+// 	TLegend *leg = util::LabelFactory::createLegendWithOffset(2,txt->GetSize(),0.06);
+// 	leg->AddEntry(hMCRes,"MC truth, "+par_->labelPtBin(bin,1),"P");
+// 	leg->AddEntry(hFitRes,"Fit result, "+par_->labelPtBin(bin,0),"L");
+// 	leg->Draw("same");
+
+// 	std::cout << "TPaveText::GetX1() " << txt->GetX1() << std::endl;
+// 	std::cout << "TPaveText::GetY1() " << txt->GetY1() << std::endl;
+// 	std::cout << "TPaveText::GetX2() " << txt->GetX2() << std::endl;
+// 	std::cout << "TPaveText::GetY2() " << txt->GetY2() << std::endl;	
+	
+// 	std::cout << "TLegend::GetX1() " << leg->GetX1() << std::endl;
+// 	std::cout << "TLegend::GetY1() " << leg->GetY1() << std::endl;
+// 	std::cout << "TLegend::GetX2() " << leg->GetX2() << std::endl;
+// 	std::cout << "TLegend::GetY2() " << leg->GetY2() << std::endl;
+
+
+	// Seema's style for PAS
+	TPaveText *txt = new TPaveText(0.22, 0.765, 0.52, 0.93, "brNDC");
+	txt->SetBorderSize(0);
+	txt->SetFillColor(0);
+	txt->SetTextFont(42);
+	txt->SetTextAlign(12);
+	txt->AddText("CMS Preliminary");
+	txt->AddText("PYTHIA,  #sqrt{s} = 7 TeV");
+	txt->AddText("L = 50 pb^{-1}");
 	txt->Draw("same");
 
-	TLegend *leg = util::LabelFactory::createLegendWithOffset(2,txt->GetSize(),0.06);
-	leg->AddEntry(hMCRes,"MC truth, "+par_->labelPtBin(bin,1),"P");
-	leg->AddEntry(hFitRes,"Fit result, "+par_->labelPtBin(bin,0),"L");
-	leg->Draw("same");
+	TH1 *hDummy = new TH1D("hDummy","",1,0,1);
+	hDummy->SetLineColor(0);
+
+	TLegend *leg = new TLegend(0.56, 0.75, 0.94, 0.93, "", "brNDC");
+	leg->SetBorderSize(0);
+	leg->SetFillColor(0);
+	leg->SetTextFont(42);
+	leg->SetHeader("|#eta^{Jet}| < 1.2");
+ 	leg->AddEntry(hMCRes,"MC truth","P");
+ 	leg->AddEntry(hDummy,par_->labelPtBin(bin,1),"L");
+ 	leg->AddEntry(hFitRes,"Fit result","L");
+ 	leg->AddEntry(hDummy,par_->labelPtBin(bin,0),"L");
+
+// 	leg->AddEntry(hMCRes,"MC truth  "+par_->labelPtBin(bin,1),"P");
+// 	leg->AddEntry(hFitRes,"Fit result  "+par_->labelPtBin(bin,0),"L");
+
+	leg->Draw("sames");
+
 	
+
 	if( logY ) gPad->SetLogy();
 	
 	// Write Canvas to fiel
@@ -679,6 +838,7 @@ namespace resolutionFit {
 	// Clean up
 	delete hMCRes;
 	delete hFitRes;
+	delete hDummy;
 	if( hFitResCore ) delete hFitResCore;
 	delete txt;
 	delete leg;
@@ -830,7 +990,7 @@ namespace resolutionFit {
     for(int slide = 0; slide < nSlides; ++slide) {
       oFile << "\n% --------------------------------------------------\n";
       oFile << "\\begin{frame}\n";
-      oFile << "  \\frametitle{MC closure in various \\pt bins (" << slide << ")}\n";
+      oFile << "  \\frametitle{MC closure in various \\pt bins (" << slide+1 << "/" << nSlides << ")}\n";
       oFile << "  \\vskip-0.7cm\n";
       oFile << "  \\begin{columns}[t] \n";
       for(int col = 0; col < 3; ++col) {
@@ -873,6 +1033,38 @@ namespace resolutionFit {
 	    oFile << "        \\includegraphics[width=\\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_Spectrum_PtBin" << ptBin << "} \n";
 	  } else if( col == 1 ) {
 	    oFile << "        \\includegraphics[width=\\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_MCClosure_PtBin" << ptBin << "} \n";
+	  }
+	  oFile << "      \\end{center} \n";
+	  oFile << "    \\end{column} \n";
+	}
+	oFile << "  \\end{columns} \n";
+	oFile << "\\end{frame} \n";
+      }
+      oFile.close();
+    }
+    else if( par_->respFuncType() == ResponseFunction::Gauss ) {
+      // Create slides of all fit results
+      name = par_->outNamePrefix();
+      name += "SlidesAllResults.tex";
+      std::ofstream oFile(name);
+
+      // Create slides with result plots
+      oFile << "% ----- All fit results ---------------------------" << std::endl;
+      int nSlides = nPtBins()/3;
+      if( nPtBins()%3 > 0 ) nSlides++;
+      for(int slide = 0; slide < nSlides; ++slide) {
+	oFile << "\n% --------------------------------------------------\n";
+	oFile << "\\begin{frame}\n";
+	oFile << "  \\frametitle{Fit results in various \\pt bins (" << slide+1 << "/" << nSlides << ")}\n";
+	oFile << "  \\vskip-1cm\n";
+	oFile << "  \\begin{columns}[T] \n";
+	for(int col = 0; col < 3; ++col) {
+	  oFile << "    \\begin{column}{0.3333\\textwidth} \n";
+	  oFile << "      \\begin{center} \n";
+	  int ptBin = 3*slide + col;
+	  if( ptBin < nPtBins() ) {
+	    oFile << "        \\includegraphics[width=\\textwidth]{figures/" << par_->outNamePrefix() << "ExtrapolatedPar0_PtBin" << ptBin << "}\\\\ \n";
+	    oFile << "        \\includegraphics[width=\\textwidth]{figures/" << par_->outNamePrefix() << "Spectrum_PtBin" << ptBin << "} \n";
 	  }
 	  oFile << "      \\end{center} \n";
 	  oFile << "    \\end{column} \n";

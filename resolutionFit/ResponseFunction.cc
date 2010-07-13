@@ -3,8 +3,23 @@
 #include <cassert>
 #include <cmath>
 
+#include "TRandom3.h"
+
 
 namespace resolutionFit {
+  ResponseFunction::ResponseFunction(Type type)
+    : type_(type) {
+    rand_ = new TRandom3(0);
+  }
+
+
+  
+  ResponseFunction::~ResponseFunction() {
+    delete rand_;
+  }
+
+
+
   double ResponseFunction::operator()(double x, const std::vector<double> &par) const {
     double f = 0.;
     if( type() == Gauss ) {
@@ -18,6 +33,10 @@ namespace resolutionFit {
     return f;
   }
 
+
+  double ResponseFunction::randomGauss(double mean, double sigma) const {
+    return rand_->Gaus(mean,sigma);
+  }
 
   int ResponseFunction::nPars() const {
     int n = 0;
