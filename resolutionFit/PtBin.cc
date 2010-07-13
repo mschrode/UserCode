@@ -1,4 +1,4 @@
-// $Id: PtBin.cc,v 1.11 2010/05/26 21:56:36 mschrode Exp $
+// $Id: PtBin.cc,v 1.12 2010/05/27 08:56:12 mschrode Exp $
 
 #include "PtBin.h"
 
@@ -84,6 +84,9 @@ namespace resolutionFit {
     name = "hPdfPtAsym_PtBin";
     name += ptBinIdx();
     hPdfPtAsym_ = parserStdSel->hist("hFitPtAsym_0",name);
+    name = "hPtGenAsym_PtBin";
+    name += ptBinIdx();
+    hPtGenAsym_ = parserStdSel->hist("hPtGenAsym_0",name);
 
     delete parserStdSel;
 
@@ -131,6 +134,7 @@ namespace resolutionFit {
     else if( name == "hPdfRes" ) h = static_cast<TH1D*>(hPdfRes_->Clone(newName));
     else if( name == "hPtAsym" ) h = static_cast<TH1D*>(hPtAsym_->Clone(newName));
     else if( name == "hPdfPtAsym" ) h = static_cast<TH1D*>(hPdfPtAsym_->Clone(newName));
+    else if( name == "hPtGenAsym" ) h = static_cast<TH1D*>(hPtGenAsym_->Clone(newName));
     else if( name == "hMCRes" ) h = static_cast<TH1D*>(hMCRes_->Clone(newName));
     else {
       std::cerr << "ERROR PtBin::getHist: No histogram of name '" << name << "'" << std::endl;

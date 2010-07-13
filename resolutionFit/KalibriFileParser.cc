@@ -1,4 +1,4 @@
-// $Id: KalibriFileParser.cc,v 1.5 2010/05/14 09:03:54 mschrode Exp $
+// $Id: KalibriFileParser.cc,v 1.6 2010/05/28 18:52:29 mschrode Exp $
 
 #include "KalibriFileParser.h"
 
@@ -30,6 +30,7 @@ namespace resolutionFit {
     hists_["hRespFit_0"] = 0;
     hists_["hPtAsym_0"] = 0;
     hists_["hFitPtAsym_0"] = 0;
+    hists_["hPtGenAsym_0"] = 0;
 
     // Parse file
     if( parse(fileName) ) exit(-1);
