@@ -48,6 +48,8 @@ namespace resolutionFit {
 
     void plotExtrapolation() const;
     void plotPtAsymmetryBins() const;
+    void plotAsymmetrySlopes() const;
+    void plotPtGenAsymmetry() const;
     void plotResolution() const;
     void plotResolutionBins() const;
     void plotSpectra() const;

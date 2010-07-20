@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.5 2010/05/28 18:52:29 mschrode Exp $
+// $Id: Parameters.h,v 1.6 2010/06/09 17:50:59 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -17,7 +17,7 @@ namespace resolutionFit {
   //!
   //! \author Matthias Schroeder
   //! \date 2010/05/15
-  //! $Id: Parameters.h,v 1.5 2010/05/28 18:52:29 mschrode Exp $
+  //! $Id: Parameters.h,v 1.6 2010/06/09 17:50:59 mschrode Exp $
   // --------------------------------------------
   class Parameters {
   public:
@@ -72,7 +72,7 @@ namespace resolutionFit {
 
     ResponseFunction::Type respFuncType() const { return respFunc_->type(); }
     const ResponseFunction *respFunc() const { return respFunc_; }
-    int nFittedPars() const { respFunc_->nPars(); }
+    int nFittedPars() const { return respFunc_->nPars()-1; }
     bool isRelParValue(int parIdx) const;
     TString parLabel(int parIdx) const;
     TString parAxisLabel(int parIdx) const;
@@ -106,6 +106,7 @@ namespace resolutionFit {
     TString labelJetAlgo() const;
     TString labelLumi() const;
     TString labelPtBin(int ptBin, int type) const;
+    TString labelPt3Cut(int ptBin) const;
     TString xAxisTitleResponse() const;
     TString yAxisTitleResponse() const;
     bool extendedLegend() const { return extendedLegend_; }

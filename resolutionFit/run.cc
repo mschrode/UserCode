@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.17 2010/06/09 17:50:59 mschrode Exp $
+// $Id: run.cc,v 1.18 2010/07/13 09:16:03 mschrode Exp $
 
 #ifndef RUN_RESOLUTION_FIT
 #define RUN_RESOLUTION_FIT
@@ -23,8 +23,8 @@ int main(int argc, char *argv[]) {
 
   if( argc > 2 ) {
     // Set style
-    //util::StyleSettings::presentationNoTitle();
-    util::StyleSettings::paperNoTitle();
+    util::StyleSettings::presentationNoTitle();
+    //util::StyleSettings::paperNoTitle();
     //util::StyleSettings::cms();
 
     gErrorIgnoreLevel = 1001;        // Do not print ROOT message if eps file has been created
@@ -211,6 +211,8 @@ int main(int argc, char *argv[]) {
     if( respType == "Gauss" ) fit->plotResolution();
     //fit->plotResolutionBins();
     fit->plotPtAsymmetryBins();
+    //    fit->plotPtGenAsymmetry();
+    //fit->plotAsymmetrySlopes();
     fit->plotSpectra();
     //fit->plotSystematicUncertainties();
     fit->plotMCClosure();

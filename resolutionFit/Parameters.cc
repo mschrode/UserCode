@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.6 2010/06/09 17:50:59 mschrode Exp $
+// $Id: Parameters.cc,v 1.7 2010/07/13 09:12:37 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -168,6 +168,13 @@ namespace resolutionFit {
 				 ptMin(ptBin),labelMeas().Data(),ptMax(ptBin));
     else if( type == 1 ) sprintf(label,"%.0f < p^{%s}_{T} < %.0f GeV",
 				 ptMin(ptBin),labelTruth().Data(),ptMax(ptBin));    
+    return label;
+  }
+
+
+  TString Parameters::labelPt3Cut(int ptBin) const {
+    char label[50];
+    sprintf(label,"p^{rel}_{T,3} < %.2f",pt3CutValue(ptBin));
     return label;
   }
 

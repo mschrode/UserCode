@@ -23,6 +23,7 @@ namespace resolutionFit {
     int nCutValues() const { return cutVar_.at(0)->nCutValues(); }
     double cutValue(int cutVarIdx) const { return cutVar_.at(0)->cutValue(cutVarIdx); }
     double fittedValue(int parIdx, int cutVarIdx) const { return cutVar_.at(parIdx)->fittedValue(cutVarIdx); }
+    double fittedValueUncert(int parIdx, int cutVarIdx) const { return cutVar_.at(parIdx)->uncert(cutVarIdx); }
     double extrapolatedValue(int parIdx) const { return extrapolatedVal_.at(parIdx); }
     double uncertDown(int parIdx) const { return uncert_.at(parIdx)->down(); }
     double uncertUp(int parIdx) const { return uncert_.at(parIdx)->up(); }
@@ -33,6 +34,8 @@ namespace resolutionFit {
     double uncertSystUp(int parIdx) const { return uncert_.at(parIdx)->up(1); }
     const Uncertainty *uncertSyst(int parIdx) const { return uncert_.at(parIdx)->uncert(1); }
     int nUncertSyst(int parIdx) const { return uncert_.at(parIdx)->uncert(1)->nUncerts(); }
+    double ptAsym(int cutVarIdx) const { return cutVar_.at(0)->ptAsym(cutVarIdx); }
+    double ptAsymUncert(int cutVarIdx) const { return cutVar_.at(0)->ptAsymUncert(cutVarIdx); }
     double meanPt() const { return meanPt_; }
     double meanPtUncert() const { return meanPtUncert_; }
     double ptMin() const { return par_->ptMin(); }
