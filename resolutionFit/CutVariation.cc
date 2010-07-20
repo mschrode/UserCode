@@ -1,4 +1,4 @@
-// $Id: CutVariation.cc,v 1.11 2010/05/28 18:52:29 mschrode Exp $
+// $Id: CutVariation.cc,v 1.12 2010/06/02 13:47:18 mschrode Exp $
 
 #include "CutVariation.h"
 #include "KalibriFileParser.h"
@@ -39,8 +39,17 @@ namespace resolutionFit {
       }
       statUncert = sqrt( statUncert*statUncert + mcStatUncert_*mcStatUncert_ );
       Uncertainty *uncert = new Uncertainty("Statistical uncertainty",statUncert);
+
+      // Fit pt asymmetry
+      TH1 *hPtAsym = parser->hist("hPtAsym_0","CutVariation:PtAsym");
+      hPtAsym->Fit("gaus","0QIR","",hPtAsym->GetMean()-1.5*hPtAsym->GetRMS(),hPtAsym->GetMean()+1.5*hPtAsym->GetRMS());
+      double ptAsym = hPtAsym->GetFunction("gaus")->GetParameter(2);
+      double ptAsymUncert = hPtAsym->GetFunction("gaus")->GetParError(2);
+      delete hPtAsym;
+
       delete parser;
-      varPoints_[i] = new VariationPoint(fittedValue,uncert,cutValue(i));
+
+      varPoints_[i] = new VariationPoint(fittedValue,uncert,cutValue(i),ptAsym,ptAsymUncert);
     }
     // Create graph of varied values
     createTGraph();
@@ -148,11 +157,16 @@ namespace resolutionFit {
   }
 
 
+  CutVariation::VariationPoint::VariationPoint(double fitValue, const Uncertainty *uncert, double cutValue,
+					       double ptAsym, double ptAsymUncert)
+    : fitValue_(fitValue), uncert_(uncert), cutValue_(cutValue),
+      ptAsym_(ptAsym), ptAsymUncert_(ptAsymUncert) {};
+
   CutVariation::VariationPoint::VariationPoint(double fitValue, const Uncertainty *uncert, double cutValue)
-    : fitValue_(fitValue), uncert_(uncert), cutValue_(cutValue) {};
+    : fitValue_(fitValue), uncert_(uncert), cutValue_(cutValue), ptAsym_(0.), ptAsymUncert_(0.) {};
 
   CutVariation::VariationPoint::VariationPoint()
-    : fitValue_(0.), uncert_(new Uncertainty()), cutValue_(0.) {};
+    : fitValue_(0.), uncert_(new Uncertainty()), cutValue_(0.), ptAsym_(0.), ptAsymUncert_(0.) {};
 
   CutVariation::VariationPoint::~VariationPoint() {
     delete uncert_;

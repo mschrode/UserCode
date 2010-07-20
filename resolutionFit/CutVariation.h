@@ -30,6 +30,8 @@ namespace resolutionFit {
     double uncert(int i) const { return varPoints_.at(i)->uncertUp(); }
     double extrapolatedValue() const { return (*extrapolatedPoint_)(); }
     double extrapolatedUncert() const { return extrapolatedPoint_->uncertUp(); }
+    double ptAsym(int i) const { return varPoints_.at(i)->ptAsym(); }
+    double ptAsymUncert(int i) const { return varPoints_.at(i)->ptAsymUncert(); }
     double meanPt() const { return meanPt_; }
 
     TF1 *getTF1(const TString &name) const;
@@ -43,17 +45,23 @@ namespace resolutionFit {
     public:
       VariationPoint();
       VariationPoint(double fitValue, const Uncertainty *uncert, double cutValue);
+      VariationPoint(double fitValue, const Uncertainty *uncert, double cutValue,
+		     double ptAsym, double ptAsymUncert);
       ~VariationPoint();
       
       double operator()() const { return fitValue_; }
       double uncertDown() const { return uncert_->down(); }
       double uncertUp() const { return uncert_->up(); }
       double cutValue() const { return cutValue_; }
+      double ptAsym() const { return ptAsym_; }
+      double ptAsymUncert() const { return ptAsymUncert_; }
       
     private:
       const double fitValue_;
       const Uncertainty *uncert_;
       const double cutValue_;
+      const double ptAsym_;
+      const double ptAsymUncert_;
     };
 
     const Parameters::PtBinParameters *par_;
