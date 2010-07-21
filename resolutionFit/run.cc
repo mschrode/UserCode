@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.18 2010/07/13 09:16:03 mschrode Exp $
+// $Id: run.cc,v 1.19 2010/07/20 14:08:38 mschrode Exp $
 
 #ifndef RUN_RESOLUTION_FIT
 #define RUN_RESOLUTION_FIT
@@ -71,8 +71,8 @@ int main(int argc, char *argv[]) {
       if( etaBin == 0 ) {
 	std::cout << "Setting up parameters for eta bin " << etaBin << std::endl;
 	ptBinEdges.clear();
-	ptBinEdges.push_back(80.);
-	ptBinEdges.push_back(100.);
+// 	ptBinEdges.push_back(80.);
+// 	ptBinEdges.push_back(100.);
 	ptBinEdges.push_back(120.);
 	ptBinEdges.push_back(140.);
 	ptBinEdges.push_back(170.);
@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
       
 	inNamePrefix += "Eta0_";
 
-	par = new resolutionFit::Parameters(0.,1.2,inNamePrefix,ptBinEdges,0,12,outNamePrefix+"Eta0_",
+	par = new resolutionFit::Parameters(0.,1.2,inNamePrefix,ptBinEdges,2,12,outNamePrefix+"Eta0_",
 					    resolutionFit::ResponseFunction::Gauss,verbosity);
 	par->setTrueGaussResPar(1.88,1.205,0.0342);
 	
@@ -207,15 +207,15 @@ int main(int argc, char *argv[]) {
     resolutionFit::FittedResolution *fit = new resolutionFit::FittedResolution(ptBins,par);
 
     // Plots
-    fit->plotExtrapolation();
-    if( respType == "Gauss" ) fit->plotResolution();
+    //fit->plotExtrapolation();
+    //if( respType == "Gauss" ) fit->plotResolution();
     //fit->plotResolutionBins();
     fit->plotPtAsymmetryBins();
     //    fit->plotPtGenAsymmetry();
     //fit->plotAsymmetrySlopes();
-    fit->plotSpectra();
+    //fit->plotSpectra();
     //fit->plotSystematicUncertainties();
-    fit->plotMCClosure();
+    //fit->plotMCClosure();
     //fit->plotCrystalBallTest();
     
     // Print

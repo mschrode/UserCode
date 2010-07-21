@@ -218,7 +218,9 @@ namespace resolutionFit {
 	name += d;
 	hAsymPred[d] = static_cast<TH1D*>(hPtAsym->Clone(name));
 	hAsymPred[d]->Reset();
-	hAsymPred[d]->SetLineColor(util::StyleSettings::color(d));
+	//	if( d > 0 ) hAsymPred[d]->SetLineColor(util::StyleSettings::color(d%2+1));
+	if( d == 1 || d == 3 || d == 5 ) hAsymPred[d]->SetLineColor(2);
+	else if( d == 2 || d == 4 || d == 6 ) hAsymPred[d]->SetLineColor(4);
 	hAsymPred[d]->SetLineWidth(lineWidth_);
 
 	name = "hPtAsymPredRatio";
@@ -238,15 +240,14 @@ namespace resolutionFit {
       hAsymPredGaussRatio->SetLineColor(hAsymPredGauss->GetLineColor());
       hAsymPredGaussRatio->SetMarkerStyle(24);
 
-      std::vector<double> varFac(nDists);
-      varFac[0] = 1.;
+      std::vector<double> varFac(nDists,1.);
       for(int d = 1; d < nDists; ++d) {
-	if( d == 1 )      varFac[d] = 1.3;
-	else if( d == 2 ) varFac[d] = 0.7;
-	else if( d == 3 ) varFac[d] = 1.3;
-	else if( d == 4 ) varFac[d] = 0.7;
-	else if( d == 5 ) varFac[d] = 1.3;
-	else if( d == 6 ) varFac[d] = 0.7;
+	if( d == 1 )      varFac[d] = 1./(1.-0.2);
+	else if( d == 2 ) varFac[d] = (1.-0.2);
+ 	else if( d == 3 ) varFac[d] = 1./(1.-0.5);
+ 	else if( d == 4 ) varFac[d] = (1.-0.5);
+	else if( d == 5 ) varFac[d] = 1./(1.-0.5);
+	else if( d == 6 ) varFac[d] = (1.-0.5);
       }
 
       std::vector<double> pars;
@@ -254,7 +255,6 @@ namespace resolutionFit {
       for(int parIdx = 0; parIdx < par_->nFittedPars(); ++parIdx) {
 	pars.push_back((*it)->fittedValue(parIdx,2));
       }
-      std::vector<double> parsTmp = pars;
       std::vector<double> parsGauss(2,1.);
       parsGauss[1] = pars[1];
       int nABins = 200;
@@ -268,7 +268,8 @@ namespace resolutionFit {
 	hAsymPred[0]->Fill(a,pdfA);
 	hAsymPredRatio[0]->Fill(a,pdfA);
 	for(int d = 1; d < nDists; ++d) {
-	  int parIdx = (d-1) / 2;
+	  int parIdx = (d-1)/2 + 1;
+	  std::vector<double> parsTmp = pars;
 	  parsTmp[parIdx] = varFac[d]*pars[parIdx];
 	  double pdfA = par_->respFunc()->pdfAsymmetry(a,parsTmp);
 	  hAsymPred[d]->Fill(a,pdfA);
@@ -404,9 +405,10 @@ namespace resolutionFit {
       legComp->AddEntry(hAsymPred[0],"Prediction ("+par_->respFunc()->typeLabel()+")","L");
 
       // Ratio with fitted parameters only
-      TLegend *legRatio = util::LabelFactory::createLegendCol(hasGaussCore ? 2 : 1,0.5);
+      //      TLegend *legRatio = util::LabelFactory::createLegendCol(hasGaussCore ? 2 : 1,0.5);
+      TLegend *legRatio = util::LabelFactory::createLegendCol(1,0.5);
       legRatio->AddEntry(hAsymPredRatio[0],par_->respFunc()->typeLabel(),"P");
-      if( hasGaussCore ) legRatio->AddEntry(hAsymPredGaussRatio,"Gauss","P");
+      //      if( hasGaussCore ) legRatio->AddEntry(hAsymPredGaussRatio,"Gauss","P");
 
       // For prediction and ratio with varied parameters
       int nVars = par_->nFittedPars();
@@ -417,21 +419,23 @@ namespace resolutionFit {
       TH1 *hDummy = new TH1D("hDummy","",1,0,1);
       hDummy->SetLineColor(0);
       for(int v = 0; v < nVars; ++v) {
+	double varUp = 100.*(1. - 1./varFac[1+2*v]);
+	double varDown = 100.*(1. - varFac[2+2*v]);
 	legsPred[v] = util::LabelFactory::createLegendCol(4,0.5);
 	legsPred[v]->AddEntry(hDummy,"Prediction ("+par_->respFunc()->typeLabel()+")","L");
 	legsPred[v]->AddEntry(hAsymPred[0],"Fitted parameters","L");
 	char label[50];
-	sprintf(label,"%s: +%.0f%%",(par_->parLabel(v)).Data(),100.*(varFac[1+2*v]-1.));
+	sprintf(label,"%s: + %.0f %%",(par_->parLabel(v)).Data(),varUp);
 	legsPred[v]->AddEntry(hAsymPred[1+2*v],label,"L");
-	sprintf(label,"%s: -%.0f%%",(par_->parLabel(v)).Data(),100.*(1.-varFac[2+2*v]));
+	sprintf(label,"%s: - %.0f %%",(par_->parLabel(v)).Data(),varDown);
 	legsPred[v]->AddEntry(hAsymPred[2+2*v],label,"L");
 
 	legsRatio[v] = util::LabelFactory::createLegendCol(4,0.5);
 	legsRatio[v]->AddEntry(hDummy,par_->respFunc()->typeLabel(),"L");
 	legsRatio[v]->AddEntry(hAsymPredRatio[0],"Fitted parameters","P");
-	sprintf(label,"%s: +%.0f%%",(par_->parLabel(v)).Data(),100.*(varFac[1+2*v]-1.));
+	sprintf(label,"%s: + %.0f %%",(par_->parLabel(v)).Data(),varUp);
 	legsRatio[v]->AddEntry(hAsymPredRatio[1+2*v],label,"P");
-	sprintf(label,"%s: -%.0f%%",(par_->parLabel(v)).Data(),100.*(1.-varFac[2+2*v]));
+	sprintf(label,"%s: - %.0f %%",(par_->parLabel(v)).Data(),varDown);
 	legsRatio[v]->AddEntry(hAsymPredRatio[2+2*v],label,"P");
       }
 
@@ -559,8 +563,7 @@ namespace resolutionFit {
 	//hAsymSmear->Draw("Hsame");
 	hPtAsym->Draw("PE1same");
 	txt->Draw("same");
-	legMeas->Draw("same");
-	legsPred[v]->Draw("same");
+	legsRatio[v]->Draw("same");
 	name = par_->outNamePrefix();
 	name += "PtAsymmetryRatio_Var";
 	name += v;
@@ -1622,12 +1625,14 @@ namespace resolutionFit {
 
 
   void FittedResolution::createSlides() const {
+
+    // ----- Create slides with MC closure plots ------------------------------------
+
     // Open file
     TString name = par_->outNamePrefix();
     name += "SlidesMCClosure.tex";
     std::ofstream oFile(name);
-
-    // Create slides with MC closure plots
+    // Parse tex-code
     oFile << "% ----- MC closure plots ---------------------------" << std::endl;
     int nSlides = nPtBins()/6;
     if( nPtBins()%6 > 0 ) nSlides++;
@@ -1654,8 +1659,11 @@ namespace resolutionFit {
     }
     oFile.close();
 
+
+
+    // ----- Create slides of all fit results ----------------------------------------
+
     if( par_->respFuncType() == ResponseFunction::CrystalBall ) {
-      // Create slides of all fit results
       name = par_->outNamePrefix();
       name += "SlidesAllResults.tex";
       std::ofstream oFile(name);
@@ -1718,6 +1726,54 @@ namespace resolutionFit {
       }
       oFile.close();
     }
+
+
+
+
+    // ----- Create slides with asymmetry distributions ---------------------------------
+
+    // Create slides of asymmetry distributions
+    name = par_->outNamePrefix();
+    name += "SlidesAsymDistributions.tex";
+    oFile.open(name);
+
+    oFile << "\n\n\n% ----- Asymmetry distributions --------------------" << std::endl;
+    for(int d = 0; d < par_->nFittedPars()+2; d++) {
+      if( d == 0 ) oFile << "\n% ------- Linear scale -----------------------------" << std::endl;
+      else if( d == 1 ) oFile << "\n% ------- Log scale --------------------------------" << std::endl;
+      else oFile << "\n% ------- Variation par " << d-2 << "--------------------------" << std::endl;
+      nSlides = nPtBins()/3;
+      if( nPtBins()%3 > 0 ) nSlides++;
+      for(int slide = 0; slide < nSlides; ++slide) {
+	oFile << "\n% --------------------------------------------------\n";
+	oFile << "\\begin{frame}\n";
+	oFile << "  \\frametitle{Measured and predicted asymmetry ";
+	if( d == 1 ) oFile << "-- log ";
+	else if( d > 1 ) oFile << " -- varied $" << par_->parLabelTex(d-2) << "$ ";
+	oFile << "(" << slide+1 << "/" << nSlides << ")}\n";
+	oFile << "  \\begin{columns}[T]\n";
+	for(int col = 0; col < 3; ++col) {
+	  oFile << "    \\begin{column}{0.3333\\textwidth}\n";
+	  oFile << "    \\centering\n";
+	  int ptBin = 3*slide + col;
+	  if( ptBin < nPtBins() ) {
+	    // Asymmetry distribution
+	    oFile << "      \\includegraphics[width=\\textwidth]{figures/" << par_->outNamePrefix() << "PtAsymmetry";
+	    if( d == 1 || (d > 1 && par_->respFuncType() == ResponseFunction::CrystalBall) ) oFile << "Log";
+	    if( d > 1 ) oFile << "_Var" << d-2;
+	    oFile << "_PtBin" << ptBin << "}\\\\ \n";
+	    // Ratio
+	    oFile << "      \\includegraphics[width=\\textwidth]{figures/" << par_->outNamePrefix() << "PtAsymmetryRatio";
+	    if( d > 1 ) oFile << "_Var" << d-2;
+	    oFile << "_PtBin" << ptBin << "}\\\\ \n";
+	  }
+	  oFile << "    \\end{column} \n";
+	}
+	oFile << "  \\end{columns} \n";
+	oFile << "\\end{frame} \n";
+      }
+    }
+    oFile.close();
   }
 
     
