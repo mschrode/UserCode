@@ -561,7 +561,6 @@ namespace resolutionFit {
 	hAsymPredRatio[2*v+2]->Draw("PE1same");
 	hAsymPredRatio[0]->Draw("PE1same");
 	//hAsymSmear->Draw("Hsame");
-	hPtAsym->Draw("PE1same");
 	txt->Draw("same");
 	legsRatio[v]->Draw("same");
 	name = par_->outNamePrefix();
