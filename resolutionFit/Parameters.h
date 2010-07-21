@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.6 2010/06/09 17:50:59 mschrode Exp $
+// $Id: Parameters.h,v 1.7 2010/07/20 14:08:38 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -17,7 +17,7 @@ namespace resolutionFit {
   //!
   //! \author Matthias Schroeder
   //! \date 2010/05/15
-  //! $Id: Parameters.h,v 1.6 2010/06/09 17:50:59 mschrode Exp $
+  //! $Id: Parameters.h,v 1.7 2010/07/20 14:08:38 mschrode Exp $
   // --------------------------------------------
   class Parameters {
   public:
@@ -75,6 +75,7 @@ namespace resolutionFit {
     int nFittedPars() const { return respFunc_->nPars()-1; }
     bool isRelParValue(int parIdx) const;
     TString parLabel(int parIdx) const;
+    TString parLabelTex(int parIdx) const;
     TString parAxisLabel(int parIdx) const;
 
     double etaMin() const { return etaMin_; }

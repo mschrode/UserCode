@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.7 2010/07/13 09:12:37 mschrode Exp $
+// $Id: Parameters.cc,v 1.8 2010/07/20 14:08:38 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -125,6 +125,18 @@ namespace resolutionFit {
     TString label = "";
     if( parIdx == 0 ) label = "#sigma / p_{T}";
     else if( parIdx == 1 ) label = "#alpha";
+    else if( parIdx == 2 ) label = "n";
+
+    return label;
+  }
+
+
+  TString Parameters::parLabelTex(int parIdx) const {
+    assert( parIdx >=0 && parIdx < nFittedPars() );
+
+    TString label = "";
+    if( parIdx == 0 ) label = "\\sigma / \\pt";
+    else if( parIdx == 1 ) label = "\\alpha";
     else if( parIdx == 2 ) label = "n";
 
     return label;
