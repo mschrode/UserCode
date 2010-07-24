@@ -1,4 +1,4 @@
-% $Id: Note_ResFit_QCDMC.tex,v 1.3 2010/07/08 14:32:36 mschrode Exp $
+% $Id: Note_ResFit_QCDMC.tex,v 1.4 2010/07/13 17:26:14 mschrode Exp $
 
 
 \section{Study with a QCD Monte Carlo Simulation}\label{sec:ResFit:QCDMC}
@@ -41,6 +41,9 @@ The jet \pt resolution is determined from Monte Carlo truth information, first, 
 \end{figure}
 The determination follows closely~\cite{bib:cmsan:mcjer}:
 In each event, the two jets with highest particle level jet \pt, \ptparticle, are selected and the response distributions \mbox{$\ptmeas / \ptparticle$} are recorded in different bins of \ptparticle and $\eta$ (the $\eta$ binning is listed in Table~\ref{tab:ResFit:QCDMC:MCTruthReso}).
+
+--- Define matching ??? ---
+
 The central part of each distribution --- defined by the interval of 1.5 standard deviations around the mean --- is fitted with a Gaussian.
 In each $\eta$ bin, the fitted Gaussian widths $\sigma$ are interpolated for different \pt by the usual parametrisation function~\eqref{eq:ResFit:ToyMC:Sigma}.
 The fitted Gaussian widths and the interpolation functions are shown in Fig.~\ref{fig:ResFit:QCDMC:MCTruthReso}; the corresponding parameter values are listed in Table~\ref{tab:ResFit:QCDMC:MCTruthReso}.
