@@ -1,20 +1,19 @@
-// $Id: $
+// $Id: HistOps.h,v 1.1 2009/05/04 14:22:16 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
 
+#include <iostream>
 #include <string>
+#include <sstream>
 #include <vector>
 
-#include <TCanvas.h>
-#include <TF1.h>
-#include <TFile.h>
-#include <TH1F.h>
-#include <cmath>
+#include "TH1.h"
+#include "TH1D.h"
+#include "TString.h"
+#include "TStyle.h"
 
-#include <TH2F.h>
-#include <TObject.h>
-#include <TString.h>
+#include "LabelFactory.h"
 
 namespace util
 {
@@ -26,24 +25,103 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: $
+  //!  $Id: HistOps.h,v 1.1 2009/05/04 14:22:16 mschrode Exp $
   class HistOps
   {
   public:
-    static void HistOps::DrawRatioPlot(TCanvas& can, const TH1F& h1, const TH1F& h2, TString drawOption, bool drawRatioError) { HistOps::DrawRatioPlotGeneric(can,h1,h2,drawOption,drawRatioError); } //!< Draw ratio plot of two histograms 
-    static void HistOps::DrawRatioPlot(TCanvas& can, const TH1F& h, const TF1& f, TString drawOption, bool drawRatioError) { HistOps::DrawRatioPlotGeneric(can,h,f,drawOption,drawRatioError); } //!< Draw ratio plot of a histogram and a function
-    static std::vector<TH1F*> HistOps::FitMean(const TH2F *h2, const std::string namePrefix, const std::string nameSuffix);
-    static TH1F* GetRelDiff(const TH1F *hBase, const TH1F* hist);
-    static std::vector<TH1F*> GetRelDiff(const TH1F *hBase, const std::vector<TH1F*> hists);
-    static int WriteToRootFile(const std::vector<TH1F*>& hists, TString fileName);
+    // -------------------------------------------------------------------------------------
+    static TH1D *createTH1D(const TString &name, int n, double xMin, double xMax, const TString &title) {
+      return new TH1D(name,title,n,xMin,xMax);
+    }
 
-    HistOps() {;}   //!< Default constructor
-    ~HistOps() {;}  //!< Destructor
+
+    // -------------------------------------------------------------------------------------
+    static TH1D *createTH1D(const TString &name, int n, double xMin, double xMax, const TString &xTitle, const TString &xUnit, const TString &yTitle, bool norm = false) {
+      // create histogram without axis label
+      TH1D *h = createTH1D(name,n,xMin,xMax,"");
+
+      // x axis label
+      h->SetXTitle(xUnit.Length()==0 ? xTitle : xTitle+" ("+xUnit+")");
+
+      // y axis label
+      TString yAxisTitle;
+      if( norm ) yAxisTitle += "1 / N  ";
+      if( yTitle == "jets" || yTitle == "events" ) {
+	if( yTitle == "jets" )        yAxisTitle += "Number of Jets / ";
+	else if( yTitle == "events" ) yAxisTitle += "Number of Events / ";
+	yAxisTitle += doubleToTString(h->GetBinWidth(1));
+	if( xUnit.Length() ) yAxisTitle += " "+xUnit;
+      } else {
+	yAxisTitle = yTitle;
+      }
+      h->SetYTitle(yAxisTitle);
+
+      return h;
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static void findYRange(const TH1 *h, double& min, double& max) {
+      min = h->GetMinimum();
+      max = h->GetMaximum();
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static void setYRange(TH1 *h, double cMin = 1., double cMax = 1., double minLimit = 3E-8) {
+      double min = 0.;
+      double max = 0.;
+      findYRange(h,min,max);
+      min *= cMin;
+      max *= cMax;
+      if( min < minLimit ) min = minLimit;
+      h->GetYaxis()->SetRangeUser(min,max);
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static void setYRange(TH1 *h, int nLabelLines) {
+      double min = 0.;
+      double max = 0.;
+      findYRange(h,min,max);
+      double padHeight = 1. - gStyle->GetPadTopMargin() - gStyle->GetPadBottomMargin();
+      double labelHeight = util::LabelFactory::lineHeight()*(0.5+nLabelLines);
+      max = max + labelHeight/padHeight*(max-min)/(1.-labelHeight/padHeight);
+      h->GetYaxis()->SetRangeUser(min,max);
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static void normHist(TH1 *h, const TString &option = "") { 
+      if( h->Integral(option) ) h->Scale(1./h->Integral(option)); 
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static void normHist(TH1 *h, double min, double max, const TString &option = "") { 
+      double norm = h->Integral(h->FindBin(min),h->FindBin(max),option);
+      if( norm ) h->Scale(1./norm);
+    }
+
+
+
+
+    //    static createRatioPlot();
 
 
   private:
-    static void DrawRatioPlotGeneric(TCanvas& can, const TH1F& h1, const TObject& h2, TString drawOption, bool drawRatioError);
-    static int WriteToRootFileGeneric(const std::vector<TObject*>& obj, TString fileName);
+    // -------------------------------------------------------------------------------------
+    static std::string toString(double d) {
+      std::stringstream ss;
+      ss << d;
+      return ss.str();
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static TString doubleToTString(double d) {
+      return toString(d).c_str();
+    }
   };
 }
 #endif
