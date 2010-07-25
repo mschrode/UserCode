@@ -71,7 +71,7 @@ namespace util {
     }
 
   private:
-    static double cornerCoordinates(int nEntries, double width, double lineHgt, double &x0, double &y0, double &x1, double &y1) {
+    static void cornerCoordinates(int nEntries, double width, double lineHgt, double &x0, double &y0, double &x1, double &y1) {
       double margin = 0.04;
       x0 = gStyle->GetPadLeftMargin()+margin;
       x1 = 1.-(gStyle->GetPadRightMargin()+margin);
