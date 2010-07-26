@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.7 2010/05/28 18:52:29 mschrode Exp $
+# $Id: Makefile,v 1.8 2010/06/02 13:48:21 mschrode Exp $
 
 ROOTLIBS   = $(shell root-config --libs) -lMinuit
 ROOTCFLAGS = $(shell root-config --cflags)
@@ -7,7 +7,7 @@ CFLAG      = -I $(ROOTCFLAGS)
 LFLAG      = $(ROOTLIBS)
 
 UTILDIR = ./../util
-UTIL    = $(UTILDIR)/LabelFactory.h $(UTILDIR)/StyleSettings.h
+UTIL    = $(UTILDIR)/LabelFactory.h $(UTILDIR)/StyleSettings.h $(UTILDIR)/HistOps.h
 
 OBJ     = CutVariation.o FittedResolution.o KalibriFileParser.o PtBin.o Parameters.o ResponseFunction.o Uncertainty.o run.o
 

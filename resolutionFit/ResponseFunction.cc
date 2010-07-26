@@ -78,26 +78,6 @@ namespace resolutionFit {
   }
 
 
-//   double ResponseFunction::pdfAsymmetry(double a, Type type, const std::vector<double> &par) const {
-//     double asym = 0.;
-//     if( a == 0 ) {
-//       std::cerr << "WARNING: A = 0" << std::endl;
-//     } else {
-//       for(int n = 0; n < nBinsIntegration_; ++n) {
-// 	double z = zMinIntegration_+(n+0.5)*deltaZIntegration_;
-// 	if( z == 0 ) {
-// 	  std::cerr << "WARNING: z = 0" << std::endl;
-// 	  continue; 
-// 	}
-// 	asym += pdf((z+z/a)/2.,type,par)*pdf((z/a-z)/2.,type,par)*std::abs(z);
-//       }
-//       asym *= deltaZIntegration_/2./a/a;
-//     }
-//     return asym;
-//   }
-
-
-
   double ResponseFunction::pdfAsymmetry(double a, Type type, const std::vector<double> &par) const {
     double h = zMaxIntegration_-zMinIntegration_;
     double asym = 0.;   

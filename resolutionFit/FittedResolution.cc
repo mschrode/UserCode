@@ -18,6 +18,7 @@
 
 #include "ResponseFunction.h"
 
+#include "../util/HistOps.h"
 #include "../util/LabelFactory.h"
 #include "../util/StyleSettings.h"
 
@@ -184,7 +185,7 @@ namespace resolutionFit {
 
 
   void FittedResolution::plotPtAsymmetryBins() const {
-    std::cout << "Plotting pt asymmetry distribtuions" << std::endl;
+    std::cout << "Plotting pt asymmetry distributions" << std::endl;
 
     TRandom3 *rand = new TRandom3(0);
     bool hasGaussCore = (par_->respFuncType() == ResponseFunction::CrystalBall) ||
@@ -198,16 +199,15 @@ namespace resolutionFit {
       // Measured asymmetry distribution
       // for default cut on pt3rel
       TH1 *hPtAsym = (*it)->getHistPtAsym("plotPtAsymmetryBins:PtAsymmetry");
-      hPtAsym->SetMarkerStyle(20);
-      double xMin = -0.4;
-      double xMax = 0.4;
+      double xMin = -0.6;
+      double xMax = 0.6;
       double yMin = 0.;
       double yMinLog = 3E-4;
       double yMax = (1.6+4.*lineHeight_)*hPtAsym->GetMaximum();
       double yMaxLog = 800.*hPtAsym->GetMaximum();
-      hPtAsym->GetXaxis()->SetRangeUser(xMin,xMax);
+      util::HistOps::setAxisTitles(hPtAsym,"p_{T} asymmetry","","events",true);
+      hPtAsym->SetMarkerStyle(20);
       hPtAsym->GetYaxis()->SetRangeUser(yMin,yMax);
-      hPtAsym->GetYaxis()->SetTitle("1 / N  dN / dA");
 
       // Simulate asymmetry from fitted response
       int nDists = 1+2*par_->nFittedPars();
@@ -217,14 +217,15 @@ namespace resolutionFit {
 	TString name = "PtAsymPredBin";
 	name += d;
 	hAsymPred[d] = static_cast<TH1D*>(hPtAsym->Clone(name));
-	hAsymPred[d]->Reset();
+	hAsymPred[d]->SetMarkerStyle(0);
 	if( d == 0 ) hAsymPred[d]->SetLineColor(2);
 	else hAsymPred[d]->SetLineColor(util::StyleSettings::color(d%2+1));
 	hAsymPred[d]->SetLineWidth(lineWidth_);
+	hAsymPred[d]->GetXaxis()->SetRangeUser(xMin,xMax);
 
 	name = "hPtAsymPredRatio";
 	name += d;
-	hAsymPredRatio[d] = static_cast<TH1D*>(hPtAsym->Clone(name));
+	hAsymPredRatio[d] = static_cast<TH1D*>(hAsymPred[d]->Clone(name));
 	hAsymPredRatio[d]->SetMarkerStyle(20);
 	if( d == 0 ) {
 	  hAsymPredRatio[d]->SetMarkerColor(2);
@@ -281,8 +282,8 @@ namespace resolutionFit {
       }
 
       // Fill asymmetry prediction
-      int nABins = 200;//5000;
-      double deltaA = (xMax-xMin)/nABins;
+      int nABins = 5000;
+      double deltaA = hPtAsym->GetNbinsX()*hPtAsym->GetBinWidth(1)/nABins;
       int progress = 10;
       for(int aBin = 0; aBin < nABins; ++aBin) {
 	double a = xMin + (aBin+0.5)*deltaA;
@@ -304,6 +305,9 @@ namespace resolutionFit {
 	  hAsymPredGauss->Fill(a,pdfAGauss);
 	  hAsymPredGaussRatio->Fill(a,pdfAGauss);
 	}
+	double pdfAGaussSimple = par_->respFunc()->pdfGauss(a,parsGaussSimple);
+	hAsymPredGaussSimple->Fill(a,pdfAGaussSimple);
+	hAsymPredGaussSimpleRatio->Fill(a,pdfAGaussSimple);
 
 // 	// Report progress
 // 	if( 100*aBin/nABins > progress ) {
@@ -320,15 +324,17 @@ namespace resolutionFit {
 	hAsymPredGauss->Scale(1.*hAsymPredGauss->GetNbinsX()/hAsymPredGauss->GetEntries());
 	hAsymPredGaussRatio->Scale(1.*hAsymPredGaussRatio->GetNbinsX()/hAsymPredGaussRatio->GetEntries());
       }
+      hAsymPredGaussSimple->Scale(1.*hAsymPredGaussSimple->GetNbinsX()/hAsymPredGaussSimple->GetEntries());
+      hAsymPredGaussSimpleRatio->Scale(1.*hAsymPredGaussSimpleRatio->GetNbinsX()/hAsymPredGaussSimpleRatio->GetEntries());
 
-      for(int aBin = 1; aBin <= hAsymPredGaussSimple->GetNbinsX(); ++aBin) {
-	int minBin = hGaussSimpleTmp->FindBin(hAsymPredGaussSimple->GetXaxis()->GetBinLowEdge(aBin));
-	int maxBin = hGaussSimpleTmp->FindBin(hAsymPredGaussSimple->GetXaxis()->GetBinUpEdge(aBin));
-	double val = hGaussSimpleTmp->Integral(minBin,maxBin);//,"width");
-	val *= 1.*hAsymPredGaussSimple->GetNbinsX()/hGaussSimpleTmp->GetNbinsX();
-	hAsymPredGaussSimple->SetBinContent(aBin,val);
-	hAsymPredGaussSimpleRatio->SetBinContent(aBin,val);
-      }
+//       for(int aBin = 1; aBin <= hAsymPredGaussSimple->GetNbinsX(); ++aBin) {
+// 	int minBin = hGaussSimpleTmp->FindBin(hAsymPredGaussSimple->GetXaxis()->GetBinLowEdge(aBin));
+// 	int maxBin = hGaussSimpleTmp->FindBin(hAsymPredGaussSimple->GetXaxis()->GetBinUpEdge(aBin));
+// 	double val = hGaussSimpleTmp->Integral(minBin,maxBin);//,"width");
+// 	val *= 1.*hAsymPredGaussSimple->GetNbinsX()/hGaussSimpleTmp->GetNbinsX();
+// 	hAsymPredGaussSimple->SetBinContent(aBin,val);
+// 	hAsymPredGaussSimpleRatio->SetBinContent(aBin,val);
+//       }
 
       for(int aBin = 1; aBin <= hAsymPred[0]->GetNbinsX(); ++aBin) {
 	for(int d = 0; d < nDists; ++d) {
@@ -359,12 +365,11 @@ namespace resolutionFit {
       // ----- Smearing ------------------------------------------------
 
       // Histograms
-      TH1 *hAsymSmear = static_cast<TH1D*>(hPtAsym->Clone("PtAsymSmear"));
+      TH1 *hAsymSmear = static_cast<TH1D*>(hAsymPred[0]->Clone("PtAsymSmear"));
       hAsymSmear->Reset();
-      hAsymSmear->SetMarkerStyle(0);
       hAsymSmear->SetLineColor(4);
       hAsymSmear->SetLineWidth(lineWidth_);
-      TH1 *hAsymSmearRatio = static_cast<TH1D*>(hPtAsym->Clone("hPtAsymSmearRatio"));
+      TH1 *hAsymSmearRatio = static_cast<TH1D*>(hAsymPred[0]->Clone("hPtAsymSmearRatio"));
       hAsymSmearRatio->Reset();
       hAsymSmearRatio->SetMarkerStyle(20);
       hAsymSmearRatio->SetMarkerColor(hAsymSmear->GetLineColor());
@@ -435,9 +440,8 @@ namespace resolutionFit {
       // ----- Gaussian fit --------------------------------------------------------
 
       // Histograms
-      TH1 *hAsymGaussFit = static_cast<TH1D*>(hPtAsym->Clone("PtAsymGaussFit"));
+      TH1 *hAsymGaussFit = static_cast<TH1D*>(hAsymPred[0]->Clone("PtAsymGaussFit"));
       hAsymGaussFit->Reset();
-      hAsymGaussFit->SetMarkerStyle(0);
       hAsymGaussFit->SetLineColor(4);
       hAsymGaussFit->SetLineStyle(2);
       hAsymGaussFit->SetLineWidth(lineWidth_);

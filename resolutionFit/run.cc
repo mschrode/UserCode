@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.19 2010/07/20 14:08:38 mschrode Exp $
+// $Id: run.cc,v 1.20 2010/07/21 10:55:30 mschrode Exp $
 
 #ifndef RUN_RESOLUTION_FIT
 #define RUN_RESOLUTION_FIT
@@ -42,8 +42,11 @@ int main(int argc, char *argv[]) {
     TString respType = argv[1];
     int etaBin = atoi(argv[2]);
     if( respType == "Gauss" ) {
-      outNamePrefix = "ResFit_Spring10QCDFlat_Gauss_";
-      inNamePrefix = "~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_";
+      outNamePrefix = "ResFit_Spring10QCDDiJet_Gauss_";
+      inNamePrefix = "~/results/ResolutionFit/Gauss/Res_Spring10QCDDiJet_Gauss_";
+
+//       outNamePrefix = "ResFit_Spring10QCDFlat_Gauss_";
+//       inNamePrefix = "~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_";
 
 //       outNamePrefix = "ResFit_Spring10QCDFlat_GaussDown30It0_";
 //       inNamePrefix = "~/results/ResolutionFit/GaussDown30/Iteration0/resolutionSpring10_Gauss_";
@@ -71,8 +74,8 @@ int main(int argc, char *argv[]) {
       if( etaBin == 0 ) {
 	std::cout << "Setting up parameters for eta bin " << etaBin << std::endl;
 	ptBinEdges.clear();
-// 	ptBinEdges.push_back(80.);
-// 	ptBinEdges.push_back(100.);
+ 	ptBinEdges.push_back(80.);
+ 	ptBinEdges.push_back(100.);
 	ptBinEdges.push_back(120.);
 	ptBinEdges.push_back(140.);
 	ptBinEdges.push_back(170.);
@@ -88,7 +91,7 @@ int main(int argc, char *argv[]) {
       
 	inNamePrefix += "Eta0_";
 
-	par = new resolutionFit::Parameters(0.,1.2,inNamePrefix,ptBinEdges,2,12,outNamePrefix+"Eta0_",
+	par = new resolutionFit::Parameters(0.,1.2,inNamePrefix,ptBinEdges,0,12,outNamePrefix+"Eta0_",
 					    resolutionFit::ResponseFunction::Gauss,verbosity);
 	par->setTrueGaussResPar(1.88,1.205,0.0342);
 	
@@ -106,7 +109,7 @@ int main(int argc, char *argv[]) {
 // 	par->addPt3Cut(0.134675,inNamePrefix+"Rel3rdJet015_");
 	//par->addPt3Cut(0.174258,inNamePrefix+"Rel3rdJet020_");
 
-	par->addFileBaseNameMCStat(inNamePrefix+"Flat_");
+	//par->addFileBaseNameMCStat(inNamePrefix+"Flat_");
 
 	//par->addMCTruthBins(4,30,100,0.05);
 	//par->fitExtrapolatedSigma(true);
@@ -114,7 +117,7 @@ int main(int argc, char *argv[]) {
 	//	par->addStartOffset(1.005);
 	//par->fitRatio(true);
 
-	par->addFileBaseNameMCClosure("~/results/ResolutionFit/MCClosure/resolutionSpring10_Gauss_Eta0_MCClosure_");
+	//par->addFileBaseNameMCClosure("~/results/ResolutionFit/MCClosure/resolutionSpring10_Gauss_Eta0_MCClosure_");
 
      
       } else if( etaBin == 1 ) {
@@ -207,13 +210,13 @@ int main(int argc, char *argv[]) {
     resolutionFit::FittedResolution *fit = new resolutionFit::FittedResolution(ptBins,par);
 
     // Plots
-    //fit->plotExtrapolation();
-    //if( respType == "Gauss" ) fit->plotResolution();
+    fit->plotExtrapolation();
+    fit->plotResolution();
     //fit->plotResolutionBins();
     fit->plotPtAsymmetryBins();
     //    fit->plotPtGenAsymmetry();
     //fit->plotAsymmetrySlopes();
-    //fit->plotSpectra();
+    fit->plotSpectra();
     //fit->plotSystematicUncertainties();
     //fit->plotMCClosure();
     //fit->plotCrystalBallTest();
