@@ -14,7 +14,7 @@ namespace util {
       double height = 0.044;
       TString mode = "Presentation";
       if( mode.CompareTo(gStyle->GetTitle()) == 0 ) {
-	height = 0.05;
+	height = 0.052;
       }
       return height;
     }
@@ -24,7 +24,7 @@ namespace util {
       double y0 = 0.;
       double x1 = 0.;
       double y1 = 0.;
-      cornerCoordinates(nEntries,width,lineHgt,x0,y0,x1,y1);
+      cornerCoordinates(nEntries,width,1.1*lineHgt,x0,y0,x1,y1);
       TLegend *leg = new TLegend(x0,y0-yOffset,x1,y1-yOffset);
       leg->SetBorderSize(0);
       leg->SetFillColor(0);
@@ -55,13 +55,16 @@ namespace util {
     static TLegend *createLegendCol(int nEntries, double width, double lineHgt) {
       return createLegend(nEntries,width,0.,lineHgt);
     }
+    static TLegend *createLegendColWithOffset(int nEntries, double width, int yOffset) {
+      return createLegend(nEntries,width,1.16*lineHeight()*yOffset,lineHeight());
+    }
 
     static TPaveText *createPaveText(int nEntries, double width = 1., double lineHgt = -1) {
       double x0 = 0.;
       double y0 = 0.;
       double x1 = 0.;
       double y1 = 0.;
-      cornerCoordinates(nEntries,width,lineHgt>0 ? lineHgt : 1.13*lineHeight(),x0,y0,x1,y1);
+      cornerCoordinates(nEntries,width,lineHgt>0 ? lineHgt : lineHeight(),x0,y0,x1,y1);
       TPaveText *txt = new TPaveText(x0,y0,x1,y1,"NDC");
       txt->SetBorderSize(0);
       txt->SetFillColor(0);
