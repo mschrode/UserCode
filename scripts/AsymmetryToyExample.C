@@ -5,6 +5,7 @@
 #include "TCanvas.h"
 #include "TH1.h"
 #include "TH1D.h"
+#include "TMath.h"
 #include "TRandom3.h"
 
 #include "../util/HistOps.h"
@@ -13,9 +14,9 @@
 
 
 
-const int nEvts_ = 500000;
-const double aMin_ = -0.5;
-const double aMax_ = 0.5;
+const int nEvts_ = 50000;
+const double aMin_ = -0.2;
+const double aMax_ = 0.2;
 const int nABins_ = 5000;
 const double zMin_ = -1.;
 const double zMax_ = 1.;
@@ -40,7 +41,7 @@ void AsymmetryToyExample() {
 
 
   // Measured asymmetry distribution
-  TH1 *hMeas = util::HistOps::createTH1D("hMeas",31,aMin_,aMax_,"p_{T} asymmetry","","events");
+  TH1 *hMeas = util::HistOps::createTH1D("hMeas",21,aMin_,aMax_,"p_{T} asymmetry","","events");
   hMeas->SetMarkerStyle(20);
   for(int n = 0; n < nEvts_; ++n) {
     double m1 = random(pars);
@@ -50,49 +51,75 @@ void AsymmetryToyExample() {
       hMeas->Fill(asym);
     }
   }
+  TH1 *hMeas2 = static_cast<TH1D*>(hMeas->Clone("hMeas2"));
+  for(int aBin = 1; aBin <= hMeas2->GetNbinsX(); ++aBin) {
+    hMeas2->SetBinError(aBin,0.);
+  }
 
 
   // Predicted asymmetry distribution
   TH1 *hPred = static_cast<TH1D*>(hMeas->Clone("hPred"));
-  hPred->Reset();
-  hPred->SetMarkerStyle(0);
-  hPred->SetLineColor(2);
-  TH1 *hRatio = static_cast<TH1D*>(hPred->Clone("hRatio"));
-  hRatio->SetMarkerStyle(20);
-  hRatio->SetMarkerColor(hPred->GetLineColor());
-  hRatio->SetYTitle("Prediction / Measurement");
+hPred->Sumw2();
+hPred->Reset();
+hPred->SetMarkerStyle(0);
+hPred->SetLineColor(2);
+TH1 *hRatio = static_cast<TH1D*>(hPred->Clone("hRatio"));
+hRatio->SetMarkerStyle(20);
+hRatio->SetMarkerColor(hPred->GetLineColor());
+hRatio->SetYTitle("Prediction / Measurement");
+TH1 *hPred2 = static_cast<TH1D*>(hPred->Clone("hPred2"));
 
-  double deltaA = hMeas->GetNbinsX()*hMeas->GetBinWidth(1)/nABins_;
-  for(int aBin = 0; aBin < nABins_; ++aBin) {
-    double a = aMin_ + (aBin+0.5)*deltaA;
-    double pdfA = pdfAsymmetry(a,pars);
-    hPred->Fill(a,pdfA);
-    hRatio->Fill(a,pdfA);
-  }
-  for(int aBin = 1; aBin <= hRatio->GetNbinsX(); ++aBin) {
-    hRatio->SetBinError(aBin,0.);
-  }
-  hPred->Scale(1.*nEvts_*hMeas->GetBinWidth(1)*hPred->GetNbinsX()/hPred->GetEntries());
-  hRatio->Scale(1.*nEvts_*hMeas->GetBinWidth(1)*hRatio->GetNbinsX()/hRatio->GetEntries());
-  hRatio->Divide(hMeas);
+double deltaA = hMeas->GetNbinsX()*hMeas->GetBinWidth(1)/nABins_;
+for(int aBin = 0; aBin < nABins_; ++aBin) {
+  double a = aMin_ + (aBin+0.5)*deltaA;
+  double pdfA = pdfAsymmetry(a,pars);
+  hPred->Fill(a,pdfA);
+  hRatio->Fill(a,pdfA);
+  hPred2->Fill(a,pdfA);
+ }
+hPred->Scale(1.*nEvts_*hMeas->GetBinWidth(1)*hPred->GetNbinsX()/hPred->GetEntries());
+hRatio->Scale(1.*nEvts_*hMeas->GetBinWidth(1)*hRatio->GetNbinsX()/hRatio->GetEntries());
+hPred2->Scale(1.*nEvts_*hMeas2->GetBinWidth(1)*hPred2->GetNbinsX()/hPred2->GetEntries());
+for(int aBin = 1; aBin <= hRatio->GetNbinsX(); ++aBin) {
+  hPred->SetBinError(aBin,0.);
+  hRatio->SetBinError(aBin,0.);
+  hPred2->SetBinError(aBin,sqrt(hPred->GetBinContent(aBin)));
+ }
+hRatio->Divide(hMeas);
 
 
-  TCanvas *canAsym = new TCanvas("canAsym","Asymmetry",500,500);
-  canAsym->cd();
-  hPred->Draw("H");
-  hMeas->Draw("PE1same");
+TCanvas *canAsym = new TCanvas("canAsym","Asymmetry",500,500);
+canAsym->cd();
+hPred->Draw("H");
+hMeas->Draw("PE1same");
 
-  TCanvas *canRatio = new TCanvas("canRatio","Ratio",500,500);
-  canRatio->cd();
-  TH1 *hFrame = util::HistOps::createRatioFrame(hRatio,"Prediction / Measurement");
-  hFrame->Draw();
-  hRatio->Draw("PE1same");
+TCanvas *canRatio = new TCanvas("canRatio","Ratio",500,500);
+canRatio->cd();
+TH1 *hFrame = util::HistOps::createRatioFrame(hRatio,"Prediction / Measurement");
+hFrame->Draw();
+hRatio->Draw("PE1same");
 
-  TCanvas *canRatioTest = new TCanvas("canRatioTest","Ratio Test",500,500);
-  canRatioTest->cd();
-  TH1 *hRatioTest = util::HistOps::createRatioPlot(hPred,hMeas,"Prediction / Measurement");
-  hFrame->Draw();
-  hRatioTest->Draw("PE1same");
+TCanvas *canAsym2 = new TCanvas("canAsym2","Asym 2",500,500);
+canAsym2->cd();
+hPred2->Draw("HE1");
+hMeas2->Draw("Psame");
+
+TCanvas *canRatio2 = new TCanvas("canRatio2","Ratio 2",500,500);
+canRatio2->cd();
+TH1 *hRatio2 = util::HistOps::createRatioPlot(hPred2,hMeas2,"Prediction / Measurement");
+hFrame->Draw();
+hRatio2->Draw("PE1same");
+
+
+// Chi2 goodness-of-fit test
+double chi2 = 0.;
+for(int aBin = 1; aBin <= hPred2->GetNbinsX(); ++aBin) {
+  chi2 += (hMeas2->GetBinContent(aBin) - hPred2->GetBinContent(aBin))*(hMeas2->GetBinContent(aBin) - hPred2->GetBinContent(aBin))/(hPred2->GetBinContent(aBin));
+ }
+int ndof = hPred2->GetNbinsX() - 3; // Parameter mu, sigma, and normalisation (num entries)
+std::cout << "Chi2        = " << chi2 << std::endl;
+std::cout << "Chi2 / ndof = " << chi2 / ndof << std::endl;
+std::cout << "Prob        = " << TMath::Prob(chi2,ndof) << std::endl;
 }
 
 
@@ -154,7 +181,7 @@ double pdfAsymmetry(double a, const std::vector<double> &par) {
       asym *= (3.*h/16./a/a);                 
       
       if( asymOld ) eps = std::abs((asym - asymOld) / asymOld);
-	nIter++;
+      nIter++;
     }
   }
   
