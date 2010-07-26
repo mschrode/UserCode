@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.2 2010/07/25 20:45:56 mschrode Exp $
+// $Id: HistOps.h,v 1.3 2010/07/26 18:07:54 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -26,7 +26,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.2 2010/07/25 20:45:56 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.3 2010/07/26 18:07:54 mschrode Exp $
   class HistOps
   {
   public:
@@ -147,6 +147,7 @@ namespace util
       hFrame->SetLineStyle(2);
       hFrame->GetYaxis()->SetRangeUser(yMin,yMax);
       hFrame->GetYaxis()->SetTitle(yTitle);
+      hFrame->GetXaxis()->SetTitle(h->GetXaxis()->GetTitle());
       for(int bin = 1; bin <= hFrame->GetNbinsX(); ++bin) {
 	hFrame->SetBinContent(bin,1.);
 	hFrame->SetBinError(bin,0.);
