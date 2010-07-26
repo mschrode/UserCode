@@ -14,7 +14,7 @@ namespace util {
       double height = 0.044;
       TString mode = "Presentation";
       if( mode.CompareTo(gStyle->GetTitle()) == 0 ) {
-	height = 0.052;
+	height = 0.05;
       }
       return height;
     }
