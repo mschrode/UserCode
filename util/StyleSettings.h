@@ -96,14 +96,14 @@ namespace util {
 	}
       } else {
 	if( spaceForTitle ) {
-	  gStyle->SetPadTopMargin(0.1);
-	  gStyle->SetPadBottomMargin(0.23);
-	  gStyle->SetPadLeftMargin(0.19);
-	  gStyle->SetPadRightMargin(0.14);
-	} else {
-	  gStyle->SetPadTopMargin(0.05);
+	  gStyle->SetPadTopMargin(0.10);
 	  gStyle->SetPadBottomMargin(0.14);
-	  gStyle->SetPadLeftMargin(0.17);
+	  gStyle->SetPadLeftMargin(0.18);
+	  gStyle->SetPadRightMargin(0.04);
+	} else {
+	  gStyle->SetPadTopMargin(0.08);
+	  gStyle->SetPadBottomMargin(0.14);
+	  gStyle->SetPadLeftMargin(0.18);
 	  gStyle->SetPadRightMargin(0.04);
 	}
       }
