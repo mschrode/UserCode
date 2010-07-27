@@ -1,4 +1,4 @@
-//  $Id: $
+//  $Id: AsymmetryToyExample.C,v 1.4 2010/07/27 10:02:53 mschrode Exp $
 //
 //  Toy validation of pt asymmetry pdf
 // -------------------------------------------------------------------------------------
@@ -55,7 +55,7 @@ void AsymmetryToyExample() {
   TH1 *hResp = util::HistOps::createTH1D("hResp",31,0.,2.,"p^{meas}_{T} / p^{true}_{T}","","jets");
   hResp->SetMarkerStyle(20);
   for(int n = 0; n < nEvts_; ++n) {
-    double truth = rand_->Uniform(100.,150.);
+    double truth = 125.;//rand_->Uniform(500.,600.);
     double m1 = random(truth,parSig);
     double m2 = random(truth,parSig);
     hResp->Fill(m1/truth);
@@ -113,11 +113,11 @@ void AsymmetryToyExample() {
 
 
   // Draw histograms
-  TString name = "ToyMC_AsymPred_PtDepSigma_";
+  TString name = "ToyMC_AsymPred_ConstSigma_";
 
   TLegend *legResp = util::LabelFactory::createLegend(2);
-  legResp->AddEntry(hResp,"Toy MC,  #sigma(p^{true}_{T}),  p^{true}_{T} #in U(100,150)","P");
-  //legResp->AddEntry(hResp,"Toy MC,  #sigma = const,  p^{true}_{T} = 125","P");
+  //legResp->AddEntry(hResp,"Toy MC,  #sigma(p^{true}_{T}),  p^{true}_{T} #in U(500,600)","P");
+  legResp->AddEntry(hResp,"Toy MC,  #sigma = const,  p^{true}_{T} = 125","P");
   legResp->AddEntry(fResp,"Gaussian fit","L");
   util::HistOps::setYRange(hResp,2);
   TCanvas *canResp = new TCanvas("canResp","Response",500,500);
@@ -129,8 +129,8 @@ void AsymmetryToyExample() {
 
   TLegend *legAsym = util::LabelFactory::createLegend(3);
   legAsym->AddEntry(hMeas,"Toy MC measurement","P");
-  legAsym->AddEntry(hPred,"Prediction,  #bar{#sigma}","L");
-  //  legAsym->AddEntry(hPred,"Prediction,  #sigma","L");
+  //legAsym->AddEntry(hPred,"Prediction,  #bar{#sigma}","L");
+  legAsym->AddEntry(hPred,"Prediction,  #sigma","L");
   util::LabelFactory::addExtraLegLine(legAsym,"#chi^{2}/ndof = "+util::toTString(chi2/ndof,3)+",  Prob = "+util::toTString(TMath::Prob(chi2,ndof),3));
   util::HistOps::setYRange(hPred,3);
   TCanvas *canAsym = new TCanvas("canAsym","Asymmetry",500,500);
@@ -138,7 +138,7 @@ void AsymmetryToyExample() {
   hPred->Draw("H");
   hMeas->Draw("PE1same");
   legAsym->Draw("same");
-  canResp->SaveAs(name+"Asym.eps","eps");
+  canAsym->SaveAs(name+"Asym.eps","eps");
 
   TCanvas *canRatio = new TCanvas("canRatio","Ratio",500,500);
   canRatio->cd();
@@ -150,7 +150,7 @@ void AsymmetryToyExample() {
   hFrame->Draw();
   hRatio->Draw("PE1same");
   txtRatio->Draw("same");
-  canResp->SaveAs(name+"Ratio.eps","eps");
+  canRatio->SaveAs(name+"Ratio.eps","eps");
 }
 
 
