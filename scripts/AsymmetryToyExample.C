@@ -1,4 +1,4 @@
-//  $Id: AsymmetryToyExample.C,v 1.4 2010/07/27 10:02:53 mschrode Exp $
+//  $Id: AsymmetryToyExample.C,v 1.5 2010/07/27 10:48:15 mschrode Exp $
 //
 //  Toy validation of pt asymmetry pdf
 // -------------------------------------------------------------------------------------
@@ -50,7 +50,7 @@ void AsymmetryToyExample() {
   parSig.push_back(1.2);
   parSig.push_back(0.04);
 
-  TH1 *hMeas = util::HistOps::createTH1D("hMeas",21,aMin_,aMax_,"p_{T} asymmetry","","events");
+  TH1 *hMeas = util::HistOps::createTH1D("hMeas",31,aMin_,aMax_,"p_{T} asymmetry","","events");
   hMeas->SetMarkerStyle(20);
   TH1 *hResp = util::HistOps::createTH1D("hResp",31,0.,2.,"p^{meas}_{T} / p^{true}_{T}","","jets");
   hResp->SetMarkerStyle(20);
@@ -98,6 +98,19 @@ void AsymmetryToyExample() {
     hPred->SetBinContent(aBin,pdfA);
     hPred->SetBinError(aBin,sqrt(pdfA));
   }
+
+
+  double aMin = -1.;
+  double aMax = 1.;
+  int n = 5000;
+  double deltaA = (aMax-aMin)/n;
+  double pdfA = 0.;
+  for(int i = 0; i < n; ++i) {
+    double a = aMin + (i+0.5)*deltaA;
+    pdfA += pdfAsymmetry(a,meanSig);
+  }
+  pdfA *= deltaA;
+  std::cout << "Int(pdfA) = " << pdfA << std::endl;
 
 
   // Chi2 goodness-of-fit test
