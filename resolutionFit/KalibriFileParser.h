@@ -1,4 +1,4 @@
-// $Id: KalibriFileParser.h,v 1.4 2010/05/14 09:03:54 mschrode Exp $
+// $Id: KalibriFileParser.h,v 1.5 2010/05/26 21:56:34 mschrode Exp $
 
 #ifndef KALIBRI_FILE_PARSER_H
 #define KALIBRI_FILE_PARSER_H
@@ -36,12 +36,12 @@ namespace resolutionFit {
   //!
   //! \author Matthias Schroeder
   //! \date 2009/03/05
-  //! $Id: KalibriFileParser.h,v 1.4 2010/05/14 09:03:54 mschrode Exp $
+  //! $Id: KalibriFileParser.h,v 1.5 2010/05/26 21:56:34 mschrode Exp $
   // --------------------------------------------
   class KalibriFileParser {
   public:
     //! Constructor
-    KalibriFileParser(const TString &fileName, int verbose = 1);
+    KalibriFileParser(const TString &fileName, int verbose = 1, bool readFittedValues = true);
     //! Destructor
     ~KalibriFileParser();
 
@@ -74,6 +74,7 @@ namespace resolutionFit {
     typedef std::map<TString,TH1*>::const_iterator HistIt;
 
     const int verbose_;		//! Verbosity level
+    const bool readFittedValues_;
 
     std::vector<double> values_; //! Fitted parameter values
     std::vector<double> statUncert_; //! Statistical uncertainty of the fitted parameter values

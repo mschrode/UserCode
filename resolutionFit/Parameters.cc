@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.8 2010/07/20 14:08:38 mschrode Exp $
+// $Id: Parameters.cc,v 1.9 2010/07/21 10:55:45 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -6,6 +6,8 @@
 
 #include "TRandom3.h"
 #include "TStyle.h"
+
+#include "../util/utils.h"
 
 
 namespace resolutionFit {
@@ -68,11 +70,12 @@ namespace resolutionFit {
   }
 
 
-  void Parameters::addPt3Cut(double pt3RelCutValue, const TString &fileBaseName) {
+  void Parameters::addPt3Cut(double pt3RelCutValue, const TString &fileBaseName, const TString &spectrumName) {
     pt3RelCutValues_.push_back(pt3RelCutValue);
     std::vector<TString> names;
     writeFileNames(names,fileBaseName);
     namesCutVars_.push_back(names);
+    namesTruthSpectra_.push_back(spectrumName);
   }
 
 
@@ -170,7 +173,7 @@ namespace resolutionFit {
 
 
   TString Parameters::labelLumi() const {
-    return "L = 50 pb^{-1}";
+    return "L = "+util::toTString(lumi())+" pb^{-1}";
   }
 
   

@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.8 2010/06/02 13:48:21 mschrode Exp $
+# $Id: Makefile,v 1.9 2010/07/26 18:08:23 mschrode Exp $
 
 ROOTLIBS   = $(shell root-config --libs) -lMinuit
 ROOTCFLAGS = $(shell root-config --cflags)
@@ -7,7 +7,7 @@ CFLAG      = -I $(ROOTCFLAGS)
 LFLAG      = $(ROOTLIBS)
 
 UTILDIR = ./../util
-UTIL    = $(UTILDIR)/LabelFactory.h $(UTILDIR)/StyleSettings.h $(UTILDIR)/HistOps.h
+UTIL    = $(UTILDIR)/LabelFactory.h $(UTILDIR)/HistOps.h $(UTILDIR)/StyleSettings.h $(UTILDIR)/utils.h
 
 OBJ     = CutVariation.o FittedResolution.o KalibriFileParser.o PtBin.o Parameters.o ResponseFunction.o Uncertainty.o run.o
 
@@ -18,7 +18,7 @@ run: $(OBJ)
 CutVariation.o: CutVariation.h CutVariation.cc Uncertainty.h KalibriFileParser.h Parameters.h
 	g++ $(CFLAG) -c CutVariation.cc
 
-FittedResolution.o: FittedResolution.h FittedResolution.cc PtBin.h Parameters.h ResponseFunction.h $(UTIL)
+FittedResolution.o: FittedResolution.h FittedResolution.cc KalibriFileParser.h PtBin.h Parameters.h ResponseFunction.h $(UTIL)
 	g++ $(CFLAG) -c FittedResolution.cc
 
 KalibriFileParser.o: KalibriFileParser.h KalibriFileParser.cc
@@ -27,7 +27,7 @@ KalibriFileParser.o: KalibriFileParser.h KalibriFileParser.cc
 PtBin.o: PtBin.h PtBin.cc Uncertainty.h CutVariation.h KalibriFileParser.h Parameters.h
 	g++ $(CFLAG) -c PtBin.cc
 
-Parameters.o: Parameters.h Parameters.cc ResponseFunction.h
+Parameters.o: Parameters.h Parameters.cc ResponseFunction.h $(UTIL)
 	g++ $(CFLAG) -c Parameters.cc
 
 ResponseFunction.o: ResponseFunction.h ResponseFunction.cc

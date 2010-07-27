@@ -1,4 +1,4 @@
-// $Id: KalibriFileParser.cc,v 1.6 2010/05/28 18:52:29 mschrode Exp $
+// $Id: KalibriFileParser.cc,v 1.7 2010/07/13 09:13:54 mschrode Exp $
 
 #include "KalibriFileParser.h"
 
@@ -19,8 +19,8 @@ namespace resolutionFit {
   //!  - 1: some useful information (default)
   //!  - 2: a lot of information for debugging
   // --------------------------------------------
-  KalibriFileParser::KalibriFileParser(const TString &fileName, int verbose)
-    : verbose_(verbose) {
+  KalibriFileParser::KalibriFileParser(const TString &fileName, int verbose, bool readFittedValues)
+    : verbose_(verbose), readFittedValues_(readFittedValues) {
     // Histograms to be read from file
     hists_["hPtGen"] = 0;
     hists_["hPtGenJet1"] = 0;
@@ -124,21 +124,23 @@ namespace resolutionFit {
 
     if( !ioError ) {
       // Read fitted values and statistical uncertainties from file
-      if( verbose_ == 2 ) std::cout << "  Getting fitted values... " << std::flush;
-      TH1 *h = 0;
-      file.GetObject("hAbsoluteParameters",h);
-      if( !h ) {
-	std::cerr << "  ERROR: 'hAbsoluteParameters' not found." << std::endl;
-	ioError = -2;
-      } else {
-	if( verbose_ == 2 ) std::cout << "ok" << std::endl;
-	h->SetDirectory(0);
-	for(int i = 0; i < h->GetNbinsX(); i++) {
-	  values_.push_back(h->GetBinContent(1+i));
-	  statUncert_.push_back(h->GetBinError(1+i));
-	  if( verbose_ == 2 ) {
-	    std::cout << "  Value " << i << ": " << values_.back() << std::flush;
-	    std::cout << " +/- " << statUncert_.back() << std::endl;
+      if( readFittedValues_ ) {
+	if( verbose_ == 2 ) std::cout << "  Getting fitted values... " << std::flush;
+	TH1 *h = 0;
+	file.GetObject("hAbsoluteParameters",h);
+	if( !h ) {
+	  std::cerr << "  ERROR: 'hAbsoluteParameters' not found." << std::endl;
+	  ioError = -2;
+	} else {
+	  if( verbose_ == 2 ) std::cout << "ok" << std::endl;
+	  h->SetDirectory(0);
+	  for(int i = 0; i < h->GetNbinsX(); i++) {
+	    values_.push_back(h->GetBinContent(1+i));
+	    statUncert_.push_back(h->GetBinError(1+i));
+	    if( verbose_ == 2 ) {
+	      std::cout << "  Value " << i << ": " << values_.back() << std::flush;
+	      std::cout << " +/- " << statUncert_.back() << std::endl;
+	    }
 	  }
 	}
       }

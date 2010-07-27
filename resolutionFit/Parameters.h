@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.7 2010/07/20 14:08:38 mschrode Exp $
+// $Id: Parameters.h,v 1.8 2010/07/21 10:55:45 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -17,7 +17,7 @@ namespace resolutionFit {
   //!
   //! \author Matthias Schroeder
   //! \date 2010/05/15
-  //! $Id: Parameters.h,v 1.7 2010/07/20 14:08:38 mschrode Exp $
+  //! $Id: Parameters.h,v 1.8 2010/07/21 10:55:45 mschrode Exp $
   // --------------------------------------------
   class Parameters {
   public:
@@ -46,7 +46,7 @@ namespace resolutionFit {
       int nPt3CutVariations() const { return par_->nPt3CutVariations(); }
       double pt3CutValue(int k) const { return par_->pt3CutValue(k); }
       TString fileNamePt3CutVariations(int k) const { return par_->fileNamePt3CutVariations(ptBinIdx(),k); }
-
+      
       bool hasMCClosure() const { return par_->hasMCClosure(); }
       TString fileNameMCClosure() const { return par_->fileNameMCClosure(ptBinIdx()); }
 
@@ -92,6 +92,7 @@ namespace resolutionFit {
     int nPt3CutVariations() const { return static_cast<int>(pt3RelCutValues_.size()); }
     double pt3CutValue(int k) const { return pt3RelCutValues_.at(k); }
     TString fileNamePt3CutVariations(int i, int k) const { return namesCutVars_[k][i]; }
+    TString fileNameTruthSpectrum(int varIdx) const { return namesTruthSpectra_[varIdx]; }
 
     int nSystUncerts() const { return static_cast<int>(labelSyst_.size()); }
     TString labelSystUncert(int k) const { return labelSyst_.at(k); }
@@ -111,6 +112,7 @@ namespace resolutionFit {
     TString xAxisTitleResponse() const;
     TString yAxisTitleResponse() const;
     bool extendedLegend() const { return extendedLegend_; }
+    double lumi() const { return lumi_; }
 
 
     double trueGaussResPar(int i) const { return trueResPar_.at(i); }
@@ -131,7 +133,7 @@ namespace resolutionFit {
     int verbosity() const { return verbosity_; }
 
 
-    void addPt3Cut(double pt3RelCutValue, const TString &fileBaseName);
+    void addPt3Cut(double pt3RelCutValue, const TString &fileBaseName, const TString &spectrumName = "");
     void addFileBaseNameMCStat(const TString &name) { writeFileNames(namesMCStat_,name); }
     void addFileBaseNameMCClosure(const TString &name) { writeFileNames(namesMCClosure_,name); }
     void addSystUncert(const TString &label, const TString &fileBaseNameDown, const TString &fileBaseNameUp);
@@ -144,6 +146,7 @@ namespace resolutionFit {
     void addStartOffset(double delta) { startResOffset_ = delta; }
     void fitExtrapolatedSigma(bool fit) { fitExtrapolatedSigma_ = fit; }
     void fitRatio(bool fit) { fitRatio_ = fit; }
+    void setLumi(double lumi) { lumi_ = lumi; }
 
     void extendedLegend(bool ext) { extendedLegend_ = ext; }
 
@@ -163,6 +166,7 @@ namespace resolutionFit {
 
     std::vector<double> pt3RelCutValues_;
     std::vector< std::vector<TString> > namesCutVars_;  // [ cut variation ] [ pt bin ]
+    std::vector<TString> namesTruthSpectra_;
 
     std::vector<TString> labelSyst_;
     std::vector< std::vector<TString> > namesSystDown_;  // [ uncertainty ] [ pt bin ]
@@ -176,6 +180,8 @@ namespace resolutionFit {
     bool fitExtrapolatedSigma_;
     bool fitRatio_;
     double startResOffset_;
+
+    double lumi_;
 
     bool extendedLegend_;
 

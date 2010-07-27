@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.20 2010/07/21 10:55:30 mschrode Exp $
+// $Id: run.cc,v 1.21 2010/07/26 18:08:23 mschrode Exp $
 
 #ifndef RUN_RESOLUTION_FIT
 #define RUN_RESOLUTION_FIT
@@ -42,8 +42,8 @@ int main(int argc, char *argv[]) {
     TString respType = argv[1];
     int etaBin = atoi(argv[2]);
     if( respType == "Gauss" ) {
-      outNamePrefix = "ResFit_Spring10QCDDiJet_Gauss_";
-      inNamePrefix = "~/results/ResolutionFit/Gauss/Res_Spring10QCDDiJet_Gauss_";
+      outNamePrefix = "ResFit_Spring10QCDDiJet_Gauss100pb_";
+      inNamePrefix = "~/results/ResolutionFit/Gauss100pb/Res_Spring10QCDDiJet_Gauss_";
 
 //       outNamePrefix = "ResFit_Spring10QCDFlat_Gauss_";
 //       inNamePrefix = "~/results/ResolutionFit/Gauss/resolutionSpring10_Gauss_";
@@ -91,16 +91,18 @@ int main(int argc, char *argv[]) {
       
 	inNamePrefix += "Eta0_";
 
-	par = new resolutionFit::Parameters(0.,1.2,inNamePrefix,ptBinEdges,0,12,outNamePrefix+"Eta0_",
+	par = new resolutionFit::Parameters(0.,1.,inNamePrefix,ptBinEdges,0,12,outNamePrefix+"Eta0_",
 					    resolutionFit::ResponseFunction::Gauss,verbosity);
-	par->setTrueGaussResPar(1.88,1.205,0.0342);
+	//	par->setTrueGaussResPar(1.88,1.205,0.0342); // Spring10 QCDFlat
+	par->setTrueGaussResPar(3.249,1.0954,0.0457); // Spring10 QCDDiJet
+	par->setLumi(100);
 	
-	par->addPt3Cut(0.06,inNamePrefix+"Rel3rdJet006_");
-	par->addPt3Cut(0.08,inNamePrefix+"Rel3rdJet008_");
-	par->addPt3Cut(0.10,inNamePrefix);
-	par->addPt3Cut(0.12,inNamePrefix+"Rel3rdJet012_");
-	par->addPt3Cut(0.15,inNamePrefix+"Rel3rdJet015_");
-	par->addPt3Cut(0.20,inNamePrefix+"Rel3rdJet020_");
+	par->addPt3Cut(0.06,inNamePrefix+"Rel3rdJet006_","~/Kalibri/input/Spring10QCDDiJet_PtGenSpectrum0030-3500_Eta00-10_Pt3-006.root");
+	par->addPt3Cut(0.08,inNamePrefix+"Rel3rdJet008_","~/Kalibri/input/Spring10QCDDiJet_PtGenSpectrum0030-3500_Eta00-10_Pt3-008.root");
+	par->addPt3Cut(0.10,inNamePrefix,"~/Kalibri/input/Spring10QCDDiJet_PtGenSpectrum0030-3500_Eta00-10_Pt3-010.root");
+	par->addPt3Cut(0.12,inNamePrefix+"Rel3rdJet012_","~/Kalibri/input/Spring10QCDDiJet_PtGenSpectrum0030-3500_Eta00-10_Pt3-012.root");
+	par->addPt3Cut(0.15,inNamePrefix+"Rel3rdJet015_","~/Kalibri/input/Spring10QCDDiJet_PtGenSpectrum0030-3500_Eta00-10_Pt3-015.root");
+	par->addPt3Cut(0.20,inNamePrefix+"Rel3rdJet020_","~/Kalibri/input/Spring10QCDDiJet_PtGenSpectrum0030-3500_Eta00-10_Pt3-020.root");
 
 // 	par->addPt3Cut(0.0354448,inNamePrefix+"Rel3rdJet006_");
 // 	par->addPt3Cut(0.0698988,inNamePrefix+"Rel3rdJet008_");
@@ -211,9 +213,9 @@ int main(int argc, char *argv[]) {
 
     // Plots
     fit->plotExtrapolation();
-    fit->plotResolution();
+    //fit->plotResolution();
     //fit->plotResolutionBins();
-    fit->plotPtAsymmetryBins();
+    //    fit->plotPtAsymmetryBins();
     //    fit->plotPtGenAsymmetry();
     //fit->plotAsymmetrySlopes();
     fit->plotSpectra();
