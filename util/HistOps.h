@@ -1,12 +1,9 @@
-// $Id: HistOps.h,v 1.3 2010/07/26 18:07:54 mschrode Exp $
+// $Id: HistOps.h,v 1.4 2010/07/26 21:45:31 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
 
 #include <cassert>
-#include <iostream>
-#include <string>
-#include <sstream>
 #include <vector>
 
 #include "TH1.h"
@@ -15,18 +12,18 @@
 #include "TStyle.h"
 
 #include "LabelFactory.h"
+#include "utils.h"
 
 namespace util
 {
-  //!  \brief    Collection of operations on histograms
+
+  //!  \brief    Collection of encapsulated methods on histograms
   //!
-  //!  HistOps bundles some useful operations on histograms.
-  //!
-  //!  \note     So far all operations are static.
+  //!  HistOps encapsulates some useful operations on histograms.
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.3 2010/07/26 18:07:54 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.4 2010/07/26 21:45:31 mschrode Exp $
   class HistOps
   {
   public:
@@ -48,8 +45,17 @@ namespace util
 
     // -------------------------------------------------------------------------------------
     static void findYRange(const TH1 *h, double& min, double& max) {
-      min = h->GetMinimum();
-      max = h->GetMaximum();
+      min = 1E10;
+      max = 0.;
+      for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
+	double val = h->GetBinContent(bin);
+	if( val < min ) min = val;
+	if( val > max ) max = val;
+      }
+      if( min > max ) {
+	min = 1E-3;
+	max = 1;
+      }
     }
 
 
@@ -58,7 +64,7 @@ namespace util
     static void findYRange(const TH1 *h, int nLabelLines, double& min, double& max) {
       findYRange(h,min,max);
       double padHeight = 1. - gStyle->GetPadTopMargin() - gStyle->GetPadBottomMargin();
-      double labelHeight = util::LabelFactory::lineHeight()*(0.5+nLabelLines);
+      double labelHeight = util::LabelFactory::lineHeight()*(1+nLabelLines) + util::LabelFactory::labelTopOffset();
       max = max + labelHeight/padHeight*(max-min)/(1.-labelHeight/padHeight);
     }
 
@@ -109,7 +115,7 @@ namespace util
       if( yTitle == "jets" || yTitle == "events" ) {
 	if( yTitle == "jets" )        yAxisTitle += "Jets / ";
 	else if( yTitle == "events" ) yAxisTitle += "Events / ";
-	yAxisTitle += doubleToTString(h->GetBinWidth(1));
+	yAxisTitle += util::toTString(h->GetBinWidth(1),3);
 	if( xUnit.Length() ) yAxisTitle += " "+xUnit;
       } else {
 	yAxisTitle = yTitle;
@@ -184,34 +190,9 @@ namespace util
       hRatio->SetMarkerColor(h1->GetLineColor());
       hRatio->SetYTitle(yTitle);
       hRatio->Divide(h2);
+      setYRange(hRatio,1.,1.,0.);
 
       return hRatio;
-    }
-
-
-  private:
-    // -------------------------------------------------------------------------------------
-    static double round(double d, int decPlaces) {
-      d *= pow(10.,1.*decPlaces);
-      d = std::floor(d+0.5);
-      d /= pow(10.,1.*decPlaces);
-
-      return d;
-    }
-
-
-
-    // -------------------------------------------------------------------------------------
-    static std::string toString(double d) {
-      std::stringstream ss;
-      ss << round(d,3);
-      return ss.str();
-    }
-
-
-    // -------------------------------------------------------------------------------------
-    static TString doubleToTString(double d) {
-      return toString(d).c_str();
     }
   };
 }

@@ -1,3 +1,5 @@
+// $Id: $
+
 #ifndef STYLE_SETTINGS_H
 #define STYLE_SETTINGS_H
 
@@ -9,7 +11,13 @@
 
 
 namespace util {
-  // -------------------------------------------
+
+  //!  Encapsulates different pad and histogram styles
+  //!
+  //!  \author   Matthias Schroeder (www.desy.de/~matsch)
+  //!  \date     2010/03/09
+  //!  $Id: $
+  // -------------------------------------------------------------------------------------
   class StyleSettings {
   public:
     static void screen() { setStyle("Screen",true); }
