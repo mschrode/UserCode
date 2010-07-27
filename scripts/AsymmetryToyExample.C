@@ -1,51 +1,65 @@
+//  $Id: $
+//
+//  Toy validation of pt asymmetry pdf
+// -------------------------------------------------------------------------------------
+
 #include <cmath>
 #include <iostream>
 #include <vector>
 
 #include "TCanvas.h"
+#include "TF1.h"
 #include "TH1.h"
 #include "TH1D.h"
+#include "TLegend.h"
 #include "TMath.h"
+#include "TPaveText.h"
 #include "TRandom3.h"
 
 #include "../util/HistOps.h"
 #include "../util/LabelFactory.h"
 #include "../util/StyleSettings.h"
-
+#include "../util/utils.h"
 
 
 const int nEvts_ = 50000;
 const double aMin_ = -0.2;
 const double aMax_ = 0.2;
-const int nABins_ = 5000;
 const double zMin_ = -1.;
 const double zMax_ = 1.;
 const double eps_ = 1E-4;
 const int maxNIter_ = 20;
-
 
 TRandom3 *rand_ = new TRandom3(0);
 
 
 double pdfGauss(double x, const std::vector<double> &par);
 double pdf(double x, const std::vector<double> &par);
-double randomGauss(const std::vector<double> &par);
-double random(const std::vector<double> &par);
+double randomGauss(double t, const std::vector<double> &par);
+double random(double t, const std::vector<double> &par);
 double pdfAsymmetry(double a, const std::vector<double> &par);
+double sigma(double t, const std::vector<double> &par);
 
 
 void AsymmetryToyExample() {
-  std::vector<double> pars;
-  pars.push_back(1.);
-  pars.push_back(0.1);
-
+  util::StyleSettings::presentationNoTitle();
 
   // Measured asymmetry distribution
+  std::vector<double> parSig;
+  parSig.push_back(2.0);
+  parSig.push_back(1.2);
+  parSig.push_back(0.04);
+
   TH1 *hMeas = util::HistOps::createTH1D("hMeas",21,aMin_,aMax_,"p_{T} asymmetry","","events");
   hMeas->SetMarkerStyle(20);
+  TH1 *hResp = util::HistOps::createTH1D("hResp",31,0.,2.,"p^{meas}_{T} / p^{true}_{T}","","jets");
+  hResp->SetMarkerStyle(20);
   for(int n = 0; n < nEvts_; ++n) {
-    double m1 = random(pars);
-    double m2 = random(pars);
+    double truth = rand_->Uniform(100.,150.);
+    double m1 = random(truth,parSig);
+    double m2 = random(truth,parSig);
+    hResp->Fill(m1/truth);
+    hResp->Fill(m2/truth);
     if( m1+m2 ) {
       double asym = (m1-m2)/(m1+m2);
       hMeas->Fill(asym);
@@ -56,36 +70,34 @@ void AsymmetryToyExample() {
   }
 
 
+  // Fit mean response
+  hResp->Fit("gaus","0QI");
+  TF1 *fResp = hResp->GetFunction("gaus");
+  fResp->SetLineWidth(2);
+  fResp->SetLineColor(4);
+  std::vector<double> meanSig;
+  meanSig.push_back(fResp->GetParameter(2));
+
   // Predicted asymmetry distribution
   TH1 *hPred = static_cast<TH1D*>(hMeas->Clone("hPred"));
   hPred->Sumw2();
   hPred->Reset();
   hPred->SetMarkerStyle(0);
   hPred->SetLineColor(2);
-  double deltaA = hMeas->GetNbinsX()*hMeas->GetBinWidth(1)/nABins_;
-  for(int aBin = 0; aBin < nABins_; ++aBin) {
-    double a = aMin_ + (aBin+0.5)*deltaA;
-    double pdfA = pdfAsymmetry(a,pars);
-    hPred->Fill(a,pdfA);
-  }
-  hPred->Scale(1.*nEvts_*hMeas->GetBinWidth(1)*hPred->GetNbinsX()/hPred->GetEntries());
   for(int aBin = 1; aBin <= hPred->GetNbinsX(); ++aBin) {
-    hPred->SetBinError(aBin,sqrt(hPred->GetBinContent(aBin)));
+    double aMin = hPred->GetXaxis()->GetBinLowEdge(aBin);
+    double aMax = hPred->GetXaxis()->GetBinUpEdge(aBin);
+    int n = 500;
+    double deltaA = (aMax-aMin)/n;
+    double pdfA = 0.;
+    for(int i = 0; i < n; ++i) {
+      double a = aMin + (i+0.5)*deltaA;
+      pdfA += pdfAsymmetry(a,meanSig);
+    }
+    pdfA *= nEvts_*deltaA;
+    hPred->SetBinContent(aBin,pdfA);
+    hPred->SetBinError(aBin,sqrt(pdfA));
   }
-
-
-  // Draw histograms
-  TCanvas *canAsym = new TCanvas("canAsym","Asymmetry",500,500);
-  canAsym->cd();
-  hPred->Draw("H");
-  hMeas->Draw("PE1same");
-
-  TCanvas *canRatio = new TCanvas("canRatio","Ratio",500,500);
-  canRatio->cd();
-  TH1 *hRatio = util::HistOps::createRatioPlot(hPred,hMeas,"Prediction / Measurement");
-  TH1 *hFrame = util::HistOps::createRatioFrame(hRatio,"Prediction / Measurement");
-  hFrame->Draw();
-  hRatio->Draw("PE1same");
 
 
   // Chi2 goodness-of-fit test
@@ -97,6 +109,48 @@ void AsymmetryToyExample() {
   std::cout << "Chi2        = " << chi2 << std::endl;
   std::cout << "Chi2 / ndof = " << chi2 / ndof << std::endl;
   std::cout << "Prob        = " << TMath::Prob(chi2,ndof) << std::endl;
+
+
+
+  // Draw histograms
+  TString name = "ToyMC_AsymPred_PtDepSigma_";
+
+  TLegend *legResp = util::LabelFactory::createLegend(2);
+  legResp->AddEntry(hResp,"Toy MC,  #sigma(p^{true}_{T}),  p^{true}_{T} #in U(100,150)","P");
+  //legResp->AddEntry(hResp,"Toy MC,  #sigma = const,  p^{true}_{T} = 125","P");
+  legResp->AddEntry(fResp,"Gaussian fit","L");
+  util::HistOps::setYRange(hResp,2);
+  TCanvas *canResp = new TCanvas("canResp","Response",500,500);
+  canResp->cd();
+  hResp->Draw("PE1");
+  fResp->Draw("same");
+  legResp->Draw("same");
+  canResp->SaveAs(name+"Resp.eps","eps");
+
+  TLegend *legAsym = util::LabelFactory::createLegend(3);
+  legAsym->AddEntry(hMeas,"Toy MC measurement","P");
+  legAsym->AddEntry(hPred,"Prediction,  #bar{#sigma}","L");
+  //  legAsym->AddEntry(hPred,"Prediction,  #sigma","L");
+  util::LabelFactory::addExtraLegLine(legAsym,"#chi^{2}/ndof = "+util::toTString(chi2/ndof,3)+",  Prob = "+util::toTString(TMath::Prob(chi2,ndof),3));
+  util::HistOps::setYRange(hPred,3);
+  TCanvas *canAsym = new TCanvas("canAsym","Asymmetry",500,500);
+  canAsym->cd();
+  hPred->Draw("H");
+  hMeas->Draw("PE1same");
+  legAsym->Draw("same");
+  canResp->SaveAs(name+"Asym.eps","eps");
+
+  TCanvas *canRatio = new TCanvas("canRatio","Ratio",500,500);
+  canRatio->cd();
+  TH1 *hRatio = util::HistOps::createRatioPlot(hPred,hMeas,"Prediction / Measurement");
+  TH1 *hFrame = util::HistOps::createRatioFrame(hRatio,"Prediction / Measurement");
+  TPaveText *txtRatio = util::LabelFactory::createPaveText(1);
+  txtRatio->AddText("#chi^{2}/ndof = "+util::toTString(chi2/ndof,3)+",  Prob = "+util::toTString(TMath::Prob(chi2,ndof),3));
+  util::HistOps::setYRange(hFrame,0.9,1.2);
+  hFrame->Draw();
+  hRatio->Draw("PE1same");
+  txtRatio->Draw("same");
+  canResp->SaveAs(name+"Ratio.eps","eps");
 }
 
 
@@ -172,18 +226,24 @@ double pdf(double x, const std::vector<double> &par) {
 }
 
 
-double random(const std::vector<double> &par) {
-  return randomGauss(par);
+double random(double t, const std::vector<double> &par) {
+  return randomGauss(t,par);
 }
 
 
 double pdfGauss(double x, const std::vector<double> &par) {
-  assert( par.size() == 2 );
-  return exp(-0.5*(x-par[0])*(x-par[0])/par[1]/par[1])/sqrt(2.*M_PI)/par[1];
+  assert( par.size() == 1 );
+  return exp(-0.5*(x-1.)*(x-1.)/par[0]/par[0])/sqrt(2.*M_PI)/par[0];
 }
 
 
-double randomGauss(const std::vector<double> &par) {
-  assert( par.size() == 2 );
-  return rand_->Gaus(par[0],par[1]);
+double randomGauss(double t, const std::vector<double> &par) {
+  assert( par.size() == 3 );
+  return rand_->Gaus(t,sigma(t,par));
+}
+
+
+double sigma(double t, const std::vector<double> &par) {
+  assert( par.size() == 3 );
+  return sqrt( par[0]*par[0] + par[1]*par[1]*t + par[2]*par[2]*t*t );
 }
