@@ -1,9 +1,10 @@
-//  $Id: $
+//  $Id: LabelFactory.h,v 1.12 2010/07/27 10:07:53 mschrode Exp $
 
 #ifndef LABEL_FACTORY_H
 #define LABEL_FACTORY_H
 
 #include <cmath>
+#include <vector>
 
 #include "TH1.h"
 #include "TH1D.h"
@@ -18,7 +19,7 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: $
+  //!  $Id: LabelFactory.h,v 1.12 2010/07/27 10:07:53 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class LabelFactory {
   public:
@@ -75,17 +76,23 @@ namespace util {
       return createLegend(nEntries,width,1.16*lineHeight()*yOffset,lineHeight());
     }
 
-    static TH1 *addExtraLegLine(TLegend *leg, const TString &entry) {
-      ++nDummies_;
+    static void addExtraLegLine(TLegend *leg, const TString &entry) {
       TString name = "hDummy";
-      name += nDummies_;
+      name += hDummies_.size();
       TH1 *hDummy = new TH1D(name,"",1,0,1);
       hDummy->SetLineColor(0);
       hDummy->SetMarkerColor(0);
       hDummy->SetMarkerStyle(0);
       leg->AddEntry(hDummy,entry,"L");
-      
-      return hDummy;
+      hDummies_.push_back(hDummy);
+    }
+
+    static void deleteDummies() {
+      for(std::vector<TH1*>::iterator it = hDummies_.begin();
+	  it != hDummies_.end(); ++it) {
+	delete *it;
+      }
+      hDummies_.clear();
     }
 
 
@@ -103,8 +110,9 @@ namespace util {
       return txt;
     }
 
+
   private:
-    static int nDummies_;
+    static std::vector<TH1*> hDummies_;
 
     static void cornerCoordinates(int nEntries, double width, double lineHgt, double &x0, double &y0, double &x1, double &y1) {
       x0 = gStyle->GetPadLeftMargin()+labelSideOffset();
@@ -117,6 +125,6 @@ namespace util {
     }
   };
 
-  int LabelFactory::nDummies_ = 0;
+  std::vector<TH1*> LabelFactory::hDummies_;
 }
 #endif

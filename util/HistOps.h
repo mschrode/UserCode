@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.4 2010/07/26 21:45:31 mschrode Exp $
+// $Id: HistOps.h,v 1.5 2010/07/27 10:07:53 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -23,7 +23,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.4 2010/07/26 21:45:31 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.5 2010/07/27 10:07:53 mschrode Exp $
   class HistOps
   {
   public:
@@ -61,11 +61,16 @@ namespace util
 
 
     // -------------------------------------------------------------------------------------
-    static void findYRange(const TH1 *h, int nLabelLines, double& min, double& max) {
+    static void findYRange(const TH1 *h, int nLabelLines, double& min, double& max, bool log = false) {
       findYRange(h,min,max);
       double padHeight = 1. - gStyle->GetPadTopMargin() - gStyle->GetPadBottomMargin();
       double labelHeight = util::LabelFactory::lineHeight()*(1+nLabelLines) + util::LabelFactory::labelTopOffset();
-      max = max + labelHeight/padHeight*(max-min)/(1.-labelHeight/padHeight);
+      if( log ) {
+	if( min <= 0. ) min = 3E-10;
+	max = exp((1.-labelHeight)*(log10(max/pow(min,labelHeight))));
+      } else {
+	max = max + labelHeight/padHeight*(max-min)/(1.-labelHeight/padHeight);
+      }
     }
 
 
@@ -82,10 +87,10 @@ namespace util
 
 
     // -------------------------------------------------------------------------------------
-    static void setYRange(TH1 *h, int nLabelLines) {
+    static void setYRange(TH1 *h, int nLabelLines, bool log = false) {
       double min = 0.;
       double max = 0.;
-      findYRange(h,nLabelLines,min,max);
+      findYRange(h,nLabelLines,min,max,log);
       h->GetYaxis()->SetRangeUser(min,max);
     }
 
@@ -105,7 +110,7 @@ namespace util
 
 
     // -------------------------------------------------------------------------------------
-    static void *setAxisTitles(TH1 *h, const TString &xTitle, const TString &xUnit, const TString &yTitle, bool norm = false) {
+    static void setAxisTitles(TH1 *h, const TString &xTitle, const TString &xUnit, const TString &yTitle, bool norm = false) {
       // x axis label
       h->SetXTitle(xUnit.Length()==0 ? xTitle : xTitle+" ("+xUnit+")");
 
@@ -121,8 +126,6 @@ namespace util
 	yAxisTitle = yTitle;
       }
       h->SetYTitle(yAxisTitle);
-
-      return h;
     }
 
 
