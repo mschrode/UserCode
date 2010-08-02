@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.5 2010/07/27 10:07:53 mschrode Exp $
+// $Id: HistOps.h,v 1.6 2010/07/27 17:09:03 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -12,6 +12,7 @@
 #include "TStyle.h"
 
 #include "LabelFactory.h"
+#include "StyleSettings.h"
 #include "utils.h"
 
 namespace util
@@ -23,7 +24,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.5 2010/07/27 10:07:53 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.6 2010/07/27 17:09:03 mschrode Exp $
   class HistOps
   {
   public:
@@ -34,9 +35,25 @@ namespace util
 
 
     // -------------------------------------------------------------------------------------
+    static TH1D *createTH1D(const TString &name, int n, const double *xBinEdges, const TString &title) {
+      return new TH1D(name,title,n,xBinEdges);
+    }
+
+
+    // -------------------------------------------------------------------------------------
     static TH1D *createTH1D(const TString &name, int n, double xMin, double xMax, const TString &xTitle, const TString &xUnit, const TString &yTitle, bool norm = false) {
       // create histogram without axis label
       TH1D *h = createTH1D(name,n,xMin,xMax,"");
+      setAxisTitles(h,xTitle,xUnit,yTitle,norm);
+
+      return h;
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static TH1D *createTH1D(const TString &name, int n, const double *xBinEdges, const TString &xTitle, const TString &xUnit, const TString &yTitle, bool norm = false) {
+      // create histogram without axis label
+      TH1D *h = createTH1D(name,n,xBinEdges,"");
       setAxisTitles(h,xTitle,xUnit,yTitle,norm);
 
       return h;
@@ -96,6 +113,19 @@ namespace util
 
 
     // -------------------------------------------------------------------------------------
+    static void setStyleColor(TH1 *h, int styleColor) {
+      setColor(h,util::StyleSettings::color(styleColor));
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static void setColor(TH1 *h, int color) {
+      h->SetMarkerColor(color);
+      h->SetLineColor(color);
+    }
+
+
+    // -------------------------------------------------------------------------------------
     static void normHist(TH1 *h, const TString &option = "") { 
       if( h->Integral(option) ) h->Scale(1./h->Integral(option)); 
     }
@@ -150,9 +180,22 @@ namespace util
     static TH1D *createRatioFrame(const TH1 *h, const TString &yTitle, double yMin, double yMax) {
       TString name = "Frame_";
       name += h->GetName();
-      TH1D *hFrame = new TH1D(name,"",10*h->GetNbinsX(),
-			      h->GetXaxis()->GetBinLowEdge(1),
-			      h->GetXaxis()->GetBinUpEdge(h->GetNbinsX()));
+      TH1D *hFrame = 0;
+      bool hasConstBinWidth = true;
+      for(int bin = 2; bin <= h->GetNbinsX(); ++bin) {
+	if( h->GetBinWidth(bin) != h->GetBinWidth(1) ) {
+	  hasConstBinWidth = false;
+	  break;
+	}
+      }
+      if( hasConstBinWidth ) {
+	hFrame = new TH1D(name,"",10*h->GetNbinsX(),
+			  h->GetXaxis()->GetBinLowEdge(1),
+			  h->GetXaxis()->GetBinUpEdge(h->GetNbinsX()));
+      } else {
+	hFrame = new TH1D(name,"",h->GetNbinsX(),
+			  h->GetXaxis()->GetXbins()->GetArray());
+      }
       hFrame->SetLineStyle(2);
       hFrame->GetYaxis()->SetRangeUser(yMin,yMax);
       hFrame->GetYaxis()->SetTitle(yTitle);
@@ -161,6 +204,21 @@ namespace util
 	hFrame->SetBinContent(bin,1.);
 	hFrame->SetBinError(bin,0.);
       }
+
+      return hFrame;
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static TH1D *createFrame(const TH1 *h, const TString &yTitle, double yMin, double yMax) {
+      TString name = "Frame_";
+      name += h->GetName();
+      TH1D *hFrame = new TH1D(name,"",10*h->GetNbinsX(),
+			      h->GetXaxis()->GetBinLowEdge(1),
+			      h->GetXaxis()->GetBinUpEdge(h->GetNbinsX()));
+      hFrame->GetYaxis()->SetRangeUser(yMin,yMax);
+      hFrame->GetYaxis()->SetTitle(yTitle);
+      hFrame->GetXaxis()->SetTitle(h->GetXaxis()->GetTitle());
 
       return hFrame;
     }
