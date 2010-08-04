@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: plotResponseAndResolution.C,v 1.1 2010/08/04 08:04:56 mschrode Exp $
 
 //!  Fit mean response and resolution from
 //!  Kalibri::ControlPlotsJetSmearing
@@ -59,7 +59,10 @@ void plotResponse(const std::vector<TString> &fileNames, const std::vector<TStri
   hFrame->Draw();
   for(size_t i = 0; i < hResp.size(); ++i) {
     hResp[i]->Draw("PE1same");
-    leg->AddEntry(hResp[i],labels[i],"P");
+    TString entry = "";
+    entry += i;
+    entry += ": "+labels[i];
+    leg->AddEntry(hResp[i],entry,"P");
   }
   leg->Draw("same");
   can->SetLogx();
@@ -98,14 +101,17 @@ void plotResolution(const std::vector<TString> &fileNames, const std::vector<TSt
   }
 
   if( fit ) {
-    std::cout << "\n\n ********** INTERPOLATED RESOLUTION **********\n";
+    std::cout << "\n\n********** INTERPOLATED RESOLUTION **********\n";
+    std::cout << "\\begin{tabular}{lccc}\n\\toprule\n";
+    std::cout << " & $b_{0}\\,(\\text{Ge}\\kern-0.06667em\\text{V})$ & $b_{1}\\,(\\sqrt{\\text{Ge}\\kern-0.06667em\\text{V}})$ & $b_{2}$ \\\\\n\\midrule\n";
     for(size_t i = 0; i < fits.size(); ++i) {
-      std::cout << "  $" << i << "$" << std::flush;
+      std::cout << "$" << i << "$" << std::flush;
       for(int p = 0; p < 3; ++p) {
 	std::cout << " & $" << fits[i]->GetParameter(p) << " \\pm " << fits[i]->GetParError(p) << "$" << std::flush;
       }
       std::cout << " \\\\ \n";
     }
+    std::cout << "\\bottomrule\n\\end{tabular}\n";
     std::cout << "\n\n";
   }
 
@@ -114,7 +120,10 @@ void plotResolution(const std::vector<TString> &fileNames, const std::vector<TSt
   hFrame->Draw();
   for(size_t i = 0; i < hReso.size(); ++i) {
     hReso[i]->Draw("PE1same");
-    leg->AddEntry(hReso[i],labels[i],"P");
+    TString entry = "";
+    entry += i;
+    entry += ": "+labels[i];
+    leg->AddEntry(hReso[i],entry,"P");
     if( fit ) fits[i]->Draw("same");
   }
   leg->Draw("same");
@@ -138,15 +147,18 @@ void plotResolution(const std::vector<TString> &fileNames, const std::vector<TSt
       hFrame->Draw();
       hReso[i]->Draw("PE1same");
       fits[i]->Draw("same");
-      TLegend *leg2 = util::LabelFactory::createLegendCol(1,0.8);
-      leg2->AddEntry(hReso[i],labels[i],"P");
+      TLegend *leg2 = util::LabelFactory::createLegendCol(1,0.7);
+      TString entry = "";
+      entry += i;
+      entry += ": "+labels[i];
+      leg2->AddEntry(hReso[i],entry,"P");
       leg2->Draw("same");
       can2->SetLogx();  
       if( outName != "" ) {
 	name = outName+"_Fit";
 	name += i;
 	name += ".eps";
-	can->SaveAs(name,"eps");
+	can2->SaveAs(name,"eps");
       }
     }
   }
