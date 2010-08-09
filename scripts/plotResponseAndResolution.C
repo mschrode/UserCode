@@ -1,4 +1,4 @@
-// $Id: plotResponseAndResolution.C,v 1.1 2010/08/04 08:04:56 mschrode Exp $
+// $Id: plotResponseAndResolution.C,v 1.2 2010/08/04 09:29:51 mschrode Exp $
 
 //!  Fit mean response and resolution from
 //!  Kalibri::ControlPlotsJetSmearing
@@ -38,8 +38,10 @@ std::vector<TH1*> readHistograms(const std::vector<TString> &fileNames, const TS
     name += numHists_;
     hists[i]->SetName(name);
     util::HistOps::setAxisTitles(hists[i],xTitle,xUnit,yTitle);
-    util::HistOps::setStyleColor(hists[i],1+i);
-    hists[i]->SetMarkerStyle(20+i);
+      util::HistOps::setStyleColor(hists[i],1+i/2);
+    //hists[i]->SetMarkerStyle(20+i);
+    if( i%2 == 0 ) hists[i]->SetMarkerStyle(20+i/2);
+    else hists[i]->SetMarkerStyle(24+i/2); 
     util::HistOps::setYRange(hists[i],(int)(fileNames.size()+1));
     hists[i]->GetXaxis()->SetRangeUser(20.,3500.);
     numHists_++;
@@ -199,14 +201,31 @@ void plotResponseAndResolution() {
 
   std::vector<TString> fileNames;
   std::vector<TString> labels;
-  fileNames.push_back(base+"Sigma_FreeMu_CaloOrdered_Rel3rdJet100.root");
-  labels.push_back("Core");
-  fileNames.push_back(base+"Core_Sigma_FreeMu_CaloOrdered_3rdJet010.root");
-  labels.push_back("Core,  p_{T,3} < 0.1 <p^{gen}_{T;1,2}>");
-  fileNames.push_back(base+"All_Sigma_FreeMu_CaloOrdered_Rel3rdJet010.root");
-  labels.push_back("All,  p_{T,3} < 0.1 <p^{gen}_{T;1,2}>");
 
-  plotResponse(fileNames,labels,"Spring10_QCDDiJet_MeanResp_CaloOrder_Pt3Cuts_CoreVsAll");
-  plotResolution(fileNames,labels,true,"Spring10_QCDDiJet_Resolution_CaloOrder_Pt3Cuts_CoreVsAll");
+//   fileNames.push_back(base+"Sigma_FreeMu_CaloOrdered_Rel3rdJet100.root");
+//   labels.push_back("Core");
+//   fileNames.push_back(base+"Core_Sigma_FreeMu_CaloOrdered_3rdJet010.root");
+//   labels.push_back("Core,  p_{T,3} < 0.1 <p^{gen}_{T;1,2}>");
+//   fileNames.push_back(base+"All_Sigma_FreeMu_CaloOrdered_Rel3rdJet010.root");
+//   labels.push_back("All,  p_{T,3} < 0.1 <p^{gen}_{T;1,2}>");
+
+  fileNames.push_back(base+"Core_Sigma_FreeMu_CaloOrdered_Rel3rdJet100.root");
+  labels.push_back("Calo ordered");
+  fileNames.push_back(base+"Core_Sigma_FreeMu_GenOrdered_Rel3rdJet100.root");
+  labels.push_back("Gen ordered");
+
+  fileNames.push_back(base+"Core_Sigma_FreeMu_CaloOrdered_Rel3rdJet010.root");
+  labels.push_back("Calo ordered, p^{rel}_{T,3} < 0.1");
+  fileNames.push_back(base+"Core_Sigma_FreeMu_GenOrdered_Rel3rdJet010.root");
+  labels.push_back("Gen ordered, p^{rel}_{T,3} < 0.1");
+
+  fileNames.push_back(base+"Core_Sigma_FreeMu_CaloOrdered_3rdJet010.root");
+  labels.push_back("Calo ordered, p_{T,3} < 0.1 <p^{gen}_{T;1,2}>");
+  fileNames.push_back(base+"Core_Sigma_FreeMu_GenOrdered_3rdJet010.root");
+  labels.push_back("Gen ordered, p_{T,3} < 0.1 <p^{gen}_{T;1,2}>");
+
+
+  plotResponse(fileNames,labels,"Spring10_QCDDiJet_MeanResp_DijetCuts_Core");
+  plotResolution(fileNames,labels,false,"Spring10_QCDDiJet_Resolution_DijetCuts_Core");
   //  plotResolutionScale1(fileNames,labels);
 }
