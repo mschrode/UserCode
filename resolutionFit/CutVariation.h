@@ -19,10 +19,11 @@ namespace resolutionFit {
     CutVariation(const Parameters::PtBinParameters *par, int parIndex);
     ~CutVariation();
 
-    int nCutValues() const { return par_->nPt3CutVariations(); }
-    double minCutValue() const { return par_->pt3CutValue(0); }
-    double maxCutValue() const { return par_->pt3CutValue(nCutValues()-1); }
-    double cutValue(int i) const { return par_->pt3CutValue(i); }
+    int nPt3Cuts() const { return par_->nPt3Cuts(); }
+    bool pt3Bins() const { return par_->pt3Bins(); }
+    double pt3Min(int i) const { return par_->pt3Min(i); }
+    double pt3Max(int i) const { return par_->pt3Max(i); }
+    double pt3Mean(int i) const { return par_->pt3Mean(i); }
 
     int parIdx() const { return parIdx_; }
     bool isRelValue() const { return par_->isRelParValue(parIdx()); }
@@ -30,13 +31,15 @@ namespace resolutionFit {
     double uncert(int i) const { return varPoints_.at(i)->uncertUp(); }
     double extrapolatedValue() const { return (*extrapolatedPoint_)(); }
     double extrapolatedUncert() const { return extrapolatedPoint_->uncertUp(); }
-    double ptAsym(int i) const { return varPoints_.at(i)->ptAsym(); }
-    double ptAsymUncert(int i) const { return varPoints_.at(i)->ptAsymUncert(); }
     double meanPt() const { return meanPt_; }
+    double meanPtUncert() const { return meanPtUncert_; }
 
     TF1 *getTF1(const TString &name) const;
     TGraphAsymmErrors *getTGraph() const;
     TH1 *getFrame(const TString &name) const;
+    TH1 *getPtAsymmetry(int i, const TString &name) const {
+      return varPoints_.at(i)->histPtAsym(name);
+    }
 
     void extrapolate();
 
@@ -44,30 +47,28 @@ namespace resolutionFit {
     class VariationPoint {
     public:
       VariationPoint();
-      VariationPoint(double fitValue, const Uncertainty *uncert, double cutValue);
-      VariationPoint(double fitValue, const Uncertainty *uncert, double cutValue,
-		     double ptAsym, double ptAsymUncert);
+      VariationPoint(double fitValue, Uncertainty *uncert, double cutValue, TH1 *hPtAsym);
+      VariationPoint(TH1 *hPtAsym, double cutValue);
       ~VariationPoint();
       
       double operator()() const { return fitValue_; }
       double uncertDown() const { return uncert_->down(); }
       double uncertUp() const { return uncert_->up(); }
       double cutValue() const { return cutValue_; }
-      double ptAsym() const { return ptAsym_; }
-      double ptAsymUncert() const { return ptAsymUncert_; }
+      TH1 *histPtAsym(const TString &name) const;
       
     private:
-      const double fitValue_;
-      const Uncertainty *uncert_;
+      double fitValue_;
+      Uncertainty *uncert_;
       const double cutValue_;
-      const double ptAsym_;
-      const double ptAsymUncert_;
+      TH1 *hPtAsym_;
     };
 
     const Parameters::PtBinParameters *par_;
     const int parIdx_;
 
     double meanPt_;    
+    double meanPtUncert_;
     double mcStatUncert_;
     std::vector<VariationPoint*> varPoints_;
     VariationPoint* extrapolatedPoint_;

@@ -1,4 +1,4 @@
-// $Id: KalibriFileParser.cc,v 1.7 2010/07/13 09:13:54 mschrode Exp $
+// $Id: KalibriFileParser.cc,v 1.8 2010/07/27 17:10:12 mschrode Exp $
 
 #include "KalibriFileParser.h"
 
@@ -192,6 +192,7 @@ namespace resolutionFit {
 
     if( verbose_ == 2 ) {
       std::cout << "  meanPtGen_      =  " << meanPtGen_ << std::endl;
+      std::cout << "  meanPtAve_      =  " << meanPtDijet_ << std::endl;
       std::cout << "  meanPdfPtTrue_  =  " << meanPdfPtTrue_ << std::endl;
     }
   }

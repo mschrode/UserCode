@@ -1,8 +1,9 @@
-// $Id: Parameters.cc,v 1.9 2010/07/21 10:55:45 mschrode Exp $
+// $Id: Parameters.cc,v 1.10 2010/07/27 17:10:23 mschrode Exp $
 
 #include "Parameters.h"
 
 #include <cassert>
+#include <iostream>
 
 #include "TRandom3.h"
 #include "TStyle.h"
@@ -11,26 +12,32 @@
 
 
 namespace resolutionFit {
-  Parameters::Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, ResponseFunction::Type type, int verbosity)
+  Parameters::Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, ResponseFunction::Type type, bool fitAsymmetry, int verbosity)
     : etaMin_(etaMin), etaMax_(etaMax),
       outNamePrefix_(outNamePrefix),
-      styleMode_(gStyle->GetTitle()), verbosity_(verbosity) {
+      styleMode_(gStyle->GetTitle()),
+      fitAsymmetry_(fitAsymmetry),
+      verbosity_(verbosity) {
 
     for(int i = startIdx; i <= endIdx; ++i) {
       fileNameIdx_.push_back(i);
     }
     init(fileBaseNameStdSel, ptBinEdges, type);
+    hasTruthSpectra_ = false;
 
     assert( static_cast<int>(fileNameIdx_.size()) == nPtBins() );
   }
 
-  Parameters::Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, const std::vector<int> fileNameIdx, const TString &outNamePrefix, ResponseFunction::Type type, int verbosity)
+  Parameters::Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, const std::vector<int> fileNameIdx, const TString &outNamePrefix, ResponseFunction::Type type, bool fitAsymmetry, int verbosity)
     : etaMin_(etaMin), etaMax_(etaMax),
       outNamePrefix_(outNamePrefix), 
-      styleMode_(gStyle->GetTitle()), verbosity_(verbosity) {
+      styleMode_(gStyle->GetTitle()),
+      fitAsymmetry_(fitAsymmetry),
+      verbosity_(verbosity) {
     
     fileNameIdx_ = fileNameIdx;
     init(fileBaseNameStdSel, ptBinEdges, type);
+    hasTruthSpectra_ = false;
 
     assert( static_cast<int>(fileNameIdx_.size()) == nPtBins() );
   }
@@ -70,12 +77,61 @@ namespace resolutionFit {
   }
 
 
-  void Parameters::addPt3Cut(double pt3RelCutValue, const TString &fileBaseName, const TString &spectrumName) {
-    pt3RelCutValues_.push_back(pt3RelCutValue);
-    std::vector<TString> names;
-    writeFileNames(names,fileBaseName);
-    namesCutVars_.push_back(names);
-    namesTruthSpectra_.push_back(spectrumName);
+  void Parameters::addPt3Threshold(double pt3RelMax, const TString &fileBaseName, const TString &spectrumName) {
+    if( nPt3Cuts() == 0 ) {
+      pt3Bins_ = false;
+      if( spectrumName == "" ) hasTruthSpectra_ = false;
+      else hasTruthSpectra_ = true;
+    }
+    if( pt3Bins() ) {
+      std::cerr << "ERROR: Already exclusive pt3 binning chosen" << std::endl;
+      exit(-2);
+    } else {
+      pt3Max_.push_back(pt3RelMax);
+      std::vector<TString> names;
+      writeFileNames(names,fileBaseName);
+      namesCutVars_.push_back(names);
+      if( names.at(0) == fileNameStdSel(0) ) stdSelIdx_ = namesCutVars_.size()-1;
+      if( hasTruthSpectra() ) {
+	if( spectrumName == "" ) {
+	  std::cerr << "ERROR: File name for truth spectra must be specified" << std::endl;
+	  exit(-2);
+	}
+	namesTruthSpectra_.push_back(spectrumName);
+      }
+    }
+  }
+
+
+  void Parameters::addPt3Bin(double pt3RelMin, double pt3RelMax, double pt3RelMean, const TString &fileBaseName, const TString &spectrumName) {
+    if( nPt3Cuts() == 0 ) {
+      pt3Bins_ = true;
+      if( spectrumName == "" ) hasTruthSpectra_ = false;
+      else hasTruthSpectra_ = true;
+    }
+    if( !pt3Bins() ) {
+      std::cerr << "ERROR: Already accumulative pt3 binning chosen" << std::endl;
+      exit(-2);
+    } else {
+      pt3Min_.push_back(pt3RelMin);
+      pt3Max_.push_back(pt3RelMax);
+      pt3Mean_.push_back(pt3RelMean);
+      std::vector<TString> names;
+      writeFileNames(names,fileBaseName);
+      namesCutVars_.push_back(names);
+      if( names.at(0) == fileNameStdSel(0) ) stdSelIdx_ = namesCutVars_.size()-1;
+      if( nPt3Cuts() == 0 ) {
+	if( spectrumName == "" ) hasTruthSpectra_ = false;
+	else hasTruthSpectra_ = true;
+      }
+      if( hasTruthSpectra() ) {
+	if( spectrumName == "" ) {
+	  std::cerr << "ERROR: File name for truth spectra must be specified" << std::endl;
+	  exit(-2);
+	}
+	namesTruthSpectra_.push_back(spectrumName);
+      }
+    }
   }
 
 
@@ -126,7 +182,10 @@ namespace resolutionFit {
     assert( parIdx >=0 && parIdx < nFittedPars() );
 
     TString label = "";
-    if( parIdx == 0 ) label = "#sigma / p_{T}";
+    if( parIdx == 0 ) {
+      if( fitAsymmetry() ) label = "#sqrt{2} #sigma_{A}";
+      else label = "#sigma / p_{T}";
+    }
     else if( parIdx == 1 ) label = "#alpha";
     else if( parIdx == 2 ) label = "n";
 
@@ -138,7 +197,10 @@ namespace resolutionFit {
     assert( parIdx >=0 && parIdx < nFittedPars() );
 
     TString label = "";
-    if( parIdx == 0 ) label = "\\sigma / \\pt";
+    if( parIdx == 0 ) {
+      if( fitAsymmetry() ) label = "\\sqrt{2} \\sigma_{A}";
+      else label = "\\sigma / \\pt";
+    }
     else if( parIdx == 1 ) label = "\\alpha";
     else if( parIdx == 2 ) label = "n";
 
@@ -150,9 +212,9 @@ namespace resolutionFit {
     assert( parIdx >=0 && parIdx < nFittedPars() );
 
     TString label = "";
-    if( parIdx == 0 ) label = "#sigma / p_{T}";
-    else if( parIdx == 1 ) label = "Start  of  tail  #alpha";
-    else if( parIdx == 2 ) label = "Slope  of  tail  n";
+    if( parIdx == 1 ) label = "Start  of  tail  ";
+    else if( parIdx == 2 ) label = "Slope  of  tail  ";
+    label += parLabel(parIdx);
 
     return label;
   }
@@ -179,17 +241,23 @@ namespace resolutionFit {
   
   TString Parameters::labelPtBin(int ptBin, int type) const {
     char label[50];
-    if( type == 0 )      sprintf(label,"%.0f < p^{%s}_{T} < %.0f GeV",
-				 ptMin(ptBin),labelMeas().Data(),ptMax(ptBin));
-    else if( type == 1 ) sprintf(label,"%.0f < p^{%s}_{T} < %.0f GeV",
-				 ptMin(ptBin),labelTruth().Data(),ptMax(ptBin));    
+    if( type == 0 ) {
+      if( fitAsymmetry() ) 
+	sprintf(label,"%.0f < p^{ave}_{T} < %.0f GeV",ptMin(ptBin),ptMax(ptBin));
+      else 
+	sprintf(label,"%.0f < p^{%s}_{T} < %.0f GeV",ptMin(ptBin),labelMeas().Data(),ptMax(ptBin));
+    } else if( type == 1 ) {
+      sprintf(label,"%.0f < p^{%s}_{T} < %.0f GeV",ptMin(ptBin),labelTruth().Data(),ptMax(ptBin));    
+    }
     return label;
   }
 
 
-  TString Parameters::labelPt3Cut(int ptBin) const {
+  TString Parameters::labelPt3Cut(int pt3Bin) const {
     char label[50];
-    sprintf(label,"p^{rel}_{T,3} < %.2f",pt3CutValue(ptBin));
+    if( pt3Bins() ) sprintf(label,"%.2f < p^{rel}_{T,3} < %.2f",pt3Min(pt3Bin),pt3Max(pt3Bin));
+    else sprintf(label,"p^{rel}_{T,3} < %.2f",pt3Max(pt3Bin));
+
     return label;
   }
 

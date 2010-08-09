@@ -1,4 +1,4 @@
-// $Id: PtBin.cc,v 1.12 2010/05/27 08:56:12 mschrode Exp $
+// $Id: PtBin.cc,v 1.13 2010/07/13 09:13:58 mschrode Exp $
 
 #include "PtBin.h"
 
@@ -17,7 +17,7 @@ namespace resolutionFit {
       std::cout << "\nPtBin::PtBin" << std::endl;
       std::cout << " fileNameStdSel: '" << par_->fileNameStdSel() << "'" << std::endl;
       std::cout << " fileNamesCutVar:" << std::endl;
-      for(int i = 0; i < par_->nPt3CutVariations(); i++) {
+      for(int i = 0; i < par_->nPt3Cuts(); i++) {
 	std::cout << "  " << i << ": '" << par_->fileNamePt3CutVariations(i) << "'" << std::endl;
       }
     }
@@ -32,11 +32,6 @@ namespace resolutionFit {
 
     // Standard selection for reference
     KalibriFileParser *parserStdSel = new KalibriFileParser(par_->fileNameStdSel(),par_->verbosity());
-
-    // Mean pt of this bin
-    meanPt_ = parserStdSel->meanPt();
-    meanPtUncert_ = parserStdSel->meanPtUncert();
-
     for(int parIdx = 0; parIdx < par_->nFittedPars(); ++parIdx) { // Loop over paramters
       // Reference sigma for unvaried case
       double refS = parserStdSel->value(parIdx);
@@ -48,10 +43,10 @@ namespace resolutionFit {
 	double dUp = parser->value(parIdx) - refS;
 	delete parser;
 	if( par_->verbosity() == 2 ) {
-	  std::cout << " Syst " << meanPt_ << std::flush;
+	  std::cout << " Syst " << meanPt() << std::flush;
 	  std::cout << ":  " << dUp << std::flush;
 	}
-	if( par_->isRelParValue(parIdx) ) dUp /= meanPt_;
+	if( par_->isRelParValue(parIdx) ) dUp /= meanPt();
 	uncertSyst->addUncertainty(new Uncertainty(par_->labelSystUncert(i),dUp,0.));
       }  
       // Sum up systematic and statistic uncertainty
@@ -66,24 +61,21 @@ namespace resolutionFit {
     TString name = "hPtGen_PtBin";
     name += ptBinIdx();
     hPtGen_ = parserStdSel->hist("hPtGen",name);
-    name = "hPtGen_PtBinJet1";
+    name = "hPtGenJet1_PtBin";
     name += ptBinIdx();
     hPtGenJet1_ = parserStdSel->hist("hPtGenJet1",name);
     name = "hPdfPtTrue_PtBin";
     name += ptBinIdx();
     hPdfPtTrue_ = parserStdSel->hist("hTruthPDF",name);
+    name = "hPtAve_PtBin";
+    name += ptBinIdx();
+    hPtAve_ = parserStdSel->hist("hPtDijet",name);
     name = "hResGen_PtBin";
     name += ptBinIdx();
     hResGen_ = parserStdSel->hist("hRespMeas_0",name);
     name = "hPdfRes_PtBin";
     name += ptBinIdx();
     hPdfRes_ = parserStdSel->hist("hRespFit_0",name);
-    name = "hPtAsym_PtBin";
-    name += ptBinIdx();
-    hPtAsym_ = parserStdSel->hist("hPtAsym_0",name);
-    name = "hPdfPtAsym_PtBin";
-    name += ptBinIdx();
-    hPdfPtAsym_ = parserStdSel->hist("hFitPtAsym_0",name);
     name = "hPtGenAsym_PtBin";
     name += ptBinIdx();
     hPtGenAsym_ = parserStdSel->hist("hPtGenAsym_0",name);
@@ -104,7 +96,7 @@ namespace resolutionFit {
       for(int parIdx = 0; parIdx < par_->nFittedPars(); ++parIdx) {
 	std::cout << "Is combined uncertainty: " << std::flush;
 	std::cout << ( uncert_[parIdx]->isCombined() ? "yes" : "no" ) << std::endl;
-	std::cout << "Syst uncert at " << meanPt_ << " GeV: +" << std::flush;
+	std::cout << "Syst uncert at " << meanPt() << " GeV: +" << std::flush;
 	std::cout << uncertSystUp(parIdx) << ", -" << uncertSystDown(parIdx) << std::endl;
       }
     }
@@ -118,10 +110,9 @@ namespace resolutionFit {
     delete hPtGen_;
     delete hPtGenJet1_;
     delete hPdfPtTrue_;
+    delete hPtAve_;
     delete hResGen_;
     delete hPdfRes_;
-    delete hPtAsym_;
-    delete hPdfPtAsym_;
   }
 
   
@@ -129,11 +120,10 @@ namespace resolutionFit {
     TH1 *h = 0;
     if( name == "hPtGen" ) h = static_cast<TH1D*>(hPtGen_->Clone(newName));
     else if( name == "hPtGenJet1" ) h = static_cast<TH1D*>(hPtGenJet1_->Clone(newName));
+    else if( name == "hPtAve" ) h = static_cast<TH1D*>(hPtAve_->Clone(newName));
     else if( name == "hPdfPtTrue" ) h = static_cast<TH1D*>(hPdfPtTrue_->Clone(newName));
     else if( name == "hResGen" ) h = static_cast<TH1D*>(hResGen_->Clone(newName));
     else if( name == "hPdfRes" ) h = static_cast<TH1D*>(hPdfRes_->Clone(newName));
-    else if( name == "hPtAsym" ) h = static_cast<TH1D*>(hPtAsym_->Clone(newName));
-    else if( name == "hPdfPtAsym" ) h = static_cast<TH1D*>(hPdfPtAsym_->Clone(newName));
     else if( name == "hPtGenAsym" ) h = static_cast<TH1D*>(hPtGenAsym_->Clone(newName));
     else if( name == "hMCRes" ) h = static_cast<TH1D*>(hMCRes_->Clone(newName));
     else {

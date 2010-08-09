@@ -117,8 +117,62 @@ namespace resolutionFit {
 	delete g;
 	delete txt;
 	delete can;
+      } // End of loop over fitted parameters
+
+
+
+      // Draw pt asymmetry for different pt3 cuts
+      TCanvas *can = new TCanvas("PlotVariedAsym","Varied Pt Asymmetry",500,500);
+      can->cd();
+      std::vector<TH1*> hAsym;
+      TLegend *leg = util::LabelFactory::createLegendCol(3,par_->pt3Bins() ? 0.47 : 0.35);
+      for(int i = 0; i < 3; ++i) {
+	if( par_->nPt3Cuts() < 3 ) continue;
+	int pt3Idx = 0;
+	if( i == 1 ) pt3Idx = par_->nPt3Cuts()/2;
+	else if( i == 2 ) pt3Idx = par_->nPt3Cuts()-1;
+
+	// Draw pt asymmetry distribution	
+	TString name = "PlotExtrapolation:VariedPtAsymmetry";
+	name += pt3Idx;
+	TH1 *h = (*it)->getHistPtAsym(pt3Idx,name);
+	util::HistOps::setAxisTitles(h,"p_{T} asymmetry","","events");
+	h->SetMarkerStyle(20+2*i);
+	h->SetMarkerColor(util::StyleSettings::color(i));
+	h->SetLineColor(h->GetMarkerColor());
+	h->GetXaxis()->SetRangeUser(-0.4,0.4);
+	if( i == 0 ) {
+	  util::HistOps::setYRange(h,3);
+	  h->Draw("PE1");
+	} else {
+	  h->Draw("PE1same");
+	}
+	leg->AddEntry(h,par_->labelPt3Cut(pt3Idx),"P");
+	hAsym.push_back(h);
       }
-    }
+      
+      // Draw label
+      TPaveText *txt = util::LabelFactory::createPaveText(2,-0.5);
+      txt->AddText(par_->labelLumi()+", "+par_->labelEtaBin());
+      txt->AddText(par_->labelPtBin(ptBin,0));
+      txt->Draw("same");
+      leg->Draw("same");
+      
+      // Write canvas to file
+      TString name = par_->outNamePrefix();
+      name += "VariedPtAsymmetry_PtBin";
+      name += ptBin;
+      name += ".eps";
+      can->SaveAs(name,"eps");
+
+      // Clean up
+      for(size_t i = 0; i < hAsym.size(); ++i) {
+	delete hAsym[i];
+      }
+      delete txt;
+      delete leg;
+      delete can;
+    } // End of loop over pt bins
   }
 
 
@@ -247,11 +301,10 @@ namespace resolutionFit {
       hAsymPredGaussRatio->SetMarkerStyle(24);
 
       // Fitted parameters
-      int cutIdx = 2;
       std::vector<double> pars;
       pars.push_back(1.); // Correct scale assumed
       for(int parIdx = 0; parIdx < par_->nFittedPars(); ++parIdx) {
-	pars.push_back((*it)->fittedValue(parIdx,cutIdx));
+	pars.push_back((*it)->fittedValue(parIdx,par_->stdSelIdx()));
       }
       std::vector<double> parsGauss(2,0.);
       parsGauss[1] = pars[1]/sqrt(2.);
@@ -430,7 +483,7 @@ namespace resolutionFit {
 
       // For all
       TPaveText *txt = util::LabelFactory::createPaveText(2,-0.47);
-      txt->AddText(par_->labelEtaBin()+",  "+par_->labelPt3Cut(cutIdx));
+      txt->AddText(par_->labelEtaBin()+",  "+par_->labelPt3Cut());
       txt->AddText(par_->labelPtBin(bin,0));
 
       // For prediction with fitted parameters only
@@ -663,6 +716,84 @@ namespace resolutionFit {
   }
 
 
+  void FittedResolution::plotPtAsymmetryAndResponseWidth() const {
+
+    // Loop over ptbins
+    for(std::vector<PtBin*>::const_iterator it = ptBins_.begin();
+	it != ptBins_.end(); it++) {
+      int ptBin = (it-ptBins_.begin());
+
+      // Graph of resolution from pt asymmetry
+      // for different cuts on pt3
+      std::vector<double> x(par_->nPt3Cuts());
+      std::vector<double> y(par_->nPt3Cuts());
+      std::vector<double> xu(par_->nPt3Cuts(),0.);
+      std::vector<double> yu(par_->nPt3Cuts());
+      for(int c = 0; c < par_->nPt3Cuts(); ++c) {
+	x[c] = (*it)->pt3Max(c);
+	TH1 *h = (*it)->getHistPtAsym(c,"h");
+	h->Fit("gaus","I0Q");
+	TF1 *f = h->GetFunction("gaus");
+	y[c] = sqrt(2.)*f->GetParameter(2);
+	yu[c] = sqrt(2.)*f->GetParError(2);		  
+	delete h;
+      }
+      TGraphAsymmErrors *gResAsym = new TGraphAsymmErrors(x.size(),&(x.front()),&(y.front()),
+							  &(xu.front()),&(xu.front()),
+							  &(yu.front()),&(yu.front()));
+      gResAsym->SetMarkerStyle(24);
+
+
+      // Graph of fitted resolution
+      TGraphAsymmErrors *gResFit = (*it)->getTGraphOfVariation(0);
+
+//       TF1 *f = (*it)->getTF1OfVariation(parIdx,"FitExtrapolation");
+//       f->SetLineWidth(lineWidth_);
+
+
+      // Frame and MC truth resolution
+      TH1 *hFrame = (*it)->getFrameOfVariation(0,"FrameComparisonAsymFit");
+      hFrame->GetYaxis()->SetRangeUser(hFrame->GetMinimum(),(1.+2*lineHeight_)*hFrame->GetMaximum());
+      for(int bin = 1; bin <= hFrame->GetNbinsX(); ++bin) {
+	hFrame->SetBinContent(bin,trueRes_->Eval((*it)->meanPt()));
+	hFrame->SetBinError(bin,0.);
+      }
+      hFrame->SetLineStyle(2);
+
+
+      // Label
+      TPaveText *txt = util::LabelFactory::createPaveText(2,-0.5);
+      txt->AddText(par_->labelEtaBin());
+      txt->AddText(par_->labelPtBin(ptBin,0));
+      
+      TLegend *leg = util::LabelFactory::createLegendCol(3,0.5);
+      leg->AddEntry(gResFit,"#sigma(Response)","P");
+      leg->AddEntry(gResAsym,"#sqrt{2}#upoint#sigma(Asymmetry)","P");
+      leg->AddEntry(hFrame,"MC truth","L");
+
+      TCanvas *can = new TCanvas("PlotPtAsymmetryAndResponse","PlotPtAsymmetryAndResponse",500,500);
+      can->cd();
+      hFrame->Draw("HIST");
+      gResFit->Draw("PE1same");
+      gResAsym->Draw("PE1same");
+      txt->Draw("same");
+      leg->Draw("same");
+      TString name = par_->outNamePrefix();
+      name += "PtAsymAndResp_PtBin";
+      name += ptBin;
+      name += ".eps";
+      can->SaveAs(name,"eps");
+
+      delete gResAsym;
+      delete gResFit;
+      delete hFrame;
+      delete txt;
+      delete leg;
+      delete can;
+    }
+  }
+
+
   void FittedResolution::plotPtGenAsymmetry() const {
     std::vector<double> meanPt;
     std::vector<double> meanPtErr;
@@ -703,7 +834,7 @@ namespace resolutionFit {
 
       // Labels
       TPaveText *txt = util::LabelFactory::createPaveText(2);
-      txt->AddText(par_->labelEtaBin()+",  "+par_->labelPt3Cut(2));
+      txt->AddText(par_->labelEtaBin()+",  "+par_->labelPt3Cut());
       txt->AddText(par_->labelPtBin(bin,0));
 
       TCanvas *can = new TCanvas("PlotPtGenAsymmetry","PlotPtGenAsymmetry",500,500);
@@ -737,7 +868,7 @@ namespace resolutionFit {
     TCanvas *can = new TCanvas("PlotPtGenAsymmetry","PlotPtGenAsymmetry",500,500);
     can->cd();
     TPaveText *txt = util::LabelFactory::createPaveText(1);
-    txt->AddText(par_->labelEtaBin()+",  "+par_->labelPt3Cut(2));
+    txt->AddText(par_->labelEtaBin()+",  "+par_->labelPt3Cut());
     TLegend *leg = util::LabelFactory::createLegendWithOffset(2,1);
     leg->AddEntry(gGauss,"#sigma Gauss fit","P");
     leg->AddEntry(gStdev,"Standard deviation","P");
@@ -776,8 +907,13 @@ namespace resolutionFit {
     if( par_->fitExtrapolatedSigma() ) nLegEntries++;
     if( gPseudo ) nLegEntries++;
     TH1 *h = new TH1D("FrameExtrapolatedResolution","",1000,ptMin_,ptMax_);
-    h->SetXTitle("p^{"+par_->labelTruth()+"}_{T} (GeV)");
-    h->SetYTitle("#sigma / p^{"+par_->labelTruth()+"}_{T}");
+    if( par_->fitAsymmetry() ) {
+      h->SetXTitle("p^{ref}_{T} (GeV)");
+      h->SetYTitle("#sigma / p^{ref}_{T}");
+    } else {
+      h->SetXTitle("p^{"+par_->labelTruth()+"}_{T} (GeV)");
+      h->SetYTitle("#sigma / p^{"+par_->labelTruth()+"}_{T}");
+    }
     h->SetNdivisions(510);
     double min = 0.7*(*std::min_element(gStat->GetY(),gStat->GetY()+gStat->GetN()));
     double max = 1.4*(*std::max_element(gStat->GetY(),gStat->GetY()+gStat->GetN()));
@@ -810,11 +946,16 @@ namespace resolutionFit {
     txt->Draw("same");
 
     TLegend *leg = util::LabelFactory::createLegendWithOffset(nLegEntries,txt->GetSize());
-    leg->AddEntry(gStat,"Extrapolated #bar{#sigma} (p^{3}_{T,rel} #rightarrow 0)","P");
-    //leg->AddEntry(gSyst,"Uncertainty from spectrum","F");
-    if( gPseudo ) leg->AddEntry(gPseudo,"Pseudo #gamma+jet measurement","P");
-    leg->AddEntry(trueRes_,"MC truth resolution","L");
-    if( par_->fitExtrapolatedSigma() ) leg->AddEntry(fittedRes_,"Fit #sigma(p_{T}) to #bar{#sigma}","L");
+    if( par_->fitAsymmetry() ) {
+      leg->AddEntry(gStat,"Extrapolated #bar{#sigma} (p^{3}_{T,rel} #rightarrow 0), p^{ref}_{T} = p^{ave}_{T}","P");
+      leg->AddEntry(trueRes_,"MC truth resolution, p^{ref}_{T} = p^{"+par_->labelTruth()+"}_{T}","L");
+    } else {
+      leg->AddEntry(gStat,"Extrapolated #bar{#sigma} (p^{3}_{T,rel} #rightarrow 0)","P");
+      //leg->AddEntry(gSyst,"Uncertainty from spectrum","F");
+      if( gPseudo ) leg->AddEntry(gPseudo,"Pseudo #gamma+jet measurement","P");
+      leg->AddEntry(trueRes_,"MC truth resolution","L");
+      if( par_->fitExtrapolatedSigma() ) leg->AddEntry(fittedRes_,"Fit #sigma(p_{T}) to #bar{#sigma}","L");
+    }
     leg->Draw("same");
 
     // Write canvas to file
@@ -944,6 +1085,22 @@ namespace resolutionFit {
     can->SaveAs(par_->outNamePrefix()+"ExtrapolatedResolutionDifference.eps","eps");
 
 
+//     ////////////////  Dirty way to get graph out of here  ////////////////////
+//     if( false ) {
+//       TString id = "FitCorePtAsym";
+//       std::cout << std::endl;
+//       std::cout << "std::vector<double> x" << id << "(" << gStat->GetN() << ",0.);" << std::endl;
+//       std::cout << "std::vector<double> y" << id << "(" << gStat->GetN() << ",0.);" << std::endl;
+//       std::cout << "std::vector<double> ex" << id << "(" << gStat->GetN() << ",0.);" << std::endl;
+//       std::cout << "std::vector<double> ey" << id << "(" << gStat->GetN() << ",0.);" << std::endl;
+//       for(int i = 0; i < gStat->GetN(); ++i) {
+// 	std::cout << "x" << id << "[" << i << "] = " << gStat->GetX()[i] << ";" << std::endl;
+// 	std::cout << "y" << id << "[" << i << "] = " << gStat->GetY()[i] << ";" << std::endl;
+// 	std::cout << "ey" << id << "[" << i << "] = " << gStat->GetEYhigh()[i] << ";" << std::endl;
+//       }
+//       std::cout << "TGraphErrors *g" << id << " = new TGraphErrors(x" << id << ".size(),&(x" << id << ".front()),&(y" << id << ".front()),&(ex" << id << ".front()),&(ey" << id << ".front()));" << std::endl;
+//     }
+
 
     // Clean up
     delete h;
@@ -980,32 +1137,34 @@ namespace resolutionFit {
       double yMax = logY ? 8E1 : (1.8+4*lineHeight_)*hPtGen->GetMaximum();
 
       TH1 *hPtGenJet1 = (*it)->getHistPtGenJet1("PlotPtGenJet1");
-      hPtGenJet1->SetXTitle("p^{"+par_->labelTruth()+"}_{T}  (GeV)");
-      hPtGenJet1->SetYTitle("1 / N  dN / dp^{"+par_->labelTruth()+"}_{T}  1 / (GeV)");
-      hPtGenJet1->GetYaxis()->SetRangeUser(yMin,yMax);
+      util::HistOps::setAxisTitles(hPtGenJet1,"p^{"+par_->labelTruth()+"}_{T}","GeV","events",true);
+      util::HistOps::setYRange(hPtGenJet1,5);
       hPtGenJet1->SetMarkerStyle(20);
 
       // Draw pdf
       TH1 *hPdfPtTrue = (*it)->getHistPdfPtTrue("PlotPdfPtTrue");
       hPdfPtTrue->SetLineColor(2);
       hPdfPtTrue->SetLineWidth(lineWidth_);
-      hPdfPtTrue->SetXTitle("p^{"+par_->labelTruth()+"}_{T}  (GeV)");
-      hPdfPtTrue->SetYTitle("1 / N  dN / dp^{"+par_->labelTruth()+"}_{T}  1 / (GeV)");
-      hPdfPtTrue->GetYaxis()->SetRangeUser(yMin,yMax);
-      hPdfPtTrue->Draw("L");
-      hPtGenJet1->Draw("PE1same");
+      util::HistOps::setAxisTitles(hPdfPtTrue,"p^{"+par_->labelTruth()+"}_{T}","GeV","events",true);
+      util::HistOps::setYRange(hPdfPtTrue,5);
+      if( par_->fitAsymmetry() ) {
+	hPtGenJet1->Draw("PE1");
+      } else {
+	hPdfPtTrue->Draw("L");
+	hPtGenJet1->Draw("PE1same");
+      }
 
       // Labels
       TPaveText *txt = util::LabelFactory::createPaveText(2);
       txt->AddText(par_->labelPtBin(bin,0));
-      txt->AddText(par_->labelEtaBin()+",  p^{rel}_{T,3} < 0.1");
+      txt->AddText(par_->labelEtaBin()+",  "+par_->labelPt3Cut());
       txt->Draw("same");
 
       TLegend *leg = util::LabelFactory::createLegendWithOffset(2,2.5*lineHeight_);
       leg->AddEntry(hPtGenJet1,"MC truth","P");
       //leg->AddEntry(hPtGen,"MC truth: p^{"+par_->labelTruth()+"}_{T,1+2}","P");
       leg->AddEntry(hPdfPtTrue,"Spectrum  #tilde{f}(p^{true}_{T})","L");
-      leg->Draw("same");
+      if( !par_->fitAsymmetry() ) leg->Draw("same");
 
       if( logY ) gPad->SetLogy();
 
@@ -1015,6 +1174,23 @@ namespace resolutionFit {
       name += bin;
       name += ".eps";
       can->SaveAs(name,"eps");
+
+      if( par_->fitAsymmetry() ) {
+	TH1 *hPtAve = (*it)->getHistPtAve("PlotSpectra:PtAve");
+	hPtAve->SetMarkerStyle(20);
+	util::HistOps::setAxisTitles(hPtAve,"p^{ave}_{T}","GeV","events",true);
+	util::HistOps::setYRange(hPtAve,2);
+	can->Clear();
+	can->cd();
+	hPtAve->Draw("PE1");
+	txt->Draw("same");
+	name = par_->outNamePrefix();
+	name += "PtAveSpectrum_PtBin";
+	name += bin;
+	name += ".eps";
+	can->SaveAs(name,"eps");
+	delete hPtAve;
+      }
 
       // Clean up
       delete hPtGen;
@@ -1027,33 +1203,30 @@ namespace resolutionFit {
 
 
     // Draw underlying truth spectra for different pt3 cuts
-    std::vector<TH1*> hSpectra;
-    TPaveText *txt = util::LabelFactory::createPaveText(1,-0.5);
-    txt->AddText(par_->labelLumi()+",  "+par_->labelEtaBin());
-    TLegend *leg = util::LabelFactory::createLegendCol(par_->nPt3CutVariations()-1,0.47);
-    for(int cutIdx = 0; cutIdx < par_->nPt3CutVariations(); ++cutIdx) {
-      if( par_->fileNameTruthSpectrum(cutIdx) != "" ) {
+    if( par_->hasTruthSpectra() ) {
+      std::vector<TH1*> hSpectra;
+      TPaveText *txt = util::LabelFactory::createPaveText(1,0.47);
+      txt->AddText(par_->labelEtaBin());
+      TLegend *leg = util::LabelFactory::createLegendColWithOffset(par_->nPt3Cuts()-1,0.47,1);
+      for(int cutIdx = 0; cutIdx < par_->nPt3Cuts(); ++cutIdx) {
 	KalibriFileParser *parser = new KalibriFileParser(par_->fileNameTruthSpectrum(cutIdx),par_->verbosity(),false);
 	TString name = "hTruthSpectrum";
 	name += cutIdx;
 	TH1 *h = parser->hist("hPtGen",name);
+	util::HistOps::normHist(h,"width");
 	util::HistOps::setAxisTitles(h,"p^{"+par_->labelTruth()+"}_{T}","GeV","jets",true);
-	h->SetMarkerStyle(7);
-	h->SetMarkerColor(util::StyleSettings::color(cutIdx));
 	h->SetLineColor(util::StyleSettings::color(cutIdx));      
 	h->SetLineWidth(1);
 	hSpectra.push_back(h);
 	leg->AddEntry(h,par_->labelPt3Cut(cutIdx),"L");
 	delete parser;
       }
-    }
-    if( hSpectra.size() ) {
       hSpectra[0]->GetYaxis()->SetRangeUser(3E-20,8);
       TCanvas *can = new TCanvas("canTruthSpectra","Truth Spectra",500,500);
       can->cd();
-      hSpectra[0]->Draw("L");
+      hSpectra[0]->Draw("HISTC");
       for(size_t i = 1; i < hSpectra.size(); ++i) {
-	hSpectra[i]->Draw("Lsame");
+	hSpectra[i]->Draw("HISTCsame");
       }
       txt->Draw("same");
       leg->Draw("same");
@@ -1066,66 +1239,6 @@ namespace resolutionFit {
       delete txt;
       delete can;
     }    
-  }
-
-
-  void FittedResolution::plotAsymmetrySlopes() const {
-    if( par_->respFuncType() == ResponseFunction::Gauss ) {
-
-      // Loop over ptbins
-      for(std::vector<PtBin*>::const_iterator it = ptBins_.begin();
-	  it != ptBins_.end(); it++) {
-	int bin = (it-ptBins_.begin());
-
-	std::vector<double> pt3cut;
-	std::vector<double> pt3cutErr;
-	std::vector<double> asym;
-	std::vector<double> asymErr;
-	std::vector<double> resp;
-	std::vector<double> respErr;
-	for(int cutIdx = 0; cutIdx < (*it)->nCutValues(); ++cutIdx) {
-	  pt3cut.push_back((*it)->cutValue(cutIdx));
-	  pt3cutErr.push_back(0.);
-	  asym.push_back(sqrt(2.)*(*it)->ptAsym(cutIdx));
-	  asymErr.push_back(sqrt(2.)*(*it)->ptAsymUncert(cutIdx));
-	  resp.push_back((*it)->fittedValue(0,cutIdx));
-	  respErr.push_back((*it)->fittedValueUncert(0,cutIdx));
-	}
-	TGraphErrors *gPtAsym = new TGraphErrors(pt3cut.size(),
-						 &(pt3cut.front()),&(asym.front()),
-						 &(pt3cutErr.front()),&(asymErr.front()));
-	gPtAsym->SetMarkerStyle(24);
-	gPtAsym->SetMarkerColor(4);
-	gPtAsym->SetLineColor(4);
-	TGraphErrors *gResp = new TGraphErrors(pt3cut.size(),
-					       &(pt3cut.front()),&(resp.front()),
-					       &(pt3cutErr.front()),&(respErr.front()));
-	gResp->SetMarkerStyle(20);
-	gResp->SetMarkerColor(2);
-	gResp->SetLineColor(2);
-
-	TH1 *hFrame = new TH1D("plotAsymmetrySlopes:hFrame",
-			       ";p^{rel}_{T,3} threshold;Resolution",
-			       10,0.,1.4*(*it)->cutValue((*it)->nCutValues()-1));
-	hFrame->GetYaxis()->SetRangeUser(0.05,0.2);
-
-	TCanvas *can = new TCanvas("PlotAsymmetrySlopes","PlotAsymmetrySlopes",500,500);
-	can->cd();
-	hFrame->Draw();
-	gResp->Draw("PE1same");
-	gPtAsym->Draw("PE1same");
-	TString name = par_->outNamePrefix();
-	name += "PtAsymmetrySlopes_PtBin";
-	name += bin;
-	name += ".eps";
-	can->SaveAs(name,"eps");
-   
-	delete hFrame;
-	delete gResp;
-	delete gPtAsym;
-	delete can;
-      }
-    }
   }
 
 
@@ -1196,14 +1309,80 @@ namespace resolutionFit {
   }
 
 
-  void FittedResolution::plotMCClosure() const {
+  void FittedResolution::plotMCClosure(bool fitCore) const {
     if( par_->hasMCClosure() ) {
+
+      // Different fits of MC truth resolution
+      std::vector<TString> mcTruthResoLabels;
+      mcTruthResoLabels.push_back("#sigma / <R>,  <R> = free parameter");
+      mcTruthResoLabels.push_back("#sigma,  <R> = free parameter");
+      mcTruthResoLabels.push_back("#sigma,  <R> = 1");
+      std::vector<TH1*> hMCTruthReso(mcTruthResoLabels.size(),0);
+      for(size_t i = 0; i < hMCTruthReso.size(); ++i) {
+	TString name = "plotMCClosure:hMCTruthReso";
+	name += i;
+	hMCTruthReso[i] = util::HistOps::createTH1D(name,nPtBins(),&(par_->ptBinEdges()->front()),"p_{T}","GeV","Resolution");
+	util::HistOps::setStyleColor(hMCTruthReso[i],i);
+      }
+
+
       // Loop over ptbins
       for(std::vector<PtBin*>::const_iterator it = ptBins_.begin();
 	  it != ptBins_.end(); it++) {
 	int bin = (it-ptBins_.begin());
 
 	TH1 *hMCRes = (*it)->getHistMCRes("PlotMCClosureMCRes");
+	util::HistOps::setAxisTitles(hMCRes,par_->xAxisTitleResponse(),"","jets",true);
+	hMCRes->SetMarkerStyle(20);
+	
+	// Fit MC truth resolution
+	std::vector<TF1*> gaussFits(3);
+	double min = 0.;
+	double max = 2.;
+	if( fitCore ) {
+	  min = hMCRes->GetMean() - 3.*hMCRes->GetRMS();
+	  max = hMCRes->GetMean() + 3.*hMCRes->GetRMS();
+	  hMCRes->Fit("gaus","I0Q","",min,max);
+	  TF1 *f = hMCRes->GetFunction("gaus");
+	  min = f->GetParameter(1) - 1.5*f->GetParameter(2);
+	  max = f->GetParameter(1) + 1.5*f->GetParameter(2);
+	}
+	for(size_t i = 0; i < hMCTruthReso.size(); ++i) {
+	  TString name = "gaussFits";
+	  name += i;
+	  if( i < 2 ) {
+	    gaussFits[i] = new TF1(name,"gaus",min,max);
+	    gaussFits[i]->SetParameter(0,5.);
+	    gaussFits[i]->SetParameter(1,1.);
+	    gaussFits[i]->SetParameter(2,0.1);
+	  } else if( i == 2 ) {
+	    gaussFits[i] = new TF1(name,gaussian,min,max,1);
+	    gaussFits[i]->SetParameter(0,0.1);
+	  }
+	  hMCRes->Fit(gaussFits[i],"I0QR");
+	  double reso = 0.;
+	  double err = 0.;
+	  if( i == 0 ) {
+	    // Resolution = Sigma / mu, mu = free parameter
+	    reso = gaussFits[i]->GetParameter(2)/gaussFits[i]->GetParameter(1);
+	    err = gaussFits[i]->GetParError(2)/gaussFits[i]->GetParameter(1);
+	  } else if( i == 1 ) {
+	    // Resolution = Sigma, mu = free parameter
+	    reso = gaussFits[i]->GetParameter(2);
+	    err = gaussFits[i]->GetParError(2);
+	  } else if( i == 2 ) {
+	    // Resolution = Sigma, mu = free parameter
+	    reso = gaussFits[i]->GetParameter(0);
+	    err = gaussFits[i]->GetParError(0);
+	  }
+	  // Store fit results
+	  hMCTruthReso[i]->SetBinContent(1+bin,reso);
+	  hMCTruthReso[i]->SetBinError(1+bin,err);
+
+	  gaussFits[i]->SetLineStyle(2);	  
+	  gaussFits[i]->SetLineColor(util::StyleSettings::color(i));
+	  gaussFits[i]->SetLineWidth(1);
+	}
 	
 	bool logY = par_->respFuncType() == ResponseFunction::CrystalBall ? true : false;
 	double rMin = 0.4;
@@ -1214,41 +1393,28 @@ namespace resolutionFit {
 	}
 	double yMin = logY ? 6E-4 : 0.;
 	//	double yMax = logY ? 4E3 : hMCRes->GetMaximum()+2.5;
-	double yMax = logY ? 3E2 : hMCRes->GetMaximum()+2.5;
+	double yMax = logY ? 3E2 : hMCRes->GetMaximum()+3.5;
 	if( par_->extendedLegend() ) {
 	  yMin = logY ? 6E-4 : 0.;
 	  yMax = logY ? 7E2 : hMCRes->GetMaximum()+3.5;
 	}
 
-	// Create Canvas
-	TCanvas *can = new TCanvas("PlotMCClosure","PlotMCClosure",500,500);
-	can->cd();
-
-	// Draw MC truth resolution
-	hMCRes->SetMarkerStyle(20);
-// 	hMCRes->SetXTitle(par_->xAxisTitleResponse());
-// 	hMCRes->SetYTitle(par_->yAxisTitleResponse());
-// 	hMCRes->GetXaxis()->SetRangeUser(rMin,rMax);
-// 	hMCRes->GetYaxis()->SetRangeUser(yMin,yMax);
-	
 	// Fill histogram of extrapolated response
-	TH1 *hFitRes = new TH1D("PlotMCClosureFitRes","",500,rMin,rMax);
+	TH1 *hFitRes = new TH1D("PlotMCClosureFitRes","",5000,rMin,rMax);
 	hFitRes->SetLineWidth(lineWidth_);
 	hFitRes->SetLineColor(2);
-	hFitRes->SetXTitle(par_->xAxisTitleResponse());
-	hFitRes->SetYTitle(par_->yAxisTitleResponse());
-	if( par_->styleMode() == "CMS" ) {
-	  char title[10];
-	  sprintf(title,"1 / N  Events / %.2f",hMCRes->GetBinWidth(1));
-	  hFitRes->SetYTitle(title);
-	}
+	hFitRes->SetXTitle(hMCRes->GetXaxis()->GetTitle());
+	hFitRes->SetYTitle(hMCRes->GetYaxis()->GetTitle());
 	hFitRes->GetXaxis()->SetRangeUser(rMin,rMax);
-	hFitRes->GetYaxis()->SetRangeUser(yMin,yMax);
 	TH1 *hFitResCore = 0;
 	if( par_->respFuncType() == ResponseFunction::CrystalBall ) {
 	  hFitResCore = static_cast<TH1D*>(hFitRes->Clone("PlotMCClosureFitResCore"));
 	  hFitResCore->SetLineStyle(2);
 	}
+	TH1 *hFitResBins = static_cast<TH1D*>(hMCRes->Clone("PlotMCClosureFitResBins"));
+	hFitResBins->SetLineWidth(lineWidth_);
+	hFitResBins->SetLineColor(2);
+	hFitResBins->GetXaxis()->SetRangeUser(rMin,rMax);
 	std::vector<double> pars;
 	pars.push_back(1.);
 	for(int parIdx = 0; parIdx < par_->nFittedPars(); ++parIdx) {
@@ -1259,96 +1425,192 @@ namespace resolutionFit {
 	  hFitRes->SetBinContent(rBin,(*(par_->respFunc()))(res,pars));
 	  if( hFitResCore ) hFitResCore->SetBinContent(rBin,par_->respFunc()->pdfGauss(res,pars));
 	}
-	hFitRes->Draw("L");	
-	//if( hFitResCore ) hFitResCore->Draw("Lsame");
-	if( par_->styleMode() == "CMS" ) hMCRes->Draw("PEsame");
-	else hMCRes->Draw("PE1same");
+	for(int rBin = 1; rBin <= hFitResBins->GetNbinsX(); ++rBin) {
+	  int minBin = hFitRes->FindBin(hFitResBins->GetXaxis()->GetBinLowEdge(rBin));
+	  int maxBin = hFitRes->FindBin(hFitResBins->GetXaxis()->GetBinUpEdge(rBin));
+	  hFitResBins->SetBinContent(rBin,hFitRes->Integral(minBin,maxBin,"width"));
+	  hFitResBins->SetBinError(rBin,0.);
+	}
+	hFitResBins->Scale(1./hFitResBins->GetBinWidth(1));
 
-	
-	//gPad->RedrawAxis(); // Leads to slightly thicker font!!
-	
 	
 	// Labels
-// 	TPaveText *txt = 0;
-// 	if( par_->extendedLegend() ) {
-// 	  txt = util::LabelFactory::createPaveText(2);
-// 	  txt->AddText("PYTHIA, #sqrt{s} = 7 TeV, "+par_->labelLumi());
-// 	  txt->AddText("Anti-k_{T} d = 0.5 jets, "+par_->labelEtaBin());
-// 	} else if( par_->styleMode() == "CMS" ) {
-// 	  txt = util::LabelFactory::createPaveText(2);
-// 	  txt->AddText("CMS preliminary");
-// 	  txt->AddText("PYTHIA, #sqrt{s} = 7 TeV, "+par_->labelLumi()+", "+par_->labelEtaBin());
-// 	} else {
-// 	  txt = util::LabelFactory::createPaveText(1);
-// 	  txt->AddText(par_->labelLumi()+", "+par_->labelEtaBin());
-// 	}
-	//txt->Draw("same");
+	TPaveText *txt = 0;
+	if( par_->extendedLegend() ) {
+	  txt = util::LabelFactory::createPaveText(2);
+	  txt->AddText("PYTHIA, #sqrt{s} = 7 TeV, "+par_->labelLumi());
+	  txt->AddText("Anti-k_{T} d = 0.5 jets, "+par_->labelEtaBin());
+	} else if( par_->styleMode() == "CMS" ) {
+	  txt = util::LabelFactory::createPaveText(2);
+	  txt->AddText("CMS preliminary");
+	  txt->AddText("PYTHIA, #sqrt{s} = 7 TeV, "+par_->labelLumi()+", "+par_->labelEtaBin());
+	} else {
+	  txt = util::LabelFactory::createPaveText(1);
+	  txt->AddText(par_->labelLumi()+", "+par_->labelEtaBin());
+	}
+	TLegend *leg = util::LabelFactory::createLegendWithOffset(2,txt->GetSize(),0.06);
+	leg->AddEntry(hMCRes,"MC truth, "+par_->labelPtBin(bin,1),"P");
+	leg->AddEntry(hFitRes,"Fit result, "+par_->labelPtBin(bin,0),"L");
 
-// 	TLegend *leg = util::LabelFactory::createLegendWithOffset(2,txt->GetSize(),0.06);
-// 	leg->AddEntry(hMCRes,"MC truth, "+par_->labelPtBin(bin,1),"P");
-// 	leg->AddEntry(hFitRes,"Fit result, "+par_->labelPtBin(bin,0),"L");
-// 	leg->Draw("same");
+	util::HistOps::setYRange(hFitRes,txt->GetSize()+3);
+	util::HistOps::setYRange(hFitResBins,txt->GetSize()+3);
 
-// 	std::cout << "TPaveText::GetX1() " << txt->GetX1() << std::endl;
-// 	std::cout << "TPaveText::GetY1() " << txt->GetY1() << std::endl;
-// 	std::cout << "TPaveText::GetX2() " << txt->GetX2() << std::endl;
-// 	std::cout << "TPaveText::GetY2() " << txt->GetY2() << std::endl;	
+	// Create Canvas
+	TCanvas *can = new TCanvas("PlotMCClosure","PlotMCClosure",500,500);
+	can->cd();
 	
-// 	std::cout << "TLegend::GetX1() " << leg->GetX1() << std::endl;
-// 	std::cout << "TLegend::GetY1() " << leg->GetY1() << std::endl;
-// 	std::cout << "TLegend::GetX2() " << leg->GetX2() << std::endl;
-// 	std::cout << "TLegend::GetY2() " << leg->GetY2() << std::endl;
-
-
-	// Seema's style for PAS
-	TPaveText *txt = new TPaveText(0.22, 0.765, 0.52, 0.93, "brNDC");
-	txt->SetBorderSize(0);
-	txt->SetFillColor(0);
-	txt->SetTextFont(42);
-	txt->SetTextAlign(12);
-	txt->AddText("CMS Preliminary");
-	txt->AddText("PYTHIA,  #sqrt{s} = 7 TeV");
-	txt->AddText("L = 50 pb^{-1}");
+	hFitRes->Draw("L");	
+	for(size_t i = 0; i < gaussFits.size(); ++i) {
+	  gaussFits[i]->Draw("same");
+	}
+	if( hFitResCore ) hFitResCore->Draw("Lsame");
+	hMCRes->Draw("PE1same");
 	txt->Draw("same");
-
-	TH1 *hDummy = new TH1D("hDummy","",1,0,1);
-	hDummy->SetLineColor(0);
-
-	TLegend *leg = new TLegend(0.56, 0.75, 0.94, 0.93, "", "brNDC");
-	leg->SetBorderSize(0);
-	leg->SetFillColor(0);
-	leg->SetTextFont(42);
-	leg->SetHeader("|#eta^{Jet}| < 1.2");
- 	leg->AddEntry(hMCRes,"MC truth","P");
- 	leg->AddEntry(hDummy,par_->labelPtBin(bin,1),"L");
- 	leg->AddEntry(hFitRes,"Fit result","L");
- 	leg->AddEntry(hDummy,par_->labelPtBin(bin,0),"L");
-
-// 	leg->AddEntry(hMCRes,"MC truth  "+par_->labelPtBin(bin,1),"P");
-// 	leg->AddEntry(hFitRes,"Fit result  "+par_->labelPtBin(bin,0),"L");
-
-	leg->Draw("sames");
-
-	
-
+	leg->Draw("same");
 	if( logY ) gPad->SetLogy();
-	
-	// Write Canvas to fiel
 	TString name = par_->outNamePrefix();
 	name += "MCClosure_PtBin";
 	name += bin;
 	name += ".eps";
 	can->SaveAs(name,"eps");
+
+	hFitResBins->Draw("HIST");	
+	hMCRes->Draw("PE1same");
+	txt->Draw("same");
+	leg->Draw("same");
+	if( logY ) gPad->SetLogy();
+	name = par_->outNamePrefix();
+	name += "MCClosureHist_PtBin";
+	name += bin;
+	name += ".eps";
+	can->SaveAs(name,"eps");
+
+	TH1 *hFitResBinsRatioFrame = util::HistOps::createRatioFrame(hMCRes,"Fit / MC truth",0.5,2.0);
+	hFitResBinsRatioFrame->GetXaxis()->SetRangeUser(rMin,rMax);
+	TH1 *hFitResBinsRatio = util::HistOps::createRatioPlot(hFitResBins,hMCRes);
+	util::HistOps::setColor(hFitResBinsRatio,1);
+	hFitResBinsRatioFrame->Draw();	
+	hFitResBinsRatio->Draw("PE1same");
+	leg->Draw("same");
+	name = par_->outNamePrefix();
+	name += "MCClosureRatio_PtBin";
+	name += bin;
+	name += ".eps";
+	can->SaveAs(name,"eps");
+	
 	
 	// Clean up
 	delete hMCRes;
 	delete hFitRes;
-	delete hDummy;
+	delete hFitResBins;
+	delete hFitResBinsRatio;
+	delete hFitResBinsRatioFrame;
+	for(size_t i = 0; i < gaussFits.size(); ++i) {
+	  delete gaussFits[i];
+	}
 	if( hFitResCore ) delete hFitResCore;
 	delete txt;
 	delete leg;
 	delete can;
       }
+
+      // Graph of fitted resolution and ratio to MC truth
+      if( par_->respFuncType() == ResponseFunction::Gauss ) {
+	// Fitted resolution
+	TGraphAsymmErrors *gStatReso = getTGraphOfResolution("Statistic");
+	// Ratio to different MC truth resolutions
+	std::vector<TGraphAsymmErrors*> gStatResoRatios(hMCTruthReso.size());
+	for(size_t g = 0; g < gStatResoRatios.size(); ++g) {
+	  gStatResoRatios[g] = getTGraphOfResolution("Statistic");
+	  for(int i = 0; i < gStatResoRatios[g]->GetN(); ++i) {
+	    double x = gStatResoRatios[g]->GetX()[i];
+	    double y = gStatResoRatios[g]->GetY()[i];
+	    double yTrue = hMCTruthReso[g]->GetBinContent(1+i);
+	    double yTrueErr = hMCTruthReso[g]->GetBinError(1+i);
+	    double exh = gStatResoRatios[g]->GetEXhigh()[i];
+	    double exl = gStatResoRatios[g]->GetEXlow()[i];
+	    double eyh = gStatResoRatios[g]->GetEYhigh()[i];
+	    eyh = sqrt( eyh*eyh/yTrue/yTrue + y*y*yTrueErr*yTrueErr/yTrue/yTrue/yTrue/yTrue);
+	    double eyl = gStatResoRatios[g]->GetEYlow()[i];	
+	    eyl = sqrt( eyl*eyl/yTrue/yTrue + y*y*yTrueErr*yTrueErr/yTrue/yTrue/yTrue/yTrue);
+	    gStatResoRatios[g]->SetPoint(i,x,y/yTrue);
+	    gStatResoRatios[g]->SetPointError(i,exl,exh,eyl,eyh);
+	    gStatResoRatios[g]->SetMarkerStyle(20+g);
+	    gStatResoRatios[g]->SetMarkerColor(hMCTruthReso[g]->GetLineColor());
+	    gStatResoRatios[g]->SetLineColor(hMCTruthReso[g]->GetLineColor());
+	  }
+	}
+
+	TGraphAsymmErrors *gTruth = getTGraphOfResolution("Statistic");
+	// Ratio to different MC truth resolutions
+	for(int i = 0; i < gTruth->GetN(); ++i) {
+	  double x = gTruth->GetX()[i];
+	  double y = trueRes_->Eval(x);
+	  double exh = gTruth->GetEXhigh()[i];
+	  double exl = gTruth->GetEXlow()[i];
+	  double eyh = 0.;
+	  double eyl = eyh;
+	  gTruth->SetPoint(i,x,y);
+	  gTruth->SetPointError(i,exl,exh,eyl,eyh);
+	  gTruth->SetMarkerStyle(24);
+	}
+
+	// Labels and legends
+	TLegend *legMCTruthReso = util::LabelFactory::createLegendCol(mcTruthResoLabels.size()+2,0.8);
+	legMCTruthReso->AddEntry(gStatReso,"Fit","P");
+	legMCTruthReso->AddEntry(gTruth,"MC Truth Resolution","P");
+	for(size_t i = 0; i < hMCTruthReso.size(); ++i) {
+	  legMCTruthReso->AddEntry(hMCTruthReso[i],mcTruthResoLabels[i],"L");
+	}
+	TLegend *legMCTruthResoRatio = util::LabelFactory::createLegendCol(mcTruthResoLabels.size(),0.8);
+	for(size_t i = 0; i < hMCTruthReso.size(); ++i) {
+	  legMCTruthResoRatio->AddEntry(gStatResoRatios[i],mcTruthResoLabels[i],"P");
+	}
+	
+
+	// Plot fitted and different MC truth resolutions
+	TCanvas *can = new TCanvas("PlotMCClosure","PlotMCTruthReso",500,500);
+	can->cd();
+	util::HistOps::setYRange(hMCTruthReso[0],legMCTruthReso->GetNRows());
+	hMCTruthReso[0]->Draw("HISTE");
+	for(size_t i = 1; i < hMCTruthReso.size(); ++i) {
+	  hMCTruthReso[i]->Draw("HISTEsame");
+	}
+	gStatReso->Draw("PE1same");
+	gTruth->Draw("PE1same");
+	legMCTruthReso->Draw("same");
+	can->SetLogx();
+	TString name = par_->outNamePrefix() + "MCClosureResolution.eps";
+	can->SaveAs(name,"eps");
+
+	// Plot ratios
+	TH1 *hResoRatio = util::HistOps::createRatioFrame(hMCTruthReso[0],"Fit / MC Truth",0.5,2.0);
+	can->cd();
+ 	hResoRatio->Draw();
+	for(size_t g = 0; g < gStatResoRatios.size(); ++g) {
+	  gStatResoRatios[g]->Draw("PE1same");
+	}
+	legMCTruthResoRatio->Draw("same");
+	can->SetLogx();
+	name = par_->outNamePrefix() + "MCClosureResolutionRatio.eps";
+	can->SaveAs(name,"eps");
+	
+
+	delete hResoRatio;
+	delete gStatReso;
+	delete gTruth;
+	for(size_t g = 0; g < gStatResoRatios.size(); ++g) {
+	  delete gStatResoRatios[g];
+	}
+	delete legMCTruthReso;
+	delete legMCTruthResoRatio;
+	delete can;
+      }
+      for(size_t i = 0; i < hMCTruthReso.size(); ++i) {
+	delete hMCTruthReso[i];
+      }
+
+
     } else {
       std::cerr << "No MCClosure response distribution available." << std::endl;
     }
@@ -1398,7 +1660,7 @@ namespace resolutionFit {
 	  hExRes->Draw("Lsame");	
 
 	  std::vector<TH1*> hCutVarRes;
-	  for(int c = 0; c < (*it)->nCutValues(); ++c) {
+	  for(int c = 0; c < (*it)->nPt3Cuts(); ++c) {
 	    pars[2] = (*it)->fittedValue(1,c);
 	    pars[3] = (*it)->fittedValue(2,c);
 
@@ -1421,13 +1683,11 @@ namespace resolutionFit {
 	  txt->AddText((*it)->ptMinStr()+" < p_{T} < "+(*it)->ptMaxStr()+" GeV,  "+par_->labelEtaBin());
 	  txt->Draw("same");
 
-	  TLegend *leg = util::LabelFactory::createLegendWithOffset((*it)->nCutValues()+2,0.05,0.038);
+	  TLegend *leg = util::LabelFactory::createLegendWithOffset((*it)->nPt3Cuts()+2,0.05,0.038);
 	  leg->AddEntry(hMCRes,"MC truth","P");
 	  leg->AddEntry(hExRes,"Full extrapolation","L");
-	  for(int c = 0; c < (*it)->nCutValues(); ++c) {
-	    char entry[50];
-	    sprintf(entry,"p^{rel}_{T,3} < %.2f",(*it)->cutValue(c));
-	    leg->AddEntry(hCutVarRes[c],entry,"L");
+	  for(int c = 0; c < (*it)->nPt3Cuts(); ++c) {
+	    leg->AddEntry(hCutVarRes[c],par_->labelPt3Cut(c),"L");
 	  }
 	  leg->Draw("same");
 	
@@ -1685,6 +1945,13 @@ namespace resolutionFit {
       graph->SetLineColor(14);
     }
     return graph;
+  }
+
+
+
+  double FittedResolution::gaussian(double *x, double *par) {
+    double u = (x[0]-1.)/par[0];
+    return par[0] > 0. ? exp(-0.5*u*u)/sqrt(2.*M_PI)/par[0] : 0.;
   }
 }
 

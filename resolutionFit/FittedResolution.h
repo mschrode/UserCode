@@ -48,13 +48,13 @@ namespace resolutionFit {
 
     void plotExtrapolation() const;
     void plotPtAsymmetryBins() const;
-    void plotAsymmetrySlopes() const;
+    void plotPtAsymmetryAndResponseWidth() const;
     void plotPtGenAsymmetry() const;
     void plotResolution() const;
     void plotResolutionBins() const;
     void plotSpectra() const;
     void plotSystematicUncertainties() const;
-    void plotMCClosure() const;
+    void plotMCClosure(bool fitCore = true) const;
     void plotCrystalBallTest() const;
     void print() const;
     void createSlides() const;
@@ -71,6 +71,7 @@ namespace resolutionFit {
     int lineWidth_;
     double lineHeight_;
 
+    static double gaussian(double *x, double *par);
     TGraphAsymmErrors *getTGraphOfResolution(const TString &uncertType) const;
   };
 }
