@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.6 2010/07/27 17:09:03 mschrode Exp $
+// $Id: HistOps.h,v 1.7 2010/08/02 16:16:20 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -24,7 +24,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.6 2010/07/27 17:09:03 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.7 2010/08/02 16:16:20 mschrode Exp $
   class HistOps
   {
   public:
@@ -242,7 +242,7 @@ namespace util
     }
 
     // -------------------------------------------------------------------------------------
-    static TH1D *createRatioPlot(const TH1 *h1, const TH1 *h2, const TString &yTitle) {
+    static TH1D *createRatioPlot(const TH1 *h1, const TH1 *h2, const TString &yTitle = "") {
       assert( h1->GetNbinsX() == h2->GetNbinsX() );
       TString name = "Ratio_";
       name += h1->GetName();
