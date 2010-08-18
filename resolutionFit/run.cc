@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.23 2010/08/09 12:43:35 mschrode Exp $
+// $Id: run.cc,v 1.24 2010/08/18 16:18:06 mschrode Exp $
 
 #ifndef RUN_RESOLUTION_FIT
 #define RUN_RESOLUTION_FIT
@@ -43,9 +43,10 @@ int main(int argc, char *argv[]) {
     TString respType = argv[1];
     int etaBin = atoi(argv[2]);
     if( respType == "Gauss" ) {
-      outNamePrefix = "ResFit_Spring10QCDDiJet_SimpleGauss_PtGenCuts_PtGenJ3_SJCut_PtGenOrdered_";
+      outNamePrefix = "ResFit_Spring10QCDDiJet_SimpleGauss_PtGenOrdered_PtGenCuts_PtGenJ3_SJCut_OutlierRejection_";
       //inNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_SimpleGauss_PtGenCuts_PtGenOrdered/Res_Spring10QCDDiJet_SimpleGauss_PtGenCuts_";
-      inNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_SimpleGauss_PtGenCuts_PtGenJ3_SJCut_PtGenOrdered_Cauchy/Res_Spring10QCDDiJet_SimpleGauss_PtGenCuts_";
+      //inNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_SimpleGauss_PtGenCuts_PtGenJ3_SJCut_PtGenOrdered_Cauchy/Res_Spring10QCDDiJet_SimpleGauss_PtGenCuts_";
+      inNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_SimpleGauss_PtGenCuts_PtGenJ3_SJCut_PtGenOrdered_OutlierRejection/Res_Spring10QCDDiJet_SimpleGauss_PtGenCuts_";
 
       //      specNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_PtGenSpectrum0030-3500_Eta00-10_Pt3";
 
@@ -71,12 +72,12 @@ int main(int argc, char *argv[]) {
 	inNamePrefix += "Eta0_";
 
 	par = new resolutionFit::Parameters(0.,1.,inNamePrefix,ptBinEdges,0,12,outNamePrefix+"Eta0_",resolutionFit::ResponseFunction::Gauss,resolutionFit::FitModeMaxLikeSimple,resolutionFit::RefPtGen,verbosity);
-	par->setTrueGaussResPar(3.249,1.0954,0.0457); // Spring10 QCDDiJet
-	//par->setTrueGaussResPar(3.82289,1.05984,0.0379744); // Spring10 QCDDiJet Pt3 Core
+	//par->setTrueGaussResPar(3.249,1.0954,0.0457); // Spring10 QCDDiJet
+	par->setTrueGaussResPar(3.82289,1.05984,0.0379744); // Spring10 QCDDiJet Pt3 Core
 	//	par->setTrueGaussResPar(3.18079,1.06712,0.0571787); // Spring10 QCDDiJet Pt3 All
 	par->setLumi(10);
 	
-	//par->addPt3Threshold(0.04,inNamePrefix+"Rel3rdJet004_");//,specNamePrefix+"-004.root");
+	par->addPt3Threshold(0.04,inNamePrefix+"Rel3rdJet004_");//,specNamePrefix+"-004.root");
 	par->addPt3Threshold(0.06,inNamePrefix+"Rel3rdJet006_");//,specNamePrefix+"-006.root");
 	par->addPt3Threshold(0.08,inNamePrefix+"Rel3rdJet008_");//,specNamePrefix+"-008.root");
 	par->addPt3Threshold(0.10,inNamePrefix);//,specNamePrefix+"-010.root");
@@ -124,15 +125,9 @@ int main(int argc, char *argv[]) {
     // Plots
     fit->plotExtrapolation();
     fit->plotResolution();
-    //fit->plotResolutionBins();
-    fit->plotPtAsymmetryBins();
-    fit->plotPtAsymmetryAndResponseWidth();
-    //    fit->plotPtGenAsymmetry();
-    //fit->plotAsymmetrySlopes();
+    fit->plotPtAsymmetry();
     fit->plotSpectra();
-    //fit->plotSystematicUncertainties();
     fit->plotMCClosure();
-    //fit->plotCrystalBallTest();
     
     // Print
     fit->print();

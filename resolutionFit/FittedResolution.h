@@ -65,15 +65,10 @@ namespace resolutionFit {
 
 
     void plotExtrapolation() const;
-    void plotPtAsymmetryBins() const;
-    void plotPtAsymmetryAndResponseWidth() const {};
-    void plotPtGenAsymmetry() const {};
+    void plotPtAsymmetry() const;
     void plotResolution() const;
-    void plotResolutionBins() const {};
     void plotSpectra() const;
-    void plotSystematicUncertainties() const {};
     void plotMCClosure() const;
-    void plotCrystalBallTest() const {};
     void print() const;
     void createSlides() const;
 
