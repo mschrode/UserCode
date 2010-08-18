@@ -27,6 +27,15 @@ namespace resolutionFit {
       assert( ptBin>=0 && ptBin<nPtBins() );
       return ptBins_[ptBin]->meanPt();
     }
+    double meanPtAve(int ptBin) const {
+      assert( ptBin>=0 && ptBin<nPtBins() );
+      return ptBins_[ptBin]->meanPtAve();
+    }
+    double meanPtAsym(int ptBin) const {
+      assert( ptBin>=0 && ptBin<nPtBins() );
+      return ptBins_[ptBin]->meanPtAsym();
+    }
+
     double extrapolatedValue(int ptBin, int parIdx) const {
       assert( ptBin>=0 && ptBin<nPtBins() );
       return ptBins_[ptBin]->extrapolatedValue(parIdx);
@@ -45,17 +54,26 @@ namespace resolutionFit {
       return ptBins_[ptBin]->uncertSystUp(parIdx);
     }
 
+    double extrapolatedAsym(int ptBin) const {
+      assert( ptBin>=0 && ptBin<nPtBins() );
+      return ptBins_[ptBin]->extrapolatedAsym();
+    }
+    double uncertStatAsym(int ptBin) const {
+      assert( ptBin>=0 && ptBin<nPtBins() );
+      return ptBins_[ptBin]->uncertDownAsym();
+    }
+
 
     void plotExtrapolation() const;
     void plotPtAsymmetryBins() const;
-    void plotPtAsymmetryAndResponseWidth() const;
-    void plotPtGenAsymmetry() const;
+    void plotPtAsymmetryAndResponseWidth() const {};
+    void plotPtGenAsymmetry() const {};
     void plotResolution() const;
-    void plotResolutionBins() const;
+    void plotResolutionBins() const {};
     void plotSpectra() const;
-    void plotSystematicUncertainties() const;
-    void plotMCClosure(bool fitCore = true) const;
-    void plotCrystalBallTest() const;
+    void plotSystematicUncertainties() const {};
+    void plotMCClosure() const;
+    void plotCrystalBallTest() const {};
     void print() const;
     void createSlides() const;
 
@@ -72,7 +90,7 @@ namespace resolutionFit {
     double lineHeight_;
 
     static double gaussian(double *x, double *par);
-    TGraphAsymmErrors *getTGraphOfResolution(const TString &uncertType) const;
+    TGraphAsymmErrors *getTGraphOfResolution(const TString &method, const TString &uncertainty) const;
   };
 }
 #endif

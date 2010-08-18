@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.10 2010/07/27 17:10:23 mschrode Exp $
+// $Id: Parameters.cc,v 1.11 2010/08/09 12:43:35 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -12,11 +12,12 @@
 
 
 namespace resolutionFit {
-  Parameters::Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, ResponseFunction::Type type, bool fitAsymmetry, int verbosity)
+  Parameters::Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, RefPt refPt, int verbosity)
     : etaMin_(etaMin), etaMax_(etaMax),
       outNamePrefix_(outNamePrefix),
       styleMode_(gStyle->GetTitle()),
-      fitAsymmetry_(fitAsymmetry),
+      fitMode_(fitMode),
+      refPt_(refPt),
       verbosity_(verbosity) {
 
     for(int i = startIdx; i <= endIdx; ++i) {
@@ -28,11 +29,12 @@ namespace resolutionFit {
     assert( static_cast<int>(fileNameIdx_.size()) == nPtBins() );
   }
 
-  Parameters::Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, const std::vector<int> fileNameIdx, const TString &outNamePrefix, ResponseFunction::Type type, bool fitAsymmetry, int verbosity)
+  Parameters::Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, const std::vector<int> fileNameIdx, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, RefPt refPt, int verbosity)
     : etaMin_(etaMin), etaMax_(etaMax),
       outNamePrefix_(outNamePrefix), 
       styleMode_(gStyle->GetTitle()),
-      fitAsymmetry_(fitAsymmetry),
+      fitMode_(fitMode),
+      refPt_(refPt),
       verbosity_(verbosity) {
     
     fileNameIdx_ = fileNameIdx;
@@ -178,13 +180,13 @@ namespace resolutionFit {
   }
 
   
-  TString Parameters::parLabel(int parIdx) const {
+  TString Parameters::parLabel(int parIdx, bool maxLikeFit) const {
     assert( parIdx >=0 && parIdx < nFittedPars() );
 
     TString label = "";
     if( parIdx == 0 ) {
-      if( fitAsymmetry() ) label = "#sqrt{2} #sigma_{A}";
-      else label = "#sigma / p_{T}";
+      if( maxLikeFit ) label = "#sigma / p_{T}";
+      else label = "#sqrt{2} #sigma_{A}";
     }
     else if( parIdx == 1 ) label = "#alpha";
     else if( parIdx == 2 ) label = "n";
@@ -193,13 +195,13 @@ namespace resolutionFit {
   }
 
 
-  TString Parameters::parLabelTex(int parIdx) const {
+  TString Parameters::parLabelTex(int parIdx, bool maxLikeFit) const {
     assert( parIdx >=0 && parIdx < nFittedPars() );
 
     TString label = "";
     if( parIdx == 0 ) {
-      if( fitAsymmetry() ) label = "\\sqrt{2} \\sigma_{A}";
-      else label = "\\sigma / \\pt";
+      if( maxLikeFit ) label = "\\sigma / \\pt";
+      else label = "\\sqrt{2} \\sigma_{A}";
     }
     else if( parIdx == 1 ) label = "\\alpha";
     else if( parIdx == 2 ) label = "n";
@@ -239,16 +241,12 @@ namespace resolutionFit {
   }
 
   
-  TString Parameters::labelPtBin(int ptBin, int type) const {
-    char label[50];
-    if( type == 0 ) {
-      if( fitAsymmetry() ) 
-	sprintf(label,"%.0f < p^{ave}_{T} < %.0f GeV",ptMin(ptBin),ptMax(ptBin));
-      else 
-	sprintf(label,"%.0f < p^{%s}_{T} < %.0f GeV",ptMin(ptBin),labelMeas().Data(),ptMax(ptBin));
-    } else if( type == 1 ) {
-      sprintf(label,"%.0f < p^{%s}_{T} < %.0f GeV",ptMin(ptBin),labelTruth().Data(),ptMax(ptBin));    
-    }
+  TString Parameters::labelPtBin(int ptBin) const {
+    TString label = util::toTString(ptMin(ptBin))+" < p^{";
+    if( refPt() == RefPtGen ) label += "gen";
+    else if( refPt() == RefPtAve ) label += "ave";
+    label += "}_{T} < "+util::toTString(ptMax(ptBin))+" GeV";
+
     return label;
   }
 
@@ -264,14 +262,12 @@ namespace resolutionFit {
 
   TString Parameters::labelMeas() const {
     TString label = "calo_{}";
-    if( styleMode() == "CMS" ) label = "Jet";
     return label;
   }
 
 
   TString Parameters::labelTruth() const {
     TString label = "particle";
-    if( styleMode() == "CMS" ) label = "GenJet";
     return label;
   }
 

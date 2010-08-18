@@ -16,7 +16,7 @@ class TH1;
 namespace resolutionFit {
   class CutVariation {
   public:
-    CutVariation(const Parameters::PtBinParameters *par, int parIndex);
+    CutVariation(const Parameters::PtBinParameters *par, int parIndex, bool maxLikeFit = true);
     ~CutVariation();
 
     int nPt3Cuts() const { return par_->nPt3Cuts(); }

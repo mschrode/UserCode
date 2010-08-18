@@ -1,4 +1,4 @@
-// $Id: CutVariation.cc,v 1.13 2010/07/20 14:07:01 mschrode Exp $
+// $Id: CutVariation.cc,v 1.14 2010/08/09 12:43:32 mschrode Exp $
 
 #include "CutVariation.h"
 #include "KalibriFileParser.h"
@@ -12,35 +12,12 @@
 #include "TH1D.h"
 
 namespace resolutionFit {
-  CutVariation::CutVariation(const Parameters::PtBinParameters *par, int parIndex)
+  CutVariation::CutVariation(const Parameters::PtBinParameters *par, int parIndex, bool maxLikeFit)
     : par_(par), parIdx_(parIndex) {
 
     mcStatUncert_ = 0.;
 
-    if( par->fitAsymmetry() ) {
-      // Read asymmetry distributions and mean ptAve from file
-      varPoints_ = std::vector<VariationPoint*>(nPt3Cuts());
-      for(int i = 0; i < nPt3Cuts(); i++) {
-	KalibriFileParser *parser = new KalibriFileParser(par_->fileNamePt3CutVariations(i),par_->verbosity(),false);
-	// Mean pt for all varied cuts (set only once)
-	if( i == 0 ) {
-	  meanPt_ = parser->meanPtDijet();
-	  meanPtUncert_ = parser->meanPtDijetUncert();
-	}	      
-
-	// Fit asymmetry distribution
-	TString name = "resolutionFit::CutVariationPtAsym_PtBin";
-	name += par_->ptBinIdx();
-	name += "_Var";
-	name += i;
-	TH1 *hAsym = parser->hist("hPtAsym_0",name);
-	double pt3Val = pt3Max(i);
-	if( pt3Bins() ) pt3Val = pt3Mean(i);
-	varPoints_[i] = new VariationPoint(hAsym,pt3Val);
-	
-	delete parser;
-      }
-    } else {
+    if( maxLikeFit ) {
       // Read uncertainty from MC statistics
       if( par_->hasMCStatUncert() ) {
 	KalibriFileParser *parser = new KalibriFileParser(par_->fileNameMCStatUncert(),par_->verbosity());
@@ -53,8 +30,16 @@ namespace resolutionFit {
 	KalibriFileParser *parser = new KalibriFileParser(par_->fileNamePt3CutVariations(i),par_->verbosity());
 	// Mean pt for all varied cuts (set only once)
 	if( i == 0 ) {
-	  meanPt_ = parser->meanPt();
-	  meanPtUncert_ = parser->meanPtUncert();
+	  if( par_->refPt() == RefPtGen ) { 
+	    meanPt_ = parser->meanPtGen();
+	    meanPtUncert_ = parser->meanPtGenUncert();
+	  } else if( par_->refPt() == RefPtAve ) {
+	    meanPt_ = parser->meanPtAve();
+	    meanPtUncert_ = parser->meanPtAveUncert();
+	  } else {
+	    meanPt_ = 1.;
+	    meanPtUncert_ = 1.;
+	  }
 	  if( isRelValue() ) mcStatUncert_ /= meanPt_;
 	}
 	// Create value at cut variation i
@@ -66,24 +51,44 @@ namespace resolutionFit {
 	}
 	statUncert = sqrt( statUncert*statUncert + mcStatUncert_*mcStatUncert_ );
 	Uncertainty *uncert = new Uncertainty("Statistical uncertainty",statUncert);
+	delete parser;
 
 	TH1 *hAsym = 0;
-	if( parIdx() == 0 ) {
-	  TString name = "resolutionFit::CutVariationPtAsym_PtBin";
-	  name += par_->ptBinIdx();
-	  name += "_Var";
-	  name += i;
-	  hAsym = parser->hist("hPtAsym_0",name);
-	}
-	
-	delete parser;
-	
 	double pt3Val = pt3Max(i);
 	if( pt3Bins() ) pt3Val = pt3Mean(i);
 
 	varPoints_[i] = new VariationPoint(fittedValue,uncert,pt3Val,hAsym);
       }
+    } else {
+      // Read asymmetry distributions and mean ptAve from file
+      varPoints_ = std::vector<VariationPoint*>(nPt3Cuts());
+      for(int i = 0; i < nPt3Cuts(); i++) {
+	KalibriFileParser *parser = new KalibriFileParser(par_->fileNamePt3CutVariations(i),par_->verbosity(),false);
+	// Mean pt for all varied cuts (set only once)
+	if( i == 0 ) {
+	  if( par_->refPt() == RefPtGen ) { 
+	    meanPt_ = parser->meanPtGen();
+	    meanPtUncert_ = parser->meanPtGenUncert();
+	  } else {
+	    meanPt_ = parser->meanPtAve();
+	    meanPtUncert_ = parser->meanPtAveUncert();
+	  }
+	}	      
+	
+	// Fit asymmetry distribution
+	TString name = "resolutionFit::CutVariationPtAsym_PtBin";
+	name += par_->ptBinIdx();
+	name += "_Var";
+	name += i;
+	TH1 *hAsym = parser->hist("hPtAsym_0",name);
+	double pt3Val = pt3Max(i);
+	if( pt3Bins() ) pt3Val = pt3Mean(i);
+	varPoints_[i] = new VariationPoint(hAsym,pt3Val);
+	
+	delete parser;
+      }
     }
+    
     // Create graph of varied values
     createTGraph();
     // Default value for extrapolation
@@ -199,10 +204,17 @@ namespace resolutionFit {
 
   CutVariation::VariationPoint::VariationPoint(TH1 *hPtAsym, double cutValue)
     : cutValue_(cutValue), hPtAsym_(hPtAsym) {
-    hPtAsym_->Fit("gaus","I0Q");
-    TF1 *fit = hPtAsym_->GetFunction("gaus");
+    TF1 *fit = new TF1("fit","gaus",hPtAsym_->GetMean()-2.*hPtAsym_->GetRMS(),hPtAsym_->GetMean()+2.*hPtAsym_->GetRMS());
+    fit->SetParameter(0,4.);
+    fit->SetParameter(1,0.);
+    //    fit->FixParameter(1,0.);
+    fit->SetParameter(2,0.1);
+    if( hPtAsym_->Fit(fit,"Q0IRB") != 0 ) {
+      std::cerr << "WARNING: No convergence" << std::endl;
+    }
     fitValue_ = sqrt(2.)*fit->GetParameter(2);
     uncert_ = new Uncertainty("Statistical uncertainty",sqrt(2.)*fit->GetParError(2));
+    delete fit;
   }
 
   CutVariation::VariationPoint::VariationPoint()
@@ -215,6 +227,6 @@ namespace resolutionFit {
 
 
   TH1 *CutVariation::VariationPoint::histPtAsym(const TString &name) const {
-    return hPtAsym_ ? static_cast<TH1*>(hPtAsym_->Clone(name)) : 0;
+    return hPtAsym_ ? static_cast<TH1D*>(hPtAsym_->Clone(name)) : 0;
   }
 }

@@ -1,4 +1,4 @@
-// $Id: KalibriFileParser.h,v 1.5 2010/05/26 21:56:34 mschrode Exp $
+// $Id: KalibriFileParser.h,v 1.6 2010/07/27 17:10:16 mschrode Exp $
 
 #ifndef KALIBRI_FILE_PARSER_H
 #define KALIBRI_FILE_PARSER_H
@@ -36,7 +36,7 @@ namespace resolutionFit {
   //!
   //! \author Matthias Schroeder
   //! \date 2009/03/05
-  //! $Id: KalibriFileParser.h,v 1.5 2010/05/26 21:56:34 mschrode Exp $
+  //! $Id: KalibriFileParser.h,v 1.6 2010/07/27 17:10:16 mschrode Exp $
   // --------------------------------------------
   class KalibriFileParser {
   public:
@@ -63,6 +63,10 @@ namespace resolutionFit {
     double meanPtDijet() const { return meanPtDijet_; }
     //! Returns uncertainty on mean value of the ptDijet distribution
     double meanPtDijetUncert() const { return meanPtDijetUncert_; }
+    //! Returns mean value of the ptTrue pdf assumed in the fit
+    double meanPtAve() const { return meanPtDijet_; }
+    //! Returns uncertainty on mean value of the ptDijet distribution
+    double meanPtAveUncert() const { return meanPtDijetUncert_; }
     //! Returns mean value of the ptTrue pdf assumed in the fit
     double meanPdfPtTrue() const { return meanPdfPtTrue_; }
     //! Returns uncertainty on mean value of the ptTrue pdf assumed in the fit

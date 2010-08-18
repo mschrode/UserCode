@@ -1,4 +1,4 @@
-// $Id: PtBin.cc,v 1.13 2010/07/13 09:13:58 mschrode Exp $
+// $Id: PtBin.cc,v 1.14 2010/08/09 12:43:35 mschrode Exp $
 
 #include "PtBin.h"
 
@@ -30,6 +30,12 @@ namespace resolutionFit {
       extrapolatedVal_.push_back(cutVar_[parIdx]->extrapolatedValue());
     }
 
+    // Perform cut variation and extrapolation
+    // of pt asymmetry
+    cutVarAsym_ = new CutVariation(par_,0,false);
+    cutVarAsym_->extrapolate();
+    extrapolatedAsym_ = cutVarAsym_->extrapolatedValue();
+
     // Standard selection for reference
     KalibriFileParser *parserStdSel = new KalibriFileParser(par_->fileNameStdSel(),par_->verbosity());
     for(int parIdx = 0; parIdx < par_->nFittedPars(); ++parIdx) { // Loop over paramters
@@ -55,6 +61,8 @@ namespace resolutionFit {
 						      cutVar_[parIdx]->extrapolatedUncert()));
       uncert_[parIdx]->addUncertainty(uncertSyst);
     } // End of loop over paramters
+    
+    uncertAsym_ = new Uncertainty("DummyUncertainty",0.);
 
     // Store spectrum and response histograms
     if( par_->verbosity() == 2 ) std::cout << "Storing spectrum and resolution histograms... " << std::flush;
@@ -107,6 +115,8 @@ namespace resolutionFit {
       delete cutVar_[parIdx];
       delete uncert_[parIdx];
     }
+    delete cutVarAsym_;
+    delete uncertAsym_;
     delete hPtGen_;
     delete hPtGenJet1_;
     delete hPdfPtTrue_;

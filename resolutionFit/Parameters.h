@@ -1,8 +1,9 @@
-// $Id: Parameters.h,v 1.9 2010/07/27 17:10:26 mschrode Exp $
+// $Id: Parameters.h,v 1.10 2010/08/09 12:43:35 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
 
+#include <cmath>
 #include <list>
 #include <vector>
 
@@ -13,11 +14,15 @@
 class TRandom3;
 namespace resolutionFit {
 
+  enum FitMode { FitModeMaxLikeFull, FitModeMaxLikeSimple };
+  enum RefPt { RefPtGen, RefPtAve, RefPtJet };
+
+
   //! \brief Store parameters like binning and file names centrally
   //!
   //! \author Matthias Schroeder
   //! \date 2010/05/15
-  //! $Id: Parameters.h,v 1.9 2010/07/27 17:10:26 mschrode Exp $
+  //! $Id: Parameters.h,v 1.10 2010/08/09 12:43:35 mschrode Exp $
   // --------------------------------------------
   class Parameters {
   public:
@@ -27,6 +32,7 @@ namespace resolutionFit {
 	: ptBinIdx_(ptBinIdx), par_(par) {};
       ~PtBinParameters() {};
 
+      FitMode fitMode() const { return par_->fitMode(); }
       ResponseFunction::Type respFuncType() const { return par_->respFuncType(); }
       int nFittedPars() const { return par_->nFittedPars(); }
       bool isRelParValue(int parIdx) const { return par_->isRelParValue(parIdx); }
@@ -34,13 +40,12 @@ namespace resolutionFit {
       TString parAxisLabel(int parIdx) const { return par_->parAxisLabel(parIdx); }
 
       int ptBinIdx() const { return ptBinIdx_; }
+      RefPt refPt() const { return par_->refPt(); }
       double ptMin() const { return par_->ptMin(ptBinIdx()); }
       double ptMax() const { return par_->ptMax(ptBinIdx()); }
       double etaMin() const { return par_->etaMin(); }
       double etaMax() const { return par_->etaMax(); }
       TString fileNameStdSel() const { return par_->fileNameStdSel(ptBinIdx()); }
-
-      bool fitAsymmetry() const { return par_->fitAsymmetry(); }
       
       bool hasMCStatUncert() const { return par_->hasMCStatUncert(); }
       TString fileNameMCStatUncert() const { return par_->fileNameMCStatUncert(ptBinIdx()); }
@@ -69,31 +74,31 @@ namespace resolutionFit {
     };
 
     
-    Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, ResponseFunction::Type type, bool fitAsymmetry, int verbosity);
-    Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, const std::vector<int> fileNameIdx, const TString &outNamePrefix, ResponseFunction::Type type, bool fitAsymmetry, int verbosity);
+    Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, RefPt refPt, int verbosity);
+    Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, const std::vector<int> fileNameIdx, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, RefPt refPt, int verbosity);
 
     ~Parameters();
 
     const PtBinParameters *createPtBinParameters(int ptBinIdx) const;
 
+    FitMode fitMode() const { return fitMode_; }
     ResponseFunction::Type respFuncType() const { return respFunc_->type(); }
     const ResponseFunction *respFunc() const { return respFunc_; }
     int nFittedPars() const { return respFunc_->nPars()-1; }
     bool isRelParValue(int parIdx) const;
-    TString parLabel(int parIdx) const;
-    TString parLabelTex(int parIdx) const;
+    TString parLabel(int parIdx, bool maxLikeFit = true) const;
+    TString parLabelTex(int parIdx, bool maxLikeFit = true) const;
     TString parAxisLabel(int parIdx) const;
 
     double etaMin() const { return etaMin_; }
     double etaMax() const { return etaMax_; }
     TString outNamePrefix() const { return outNamePrefix_; }
+    RefPt refPt() const { return refPt_; }
     int nPtBins() const { return static_cast<int>(ptBinEdges_.size())-1; }
     double ptMin(int ptBin) const { return ptBinEdges_.at(ptBin); }
     double ptMax(int ptBin) const { return ptBinEdges_.at(ptBin+1); }
     const std::vector<double> *ptBinEdges() const { return &ptBinEdges_; }
     TString fileNameStdSel(int i) const { return namesStdSel_.at(i); }
-
-    bool fitAsymmetry() const { return fitAsymmetry_; }
 
     bool hasMCStatUncert() const { return namesMCStat_.size() > 0 ? true : false; }
     TString fileNameMCStatUncert(int i) const { return namesMCStat_.at(i); }
@@ -121,7 +126,7 @@ namespace resolutionFit {
     TString labelEtaBin() const;
     TString labelJetAlgo() const;
     TString labelLumi() const;
-    TString labelPtBin(int ptBin, int type) const;
+    TString labelPtBin(int ptBin) const;
     TString labelPt3Cut() const { return labelPt3Cut(stdSelIdx()); }
     TString labelPt3Cut(int ptBin) const;
     TString xAxisTitleResponse() const;
@@ -130,6 +135,9 @@ namespace resolutionFit {
     double lumi() const { return lumi_; }
 
     double trueGaussResPar(int i) const { return trueResPar_.at(i); }
+    double trueGaussSigma(double pt) const { 
+      return sqrt( trueResPar_[0]*trueResPar_[0]/pt/pt + trueResPar_[1]*trueResPar_[1]/pt + trueResPar_[2]*trueResPar_[2] ); 
+    }
     bool hasMCTruthBins() const { return mcTruthPtBinEdges_.size() > 0 ? true : false; }
     int nMCTruthPtBins() const { return static_cast<int>(mcTruthPtBinEdges_.size())-1; }
     double mcTruthPtMin(int i) const { return mcTruthPtBinEdges_.at(i); }
@@ -169,8 +177,9 @@ namespace resolutionFit {
   private:
     const double etaMin_;
     const double etaMax_;
-    const bool fitAsymmetry_;
     const TString outNamePrefix_;
+    const FitMode fitMode_;
+    const RefPt refPt_;
     const TString styleMode_;
     const int verbosity_;
 
