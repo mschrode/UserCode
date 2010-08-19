@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.24 2010/08/18 16:18:06 mschrode Exp $
+// $Id: run.cc,v 1.25 2010/08/18 19:07:48 mschrode Exp $
 
 #ifndef RUN_RESOLUTION_FIT
 #define RUN_RESOLUTION_FIT
@@ -43,10 +43,10 @@ int main(int argc, char *argv[]) {
     TString respType = argv[1];
     int etaBin = atoi(argv[2]);
     if( respType == "Gauss" ) {
-      outNamePrefix = "ResFit_Spring10QCDDiJet_SimpleGauss_PtGenOrdered_PtGenCuts_PtGenJ3_SJCut_OutlierRejection_";
+      outNamePrefix = "ResFit_Spring10QCDDiJet_SimpleGauss_PtGenOrdered_PtGenCuts_PtGenJ3_SJCut_Cauchy_";
       //inNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_SimpleGauss_PtGenCuts_PtGenOrdered/Res_Spring10QCDDiJet_SimpleGauss_PtGenCuts_";
-      //inNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_SimpleGauss_PtGenCuts_PtGenJ3_SJCut_PtGenOrdered_Cauchy/Res_Spring10QCDDiJet_SimpleGauss_PtGenCuts_";
-      inNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_SimpleGauss_PtGenCuts_PtGenJ3_SJCut_PtGenOrdered_OutlierRejection/Res_Spring10QCDDiJet_SimpleGauss_PtGenCuts_";
+      inNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_SimpleGauss_PtGenCuts_PtGenJ3_SJCut_PtGenOrdered_Cauchy/Res_Spring10QCDDiJet_SimpleGauss_PtGenCuts_";
+      //inNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_SimpleGauss_PtGenCuts_PtGenJ3_SJCut_PtGenOrdered_OutlierRejection/Res_Spring10QCDDiJet_SimpleGauss_PtGenCuts_";
 
       //      specNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_PtGenSpectrum0030-3500_Eta00-10_Pt3";
 

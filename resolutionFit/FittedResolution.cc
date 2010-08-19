@@ -526,10 +526,12 @@ namespace resolutionFit {
 
       for(size_t t = 0; t < gRatioMCClosure.size(); ++t) {
 	if( i == 0 ) gRatioMCClosure[t] = getTGraphOfResolution("MaxLike","Statistic");
-	y = mcTruthReso[t][i] / yTrue;
-	eyh = mcTruthResoErr[t][i] / yTrue;
-	gRatioMCClosure[t]->SetPoint(i,x,y);
-	gRatioMCClosure[t]->SetPointError(i,exl,exh,eyh,eyh);
+	if( par_->hasMCClosure() ) {
+	  y = mcTruthReso[t][i] / yTrue;
+	  eyh = mcTruthResoErr[t][i] / yTrue;
+	  gRatioMCClosure[t]->SetPoint(i,x,y);
+	  gRatioMCClosure[t]->SetPointError(i,exl,exh,eyh,eyh);
+	}
       }	
     }
     TF1 *lineFitRatio = new TF1("LineFitRatioExtraplolatedResolution","pol0",ptMin_,ptMax_);
@@ -617,19 +619,21 @@ namespace resolutionFit {
     gPad->SetLogx();
     can->SaveAs(par_->outNamePrefix()+"ExtraResoCompRatio.eps","eps");
 
-    h->Draw();
-    gMaxLikeRatioStat->Draw("PE1same");
-    gPtAsymRatioStat->Draw("PE1same");
-    for(size_t i = 0; i < gRatioMCClosure.size(); ++i) {
-      gRatioMCClosure[i]->SetMarkerStyle(25+i);
-      gRatioMCClosure[i]->SetMarkerColor(util::StyleSettings::color(1+i));
-      gRatioMCClosure[i]->SetLineColor(util::StyleSettings::color(1+i));
-      gRatioMCClosure[i]->Draw("PE1same");
+    if( par_->hasMCClosure() ) {
+      h->Draw();
+      gMaxLikeRatioStat->Draw("PE1same");
+      gPtAsymRatioStat->Draw("PE1same");
+      for(size_t i = 0; i < gRatioMCClosure.size(); ++i) {
+	gRatioMCClosure[i]->SetMarkerStyle(25+i);
+	gRatioMCClosure[i]->SetMarkerColor(util::StyleSettings::color(1+i));
+	gRatioMCClosure[i]->SetLineColor(util::StyleSettings::color(1+i));
+	gRatioMCClosure[i]->Draw("PE1same");
+      }
+      txt->Draw("same");
+      legComp->Draw("same");
+      gPad->SetLogx();
+      can->SaveAs(par_->outNamePrefix()+"ExtraResoMCClosureRatio.eps","eps");
     }
-    txt->Draw("same");
-    legComp->Draw("same");
-    gPad->SetLogx();
-    can->SaveAs(par_->outNamePrefix()+"ExtraResoMCClosureRatio.eps","eps");
 
 
     // Clean up
@@ -672,7 +676,7 @@ namespace resolutionFit {
       TH1 *hPtGen = (*it)->getHistPtGen("PlotPtGen");
       util::HistOps::setAxisTitles(hPtGen,"p^{"+par_->labelTruth()+"}_{T}","GeV","events",true);
       util::HistOps::setYRange(hPtGen,5);
-      hPtGen->SetMarkerStyle(24);
+      hPtGen->SetMarkerStyle(20);
 
       // Pdf
       TH1 *hPdfPtTrue = (*it)->getHistPdfPtTrue("PlotPdfPtTrue");
@@ -682,10 +686,12 @@ namespace resolutionFit {
       util::HistOps::setYRange(hPdfPtTrue,5);
 
       // Labels
-      TPaveText *txt = util::LabelFactory::createPaveText(2);
+      TPaveText *txt = util::LabelFactory::createPaveText(2,-0.55);
       txt->AddText(par_->labelPtBin(ptBin));
       txt->AddText(par_->labelEtaBin()+",  "+par_->labelPt3Cut());
-      TLegend *leg = util::LabelFactory::createLegendWithOffset(2,2.5*lineHeight_);
+      int nLegEntries = 1;
+      if( par_->fitMode() == FitModeMaxLikeFull ) nLegEntries++;
+      TLegend *leg = util::LabelFactory::createLegendCol(nLegEntries,0.45);
       leg->AddEntry(hPtGen,"MC truth: p^{"+par_->labelTruth()+"}_{T,1+2}","P");
       if( par_->fitMode() == FitModeMaxLikeFull ) leg->AddEntry(hPdfPtTrue,"Spectrum  #tilde{f}(p^{true}_{T})","L");
 
@@ -721,13 +727,22 @@ namespace resolutionFit {
 
       // Different fits of MC truth resolution
       std::vector<TString> mcTruthResoLabels;
-      mcTruthResoLabels.push_back("#sigma,  <R> = free parameter");
-      mcTruthResoLabels.push_back("#sigma,  <R> = 1");
-      
+      mcTruthResoLabels.push_back("<R> = free parameter");
+      mcTruthResoLabels.push_back("<R> = 1");
+
+      std::vector<double> ptMean;
+      std::vector<double> ptMeanErr;
+      std::vector< std::vector<double> > mcTruthReso(mcTruthResoLabels.size());
+      std::vector< std::vector<double> > mcTruthResoErr(mcTruthResoLabels.size());     
+      std::vector< std::vector<double> > mcTruthScale(mcTruthResoLabels.size());
+      std::vector< std::vector<double> > mcTruthScaleErr(mcTruthResoLabels.size());     
+
       // Loop over ptbins
       for(std::vector<PtBin*>::const_iterator it = ptBins_.begin();
   	  it != ptBins_.end(); it++) {
   	int ptBin = (it-ptBins_.begin());
+	ptMean.push_back((*it)->meanPt());
+	ptMeanErr.push_back((*it)->meanPtUncert());
 
   	TH1 *hMCRes = (*it)->getHistMCRes("PlotMCClosureMCRes");
   	util::HistOps::setAxisTitles(hMCRes,par_->xAxisTitleResponse(),"","jets",true);
@@ -758,6 +773,11 @@ namespace resolutionFit {
   	  gaussFits[i]->SetLineStyle(2);	  
   	  gaussFits[i]->SetLineColor(util::StyleSettings::color(2+i));
   	  gaussFits[i]->SetLineWidth(1);
+
+	  mcTruthReso[i].push_back(gaussFits[i]->GetParameter(2)); 
+	  mcTruthResoErr[i].push_back(gaussFits[i]->GetParError(2));
+	  mcTruthScale[i].push_back(gaussFits[i]->GetParameter(1)); 
+	  mcTruthScaleErr[i].push_back(gaussFits[i]->GetParError(1));
   	}
 
 
@@ -873,7 +893,81 @@ namespace resolutionFit {
   	delete leg;
 	delete legFits;
   	delete can;
+      } // End of loop over pt bins
+
+
+      // Compare width to MC truth resolution and plot scale
+      std::vector<TGraphErrors*> gReso(mcTruthReso.size());
+      std::vector<TGraphErrors*> gScale(mcTruthReso.size());
+      for(size_t i = 0; i < gReso.size(); ++i) {
+	gReso[i] = new TGraphErrors(ptMean.size(),&(ptMean.front()),&(mcTruthReso[i].front()),
+				    &(ptMeanErr.front()),&(mcTruthResoErr[i].front()));
+	gReso[i]->SetMarkerStyle(20+i);
+	gReso[i]->SetMarkerColor(util::StyleSettings::color(i));
+	gReso[i]->SetLineColor(util::StyleSettings::color(i));
+
+	gScale[i] = new TGraphErrors(ptMean.size(),&(ptMean.front()),&(mcTruthScale[i].front()),
+				    &(ptMeanErr.front()),&(mcTruthScaleErr[i].front()));
+	gScale[i]->SetMarkerStyle(20+i);
+	gScale[i]->SetMarkerColor(util::StyleSettings::color(i));
+	gScale[i]->SetLineColor(util::StyleSettings::color(i));
       }
+      std::vector<TF1*> fitsMCTruthReso;
+      fitsMCTruthReso.push_back(new TF1("fitsMCTruthReso:1","sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2])",ptMin(),ptMax()));
+      fitsMCTruthReso.back()->SetParameter(0,3.249);
+      fitsMCTruthReso.back()->SetParameter(1,1.0954);
+      fitsMCTruthReso.back()->SetParameter(2,0.0457);
+      for(size_t i = 0; i < fitsMCTruthReso.size(); ++i) {
+	fitsMCTruthReso[i]->SetLineColor(util::StyleSettings::color(3+i));
+	fitsMCTruthReso[i]->SetLineWidth(lineWidth_);
+	fitsMCTruthReso[i]->SetLineStyle(2+i);
+      }      
+      TH1 *hFrameReso = new TH1D("hFrameReso",";"+par_->labelPtGen()+" (GeV);#sigma / "+par_->labelPtGen(),1000,ptMin(),ptMax());
+      hFrameReso->GetYaxis()->SetRangeUser(0.,0.3);
+      TLegend *leg = util::LabelFactory::createLegendCol(gReso.size(),0.6);
+      for(size_t i = 0; i < gReso.size(); ++i) {
+	leg->AddEntry(gReso[i],mcTruthResoLabels[i],"P");
+      }
+      TCanvas *can1 = new TCanvas("PlotMCClosureResolution","MCClosure Resolution",500,500);
+      can1->cd();
+      hFrameReso->Draw();
+      trueRes_->Draw("same");
+      for(size_t i = 0; i < fitsMCTruthReso.size(); ++i) {
+	fitsMCTruthReso[i]->Draw("same");
+      }
+      for(size_t i = 0; i < gReso.size(); ++i) {
+	gReso[i]->Draw("PE1same");
+      }
+      leg->Draw("same");
+      can1->SetLogx();
+      can1->SaveAs(par_->outNamePrefix()+"MCClosureReso.eps","eps");
+
+
+      TH1 *hFrameScale = util::HistOps::createRatioFrame(ptMin(),ptMax(),0.9,1.2,par_->labelPtGen()+" (GeV)","< R >");
+      TCanvas *can2 = new TCanvas("PlotMCClosureScale","MCClosure Scale",500,500);
+      can2->cd();
+      hFrameScale->Draw();
+      for(size_t i = 0; i < gScale.size(); ++i) {
+	gScale[i]->Draw("PE1same");
+      }
+      leg->Draw("same");
+      can2->SetLogx();
+      can2->SaveAs(par_->outNamePrefix()+"MCClosureScale.eps","eps");
+      
+
+      for(size_t i = 0; i < gReso.size(); ++i) {
+	delete gReso[i];
+	delete gScale[i];
+      }      
+      for(size_t i = 0; i < fitsMCTruthReso.size(); ++i) {
+	delete fitsMCTruthReso[i];
+      }
+      delete hFrameReso;
+      delete hFrameScale;
+      delete leg;
+      delete can1;
+      delete can2;
+
     } else {
       std::cerr << "No MCClosure response distribution available." << std::endl;
     }
