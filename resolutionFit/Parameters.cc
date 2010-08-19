@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.11 2010/08/09 12:43:35 mschrode Exp $
+// $Id: Parameters.cc,v 1.12 2010/08/18 16:18:06 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -243,7 +243,7 @@ namespace resolutionFit {
   
   TString Parameters::labelPtBin(int ptBin) const {
     TString label = util::toTString(ptMin(ptBin))+" < p^{";
-    if( refPt() == RefPtGen ) label += "gen";
+    if( refPt() == RefPtGen ) label += labelTruth();
     else if( refPt() == RefPtAve ) label += "ave";
     label += "}_{T} < "+util::toTString(ptMax(ptBin))+" GeV";
 
@@ -269,6 +269,11 @@ namespace resolutionFit {
   TString Parameters::labelTruth() const {
     TString label = "particle";
     return label;
+  }
+
+
+  TString Parameters::labelPtGen() const {
+    return "p^{"+labelTruth()+"}_{T}";
   }
 
 
