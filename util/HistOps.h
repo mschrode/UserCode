@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.8 2010/08/09 12:39:16 mschrode Exp $
+// $Id: HistOps.h,v 1.9 2010/08/18 16:18:45 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -17,14 +17,13 @@
 
 namespace util
 {
-
   //!  \brief    Collection of encapsulated methods on histograms
   //!
   //!  HistOps encapsulates some useful operations on histograms.
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.8 2010/08/09 12:39:16 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.9 2010/08/18 16:18:45 mschrode Exp $
   class HistOps
   {
   public:
@@ -159,6 +158,23 @@ namespace util
     }
 
 
+    // -------------------------------------------------------------------------------------
+    static TH1D *createRatioFrame(double xMin, double xMax, double yMin, double yMax, const TString &xTitle, const TString &yTitle) {
+      TString name = "util::HistOps::hRatioFrame";
+      name += nFrames_;
+      ++nFrames_;
+      TH1D *h = new TH1D(name,"",1000,xMin,xMax);
+      for(int xBin = 1; xBin <= h->GetNbinsX(); ++xBin) {
+	h->SetBinContent(xBin,1.);
+      }
+      h->GetXaxis()->SetTitle(xTitle);
+      h->GetYaxis()->SetTitle(yTitle);
+      h->GetYaxis()->SetRangeUser(yMin,yMax);
+      h->SetLineStyle(2);
+      return h;
+    }
+
+
 
     // -------------------------------------------------------------------------------------
     static TH1D *createRatioFrame(const TH1 *h, const TString &yTitle) {
@@ -255,6 +271,12 @@ namespace util
 
       return hRatio;
     }
+
+
+  private:
+    static unsigned int nFrames_;
   };
+
+  unsigned int HistOps::nFrames_ = 0;
 }
 #endif
