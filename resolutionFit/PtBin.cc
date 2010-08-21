@@ -1,4 +1,4 @@
-// $Id: PtBin.cc,v 1.14 2010/08/09 12:43:35 mschrode Exp $
+// $Id: PtBin.cc,v 1.15 2010/08/18 16:18:06 mschrode Exp $
 
 #include "PtBin.h"
 
@@ -62,7 +62,7 @@ namespace resolutionFit {
       uncert_[parIdx]->addUncertainty(uncertSyst);
     } // End of loop over paramters
     
-    uncertAsym_ = new Uncertainty("DummyUncertainty",0.);
+    uncertAsym_ = new Uncertainty("StatisticUncertainty",cutVarAsym_->extrapolatedUncert());
 
     // Store spectrum and response histograms
     if( par_->verbosity() == 2 ) std::cout << "Storing spectrum and resolution histograms... " << std::flush;
