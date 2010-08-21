@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.12 2010/08/19 09:23:51 mschrode Exp $
+// $Id: Parameters.h,v 1.13 2010/08/21 13:38:28 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -23,7 +23,7 @@ namespace resolutionFit {
   //!
   //! \author Matthias Schroeder
   //! \date 2010/05/15
-  //! $Id: Parameters.h,v 1.12 2010/08/19 09:23:51 mschrode Exp $
+  //! $Id: Parameters.h,v 1.13 2010/08/21 13:38:28 mschrode Exp $
   // --------------------------------------------
   class Parameters {
   public:
@@ -227,6 +227,7 @@ namespace resolutionFit {
     
     void init(const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, ResponseFunction::Type type);
     void writeFileNames(std::vector<TString> &names, const TString &baseName) const;
+    void print() const;
   };
 }
 #endif

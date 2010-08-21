@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.13 2010/08/19 09:23:51 mschrode Exp $
+// $Id: Parameters.cc,v 1.14 2010/08/21 13:38:28 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -27,6 +27,7 @@ namespace resolutionFit {
     hasTruthSpectra_ = false;
 
     assert( static_cast<int>(fileNameIdx_.size()) == nPtBins() );
+    print();
   }
 
   Parameters::Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, const std::vector<int> fileNameIdx, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, RefPt refPt, int verbosity)
@@ -42,6 +43,7 @@ namespace resolutionFit {
     hasTruthSpectra_ = false;
 
     assert( static_cast<int>(fileNameIdx_.size()) == nPtBins() );
+    print();
   }
 
 
@@ -245,7 +247,10 @@ namespace resolutionFit {
 
 
   TString Parameters::labelLumi() const {
-    return "L = "+util::toTString(lumi())+" pb^{-1}";
+    TString label;
+    if( lumi() < 0 ) label = "MC Stats";
+    else label = "L = "+util::toTString(lumi())+" pb^{-1}";
+    return label;
   }
 
   
@@ -300,4 +305,11 @@ namespace resolutionFit {
     return "1 / N  dN / dR";
   }
 
+
+  void Parameters::print() const {
+    std::cout << "Setup:\n";
+    std::cout << "  FitMode : " << (fitMode()==FitModeMaxLikeSimple ? "FitModeMaxLikeSimple" : "FitModeMaxLikeFull") << std::endl;
+    std::cout << "  RefPt   : " << (refPt()==RefPtGen ? "PtGen" : "PtAve") << std::endl;
+    std::cout << "  Pt3Var  : " << (pt3Var()==Pt3Rel ? "Pt3Rel" : "Pt3Abs") << std::endl;
+  }
 }
