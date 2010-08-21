@@ -605,7 +605,7 @@ namespace resolutionFit {
 
     // Draw PtAsym results
     h->Draw();
-    gPtAsymStat->Draw("PE1same");
+    gPtAsymRatioStat->Draw("PE1same");
     txt->Draw("same");
     legPtAsym->Draw("same");
     gPad->SetLogx();
@@ -663,15 +663,22 @@ namespace resolutionFit {
 	it != ptBins_.end(); it++) {
       int ptBin = (it-ptBins_.begin());
       
-      // Create Canvas
-      TCanvas *can = new TCanvas("PlotSpectrum","Spectrum ("+util::toTString(ptBin)+")",500,500);
-      can->cd();
-      
       // PtGen spectrum
       TH1 *hPtGen = (*it)->getHistPtGen("PlotPtGen");
       util::HistOps::setAxisTitles(hPtGen,"p^{"+par_->labelTruth()+"}_{T}","GeV","events",true);
       util::HistOps::setYRange(hPtGen,5);
       hPtGen->SetMarkerStyle(20);
+
+      TH1 *hPtGenJet1 = (*it)->getHistPtGenJet1("PlotPtGenJet1");
+      util::HistOps::setAxisTitles(hPtGenJet1,"p^{"+par_->labelTruth()+"}_{T}","GeV","jets",true);
+      util::HistOps::setYRange(hPtGenJet1,5);
+      hPtGenJet1->SetMarkerStyle(20);
+
+      // PtAve spectrum
+      TH1 *hPtAve = (*it)->getHistPtAve("PlotPtAve");
+      util::HistOps::setAxisTitles(hPtAve,"p^{ave}_{T}","GeV","events",true);
+      util::HistOps::setYRange(hPtAve,5);
+      hPtAve->SetMarkerStyle(20);
 
       // Pdf
       TH1 *hPdfPtTrue = (*it)->getHistPdfPtTrue("PlotPdfPtTrue");
@@ -684,32 +691,69 @@ namespace resolutionFit {
       TPaveText *txt = util::LabelFactory::createPaveText(2,-0.55);
       txt->AddText(par_->labelPtBin(ptBin));
       txt->AddText(par_->labelEtaBin()+",  "+par_->labelPt3Cut());
-      int nLegEntries = 1;
-      if( par_->fitMode() == FitModeMaxLikeFull ) nLegEntries++;
-      TLegend *leg = util::LabelFactory::createLegendCol(nLegEntries,0.45);
-      leg->AddEntry(hPtGen,"MC truth: p^{"+par_->labelTruth()+"}_{T,1+2}","P");
-      if( par_->fitMode() == FitModeMaxLikeFull ) leg->AddEntry(hPdfPtTrue,"Spectrum  #tilde{f}(p^{true}_{T})","L");
+      TLegend *legPtGen = util::LabelFactory::createLegendCol(2,0.45);
+      legPtGen->AddEntry(hPtGen,"MC truth: p^{"+par_->labelTruth()+"}_{T,1+2}","P");
+      legPtGen->AddEntry(hPdfPtTrue,"Spectrum  #tilde{f}(p^{true}_{T})","L");
+      TLegend *legPtGenJet1 = util::LabelFactory::createLegendCol(2,0.45);
+      legPtGenJet1->AddEntry(hPtGenJet1,"MC truth: p^{"+par_->labelTruth()+"}_{T,1}","P");
+      legPtGenJet1->AddEntry(hPdfPtTrue,"Spectrum  #tilde{f}(p^{true}_{T})","L");
+      TLegend *legPtAve = util::LabelFactory::createLegendCol(2,0.45);
+      legPtAve->AddEntry(hPtAve,"p^{ave}_{T}","P");
+      legPtAve->AddEntry(hPdfPtTrue,"Spectrum  #tilde{f}(p^{true}_{T})","L");
 
       // Plot
+      TCanvas *can = new TCanvas("PlotSpectrum","Spectrum ("+util::toTString(ptBin)+")",500,500);
+      can->cd();
+
       hPtGen->Draw("PE1");
       if( par_->fitMode() == FitModeMaxLikeFull ) hPdfPtTrue->Draw("Lsame");
       txt->Draw("same");
-      leg->Draw("same");
+      if( par_->fitMode() == FitModeMaxLikeFull ) legPtGen->Draw("same");
       can->SaveAs(par_->outNamePrefix()+"Spectrum_PtBin"+util::toTString(ptBin)+".eps","eps");
+
+      hPtGenJet1->Draw("PE1");
+      if( par_->fitMode() == FitModeMaxLikeFull ) hPdfPtTrue->Draw("Lsame");
+      txt->Draw("same");
+      if( par_->fitMode() == FitModeMaxLikeFull ) legPtGenJet1->Draw("same");
+      can->SaveAs(par_->outNamePrefix()+"SpectrumJet1_PtBin"+util::toTString(ptBin)+".eps","eps");
+
+      hPtAve->Draw("PE1");
+      if( par_->fitMode() == FitModeMaxLikeFull ) hPdfPtTrue->Draw("Lsame");
+      txt->Draw("same");
+      if( par_->fitMode() == FitModeMaxLikeFull ) legPtAve->Draw("same");
+      can->SaveAs(par_->outNamePrefix()+"PtAveSpectrum_PtBin"+util::toTString(ptBin)+".eps","eps");
 
       util::HistOps::setYRange(hPtGen,5,true);
       hPtGen->Draw("PE1");
       if( par_->fitMode() == FitModeMaxLikeFull ) hPdfPtTrue->Draw("Lsame");
       txt->Draw("same");
-      leg->Draw("same");
+      if( par_->fitMode() == FitModeMaxLikeFull ) legPtGen->Draw("same");
       can->SetLogy();
-      can->SaveAs(par_->outNamePrefix()+"Spectrum_PtBin"+util::toTString(ptBin)+"_Log.eps","eps");
+      can->SaveAs(par_->outNamePrefix()+"SpectrumLog_PtBin"+util::toTString(ptBin)+".eps","eps");
+      util::HistOps::setYRange(hPtGenJet1,5,true);
+      hPtGenJet1->Draw("PE1");
+      if( par_->fitMode() == FitModeMaxLikeFull ) hPdfPtTrue->Draw("Lsame");
+      txt->Draw("same");
+      if( par_->fitMode() == FitModeMaxLikeFull ) legPtGenJet1->Draw("same");
+      can->SetLogy();
+      can->SaveAs(par_->outNamePrefix()+"SpectrumJet1Log_PtBin"+util::toTString(ptBin)+".eps","eps");
+      util::HistOps::setYRange(hPtAve,5,true);
+      hPtAve->Draw("PE1");
+      if( par_->fitMode() == FitModeMaxLikeFull ) hPdfPtTrue->Draw("Lsame");
+      txt->Draw("same");
+      if( par_->fitMode() == FitModeMaxLikeFull ) legPtAve->Draw("same");
+      can->SetLogy();
+      can->SaveAs(par_->outNamePrefix()+"PtAveSpectrumLog_PtBin"+util::toTString(ptBin)+".eps","eps");
 
       // Clean up
       delete hPtGen;
+      delete hPtGenJet1;
+      delete hPtAve;
       delete hPdfPtTrue;
       delete txt;
-      delete leg;
+      delete legPtGen;
+      delete legPtGenJet1;
+      delete legPtAve;
       delete can;
     }
   }

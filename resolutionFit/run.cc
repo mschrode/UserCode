@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.26 2010/08/19 09:23:39 mschrode Exp $
+// $Id: run.cc,v 1.27 2010/08/21 13:38:37 mschrode Exp $
 
 #ifndef RUN_RESOLUTION_FIT
 #define RUN_RESOLUTION_FIT
@@ -43,8 +43,8 @@ int main(int argc, char *argv[]) {
     TString respType = argv[1];
     int etaBin = atoi(argv[2]);
     if( respType == "Gauss" ) {
-      outNamePrefix = "ResFit_Spring10QCDDiJet_SimpleGauss_PtGenCuts_11_";
-      inNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_SimpleGauss_PtGenCuts_11/Res_Spring10QCDDiJet_SimpleGauss_PtGenCuts_";
+      outNamePrefix = "ResFit_Spring10QCDDiJet_SimpleGauss_PtAveCuts_61_";
+      inNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_SimpleGauss_PtAveCuts_61/Res_Spring10QCDDiJet_SimpleGauss_PtAveCuts_";
 
       //      specNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_PtGenSpectrum0030-3500_Eta00-10_Pt3";
 
@@ -69,8 +69,8 @@ int main(int argc, char *argv[]) {
       
 	inNamePrefix += "Eta0_";
 
-	par = new resolutionFit::Parameters(0.,1.,inNamePrefix+"Pt3RelGen10_",ptBinEdges,0,12,outNamePrefix+"Eta0_",resolutionFit::ResponseFunction::Gauss,resolutionFit::FitModeMaxLikeSimple,resolutionFit::RefPtGen,verbosity);
-	par->setLumi(10);
+	par = new resolutionFit::Parameters(0.,1.,inNamePrefix+"Pt3Rel10_",ptBinEdges,0,12,outNamePrefix+"Eta0_",resolutionFit::ResponseFunction::Gauss,resolutionFit::FitModeMaxLikeSimple,resolutionFit::RefPtAve,verbosity);
+	par->setLumi(-1.);
 
 	
 	//par->setTrueGaussResPar(3.249,1.0954,0.0457); // Spring10 QCDDiJet
@@ -83,13 +83,13 @@ int main(int argc, char *argv[]) {
 	//par->setTrueGaussResPar(3.78212,1.07669,0.0380769); // DeltaPhi, pt3RelGen10, ptSGen10
 	//par->setTrueGaussResPar(3.74661,1.08124,0.0377255); // DeltaPhi, pt3RelGen10
 
-	//	par->addPt3Threshold(resolutionFit::Pt3Rel,0.04,inNamePrefix+"Pt3RelGen04_");
-	par->addPt3Threshold(resolutionFit::Pt3Rel,0.06,inNamePrefix+"Pt3RelGen06_");
-	par->addPt3Threshold(resolutionFit::Pt3Rel,0.08,inNamePrefix+"Pt3RelGen08_");
-	par->addPt3Threshold(resolutionFit::Pt3Rel,0.10,inNamePrefix+"Pt3RelGen10_");
-	par->addPt3Threshold(resolutionFit::Pt3Rel,0.12,inNamePrefix+"Pt3RelGen12_");
- 	par->addPt3Threshold(resolutionFit::Pt3Rel,0.15,inNamePrefix+"Pt3RelGen15_");
-	//	par->addPt3Threshold(resolutionFit::Pt3Rel,0.20,inNamePrefix+"Pt3RelGen20_");
+	par->addPt3Threshold(resolutionFit::Pt3Rel,0.04,inNamePrefix+"Pt3Rel04_");
+	par->addPt3Threshold(resolutionFit::Pt3Rel,0.06,inNamePrefix+"Pt3Rel06_");
+	par->addPt3Threshold(resolutionFit::Pt3Rel,0.08,inNamePrefix+"Pt3Rel08_");
+	par->addPt3Threshold(resolutionFit::Pt3Rel,0.10,inNamePrefix+"Pt3Rel10_");
+	par->addPt3Threshold(resolutionFit::Pt3Rel,0.12,inNamePrefix+"Pt3Rel12_");
+ 	par->addPt3Threshold(resolutionFit::Pt3Rel,0.15,inNamePrefix+"Pt3Rel15_");
+	par->addPt3Threshold(resolutionFit::Pt3Rel,0.20,inNamePrefix+"Pt3Rel20_");
 	
 // 	par->addPt3Threshold(resolutionFit::Pt3Abs,6.,inNamePrefix+"Pt3Gen06_");
 // 	par->addPt3Threshold(resolutionFit::Pt3Abs,8.,inNamePrefix+"Pt3Gen08_");
@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
 	//par->fitRatio(true);
 
 	//	par->addFileBaseNameMCClosure("~/results/ResolutionFit/MCClosure_CaloOrdered_Rel3rdJet010/Res_Spring10QCDDiJet_Gauss_Eta0_");
-	par->addFileBaseNameMCClosure(inNamePrefix+"Pt3RelGen10_");
+	//par->addFileBaseNameMCClosure(inNamePrefix+"Pt3Rel10_");
       } else {
 	std::cerr << "ERROR: '" << etaBin << "' is not a valid eta bin for '" << respType << "' response.\n";
 	exit(1);
