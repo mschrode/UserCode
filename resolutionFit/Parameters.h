@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.11 2010/08/18 16:18:06 mschrode Exp $
+// $Id: Parameters.h,v 1.12 2010/08/19 09:23:51 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -16,13 +16,14 @@ namespace resolutionFit {
 
   enum FitMode { FitModeMaxLikeFull, FitModeMaxLikeSimple };
   enum RefPt { RefPtGen, RefPtAve, RefPtJet };
+  enum Pt3Var { Pt3Rel, Pt3Abs };
 
 
   //! \brief Store parameters like binning and file names centrally
   //!
   //! \author Matthias Schroeder
   //! \date 2010/05/15
-  //! $Id: Parameters.h,v 1.11 2010/08/18 16:18:06 mschrode Exp $
+  //! $Id: Parameters.h,v 1.12 2010/08/19 09:23:51 mschrode Exp $
   // --------------------------------------------
   class Parameters {
   public:
@@ -52,6 +53,7 @@ namespace resolutionFit {
       
       int nPt3Cuts() const { return par_->nPt3Cuts(); }
       bool pt3Bins() const { return par_->pt3Bins(); }
+      Pt3Var pt3Var() const { return par_->pt3Var(); }
       double pt3Min(int k) const { return pt3Bins() ? par_->pt3Min(k) : 0.; }
       double pt3Max(int k) const { return par_->pt3Max(k); }
       double pt3Mean(int k) const { return pt3Bins() ? par_->pt3Mean(k) : 0.; }
@@ -105,6 +107,7 @@ namespace resolutionFit {
 
     int nPt3Cuts() const { return static_cast<int>(pt3Max_.size()); }
     bool pt3Bins() const { return pt3Bins_; }
+    Pt3Var pt3Var() const { return pt3Var_; }
     double pt3Min(int k) const { return pt3Min_.at(k); }
     double pt3Max(int k) const { return pt3Max_.at(k); }
     double pt3Mean(int k) const { return pt3Mean_.at(k); }
@@ -156,8 +159,8 @@ namespace resolutionFit {
     int verbosity() const { return verbosity_; }
 
 
-    void addPt3Threshold(double pt3RelMax, const TString &fileBaseName, const TString &spectrumName = "");
-    void addPt3Bin(double pt3RelMin, double pt3RelMax, double pt3RelMean, const TString &fileBaseName, const TString &spectrumName = "");
+    void addPt3Threshold(Pt3Var pt3Variable, double pt3RelMax, const TString &fileBaseName, const TString &spectrumName = "");
+    void addPt3Bin(Pt3Var pt3Variable, double pt3RelMin, double pt3RelMax, double pt3RelMean, const TString &fileBaseName, const TString &spectrumName = "");
     void addFileBaseNameMCStat(const TString &name) { writeFileNames(namesMCStat_,name); }
     void addFileBaseNameMCClosure(const TString &name) { writeFileNames(namesMCClosure_,name); }
     void addSystUncert(const TString &label, const TString &fileBaseNameDown, const TString &fileBaseNameUp);
@@ -192,6 +195,7 @@ namespace resolutionFit {
 
     bool pt3Bins_;
     int stdSelIdx_;
+    Pt3Var pt3Var_;
     std::vector<double> pt3Min_;
     std::vector<double> pt3Max_;
     std::vector<double> pt3Mean_;

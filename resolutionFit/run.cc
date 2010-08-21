@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.25 2010/08/18 19:07:48 mschrode Exp $
+// $Id: run.cc,v 1.26 2010/08/19 09:23:39 mschrode Exp $
 
 #ifndef RUN_RESOLUTION_FIT
 #define RUN_RESOLUTION_FIT
@@ -43,10 +43,8 @@ int main(int argc, char *argv[]) {
     TString respType = argv[1];
     int etaBin = atoi(argv[2]);
     if( respType == "Gauss" ) {
-      outNamePrefix = "ResFit_Spring10QCDDiJet_SimpleGauss_PtGenOrdered_PtGenCuts_PtGenJ3_SJCut_Cauchy_";
-      //inNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_SimpleGauss_PtGenCuts_PtGenOrdered/Res_Spring10QCDDiJet_SimpleGauss_PtGenCuts_";
-      inNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_SimpleGauss_PtGenCuts_PtGenJ3_SJCut_PtGenOrdered_Cauchy/Res_Spring10QCDDiJet_SimpleGauss_PtGenCuts_";
-      //inNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_SimpleGauss_PtGenCuts_PtGenJ3_SJCut_PtGenOrdered_OutlierRejection/Res_Spring10QCDDiJet_SimpleGauss_PtGenCuts_";
+      outNamePrefix = "ResFit_Spring10QCDDiJet_SimpleGauss_PtGenCuts_11_";
+      inNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_SimpleGauss_PtGenCuts_11/Res_Spring10QCDDiJet_SimpleGauss_PtGenCuts_";
 
       //      specNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_PtGenSpectrum0030-3500_Eta00-10_Pt3";
 
@@ -71,26 +69,35 @@ int main(int argc, char *argv[]) {
       
 	inNamePrefix += "Eta0_";
 
-	par = new resolutionFit::Parameters(0.,1.,inNamePrefix,ptBinEdges,0,12,outNamePrefix+"Eta0_",resolutionFit::ResponseFunction::Gauss,resolutionFit::FitModeMaxLikeSimple,resolutionFit::RefPtGen,verbosity);
-	//par->setTrueGaussResPar(3.249,1.0954,0.0457); // Spring10 QCDDiJet
-	par->setTrueGaussResPar(3.82289,1.05984,0.0379744); // Spring10 QCDDiJet Pt3 Core
-	//	par->setTrueGaussResPar(3.18079,1.06712,0.0571787); // Spring10 QCDDiJet Pt3 All
+	par = new resolutionFit::Parameters(0.,1.,inNamePrefix+"Pt3RelGen10_",ptBinEdges,0,12,outNamePrefix+"Eta0_",resolutionFit::ResponseFunction::Gauss,resolutionFit::FitModeMaxLikeSimple,resolutionFit::RefPtGen,verbosity);
 	par->setLumi(10);
-	
-	par->addPt3Threshold(0.04,inNamePrefix+"Rel3rdJet004_");//,specNamePrefix+"-004.root");
-	par->addPt3Threshold(0.06,inNamePrefix+"Rel3rdJet006_");//,specNamePrefix+"-006.root");
-	par->addPt3Threshold(0.08,inNamePrefix+"Rel3rdJet008_");//,specNamePrefix+"-008.root");
-	par->addPt3Threshold(0.10,inNamePrefix);//,specNamePrefix+"-010.root");
-	par->addPt3Threshold(0.12,inNamePrefix+"Rel3rdJet012_");//,specNamePrefix+"-012.root");
-	par->addPt3Threshold(0.15,inNamePrefix+"Rel3rdJet015_");//,specNamePrefix+"-015.root");
-	par->addPt3Threshold(0.20,inNamePrefix+"Rel3rdJet020_");//,specNamePrefix+"-020.root");
 
-// 	par->addPt3Bin(0.00,0.06,0.03622,inNamePrefix+"Rel3rdJet00-06_",specNamePrefix+"00-06.root");
-// 	par->addPt3Bin(0.06,0.08,0.06992,inNamePrefix+"Rel3rdJet06-08_",specNamePrefix+"06-08.root");
-// 	par->addPt3Bin(0.08,0.10,0.08988,inNamePrefix+"Rel3rdJet08-10_",specNamePrefix+"08-10.root");
-// 	par->addPt3Bin(0.10,0.12,0.10983,inNamePrefix+"Rel3rdJet10-12_",specNamePrefix+"10-12.root");
-// 	par->addPt3Bin(0.12,0.15,0.13464,inNamePrefix+"Rel3rdJet12-15_",specNamePrefix+"12-15.root");
-// 	par->addPt3Bin(0.15,0.20,0.17396,inNamePrefix+"Rel3rdJet15-20_",specNamePrefix+"15-20.root");
+	
+	//par->setTrueGaussResPar(3.249,1.0954,0.0457); // Spring10 QCDDiJet
+	//par->setTrueGaussResPar(3.82289,1.05984,0.0379744); // Spring10 QCDDiJet Pt3 Core
+	//par->setTrueGaussResPar(3.18079,1.06712,0.0571787); // Spring10 QCDDiJet Pt3 All
+
+
+	par->setTrueGaussResPar(3.60458,1.12229,0.0363994); // DeltaPhi
+	//par->setTrueGaussResPar(3.14604,1.1096,0.0377418); // DeltaPhi, pt3Gen10, ptSGen10
+	//par->setTrueGaussResPar(3.78212,1.07669,0.0380769); // DeltaPhi, pt3RelGen10, ptSGen10
+	//par->setTrueGaussResPar(3.74661,1.08124,0.0377255); // DeltaPhi, pt3RelGen10
+
+	//	par->addPt3Threshold(resolutionFit::Pt3Rel,0.04,inNamePrefix+"Pt3RelGen04_");
+	par->addPt3Threshold(resolutionFit::Pt3Rel,0.06,inNamePrefix+"Pt3RelGen06_");
+	par->addPt3Threshold(resolutionFit::Pt3Rel,0.08,inNamePrefix+"Pt3RelGen08_");
+	par->addPt3Threshold(resolutionFit::Pt3Rel,0.10,inNamePrefix+"Pt3RelGen10_");
+	par->addPt3Threshold(resolutionFit::Pt3Rel,0.12,inNamePrefix+"Pt3RelGen12_");
+ 	par->addPt3Threshold(resolutionFit::Pt3Rel,0.15,inNamePrefix+"Pt3RelGen15_");
+	//	par->addPt3Threshold(resolutionFit::Pt3Rel,0.20,inNamePrefix+"Pt3RelGen20_");
+	
+// 	par->addPt3Threshold(resolutionFit::Pt3Abs,6.,inNamePrefix+"Pt3Gen06_");
+// 	par->addPt3Threshold(resolutionFit::Pt3Abs,8.,inNamePrefix+"Pt3Gen08_");
+// 	par->addPt3Threshold(resolutionFit::Pt3Abs,10.,inNamePrefix+"Pt3Gen10_");
+// 	par->addPt3Threshold(resolutionFit::Pt3Abs,12.,inNamePrefix+"Pt3Gen12_");
+//	par->addPt3Threshold(resolutionFit::Pt3Abs,15.,inNamePrefix+"Pt3Gen15_");
+// 	par->addPt3Threshold(resolutionFit::Pt3Abs,20.,inNamePrefix+"Pt3Gen20_");
+//	par->addPt3Threshold(resolutionFit::Pt3Abs,40.,inNamePrefix+"Pt3Gen40_");
 
 	//par->addFileBaseNameMCStat(inNamePrefix+"Flat_");
 
@@ -101,7 +108,7 @@ int main(int argc, char *argv[]) {
 	//par->fitRatio(true);
 
 	//	par->addFileBaseNameMCClosure("~/results/ResolutionFit/MCClosure_CaloOrdered_Rel3rdJet010/Res_Spring10QCDDiJet_Gauss_Eta0_");
-	par->addFileBaseNameMCClosure(inNamePrefix);
+	par->addFileBaseNameMCClosure(inNamePrefix+"Pt3RelGen10_");
       } else {
 	std::cerr << "ERROR: '" << etaBin << "' is not a valid eta bin for '" << respType << "' response.\n";
 	exit(1);

@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.12 2010/08/18 16:18:06 mschrode Exp $
+// $Id: Parameters.cc,v 1.13 2010/08/19 09:23:51 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -79,14 +79,18 @@ namespace resolutionFit {
   }
 
 
-  void Parameters::addPt3Threshold(double pt3RelMax, const TString &fileBaseName, const TString &spectrumName) {
+  void Parameters::addPt3Threshold(Pt3Var pt3Variable, double pt3RelMax, const TString &fileBaseName, const TString &spectrumName) {
     if( nPt3Cuts() == 0 ) {
       pt3Bins_ = false;
       if( spectrumName == "" ) hasTruthSpectra_ = false;
       else hasTruthSpectra_ = true;
+      pt3Var_ = pt3Variable;
     }
     if( pt3Bins() ) {
       std::cerr << "ERROR: Already exclusive pt3 binning chosen" << std::endl;
+      exit(-2);
+    } else if( pt3Variable != pt3Var() ) {
+      std::cerr << "ERROR: Already pt3 variable '" << pt3Var() << "' chosen" << std::endl;
       exit(-2);
     } else {
       pt3Max_.push_back(pt3RelMax);
@@ -105,14 +109,18 @@ namespace resolutionFit {
   }
 
 
-  void Parameters::addPt3Bin(double pt3RelMin, double pt3RelMax, double pt3RelMean, const TString &fileBaseName, const TString &spectrumName) {
+  void Parameters::addPt3Bin(Pt3Var pt3Variable, double pt3RelMin, double pt3RelMax, double pt3RelMean, const TString &fileBaseName, const TString &spectrumName) {
     if( nPt3Cuts() == 0 ) {
       pt3Bins_ = true;
       if( spectrumName == "" ) hasTruthSpectra_ = false;
       else hasTruthSpectra_ = true;
+      pt3Var_ = pt3Variable;
     }
     if( !pt3Bins() ) {
       std::cerr << "ERROR: Already accumulative pt3 binning chosen" << std::endl;
+      exit(-2);
+    } else if( pt3Variable != pt3Var() ) {
+      std::cerr << "ERROR: Already pt3 variable '" << pt3Var() << "' chosen" << std::endl;
       exit(-2);
     } else {
       pt3Min_.push_back(pt3RelMin);
@@ -252,10 +260,12 @@ namespace resolutionFit {
 
 
   TString Parameters::labelPt3Cut(int pt3Bin) const {
-    char label[50];
-    if( pt3Bins() ) sprintf(label,"%.2f < p^{rel}_{T,3} < %.2f",pt3Min(pt3Bin),pt3Max(pt3Bin));
-    else sprintf(label,"p^{rel}_{T,3} < %.2f",pt3Max(pt3Bin));
-
+    TString label;
+    if( pt3Bins() ) label += util::toTString(pt3Min(pt3Bin))+" < ";
+    if( pt3Var() == Pt3Rel ) label += "p^{rel}_{T,3}";
+    else if( pt3Var() == Pt3Abs ) label += "p_{T,3}";
+    label += " < "+util::toTString(pt3Max(pt3Bin));
+    if( pt3Var() == Pt3Abs ) label += " GeV";
     return label;
   }
 

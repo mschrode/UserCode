@@ -1,4 +1,4 @@
-// $Id: CutVariation.cc,v 1.14 2010/08/09 12:43:32 mschrode Exp $
+// $Id: CutVariation.cc,v 1.15 2010/08/18 16:18:05 mschrode Exp $
 
 #include "CutVariation.h"
 #include "KalibriFileParser.h"
@@ -153,8 +153,12 @@ namespace resolutionFit {
 
     TH1 *hFrame = new TH1D(name,"",1000,xMin,xMax);
     hFrame->SetNdivisions(505);
-    if( pt3Bins() ) hFrame->SetXTitle("p^{rel}_{T,3}");
-    else hFrame->SetXTitle("p^{rel}_{T,3} threshold");
+    TString xTitle;
+    if( par_->pt3Var() == Pt3Rel ) xTitle = "p^{rel}_{T,3}";
+    else if( par_->pt3Var() == Pt3Abs ) xTitle = "p_{T,3}";
+    if( !pt3Bins() ) xTitle += " threshold";
+    if( par_->pt3Var() == Pt3Abs ) xTitle += " (GeV)";
+    hFrame->SetXTitle(xTitle);
     hFrame->SetYTitle(par_->parAxisLabel(parIdx()));
     hFrame->GetYaxis()->SetRangeUser(yMin,yMax);
 
@@ -212,7 +216,7 @@ namespace resolutionFit {
     if( hPtAsym_->Fit(fit,"Q0IRB") != 0 ) {
       std::cerr << "WARNING: No convergence" << std::endl;
     }
-    fitValue_ = sqrt(2.)*fit->GetParameter(2);
+    fitValue_ = sqrt(2.)*std::abs(fit->GetParameter(2));
     uncert_ = new Uncertainty("Statistical uncertainty",sqrt(2.)*fit->GetParError(2));
     delete fit;
   }
