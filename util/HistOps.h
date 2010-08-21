@@ -1,13 +1,15 @@
-// $Id: HistOps.h,v 1.9 2010/08/18 16:18:45 mschrode Exp $
+// $Id: HistOps.h,v 1.10 2010/08/19 09:24:09 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
 
 #include <cassert>
+#include <cmath>
 #include <vector>
 
 #include "TH1.h"
 #include "TH1D.h"
+#include "TH2.h"
 #include "TString.h"
 #include "TStyle.h"
 
@@ -23,7 +25,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.9 2010/08/18 16:18:45 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.10 2010/08/19 09:24:09 mschrode Exp $
   class HistOps
   {
   public:
@@ -272,6 +274,37 @@ namespace util
       return hRatio;
     }
 
+    // -------------------------------------------------------------------------------------
+    static void fillSlices(const TH2 *h2, std::vector<TH1*> &hSlices, const TString &namePrefix) {
+      for(int xBin = 1; xBin <= h2->GetNbinsX(); ++xBin) {
+	TH1 *h = new TH1D(namePrefix+toTString(xBin-1),"",h2->GetNbinsY(),
+			  h2->GetYaxis()->GetXmin(),h2->GetYaxis()->GetXmax());
+	h->Sumw2();
+	h->SetXTitle(h2->GetYaxis()->GetTitle());
+	for(int yBin = 1; yBin <= h2->GetNbinsY(); yBin++) {
+	  h->SetBinContent(yBin,h2->GetBinContent(h2->GetBin(xBin,yBin)));
+	  h->SetBinError(yBin,h2->GetBinError(h2->GetBin(xBin,yBin)));
+	}  
+	hSlices.push_back(h);
+      }
+    }
+
+    // -------------------------------------------------------------------------------------
+    static bool equidistLogBins(std::vector<double>& binEdges, unsigned int nBins, double min, double max) {
+      if( binEdges.size() != nBins+1 ) return false;
+      if( min <= 0. || max <= 0. || min >= max ) return false;
+      
+      binEdges[0]     = min;
+      binEdges[nBins] = max;
+      const double minLog = log10(binEdges[0]);
+      const double maxLog  = log10(binEdges[nBins]);
+      for (unsigned int i = 1; i < nBins; ++i) {
+	binEdges[i] = pow(10., minLog + i*(maxLog-minLog)/(nBins));
+      }
+      
+      return true;
+    }
+ 
 
   private:
     static unsigned int nFrames_;
