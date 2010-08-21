@@ -4,13 +4,13 @@
 #include <cassert>
 #include <vector>
 
+#include "TGraphAsymmErrors.h"
 #include "TString.h"
 
 #include "Parameters.h"
 #include "PtBin.h"
 
 class TF1;
-class TGraphAsymmErrors;
 
 namespace resolutionFit {
   class FittedResolution {
@@ -63,6 +63,10 @@ namespace resolutionFit {
       return ptBins_[ptBin]->uncertDownAsym();
     }
 
+    int nMCClosureResFits() const { return static_cast<int>(mcClosureResoLabels_.size()); }
+    TString mcClosureLabel(int i) const { return mcClosureResoLabels_.at(i); }
+    double mcClosureReso(int i, int ptBin) const { return mcClosureGReso_.at(i)->GetY()[ptBin]; }
+    double mcClosureResoErr(int i, int ptBin) const { return mcClosureGReso_.at(i)->GetEYhigh()[ptBin]; }
 
     void plotExtrapolation() const;
     void plotPtAsymmetry() const;
@@ -76,15 +80,22 @@ namespace resolutionFit {
     const Parameters *par_;
     const std::vector<PtBin*> ptBins_;
 
+    double ptMin_;
+    double ptMax_;
+
     TF1 *trueRes_;
     TF1 *fittedRes_;
 
-    double ptMin_;
-    double ptMax_;
+    std::vector<TString> mcClosureResoLabels_;
+    std::vector< std::vector<TF1*> > mcClosureFits_;
+    std::vector<TGraphAsymmErrors*> mcClosureGReso_;
+    std::vector<TGraphAsymmErrors*> mcClosureGScale_;
+
     int lineWidth_;
     double lineHeight_;
 
     static double gaussian(double *x, double *par);
+    void fitMCClosure();
     TGraphAsymmErrors *getTGraphOfResolution(const TString &method, const TString &uncertainty) const;
   };
 }
