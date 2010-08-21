@@ -1,4 +1,4 @@
-// $Id: utils.h,v 1.2 2010/07/27 10:07:21 mschrode Exp $
+// $Id: utils.h,v 1.3 2010/07/27 17:08:39 mschrode Exp $
 
 #ifndef UTILS_H
 #define UTILS_H
@@ -15,9 +15,17 @@
 //!
 //!  \author   Matthias Schroeder (www.desy.de/~matsch)
 //!  \date     2010/03/09
-//!  $Id: utils.h,v 1.2 2010/07/27 10:07:21 mschrode Exp $
+//!  $Id: utils.h,v 1.3 2010/07/27 17:08:39 mschrode Exp $
 // -------------------------------------------------------------------------------------
 namespace util {
+
+  //! Returns error of A / B for two uncorrelated variables
+  //! A, B with error AE, BE
+  // -------------------------------------------------------------------------------------
+  static double ratioError(double A, double AE, double B, double BE) {
+    return sqrt( AE*AE/B/B + BE*BE*A*A/B/B/B/B );
+  }
+
 
   // -------------------------------------------------------------------------------------
   static double round(double d, int decPlaces) {
