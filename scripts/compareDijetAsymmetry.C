@@ -371,7 +371,7 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
   TPaveText *labSpec = util::LabelFactory::createPaveText(3,-0.6);
   labSpec->AddText("L = "+util::toTString(lumi)+" pb^{-1},  |#eta| < "+util::toTString(maxEta));
   labSpec->AddText("|#Delta#phi| > "+util::toTString(minDeltaPhi)+",  p^{rel}_{T} < "+util::toTString(maxPt3Rel));
-  labSpec->AddText("p^{ave}_{T} < "+util::toTString(minPtAve)+" GeV");
+  labSpec->AddText("p^{ave}_{T} > "+util::toTString(minPtAve)+" GeV");
 
   TLegend *leg = util::LabelFactory::createLegendCol(2,0.3);
   leg->AddEntry(hPtCorr[0][0],"Data","P");
