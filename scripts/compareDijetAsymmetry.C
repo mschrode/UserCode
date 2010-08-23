@@ -6,12 +6,16 @@
 
 #include "TCanvas.h"
 #include "TChain.h"
+#include "TF1.h"
 #include "TFile.h"
 #include "TH1.h"
+#include "TLegend.h"
+#include "TPaveText.h"
 #include "TRandom.h"
 #include "TString.h"
 #include "TVector2.h"
 
+#include "/afs/naf.desy.de/user/m/mschrode/UserCode/mschrode/util/utils.h"
 #include "/afs/naf.desy.de/user/m/mschrode/UserCode/mschrode/util/HistOps.h"
 #include "/afs/naf.desy.de/user/m/mschrode/UserCode/mschrode/util/LabelFactory.h"
 #include "/afs/naf.desy.de/user/m/mschrode/UserCode/mschrode/util/StyleSettings.h"
@@ -59,7 +63,7 @@ TChain *createTChain(const TString &fileListName) {
 
 
 void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
-  util::StyleSettings::presentation();
+  util::StyleSettings::presentationNoTitle();
 
   const TString prefix = "JetMET_Run2010A-PromptReco-v4_614nb_Pt3RelCuts_";
   const int maxNJet = 50;
@@ -325,36 +329,85 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
   // Get pt asymmetry per bin
   std::vector< std::vector<TH1*> > hPtAsymUncorr(nChains);
   std::vector< std::vector<TH1*> > hPtAsymCorr(nChains);
+  std::vector<TH1*> hPtAsymCorrWidthGauss(nChains);
+  std::vector<TH1*> hPtAsymCorrWidthStd(nChains);
   for(unsigned int c = 0; c < nChains; ++c) {
     util::HistOps::fillSlices(hPtAsymVsPtAveUncorr[c],hPtAsymUncorr[c],"hPtAsymUncorr"+util::toTString(c));
     util::HistOps::fillSlices(hPtAsymVsPtAveCorr[c],hPtAsymCorr[c],"hPtAsymCorr"+util::toTString(c));
+
+    hPtAsymCorrWidthGauss[c] = util::HistOps::createTH1D("hPtAsymCorrWidthGauss"+util::toTString(c),ptAveBinEdges.size()-1,&(ptAveBinEdges.front()),"p^{ave}_{T}","GeV","#sigma(Asymmetry)");
+    if( c == 0 ) hPtAsymCorrWidthGauss[c]->SetMarkerStyle(20);
+    
+    hPtAsymCorrWidthStd[c] = util::HistOps::createTH1D("hPtAsymCorrWidthStd"+util::toTString(c),ptAveBinEdges.size()-1,&(ptAveBinEdges.front()),"p^{ave}_{T}","GeV","StdDev(Asymmetry)");
+    if( c == 0 ) hPtAsymCorrWidthStd[c]->SetMarkerStyle(20);
+				       
     for(size_t p = 0; p < hPtAsymUncorr[c].size(); ++p) {
       util::HistOps::setAxisTitles(hPtAsymUncorr[c][p],"Asymmetry","","events",false);
       if( c == 0 ) hPtAsymUncorr[c][p]->SetMarkerStyle(20);
-      hPtAsymUncorr[c][p]->SetTitle(util::toTString(ptAveBinEdges[p])+" < p^{ave}_{T} < "+util::toTString(ptAveBinEdges[p+1])+" GeV");
-
+      
       util::HistOps::setAxisTitles(hPtAsymCorr[c][p],"Corrected Asymmetry","","events",false);
       if( c == 0 ) hPtAsymCorr[c][p]->SetMarkerStyle(20);
-      hPtAsymCorr[c][p]->SetTitle(util::toTString(ptAveBinEdges[p])+" < p^{ave}_{T} < "+util::toTString(ptAveBinEdges[p+1])+" GeV");
+      hPtAsymCorrWidthStd[c]->SetBinContent(1+p,hPtAsymCorr[c][p]->GetRMS());
+      hPtAsymCorrWidthStd[c]->SetBinError(1+p,hPtAsymCorr[c][p]->GetRMSError());
+      if( hPtAsymCorr[c][p]->Fit("gaus","0QIR","",hPtAsymCorr[c][p]->GetMean()-2.*hPtAsymCorr[c][p]->GetRMS(),hPtAsymCorr[c][p]->GetMean()+2.*hPtAsymCorr[c][p]->GetRMS()) == 0 ) {
+	hPtAsymCorrWidthGauss[c]->SetBinContent(1+p,std::abs(hPtAsymCorr[c][p]->GetFunction("gaus")->GetParameter(2)));
+	hPtAsymCorrWidthGauss[c]->SetBinError(1+p,hPtAsymCorr[c][p]->GetFunction("gaus")->GetParError(2));
+      }
     }
   }
+  TH1 *hPtAsymCorrWidthRatioGauss = util::HistOps::createRatioPlot(hPtAsymCorrWidthGauss[0],hPtAsymCorrWidthGauss[1],"#sigma(Asymmetry) Data / MC",0.7,1.5);
+  TH1 *hPtAsymCorrWidthRatioStd = util::HistOps::createRatioPlot(hPtAsymCorrWidthStd[0],hPtAsymCorrWidthStd[1],"StdDev(Asymmetry) Data / MC",0.7,1.5);
+
+
+
+  // Labels
+  std::vector<TPaveText*> labPtAveBin(ptAveBinEdges.size()-1);
+  for(size_t i = 0; i < labPtAveBin.size(); ++i) {
+    labPtAveBin[i] = util::LabelFactory::createPaveText(3,-0.6);
+    labPtAveBin[i]->AddText("L = "+util::toTString(lumi)+" pb^{-1},  |#eta| < "+util::toTString(maxEta));
+    labPtAveBin[i]->AddText("|#Delta#phi| > "+util::toTString(minDeltaPhi)+",  p^{rel}_{T} < "+util::toTString(maxPt3Rel));
+    labPtAveBin[i]->AddText(util::toTString(ptAveBinEdges[i])+" < p^{ave}_{T} < "+util::toTString(ptAveBinEdges[i+1])+" GeV");
+  }
+  TPaveText *labSpec = util::LabelFactory::createPaveText(3,-0.6);
+  labSpec->AddText("L = "+util::toTString(lumi)+" pb^{-1},  |#eta| < "+util::toTString(maxEta));
+  labSpec->AddText("|#Delta#phi| > "+util::toTString(minDeltaPhi)+",  p^{rel}_{T} < "+util::toTString(maxPt3Rel));
+  labSpec->AddText("p^{ave}_{T} < "+util::toTString(minPtAve)+" GeV");
+
+  TLegend *leg = util::LabelFactory::createLegendCol(2,0.3);
+  leg->AddEntry(hPtCorr[0][0],"Data","P");
+  leg->AddEntry(hPtCorr[1][0],"MC","L");
+
 
 
   // Plots
   TCanvas *can1 = new TCanvas("canPtAveCorr","PtAve Corr",500,500);
   can1->cd();
+  util::HistOps::setYRange(hPtAveCorr[1],3);
   hPtAveCorr[1]->Draw("HISTE");
   hPtAveCorr[0]->Draw("PE1same");
+  labSpec->Draw("same");
+  leg->Draw("same");
   can1->SaveAs(prefix+"PtAveCorr.eps","eps");
+  hPtAveCorr[1]->GetYaxis()->SetRangeUser(3E-2,7*pow(10,log10(hPtAveCorr[1]->GetMaximum())+3));
+  hPtAveCorr[1]->Draw("HISTE");
+  hPtAveCorr[0]->Draw("PE1same");
   can1->SetLogy();
   can1->SaveAs(prefix+"PtAveCorrLogy.eps","eps");
 
   TCanvas *can2 = new TCanvas("canPtAveCorrLog","PtAve Corr (Log)",500,500);
   can2->cd();
+  util::HistOps::setYRange(hPtAveCorrLog[1],3);
   hPtAveCorrLog[1]->Draw("HISTE");
   hPtAveCorrLog[0]->Draw("PE1same");
+  labSpec->Draw("same");
+  leg->Draw("same");
   can2->SetLogx();
   can2->SaveAs(prefix+"PtAveCorrLogx.eps","eps");
+  hPtAveCorrLog[1]->GetYaxis()->SetRangeUser(3E-2,7*pow(10,log10(hPtAveCorrLog[1]->GetMaximum())+3));
+  hPtAveCorrLog[1]->Draw("HISTE");
+  hPtAveCorrLog[0]->Draw("PE1same");
+  labSpec->Draw("same");
+  leg->Draw("same");
   can2->SetLogy();
   can2->SaveAs(prefix+"PtAveCorrLogxy.eps","eps");
 
@@ -370,49 +423,105 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
   hEta[0]->Draw("PE1same");
   can4->SaveAs(prefix+"Eta.eps","eps");
 
+  TCanvas *can5 = new TCanvas("canPtAsymCorrWidthGauss","PtAsym Width Gauss",500,500);
+  can5->cd();
+  util::HistOps::setYRange(hPtAsymCorrWidthGauss[1],3);
+  hPtAsymCorrWidthGauss[1]->Draw("HISTE");
+  hPtAsymCorrWidthGauss[0]->Draw("PE1same");
+  labSpec->Draw("same");
+  leg->Draw("same");
+  can5->SetLogx();
+  can5->SaveAs(prefix+"PtAsymCorrWidthGauss.eps","eps");
+
+  TCanvas *can6 = new TCanvas("canPtAsymCorrWidthGaussRatio","PtAsym Width Gauss Ratio",500,500);
+  can6->cd();
+  util::HistOps::createRatioFrame(hPtAsymCorrWidthRatioGauss,"#sigma(Asymmetry) Data / MC",0.7,1.8)->Draw();
+  hPtAsymCorrWidthRatioGauss->Draw("PE1same");
+  labSpec->Draw("same");
+  leg->Draw("same");
+  can6->SetLogx();
+  can6->SaveAs(prefix+"PtAsymCorrWidthGaussRatio.eps","eps");
+
+  TCanvas *can7 = new TCanvas("canPtAsymCorrWidthStd","PtAsym Width Std",500,500);
+  can7->cd();
+  util::HistOps::setYRange(hPtAsymCorrWidthStd[1],3);
+  hPtAsymCorrWidthStd[1]->Draw("HISTE");
+  hPtAsymCorrWidthStd[0]->Draw("PE1same");
+  labSpec->Draw("same");
+  leg->Draw("same");
+  can7->SetLogx();
+  can7->SaveAs(prefix+"PtAsymCorrWidthStd.eps","eps");
+
+  TCanvas *can8 = new TCanvas("canPtAsymCorrWidthStdRatio","PtAsym Width Std Ratio",500,500);
+  can8->cd();
+  util::HistOps::createRatioFrame(hPtAsymCorrWidthRatioStd,"StdDev(Asymmetry) Data / MC",0.7,1.8)->Draw();
+  hPtAsymCorrWidthRatioStd->Draw("PE1same");
+  labSpec->Draw("same");
+  leg->Draw("same");
+  can8->SetLogx();
+  can8->SaveAs(prefix+"PtAsymCorrWidthStdRatio.eps","eps");
+
   for(size_t i = 0; i < hPtUncorr[0].size(); ++i) {
     TCanvas *can = new TCanvas("canPtUncorr"+util::toTString(i),"Pt Uncorr "+util::toTString(1+i),500,500);
     can->cd();
+    hPtUncorr[1][i]->GetYaxis()->SetRangeUser(3E-2,7*pow(10,log10(hPtUncorr[1][i]->GetMaximum())+3));
     hPtUncorr[1][i]->Draw("HISTE");
     hPtUncorr[0][i]->Draw("PE1same");
+    labSpec->Draw("same");
+    leg->Draw("same");
     can->SetLogy();
     can->SaveAs(prefix+"PtUncorr_Jet"+util::toTString(1+i)+".eps","eps");
   }
   for(size_t i = 0; i < hPtCorr[0].size(); ++i) {
     TCanvas *can = new TCanvas("canPtCorr"+util::toTString(i),"Pt Corr "+util::toTString(1+i),500,500);
     can->cd();
+    hPtCorr[1][i]->GetYaxis()->SetRangeUser(3E-2,7*pow(10,log10(hPtCorr[1][i]->GetMaximum())+3));
     hPtCorr[1][i]->Draw("HISTE");
     hPtCorr[0][i]->Draw("PE1same");
+    labSpec->Draw("same");
+    leg->Draw("same");
     can->SetLogy();
     can->SaveAs(prefix+"PtCorr_Jet"+util::toTString(1+i)+".eps","eps");
   }
   for(size_t i = 0; i < hPtAsymUncorr[0].size(); ++i) {
     TCanvas *can = new TCanvas("canPtAsym"+util::toTString(i),"Asym Uncorr "+util::toTString(1+i),500,500);
     can->cd();
+    util::HistOps::setYRange(hPtAsymUncorr[1][i],3);
     hPtAsymUncorr[1][i]->Draw("HISTE");
     hPtAsymUncorr[0][i]->Draw("PE1same");
+    labPtAveBin[i]->Draw("same");
+    leg->Draw("same");
     can->SaveAs(prefix+"PtAsymUncorr_PtAveBin"+util::toTString(i)+".eps","eps");
   }
   for(size_t i = 0; i < hPtAsymUncorr[0].size(); ++i) {
     TCanvas *can = new TCanvas("canPtAsymLog"+util::toTString(i),"Asym Uncorr "+util::toTString(1+i)+" (Log)",500,500);
     can->cd();
+    hPtAsymUncorr[1][i]->GetYaxis()->SetRangeUser(3E-2,7*pow(10,log10(hPtAsymUncorr[1][i]->GetMaximum())+3));
     hPtAsymUncorr[1][i]->Draw("HISTE");
     hPtAsymUncorr[0][i]->Draw("PE1same");
+    labPtAveBin[i]->Draw("same");
+    leg->Draw("same");
     can->SetLogy();
     can->SaveAs(prefix+"PtAsymUncorrLog_PtAveBin"+util::toTString(i)+".eps","eps");
   }
   for(size_t i = 0; i < hPtAsymCorr[0].size(); ++i) {
     TCanvas *can = new TCanvas("canPtAsymCorr"+util::toTString(i),"Asym Corr "+util::toTString(1+i),500,500);
     can->cd();
+    util::HistOps::setYRange(hPtAsymCorr[1][i],3);
     hPtAsymCorr[1][i]->Draw("HISTE");
     hPtAsymCorr[0][i]->Draw("PE1same");
+    labPtAveBin[i]->Draw("same");
+    leg->Draw("same");
     can->SaveAs(prefix+"PtAsymCorr_PtAveBin"+util::toTString(i)+".eps","eps");
   }
   for(size_t i = 0; i < hPtAsymCorr[0].size(); ++i) {
     TCanvas *can = new TCanvas("canPtAsymCorrLog"+util::toTString(i),"Asym Corr "+util::toTString(1+i)+" (Log)",500,500);
     can->cd();
+    hPtAsymCorr[1][i]->GetYaxis()->SetRangeUser(3E-2,7*pow(10,log10(hPtAsymCorr[1][i]->GetMaximum())+3));
     hPtAsymCorr[1][i]->Draw("HISTE");
     hPtAsymCorr[0][i]->Draw("PE1same");
+    labPtAveBin[i]->Draw("same");
+    leg->Draw("same");
     can->SetLogy();
     can->SaveAs(prefix+"PtAsymCorrLog_PtAveBin"+util::toTString(i)+".eps","eps");
   }
