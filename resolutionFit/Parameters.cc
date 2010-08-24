@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.14 2010/08/21 13:38:28 mschrode Exp $
+// $Id: Parameters.cc,v 1.15 2010/08/21 16:35:39 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -18,7 +18,8 @@ namespace resolutionFit {
       styleMode_(gStyle->GetTitle()),
       fitMode_(fitMode),
       refPt_(refPt),
-      verbosity_(verbosity) {
+      verbosity_(verbosity),
+      isData_(false) {
 
     for(int i = startIdx; i <= endIdx; ++i) {
       fileNameIdx_.push_back(i);
@@ -36,7 +37,8 @@ namespace resolutionFit {
       styleMode_(gStyle->GetTitle()),
       fitMode_(fitMode),
       refPt_(refPt),
-      verbosity_(verbosity) {
+      verbosity_(verbosity),
+      isData_(false) {
     
     fileNameIdx_ = fileNameIdx;
     init(fileBaseNameStdSel, ptBinEdges, type);
@@ -310,6 +312,5 @@ namespace resolutionFit {
     std::cout << "Setup:\n";
     std::cout << "  FitMode : " << (fitMode()==FitModeMaxLikeSimple ? "FitModeMaxLikeSimple" : "FitModeMaxLikeFull") << std::endl;
     std::cout << "  RefPt   : " << (refPt()==RefPtGen ? "PtGen" : "PtAve") << std::endl;
-    std::cout << "  Pt3Var  : " << (pt3Var()==Pt3Rel ? "Pt3Rel" : "Pt3Abs") << std::endl;
   }
 }

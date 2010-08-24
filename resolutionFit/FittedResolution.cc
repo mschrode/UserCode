@@ -137,7 +137,7 @@ namespace resolutionFit {
 	fPtAsym->SetLineColor(4);
 	
 	// Pt asymmetry from MaxLike
-	TF1 *fMaxLike = new TF1("PtAsymmetryBins:fMaxLike","gaus",xMin,xMax);
+	TF1 *fMaxLike = new TF1("PtAsymmetryBins:fMaxLike","gaus",-1.,1);
 	fMaxLike->SetParameter(1,0.);
 	fMaxLike->SetParameter(2,resMaxLike[ptBin]);
 	fMaxLike->SetParameter(0,1./sqrt(2.*M_PI)/fMaxLike->GetParameter(2));	
@@ -164,6 +164,17 @@ namespace resolutionFit {
 	label->Draw("same");
 	leg->Draw("same");
 	can->SaveAs(par_->outNamePrefix()+"PtAsymmetry_PtBin"+util::toTString(ptBin)+"_Pt3Cut"+util::toTString(c)+".eps","eps");
+
+	can->cd();
+	hPtAsym->GetXaxis()->SetRangeUser(-1.,1.);
+	hPtAsym->GetYaxis()->SetRangeUser(3E-3,190.);
+	hPtAsym->Draw("PE1");
+	fPtAsym->Draw("same");
+	fMaxLike->Draw("same");
+	label->Draw("same");
+	leg->Draw("same");
+	can->SetLogy();
+	can->SaveAs(par_->outNamePrefix()+"PtAsymmetryLog_PtBin"+util::toTString(ptBin)+"_Pt3Cut"+util::toTString(c)+".eps","eps");
 
 	// Clean up
 	delete hPtAsym;
@@ -195,7 +206,7 @@ namespace resolutionFit {
       leg->AddEntry(gResMaxLike,"MaxLike","P");
       leg->AddEntry(gResPtAsym,"PtAsym","P");
 
-      TH1 *hFrame = new TH1D("FittedResolutions",";p^{ref}_{T} (GeV);#sigma / p^{ref}_{T}",1000,0.9*ptMin(),1.1*ptMax());
+      TH1 *hFrame = new TH1D("FittedResolutions",";"+par_->labelPtRef()+" (GeV);#sigma / "+par_->labelPtRef(),1000,0.9*ptMin(),1.1*ptMax());
       double yMin = *(std::min_element(gResMaxLike->GetY(),gResMaxLike->GetY()+gResMaxLike->GetN()));
       double yMax = *(std::max_element(gResMaxLike->GetY(),gResMaxLike->GetY()+gResMaxLike->GetN()));
       double tmp =  *(std::min_element(gResPtAsym->GetY(),gResPtAsym->GetY()+gResPtAsym->GetN()));
@@ -253,26 +264,20 @@ namespace resolutionFit {
       // Loop over fitted parameters
       for(int parIdx = 0; parIdx < par_->nFittedPars(); ++parIdx) {
 
-	// Create Canvas
-	TCanvas *can = new TCanvas("PlotExtrapolation","Extrapolation ("+util::toTString(ptBin)+")",500,500);
-	can->cd();
-
-	// Draw a frame
+	// Create a frame
 	TH1 *h = (*it)->getFrameOfVariation(parIdx,"FrameExtrapolation");
-	for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
-	  h->SetBinContent(bin,par_->trueGaussSigma((*it)->meanPt()));
+	if( !par_->isData() ) {
+	  for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
+	    h->SetBinContent(bin,par_->trueGaussSigma((*it)->meanPt()));
+	  }
 	}
-	h->GetYaxis()->SetRangeUser(0.9*par_->trueGaussSigma((*it)->meanPt()),1.5*par_->trueGaussSigma((*it)->meanPt()));
 	h->SetLineStyle(2);
-	h->Draw();
 
-	// Draw graph and extrapolation
+	// Get graph and extrapolation
 	TGraphAsymmErrors *g = (*it)->getTGraphOfVariation(parIdx);
 	g->Draw("PE1same");
 	TF1 *f = (*it)->getTF1OfVariation(parIdx,"FitExtrapolation");
 	f->SetLineWidth(lineWidth_);
-	f->Draw("same");
-	g->Draw("PE1same");
 
 	TGraphAsymmErrors *gAsym = (*it)->getTGraphOfVariationAsym();
 	gAsym->SetMarkerStyle(24);
@@ -284,22 +289,26 @@ namespace resolutionFit {
 	TPaveText *txt = util::LabelFactory::createPaveText(2,-0.5);
 	txt->AddText(par_->labelLumi()+", "+par_->labelEtaBin());
 	txt->AddText(par_->labelPtBin(ptBin));
-	txt->Draw("same");
 
-	TLegend *leg = util::LabelFactory::createLegendCol(3,0.47);
+	TLegend *leg = util::LabelFactory::createLegendCol(2,0.47);
 	leg->AddEntry(g,"Maximum likelihood","P");
-	leg->AddEntry(gAsym,"p_{T} asymmetry","P");
-	leg->AddEntry(h,"MC truth","L");
+	leg->AddEntry(f,"Fit to MaxLike","L");
 
-	// Write canvas to file
-	TString name = par_->outNamePrefix();
-	name += "ExtrapolatedPar";
-	name += parIdx;
-	name += "_PtBin";
-	name += ptBin;
-	name += ".eps";
-	can->SaveAs(name,"eps");
+	TLegend *legComp = util::LabelFactory::createLegendCol(4,0.47);
+	legComp->AddEntry(g,"Maximum likelihood","P");
+	legComp->AddEntry(f,"Fit to MaxLike","L");
+	legComp->AddEntry(gAsym,"p_{T} asymmetry","P");
+	legComp->AddEntry(fAsym,"Fit to PtAsym","L");
 
+	// Draw
+	TCanvas *can = new TCanvas("PlotExtrapolation","Extrapolation ("+util::toTString(ptBin)+")",500,500);
+	can->cd();
+	h->Draw();
+	f->Draw("same");
+	g->Draw("PE1same");
+	txt->Draw("same");
+	leg->Draw("same");
+	can->SaveAs(par_->outNamePrefix()+"ExtrapolatedPar"+util::toTString(parIdx)+"_PtBin"+util::toTString(ptBin)+".eps","eps");
 	if( parIdx == 0 ) {
 	  can->cd();
 	  h->Draw();
@@ -308,14 +317,8 @@ namespace resolutionFit {
 	  f->Draw("same");
 	  fAsym->Draw("same");
 	  txt->Draw("same");
-	  leg->Draw("same");
-	  name = par_->outNamePrefix();
-	  name += "ExtrapolatedPar";
-	  name += parIdx;
-	  name += "CompAsym_PtBin";
-	  name += ptBin;
-	  name += ".eps";
-	  can->SaveAs(name,"eps");
+	  legComp->Draw("same");
+	  can->SaveAs(par_->outNamePrefix()+"ExtrapolatedPar"+util::toTString(parIdx)+"CompAsym_PtBin"+util::toTString(ptBin)+".eps","eps");
 	}
 
 	// Clean up
@@ -326,6 +329,7 @@ namespace resolutionFit {
 	delete gAsym;
 	delete txt;
 	delete leg;
+	delete legComp;
 	delete can;
       } // End of loop over fitted parameters
 
@@ -413,8 +417,8 @@ namespace resolutionFit {
 
     // Create a frame
     TH1 *h = new TH1D("FrameExtrapolatedResolution","",1000,ptMin_,ptMax_);
-    h->SetXTitle("p^{ref}_{T} (GeV)");
-    h->SetYTitle("#sigma / p^{ref}_{T}");
+    h->SetXTitle(par_->labelPtRef()+" (GeV)");
+    h->SetYTitle("#sigma / "+par_->labelPtRef());
     h->SetNdivisions(510);
     double min = 0.5*(*std::min_element(gMaxLikeStat->GetY(),gMaxLikeStat->GetY()+gMaxLikeStat->GetN()));
     double max = 1.6*(*std::max_element(gMaxLikeStat->GetY(),gMaxLikeStat->GetY()+gMaxLikeStat->GetN()));
@@ -572,7 +576,8 @@ namespace resolutionFit {
     h->SetLineStyle(trueRes_->GetLineStyle());
     h->SetLineColor(trueRes_->GetLineColor());
     h->GetYaxis()->SetTitle("#sigma_{fit} / #sigma_{MC}");
-    h->GetYaxis()->SetRangeUser(0.65,1.45+0.8*nLegEntries*lineHeight_);
+    //    h->GetYaxis()->SetRangeUser(0.65,1.45+0.8*nLegEntries*lineHeight_);
+    h->GetYaxis()->SetRangeUser(0.85,1.85);
 
 
     // Recreate labels
@@ -679,6 +684,10 @@ namespace resolutionFit {
       util::HistOps::setAxisTitles(hPtAve,"p^{ave}_{T}","GeV","events",true);
       util::HistOps::setYRange(hPtAve,5);
       hPtAve->SetMarkerStyle(20);
+      TH1 *hPtAveAbs = (*it)->getHistPtAveAbs("PlotPtAve");
+      util::HistOps::setAxisTitles(hPtAveAbs,"p^{ave}_{T}","GeV","events");
+      util::HistOps::setYRange(hPtAveAbs,5);
+      hPtAveAbs->SetMarkerStyle(20);
 
       // Pdf
       TH1 *hPdfPtTrue = (*it)->getHistPdfPtTrue("PlotPdfPtTrue");
@@ -705,38 +714,47 @@ namespace resolutionFit {
       TCanvas *can = new TCanvas("PlotSpectrum","Spectrum ("+util::toTString(ptBin)+")",500,500);
       can->cd();
 
-      hPtGen->Draw("PE1");
-      if( par_->fitMode() == FitModeMaxLikeFull ) hPdfPtTrue->Draw("Lsame");
-      txt->Draw("same");
-      if( par_->fitMode() == FitModeMaxLikeFull ) legPtGen->Draw("same");
-      can->SaveAs(par_->outNamePrefix()+"Spectrum_PtBin"+util::toTString(ptBin)+".eps","eps");
+      if( !par_->isData() ) {
+	hPtGen->Draw("PE1");
+	if( par_->fitMode() == FitModeMaxLikeFull ) hPdfPtTrue->Draw("Lsame");
+	txt->Draw("same");
+	if( par_->fitMode() == FitModeMaxLikeFull ) legPtGen->Draw("same");
+	can->SaveAs(par_->outNamePrefix()+"Spectrum_PtBin"+util::toTString(ptBin)+".eps","eps");
 
-      hPtGenJet1->Draw("PE1");
-      if( par_->fitMode() == FitModeMaxLikeFull ) hPdfPtTrue->Draw("Lsame");
-      txt->Draw("same");
-      if( par_->fitMode() == FitModeMaxLikeFull ) legPtGenJet1->Draw("same");
-      can->SaveAs(par_->outNamePrefix()+"SpectrumJet1_PtBin"+util::toTString(ptBin)+".eps","eps");
+	hPtGenJet1->Draw("PE1");
+	if( par_->fitMode() == FitModeMaxLikeFull ) hPdfPtTrue->Draw("Lsame");
+	txt->Draw("same");
+	if( par_->fitMode() == FitModeMaxLikeFull ) legPtGenJet1->Draw("same");
+	can->SaveAs(par_->outNamePrefix()+"SpectrumJet1_PtBin"+util::toTString(ptBin)+".eps","eps");
 
+	util::HistOps::setYRange(hPtGen,5,true);
+	hPtGen->Draw("PE1");
+	if( par_->fitMode() == FitModeMaxLikeFull ) hPdfPtTrue->Draw("Lsame");
+	txt->Draw("same");
+	if( par_->fitMode() == FitModeMaxLikeFull ) legPtGen->Draw("same");
+	can->SetLogy();
+	can->SaveAs(par_->outNamePrefix()+"SpectrumLog_PtBin"+util::toTString(ptBin)+".eps","eps");
+
+	util::HistOps::setYRange(hPtGenJet1,5,true);
+	hPtGenJet1->Draw("PE1");
+	if( par_->fitMode() == FitModeMaxLikeFull ) hPdfPtTrue->Draw("Lsame");
+	txt->Draw("same");
+	if( par_->fitMode() == FitModeMaxLikeFull ) legPtGenJet1->Draw("same");
+	can->SetLogy();
+	can->SaveAs(par_->outNamePrefix()+"SpectrumJet1Log_PtBin"+util::toTString(ptBin)+".eps","eps");
+      }
+
+      can->SetLogy(0);
       hPtAve->Draw("PE1");
       if( par_->fitMode() == FitModeMaxLikeFull ) hPdfPtTrue->Draw("Lsame");
       txt->Draw("same");
       if( par_->fitMode() == FitModeMaxLikeFull ) legPtAve->Draw("same");
       can->SaveAs(par_->outNamePrefix()+"PtAveSpectrum_PtBin"+util::toTString(ptBin)+".eps","eps");
 
-      util::HistOps::setYRange(hPtGen,5,true);
-      hPtGen->Draw("PE1");
-      if( par_->fitMode() == FitModeMaxLikeFull ) hPdfPtTrue->Draw("Lsame");
+      hPtAveAbs->Draw("PE1");
       txt->Draw("same");
-      if( par_->fitMode() == FitModeMaxLikeFull ) legPtGen->Draw("same");
-      can->SetLogy();
-      can->SaveAs(par_->outNamePrefix()+"SpectrumLog_PtBin"+util::toTString(ptBin)+".eps","eps");
-      util::HistOps::setYRange(hPtGenJet1,5,true);
-      hPtGenJet1->Draw("PE1");
-      if( par_->fitMode() == FitModeMaxLikeFull ) hPdfPtTrue->Draw("Lsame");
-      txt->Draw("same");
-      if( par_->fitMode() == FitModeMaxLikeFull ) legPtGenJet1->Draw("same");
-      can->SetLogy();
-      can->SaveAs(par_->outNamePrefix()+"SpectrumJet1Log_PtBin"+util::toTString(ptBin)+".eps","eps");
+      can->SaveAs(par_->outNamePrefix()+"PtAveSpectrumAbs_PtBin"+util::toTString(ptBin)+".eps","eps");
+
       util::HistOps::setYRange(hPtAve,5,true);
       hPtAve->Draw("PE1");
       if( par_->fitMode() == FitModeMaxLikeFull ) hPdfPtTrue->Draw("Lsame");
@@ -749,6 +767,7 @@ namespace resolutionFit {
       delete hPtGen;
       delete hPtGenJet1;
       delete hPtAve;
+      delete hPtAveAbs;
       delete hPdfPtTrue;
       delete txt;
       delete legPtGen;

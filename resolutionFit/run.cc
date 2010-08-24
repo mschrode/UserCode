@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.27 2010/08/21 13:38:37 mschrode Exp $
+// $Id: run.cc,v 1.28 2010/08/21 16:35:53 mschrode Exp $
 
 #ifndef RUN_RESOLUTION_FIT
 #define RUN_RESOLUTION_FIT
@@ -43,10 +43,13 @@ int main(int argc, char *argv[]) {
     TString respType = argv[1];
     int etaBin = atoi(argv[2]);
     if( respType == "Gauss" ) {
-      outNamePrefix = "ResFit_Spring10QCDDiJet_SimpleGauss_PtAveCuts_61_";
-      inNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_SimpleGauss_PtAveCuts_61/Res_Spring10QCDDiJet_SimpleGauss_PtAveCuts_";
-
+//       outNamePrefix = "ResFit_Spring10QCDDiJet_SimpleGauss_PtAveCuts_61_";
+//       inNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_SimpleGauss_PtAveCuts_61/Res_Spring10QCDDiJet_SimpleGauss_PtAveCuts_";
       //      specNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_PtGenSpectrum0030-3500_Eta00-10_Pt3";
+
+      outNamePrefix = "ResFit_JetMET_Run2010A-PromptReco-v4_DCSONLY_SimpleGauss_Pt3Rel_";
+      inNamePrefix = "~/results/ResolutionFit/JetMET_Run2010A-PromptReco-v4_DCSONLY_SimpleGauss_Pt3Rel/Res_Data_SimpleGauss_PtAveCuts_";
+
 
 
       if( etaBin == 0 ) {
@@ -60,17 +63,18 @@ int main(int argc, char *argv[]) {
  	ptBinEdges.push_back(200.);
 	ptBinEdges.push_back(250.);
 	ptBinEdges.push_back(300.);
-	ptBinEdges.push_back(350.);
-	ptBinEdges.push_back(400.);
-	ptBinEdges.push_back(500.);
-	ptBinEdges.push_back(600.);
-	ptBinEdges.push_back(800.);
-	ptBinEdges.push_back(1000.);
+// 	ptBinEdges.push_back(350.);
+// 	ptBinEdges.push_back(400.);
+// 	ptBinEdges.push_back(500.);
+// 	ptBinEdges.push_back(600.);
+// 	ptBinEdges.push_back(800.);
+// 	ptBinEdges.push_back(1000.);
       
 	inNamePrefix += "Eta0_";
 
-	par = new resolutionFit::Parameters(0.,1.,inNamePrefix+"Pt3Rel10_",ptBinEdges,0,12,outNamePrefix+"Eta0_",resolutionFit::ResponseFunction::Gauss,resolutionFit::FitModeMaxLikeSimple,resolutionFit::RefPtAve,verbosity);
-	par->setLumi(-1.);
+	par = new resolutionFit::Parameters(0.,1.,inNamePrefix+"Pt3Rel10_",ptBinEdges,0,6,outNamePrefix+"Eta0_",resolutionFit::ResponseFunction::Gauss,resolutionFit::FitModeMaxLikeSimple,resolutionFit::RefPtAve,verbosity);
+	par->isData(true);
+	par->setLumi(0.614);
 
 	
 	//par->setTrueGaussResPar(3.249,1.0954,0.0457); // Spring10 QCDDiJet
@@ -89,7 +93,7 @@ int main(int argc, char *argv[]) {
 	par->addPt3Threshold(resolutionFit::Pt3Rel,0.10,inNamePrefix+"Pt3Rel10_");
 	par->addPt3Threshold(resolutionFit::Pt3Rel,0.12,inNamePrefix+"Pt3Rel12_");
  	par->addPt3Threshold(resolutionFit::Pt3Rel,0.15,inNamePrefix+"Pt3Rel15_");
-	par->addPt3Threshold(resolutionFit::Pt3Rel,0.20,inNamePrefix+"Pt3Rel20_");
+	//par->addPt3Threshold(resolutionFit::Pt3Rel,0.20,inNamePrefix+"Pt3Rel20_");
 	
 // 	par->addPt3Threshold(resolutionFit::Pt3Abs,6.,inNamePrefix+"Pt3Gen06_");
 // 	par->addPt3Threshold(resolutionFit::Pt3Abs,8.,inNamePrefix+"Pt3Gen08_");

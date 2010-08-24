@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.13 2010/08/21 13:38:28 mschrode Exp $
+// $Id: Parameters.h,v 1.14 2010/08/21 16:35:39 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -23,7 +23,7 @@ namespace resolutionFit {
   //!
   //! \author Matthias Schroeder
   //! \date 2010/05/15
-  //! $Id: Parameters.h,v 1.13 2010/08/21 13:38:28 mschrode Exp $
+  //! $Id: Parameters.h,v 1.14 2010/08/21 16:35:39 mschrode Exp $
   // --------------------------------------------
   class Parameters {
   public:
@@ -83,6 +83,8 @@ namespace resolutionFit {
 
     const PtBinParameters *createPtBinParameters(int ptBinIdx) const;
 
+
+    bool isData() const { return isData_; }
     FitMode fitMode() const { return fitMode_; }
     ResponseFunction::Type respFuncType() const { return respFunc_->type(); }
     const ResponseFunction *respFunc() const { return respFunc_; }
@@ -133,6 +135,7 @@ namespace resolutionFit {
     TString labelPt3Cut() const { return labelPt3Cut(stdSelIdx()); }
     TString labelPt3Cut(int ptBin) const;
     TString labelPtGen() const;
+    TString labelPtRef() const { return "p^{ave}_{T}"; }
     TString xAxisTitleResponse() const;
     TString yAxisTitleResponse() const;
     bool extendedLegend() const { return extendedLegend_; }
@@ -174,7 +177,7 @@ namespace resolutionFit {
     void fitExtrapolatedSigma(bool fit) { fitExtrapolatedSigma_ = fit; }
     void fitRatio(bool fit) { fitRatio_ = fit; }
     void setLumi(double lumi) { lumi_ = lumi; }
-
+    void isData(bool data) { isData_ = data; }
     void extendedLegend(bool ext) { extendedLegend_ = ext; }
 
 
@@ -186,6 +189,9 @@ namespace resolutionFit {
     const RefPt refPt_;
     const TString styleMode_;
     const int verbosity_;
+
+    bool isData_;
+    double lumi_;
 
     std::vector<int> fileNameIdx_;
     std::vector<double> ptBinEdges_;
@@ -215,8 +221,6 @@ namespace resolutionFit {
     bool fitExtrapolatedSigma_;
     bool fitRatio_;
     double startResOffset_;
-
-    double lumi_;
 
     bool extendedLegend_;
 
