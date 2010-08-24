@@ -1,4 +1,4 @@
-// $Id: CutVariation.cc,v 1.15 2010/08/18 16:18:05 mschrode Exp $
+// $Id: CutVariation.cc,v 1.16 2010/08/21 13:38:28 mschrode Exp $
 
 #include "CutVariation.h"
 #include "KalibriFileParser.h"
@@ -149,7 +149,7 @@ namespace resolutionFit {
     double deltaY = yMax - yMin;
     yMin -= 0.2*deltaY;
     if( yMin < 0. ) yMin = 0.;
-    yMax += 0.2*deltaY;
+    yMax += 0.7*deltaY;
 
     TH1 *hFrame = new TH1D(name,"",1000,xMin,xMax);
     hFrame->SetNdivisions(505);
