@@ -1,4 +1,4 @@
-// $Id: PtBin.cc,v 1.15 2010/08/18 16:18:06 mschrode Exp $
+// $Id: PtBin.cc,v 1.16 2010/08/21 16:35:16 mschrode Exp $
 
 #include "PtBin.h"
 
@@ -78,6 +78,9 @@ namespace resolutionFit {
     name = "hPtAve_PtBin";
     name += ptBinIdx();
     hPtAve_ = parserStdSel->hist("hPtDijet",name);
+    name = "hPtAveAbs_PtBin";
+    name += ptBinIdx();
+    hPtAveAbs_ = parserStdSel->hist("hPtDijet",name,true);
     name = "hResGen_PtBin";
     name += ptBinIdx();
     hResGen_ = parserStdSel->hist("hRespMeas_0",name);
@@ -121,6 +124,7 @@ namespace resolutionFit {
     delete hPtGenJet1_;
     delete hPdfPtTrue_;
     delete hPtAve_;
+    delete hPtAveAbs_;
     delete hResGen_;
     delete hPdfRes_;
   }
@@ -131,6 +135,7 @@ namespace resolutionFit {
     if( name == "hPtGen" ) h = static_cast<TH1D*>(hPtGen_->Clone(newName));
     else if( name == "hPtGenJet1" ) h = static_cast<TH1D*>(hPtGenJet1_->Clone(newName));
     else if( name == "hPtAve" ) h = static_cast<TH1D*>(hPtAve_->Clone(newName));
+    else if( name == "hPtAveAbs" ) h = static_cast<TH1D*>(hPtAveAbs_->Clone(newName));
     else if( name == "hPdfPtTrue" ) h = static_cast<TH1D*>(hPdfPtTrue_->Clone(newName));
     else if( name == "hResGen" ) h = static_cast<TH1D*>(hResGen_->Clone(newName));
     else if( name == "hPdfRes" ) h = static_cast<TH1D*>(hPdfRes_->Clone(newName));

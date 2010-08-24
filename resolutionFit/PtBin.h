@@ -64,6 +64,7 @@ namespace resolutionFit {
     TH1 *getHistPtGen(const TString &newName) const { return getHist("hPtGen",newName); }
     TH1 *getHistPtGenJet1(const TString &newName) const { return getHist("hPtGenJet1",newName); }
     TH1 *getHistPtAve(const TString &newName) const { return getHist("hPtAve",newName); }
+    TH1 *getHistPtAveAbs(const TString &newName) const { return getHist("hPtAveAbs",newName); }
     TH1 *getHistPdfPtTrue(const TString &newName) const { return getHist("hPdfPtTrue",newName); }
     TH1 *getHistResGen(const TString &newName) const { return getHist("hResGen",newName); }
     TH1 *getHistPdfRes(const TString &newName) const { return getHist("hPdfRes",newName); }
@@ -97,6 +98,7 @@ namespace resolutionFit {
     TH1* hPtGenJet1_;
     TH1* hPdfPtTrue_;
     TH1 *hPtAve_;
+    TH1 *hPtAveAbs_;
     TH1* hResGen_;
     TH1* hPdfRes_;
     TH1* hPtGenAsym_;
