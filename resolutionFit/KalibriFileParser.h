@@ -1,4 +1,4 @@
-// $Id: KalibriFileParser.h,v 1.6 2010/07/27 17:10:16 mschrode Exp $
+// $Id: KalibriFileParser.h,v 1.7 2010/08/18 16:18:06 mschrode Exp $
 
 #ifndef KALIBRI_FILE_PARSER_H
 #define KALIBRI_FILE_PARSER_H
@@ -36,7 +36,7 @@ namespace resolutionFit {
   //!
   //! \author Matthias Schroeder
   //! \date 2009/03/05
-  //! $Id: KalibriFileParser.h,v 1.6 2010/07/27 17:10:16 mschrode Exp $
+  //! $Id: KalibriFileParser.h,v 1.7 2010/08/18 16:18:06 mschrode Exp $
   // --------------------------------------------
   class KalibriFileParser {
   public:
@@ -72,7 +72,7 @@ namespace resolutionFit {
     //! Returns uncertainty on mean value of the ptTrue pdf assumed in the fit
     double meanPdfPtTrueUncert() const { return meanPdfPtTrueUncert_; }
     //! Returns the specified histogram filled by \p ControlPlotsJetSmearingc
-    TH1 *hist(const TString &name, const TString &newName) const;
+    TH1 *hist(const TString &name, const TString &newName, bool abs = false) const;
 
   private:
     typedef std::map<TString,TH1*>::const_iterator HistIt;

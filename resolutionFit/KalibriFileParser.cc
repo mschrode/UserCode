@@ -1,4 +1,4 @@
-// $Id: KalibriFileParser.cc,v 1.8 2010/07/27 17:10:12 mschrode Exp $
+// $Id: KalibriFileParser.cc,v 1.9 2010/08/09 12:43:35 mschrode Exp $
 
 #include "KalibriFileParser.h"
 
@@ -31,6 +31,8 @@ namespace resolutionFit {
     hists_["hPtAsym_0"] = 0;
     hists_["hFitPtAsym_0"] = 0;
     hists_["hPtGenAsym_0"] = 0;
+    hists_["hPtJet1"] = 0;
+    hists_["hPtJet2"] = 0;
 
     // Parse file
     if( parse(fileName) ) exit(-1);
@@ -67,7 +69,7 @@ namespace resolutionFit {
   //! the name \p newName; deletion has to be taken
   //! care of by the calling instance!
   // --------------------------------------------
-  TH1 *KalibriFileParser::hist(const TString &name, const TString &newName) const {
+  TH1 *KalibriFileParser::hist(const TString &name, const TString &newName, bool abs) const {
     TH1 *h = 0;
     HistIt it = hists_.find(name);
     if( it == hists_.end() ) {
@@ -96,6 +98,8 @@ namespace resolutionFit {
       }
       h->SetLineColor(it->second->GetLineColor());
       h->SetLineWidth(it->second->GetLineWidth());
+
+      if( abs) h->Scale(it->second->GetEntries()*it->second->GetBinWidth(1));
     }
 
     return h;
