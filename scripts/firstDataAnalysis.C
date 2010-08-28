@@ -1,4 +1,4 @@
-// $Id: firstDataAnalysis.C,v 1.9 2010/01/18 10:52:56 mschrode Exp $
+// $Id: firstDataAnalysis.C,v 1.10 2010/01/18 15:54:38 mschrode Exp $
 
 // ===== Script for dijet analysis from Kalibri ntuples =====
 //
@@ -401,8 +401,8 @@ CutFlow::CutFlow(const TString &sampleName) {
   cuts_.push_back(new Cut(sampleName,3,"RelMET","MET / SumEt",true,0.5,false,false,
 			  50,0.,1.,"MET / sumEt",true));
 
-  cuts_.push_back(new Cut(sampleName,4,"PtJet2","Pt jet (2)",true,4.,true,false,
-			  30,0.,30.,"p^{jet2}_{T} (GeV)",true));
+  cuts_.push_back(new Cut(sampleName,4,"CorrPtJet2","Corr pt jet (2)",true,10.,true,false,
+			  30,0.,50.,"Corrected p^{jet2}_{T} (GeV)",true));
 
   cuts_.push_back(new Cut(sampleName,5,"Eta","Eta jet (1,2)",false,3.,false,true,
 			  20,-5.2,5.2,"#eta"));
@@ -444,17 +444,30 @@ void CutFlow::normaliseDists(const CutFlow *cutFlow) {
 
 bool CutFlow::passes(const Event *evt) {
   bool passes = true;
+//   if( !cuts_[0]->passes( evt->nJets()) ) passes = false;
+//   else if( !cuts_[1]->passes(evt->vtxNTracks()) ) passes = false;
+//   else if( !cuts_[2]->passes(evt->vtxPosZ()) ) passes = false;
+//   else if( !cuts_[3]->passes(evt->met()/evt->sumEt()) ) passes = false;
+//   else if( !cuts_[4]->passes(evt->jet(1)->pt()) ) passes = false;
+//   else if( !cuts_[5]->passes(evt->jet(0)->eta(),evt->jet(1)->eta()) ) passes = false;
+//   else if( !cuts_[6]->passes(TVector2::Phi_mpi_pi(evt->jet(0)->phi()-evt->jet(1)->phi())) ) passes = false;
+//   else if( !cuts_[7]->passes(evt->jet(0)->emf(),evt->jet(1)->emf()) ) passes = false;
+//   else if( !cuts_[8]->passes(evt->jet(0)->n90Hits(),evt->jet(1)->n90Hits()) ) passes = false;
+//   else if( !cuts_[9]->passes(evt->jet(0)->fHPD(),evt->jet(1)->fHPD()) ) passes = false;
+//   else if( !cuts_[10]->passes(evt->jet(0)->fRBX(),evt->jet(1)->fRBX()) ) passes = false;
+
   if( !cuts_[0]->passes( evt->nJets()) ) passes = false;
   else if( !cuts_[1]->passes(evt->vtxNTracks()) ) passes = false;
   else if( !cuts_[2]->passes(evt->vtxPosZ()) ) passes = false;
   else if( !cuts_[3]->passes(evt->met()/evt->sumEt()) ) passes = false;
-  else if( !cuts_[4]->passes(evt->jet(1)->pt()) ) passes = false;
-  else if( !cuts_[5]->passes(evt->jet(0)->eta(),evt->jet(1)->eta()) ) passes = false;
-  else if( !cuts_[6]->passes(TVector2::Phi_mpi_pi(evt->jet(0)->phi()-evt->jet(1)->phi())) ) passes = false;
-  else if( !cuts_[7]->passes(evt->jet(0)->emf(),evt->jet(1)->emf()) ) passes = false;
-  else if( !cuts_[8]->passes(evt->jet(0)->n90Hits(),evt->jet(1)->n90Hits()) ) passes = false;
-  else if( !cuts_[9]->passes(evt->jet(0)->fHPD(),evt->jet(1)->fHPD()) ) passes = false;
-  else if( !cuts_[10]->passes(evt->jet(0)->fRBX(),evt->jet(1)->fRBX()) ) passes = false;
+  else if( !cuts_[4]->passes(evt->corrJet(1)->corrL2L3Pt()) ) passes = false;
+  else if( !cuts_[5]->passes(evt->corrJet(0)->eta(),evt->corrJet(1)->eta()) ) passes = false;
+  else if( !cuts_[6]->passes(TVector2::Phi_mpi_pi(evt->corrJet(0)->phi()-evt->corrJet(1)->phi())) ) passes = false;
+  else if( !cuts_[7]->passes(evt->corrJet(0)->emf(),evt->corrJet(1)->emf()) ) passes = false;
+  else if( !cuts_[8]->passes(evt->corrJet(0)->n90Hits(),evt->corrJet(1)->n90Hits()) ) passes = false;
+  else if( !cuts_[9]->passes(evt->corrJet(0)->fHPD(),evt->corrJet(1)->fHPD()) ) passes = false;
+  else if( !cuts_[10]->passes(evt->corrJet(0)->fRBX(),evt->corrJet(1)->fRBX()) ) passes = false;
+
 
   return passes;
 }
@@ -531,7 +544,7 @@ Sample::Sample(const TString &sampleName,const TString &treeName)
   name = name_;
   name += ":PtAsym";
   dists_[2] = new TH1D(name,"Selected dijet events",15,-1.5,1.5);
-  dists_[2]->GetXaxis()->SetTitle("p_{T} asymmetry");
+  dists_[2]->GetXaxis()->SetTitle("Corredcted p_{T} asymmetry");
   dists_[2]->GetYaxis()->SetTitle("Number of events");
 
   name = name_;
@@ -603,20 +616,37 @@ void Sample::fillDistributions() {
   for(DataIt it = data_.begin(); it != data_.end(); it++) {
     Event *evt = *it;
 
-    double diff = evt->jet(0)->pt() - evt->jet(1)->pt();
-    if( rand_->Uniform() > 0.5 ) diff = evt->jet(1)->pt() - evt->jet(0)->pt();
-    dists_[2]->Fill(diff/(evt->jet(0)->pt() + evt->jet(1)->pt()));
+//     double diff = evt->jet(0)->pt() - evt->jet(1)->pt();
+//     if( rand_->Uniform() < 0.5 ) diff = evt->jet(1)->pt() - evt->jet(0)->pt();
+//     dists_[2]->Fill(diff/(evt->jet(0)->pt() + evt->jet(1)->pt()));
 
-    double deltaPhi = TVector2::Phi_mpi_pi(evt->jet(0)->phi() - evt->jet(1)->phi());
+//     double deltaPhi = TVector2::Phi_mpi_pi(evt->jet(0)->phi() - evt->jet(1)->phi());
+//     if( deltaPhi < 0 ) deltaPhi += 2*M_PI;
+//     dists_[4]->Fill(deltaPhi);
+
+//     // Loop over two jets leading in pt
+//     for(int j = 0; j < 2; j++) {
+//       dists_[0]->Fill(evt->jet(j)->pt());
+//       dists_[1]->Fill(evt->jet(j)->corrL2L3Pt());
+//       dists_[3]->Fill(evt->jet(j)->phi());
+//       dists_[5]->Fill(evt->jet(j)->eta());
+//     } // End of loop over dijets
+
+
+    double deltaPhi = TVector2::Phi_mpi_pi(evt->corrJet(0)->phi() - evt->corrJet(1)->phi());
     if( deltaPhi < 0 ) deltaPhi += 2*M_PI;
     dists_[4]->Fill(deltaPhi);
 
+    double diff = evt->corrJet(0)->corrL2L3Pt() - evt->corrJet(1)->corrL2L3Pt();
+    if( rand_->Uniform() < 0.5 ) diff = evt->corrJet(1)->corrL2L3Pt() - evt->corrJet(0)->corrL2L3Pt();
+    dists_[2]->Fill(diff/(evt->corrJet(0)->corrL2L3Pt() + evt->corrJet(1)->corrL2L3Pt()));
+
     // Loop over two jets leading in pt
     for(int j = 0; j < 2; j++) {
-      dists_[0]->Fill(evt->jet(j)->pt());
-      dists_[1]->Fill(evt->jet(j)->corrL2L3Pt());
-      dists_[3]->Fill(evt->jet(j)->phi());
-      dists_[5]->Fill(evt->jet(j)->eta());
+      dists_[0]->Fill(evt->corrJet(j)->pt());
+      dists_[1]->Fill(evt->corrJet(j)->corrL2L3Pt());
+      dists_[3]->Fill(evt->corrJet(j)->phi());
+      dists_[5]->Fill(evt->corrJet(j)->eta());
     } // End of loop over dijets
   } // End of loop over data
 
@@ -869,7 +899,7 @@ void printCutFlow(const std::vector<Sample*> samples) {
     std::cout << line << std::flush;
     for(size_t s = 0; s < samples.size(); s++) {
       line = samples[s]->name();
-      while( line.Length() < 12 ) line += " ";
+      while( line.Length() < 25 ) line += " ";
       std::cout << line << std::flush;
     }
     std::cout << std::endl;
@@ -880,7 +910,7 @@ void printCutFlow(const std::vector<Sample*> samples) {
     for(size_t s = 0; s < samples.size(); s++) {
       line = "";
       line += samples[s]->nTotalEvts();
-      while( line.Length() < 12 ) line += " ";
+      while( line.Length() < 25 ) line += " ";
       std::cout << line << std::flush;
     }
     std::cout << std::endl;
@@ -891,7 +921,14 @@ void printCutFlow(const std::vector<Sample*> samples) {
       for(size_t s = 0; s < samples.size(); s++) {
 	line = "";
 	line += samples[s]->nPassedEvts(c);
-	while( line.Length() < 12 ) line += " ";
+	while( line.Length() < 10 ) line += " ";
+	double eff = 1.*samples[s]->nPassedEvts(c)/samples[s]->nTotalEvts();
+	double sig = sqrt(eff*(1.-eff)/samples[s]->nTotalEvts());
+	line += 100.*eff;
+	line += " +/- ";
+	line += 100.*sig;
+	line += " %";
+	while( line.Length() < 25 ) line += " ";
 	std::cout << line << std::flush;
       }
       std::cout << std::endl;
@@ -910,27 +947,33 @@ void writeCutFlowLaTeX(const std::vector<Sample*> samples, const TString &prefix
     file << "\\begin{center}\n";
     file << "\\begin{tabular}[h]{rl";
     for(size_t s = 0; s < samples.size(); s++) {
-      file << "r";
+      file << "rr";
     }
     file << "}\n";
     file << " \\hline\n\\hline\n";
 
     file << " & Cut";
     for(size_t s = 0; s < samples.size(); s++) {
-      file << " & " << samples[s]->name();
+      file << " & \\multicolumn{2}{c}{" << samples[s]->name() << "}";
     }
     file << " \\\\\n\\hline\\hline\n";
 
     file << " & Total";
     for(size_t s = 0; s < samples.size(); s++) {
-      file << " & " << samples[s]->nTotalEvts();
+      file << " & $" << samples[s]->nTotalEvts();
+      file << "$ & $100\\%$";
     }
     file << " \\\\\n\\hline\n";
 
     for(int c = 0; c < samples[0]->nCuts(); c++) {
       file << samples[0]->printCutLineLaTeX(c);
       for(size_t s = 0; s < samples.size(); s++) {
-	file << " & " << samples[s]->nPassedEvts(c);
+	file << " & $" << samples[s]->nPassedEvts(c);
+	double eff = 1.*samples[s]->nPassedEvts(c)/samples[s]->nTotalEvts();
+	double sig = sqrt(eff*(1.-eff)/samples[s]->nTotalEvts());
+	char text[50];
+	sprintf(text,"%.3f \\pm %.3f",100.*eff,100.*sig);
+	file << "$ & $" << text << "\\% $";
       }
       file << " \\\\\n";
     }
@@ -957,7 +1000,7 @@ void run(int nMax = -1) {
   TString mcFileBase = "/afs/naf.desy.de/user/m/mschrode/lustre/mc/MinBias-Summer09-STARTUP3X_V8L_2360GeV-v1/MinBias-Summer09-STARTUP3X_V8L_2360GeV-v1__";
   //  TString mcFileBase = "/afs/naf.desy.de/user/m/mschrode/lustre/mc/MinBias-Summer09-STARTUP3X_V8I_900GeV-v2/MinBias-Summer09-STARTUP3X_V8I_900GeV-v2__";
   samples[1] = new Sample("MC","DiJetTree");
-  for(int i = 1; i <=3; i++) {
+  for(int i = 1; i <=6; i++) {
     TString mcFileName = mcFileBase;
     mcFileName += i;
     mcFileName += ".root";
@@ -969,9 +1012,9 @@ void run(int nMax = -1) {
     samples[s]->fillDistributions();
   }
 
-  draw(samples,"900 GeV MinBias","plots/900GeV");
+  draw(samples,"2360 GeV MinBias","plots/2360GeV");
   printCutFlow(samples);
-  writeCutFlowLaTeX(samples,"plots/900GeV");
+  writeCutFlowLaTeX(samples,"plots/2360GeV");
 }
 
 void firstDataAnalysis() {

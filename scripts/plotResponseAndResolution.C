@@ -1,4 +1,4 @@
-// $Id: plotResponseAndResolution.C,v 1.2 2010/08/04 09:29:51 mschrode Exp $
+// $Id: plotResponseAndResolution.C,v 1.3 2010/08/09 12:39:42 mschrode Exp $
 
 //!  Fit mean response and resolution from
 //!  Kalibri::ControlPlotsJetSmearing
@@ -38,12 +38,15 @@ std::vector<TH1*> readHistograms(const std::vector<TString> &fileNames, const TS
     name += numHists_;
     hists[i]->SetName(name);
     util::HistOps::setAxisTitles(hists[i],xTitle,xUnit,yTitle);
-      util::HistOps::setStyleColor(hists[i],1+i/2);
-    //hists[i]->SetMarkerStyle(20+i);
-    if( i%2 == 0 ) hists[i]->SetMarkerStyle(20+i/2);
-    else hists[i]->SetMarkerStyle(24+i/2); 
+    util::HistOps::setStyleColor(hists[i],i);
+    hists[i]->SetMarkerStyle(20+i);
+
+//     util::HistOps::setStyleColor(hists[i],1+i/2);
+//     if( i%2 == 0 ) hists[i]->SetMarkerStyle(20+i/2);
+//     else hists[i]->SetMarkerStyle(24+i/2); 
+
     util::HistOps::setYRange(hists[i],(int)(fileNames.size()+1));
-    hists[i]->GetXaxis()->SetRangeUser(20.,3500.);
+    hists[i]->GetXaxis()->SetRangeUser(20.,45.);
     numHists_++;
   }
   return hists;
@@ -54,7 +57,7 @@ void plotResponse(const std::vector<TString> &fileNames, const std::vector<TStri
   assert( fileNames.size() == labels.size() );
 
   std::vector<TH1*> hResp = readHistograms(fileNames,"MeanResp_hRespGauss","p^{gen}_{T}","GeV","Mean response");
-  TLegend *leg = util::LabelFactory::createLegendCol(fileNames.size(),0.7);
+  TLegend *leg = util::LabelFactory::createLegendCol(fileNames.size(),0.6);
   TH1 *hFrame = util::HistOps::createRatioFrame(hResp[0],"Mean response",0.8,1.4);
   TCanvas *can = new TCanvas("canResp","Mean Response",500,500);
   can->cd();
@@ -79,7 +82,7 @@ void plotResolution(const std::vector<TString> &fileNames, const std::vector<TSt
   assert( fileNames.size() == labels.size() );
 
   std::vector<TH1*> hReso = readHistograms(fileNames,"MeanResp_hResoGauss","p^{gen}_{T}","GeV","Resolution");
-  TLegend *leg = util::LabelFactory::createLegendCol(fileNames.size(),0.7);
+  TLegend *leg = util::LabelFactory::createLegendCol(fileNames.size(),0.6);
   TH1 *hFrame = util::HistOps::createFrame(hReso[0],"Resolution",0.,0.4);
   std::vector<TF1*> fits(hReso.size(),0);
   for(size_t i = 0; i < hReso.size(); ++i) {
@@ -179,7 +182,7 @@ void plotResolutionScale1(const std::vector<TString> &fileNames, const std::vect
     }
   }
 
-  TLegend *leg = util::LabelFactory::createLegendCol(fileNames.size(),0.7);
+  TLegend *leg = util::LabelFactory::createLegendCol(fileNames.size(),0.6);
   TH1 *hFrame = util::HistOps::createFrame(hReso[0],"Resolution",0.,0.4);
   TCanvas *can = new TCanvas("canResoScale1","Resolution Scale 1",500,500);
   can->cd();
@@ -197,35 +200,20 @@ void plotResolutionScale1(const std::vector<TString> &fileNames, const std::vect
 void plotResponseAndResolution() {
   util::StyleSettings::presentationNoTitle();
   
-  TString base = "~/results/ResolutionFit/Spring10QCDDiJet_MCTruthResponse0010-3500_";
+  TString base = "~/results/ResolutionFit/Spring10QCDDiJet_Response";
 
   std::vector<TString> fileNames;
   std::vector<TString> labels;
 
-//   fileNames.push_back(base+"Sigma_FreeMu_CaloOrdered_Rel3rdJet100.root");
-//   labels.push_back("Core");
-//   fileNames.push_back(base+"Core_Sigma_FreeMu_CaloOrdered_3rdJet010.root");
-//   labels.push_back("Core,  p_{T,3} < 0.1 <p^{gen}_{T;1,2}>");
-//   fileNames.push_back(base+"All_Sigma_FreeMu_CaloOrdered_Rel3rdJet010.root");
-//   labels.push_back("All,  p_{T,3} < 0.1 <p^{gen}_{T;1,2}>");
-
-  fileNames.push_back(base+"Core_Sigma_FreeMu_CaloOrdered_Rel3rdJet100.root");
-  labels.push_back("Calo ordered");
-  fileNames.push_back(base+"Core_Sigma_FreeMu_GenOrdered_Rel3rdJet100.root");
-  labels.push_back("Gen ordered");
-
-  fileNames.push_back(base+"Core_Sigma_FreeMu_CaloOrdered_Rel3rdJet010.root");
-  labels.push_back("Calo ordered, p^{rel}_{T,3} < 0.1");
-  fileNames.push_back(base+"Core_Sigma_FreeMu_GenOrdered_Rel3rdJet010.root");
-  labels.push_back("Gen ordered, p^{rel}_{T,3} < 0.1");
-
-  fileNames.push_back(base+"Core_Sigma_FreeMu_CaloOrdered_3rdJet010.root");
-  labels.push_back("Calo ordered, p_{T,3} < 0.1 <p^{gen}_{T;1,2}>");
-  fileNames.push_back(base+"Core_Sigma_FreeMu_GenOrdered_3rdJet010.root");
-  labels.push_back("Gen ordered, p_{T,3} < 0.1 <p^{gen}_{T;1,2}>");
+  fileNames.push_back(base+"_Eta00-13.root");
+  labels.push_back("|#eta| < 1.3");
+  fileNames.push_back(base+"_Eta13-30.root");
+  labels.push_back("1.3 < |#eta| < 3");
+  fileNames.push_back(base+"_Eta30-50.root");
+  labels.push_back("3 < |#eta| < 5");
 
 
-  plotResponse(fileNames,labels,"Spring10_QCDDiJet_MeanResp_DijetCuts_Core");
-  plotResolution(fileNames,labels,false,"Spring10_QCDDiJet_Resolution_DijetCuts_Core");
-  //  plotResolutionScale1(fileNames,labels);
+  plotResponse(fileNames,labels);//,"Spring10_QCDDiJet_MeanResp");
+  plotResolution(fileNames,labels,true,"Spring10_QCDDiJet_Resolution_Eta30-50");
+  //plotResolutionScale1(fileNames,labels);
 }
