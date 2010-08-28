@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.10 2010/08/19 09:24:09 mschrode Exp $
+// $Id: HistOps.h,v 1.11 2010/08/21 13:40:09 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -7,6 +7,9 @@
 #include <cmath>
 #include <vector>
 
+#include "TAttPad.h"
+#include "TGraphAsymmErrors.h"
+#include "TGraphErrors.h"
 #include "TH1.h"
 #include "TH1D.h"
 #include "TH2.h"
@@ -25,7 +28,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.10 2010/08/19 09:24:09 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.11 2010/08/21 13:40:09 mschrode Exp $
   class HistOps
   {
   public:
@@ -149,10 +152,12 @@ namespace util
       TString yAxisTitle;
       if( norm ) yAxisTitle += "1 / N  ";
       if( yTitle == "jets" || yTitle == "events" ) {
-	if( yTitle == "jets" )        yAxisTitle += "Jets / ";
-	else if( yTitle == "events" ) yAxisTitle += "Events / ";
-	if( norm ) yAxisTitle += util::toTString(h->GetBinWidth(1),3);
-	if( xUnit.Length() ) yAxisTitle += " "+xUnit;
+	if( yTitle == "jets" )        yAxisTitle += "Jets";
+	else if( yTitle == "events" ) yAxisTitle += "Events";
+	if( norm ) {
+	  yAxisTitle += (" / "+util::toTString(h->GetBinWidth(1),3));
+	  if( xUnit.Length() ) yAxisTitle += " "+xUnit;
+	}
       } else {
 	yAxisTitle = yTitle;
       }
@@ -275,6 +280,66 @@ namespace util
     }
 
     // -------------------------------------------------------------------------------------
+    static TGraphAsymmErrors *createRatioGraph(const TGraphAsymmErrors *g, const TF1 *f) {
+      TGraphAsymmErrors *gRatio = new TGraphAsymmErrors(g->GetN());
+      for(int i = 0; i < g->GetN(); ++i) {
+	double yTrue = f->Eval(g->GetX()[i]);
+	if( yTrue != 0. ) {
+	  gRatio->SetPoint(i,g->GetX()[i],g->GetY()[i]/yTrue);
+	  gRatio->SetPointError(i,g->GetEXhigh()[i],g->GetEXlow()[i],g->GetEYhigh()[i]/yTrue,g->GetEYlow()[i]/yTrue);
+	} else {
+	  gRatio->SetPoint(i,g->GetX()[i],0.);
+	  gRatio->SetPointError(i,g->GetEXhigh()[i],g->GetEXlow()[i],0.,0.);
+	}
+      }
+      gRatio->SetMarkerStyle(g->GetMarkerStyle());
+      gRatio->SetMarkerColor(g->GetMarkerColor());
+      gRatio->SetLineColor(g->GetLineColor());
+      
+      return gRatio;
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static TGraphErrors *createRatioGraph(const TGraphErrors *g, const TF1 *f) {
+      TGraphErrors *gRatio = new TGraphErrors(g->GetN());
+      for(int i = 0; i < g->GetN(); ++i) {
+	double yTrue = f->Eval(g->GetX()[i]);
+	if( yTrue != 0. ) {
+	  gRatio->SetPoint(i,g->GetX()[i],g->GetY()[i]/yTrue);
+	  gRatio->SetPointError(i,g->GetEX()[i],g->GetEY()[i]/yTrue);
+	} else {
+	  gRatio->SetPoint(i,g->GetX()[i],0.);
+	  gRatio->SetPointError(i,g->GetEXhigh()[i],0.);
+	}
+      }
+      gRatio->SetMarkerStyle(g->GetMarkerStyle());
+      gRatio->SetMarkerColor(g->GetMarkerColor());
+      gRatio->SetLineColor(g->GetLineColor());
+      
+      return gRatio;
+    }
+
+    // -------------------------------------------------------------------------------------
+    static TH1D *createRatio(const TF1 *f1, const TF1 *f2, double xMin, double xMax, const TString &xTitle, const TString &yTitle) {
+      TString name = f1->GetName();
+      name += "Ratio";
+      TH1D *h = new TH1D(name,"",1000,xMin,xMax);
+      h->SetXTitle(xTitle);
+      h->SetYTitle(yTitle);
+      for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
+	if( f2->Eval(h->GetBinCenter(bin)) ) {
+	  h->SetBinContent(bin,f1->Eval(h->GetBinCenter(bin))/f2->Eval(h->GetBinCenter(bin)));
+	  h->SetBinError(bin,0.);
+	}
+      }
+      h->SetLineWidth(f1->GetLineWidth());
+      h->SetLineColor(f1->GetLineColor());
+      return h;
+    }
+
+
+    // -------------------------------------------------------------------------------------
     static void fillSlices(const TH2 *h2, std::vector<TH1*> &hSlices, const TString &namePrefix) {
       for(int xBin = 1; xBin <= h2->GetNbinsX(); ++xBin) {
 	TH1 *h = new TH1D(namePrefix+toTString(xBin-1),"",h2->GetNbinsY(),
@@ -303,6 +368,12 @@ namespace util
       }
       
       return true;
+    }
+
+    // -------------------------------------------------------------------------------------
+    static void setMarginsColz(TAttPad *pad) {
+      pad->SetRightMargin(0.1+pad->GetRightMargin());
+      pad->SetBottomMargin(0.1+pad->GetBottomMargin());
     }
  
 
