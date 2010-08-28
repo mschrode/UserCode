@@ -16,7 +16,7 @@ class TH1;
 namespace resolutionFit {
   class CutVariation {
   public:
-    CutVariation(const Parameters::PtBinParameters *par, int parIndex, bool maxLikeFit = true);
+    CutVariation(const Parameters::PtBinParameters *par, int parIndex, const TString &quantity);
     ~CutVariation();
 
     int nPt3Cuts() const { return par_->nPt3Cuts(); }
@@ -40,6 +40,9 @@ namespace resolutionFit {
     TH1 *getPtAsymmetry(int i, const TString &name) const {
       return varPoints_.at(i)->histPtAsym(name);
     }
+    TH1 *getPtGenRes(int i, const TString &name) const {
+      return varPoints_.at(i)->histPtGenRes(name);
+    }
 
     void extrapolate();
 
@@ -47,8 +50,8 @@ namespace resolutionFit {
     class VariationPoint {
     public:
       VariationPoint();
-      VariationPoint(double fitValue, Uncertainty *uncert, double cutValue, TH1 *hPtAsym);
-      VariationPoint(TH1 *hPtAsym, double cutValue);
+      VariationPoint(double fitValue, Uncertainty *uncert, double cutValue, TH1 *hPtGenRes);
+      VariationPoint(TH1 *hPtAsym, bool fitGauss, double cutValue);
       ~VariationPoint();
       
       double operator()() const { return fitValue_; }
@@ -56,12 +59,14 @@ namespace resolutionFit {
       double uncertUp() const { return uncert_->up(); }
       double cutValue() const { return cutValue_; }
       TH1 *histPtAsym(const TString &name) const;
+      TH1 *histPtGenRes(const TString &name) const;
       
     private:
       double fitValue_;
       Uncertainty *uncert_;
       const double cutValue_;
       TH1 *hPtAsym_;
+      TH1 *hPtGenRes_;
     };
 
     const Parameters::PtBinParameters *par_;

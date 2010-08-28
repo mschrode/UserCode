@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.15 2010/08/21 16:35:39 mschrode Exp $
+// $Id: Parameters.cc,v 1.16 2010/08/24 09:37:32 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -12,12 +12,12 @@
 
 
 namespace resolutionFit {
-  Parameters::Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, RefPt refPt, int verbosity)
+  Parameters::Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, BinPt binPt, int verbosity)
     : etaMin_(etaMin), etaMax_(etaMax),
       outNamePrefix_(outNamePrefix),
       styleMode_(gStyle->GetTitle()),
       fitMode_(fitMode),
-      refPt_(refPt),
+      binPt_(binPt),
       verbosity_(verbosity),
       isData_(false) {
 
@@ -31,12 +31,12 @@ namespace resolutionFit {
     print();
   }
 
-  Parameters::Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, const std::vector<int> fileNameIdx, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, RefPt refPt, int verbosity)
+  Parameters::Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, const std::vector<int> fileNameIdx, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, BinPt binPt, int verbosity)
     : etaMin_(etaMin), etaMax_(etaMax),
       outNamePrefix_(outNamePrefix), 
       styleMode_(gStyle->GetTitle()),
       fitMode_(fitMode),
-      refPt_(refPt),
+      binPt_(binPt),
       verbosity_(verbosity),
       isData_(false) {
     
@@ -258,8 +258,8 @@ namespace resolutionFit {
   
   TString Parameters::labelPtBin(int ptBin) const {
     TString label = util::toTString(ptMin(ptBin))+" < p^{";
-    if( refPt() == RefPtGen ) label += labelTruth();
-    else if( refPt() == RefPtAve ) label += "ave";
+    if( binPt() == BinPtGen ) label += labelTruth();
+    else if( binPt() == BinPtAve ) label += "ave";
     label += "}_{T} < "+util::toTString(ptMax(ptBin))+" GeV";
 
     return label;
@@ -289,8 +289,24 @@ namespace resolutionFit {
   }
 
 
+  TString Parameters::labelPtMeas() const {
+    return "p^{"+labelMeas()+"}_{T}";
+  }
+
+
   TString Parameters::labelPtGen() const {
     return "p^{"+labelTruth()+"}_{T}";
+  }
+
+
+  TString Parameters::labelPtRef(const TString &plot) const {
+    TString label = "p^{ref}_{T}";
+    if( fitMode() == FitModeMaxLikeSimple ) label = "p^{ave}_{T}";
+    else if( fitMode() == FitModeMaxLikeFull ) {
+      if( plot == "MaxLike" ) label = labelPtGen();
+      else if( plot == "PtAsym" ) label = "p^{ave}_{T}";
+    }
+    return label;
   }
 
 
@@ -311,6 +327,6 @@ namespace resolutionFit {
   void Parameters::print() const {
     std::cout << "Setup:\n";
     std::cout << "  FitMode : " << (fitMode()==FitModeMaxLikeSimple ? "FitModeMaxLikeSimple" : "FitModeMaxLikeFull") << std::endl;
-    std::cout << "  RefPt   : " << (refPt()==RefPtGen ? "PtGen" : "PtAve") << std::endl;
+    std::cout << "  BinPt   : " << (binPt()==BinPtGen ? "PtGen" : "PtAve") << std::endl;
   }
 }

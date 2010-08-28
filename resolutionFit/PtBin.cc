@@ -1,4 +1,4 @@
-// $Id: PtBin.cc,v 1.16 2010/08/21 16:35:16 mschrode Exp $
+// $Id: PtBin.cc,v 1.17 2010/08/24 09:37:08 mschrode Exp $
 
 #include "PtBin.h"
 
@@ -25,16 +25,10 @@ namespace resolutionFit {
     // Perform cut variation and extrapolation
     // of fitted values
     for(int parIdx = 0; parIdx < par_->nFittedPars(); ++parIdx) {
-      cutVar_.push_back(new CutVariation(par_,parIdx));
+      cutVar_.push_back(new CutVariation(par_,parIdx,"MaxLikeFit"));
       cutVar_[parIdx]->extrapolate();
       extrapolatedVal_.push_back(cutVar_[parIdx]->extrapolatedValue());
     }
-
-    // Perform cut variation and extrapolation
-    // of pt asymmetry
-    cutVarAsym_ = new CutVariation(par_,0,false);
-    cutVarAsym_->extrapolate();
-    extrapolatedAsym_ = cutVarAsym_->extrapolatedValue();
 
     // Standard selection for reference
     KalibriFileParser *parserStdSel = new KalibriFileParser(par_->fileNameStdSel(),par_->verbosity());
@@ -61,8 +55,21 @@ namespace resolutionFit {
 						      cutVar_[parIdx]->extrapolatedUncert()));
       uncert_[parIdx]->addUncertainty(uncertSyst);
     } // End of loop over paramters
-    
+
+    // Perform cut variation and extrapolation
+    // of pt asymmetry
+    cutVarAsym_ = new CutVariation(par_,0,"PtAsym");
+    cutVarAsym_->extrapolate();
+    extrapolatedAsym_ = cutVarAsym_->extrapolatedValue();
     uncertAsym_ = new Uncertainty("StatisticUncertainty",cutVarAsym_->extrapolatedUncert());
+
+    // Perform cut variation and extrapolation
+    // of ptGen asymmetry
+    cutVarGenAsym_ = new CutVariation(par_,0,"PtGenAsym");
+    cutVarGenAsym_->extrapolate();
+    extrapolatedGenAsym_ = cutVarGenAsym_->extrapolatedValue();
+    uncertGenAsym_ = new Uncertainty("StatisticUncertainty",cutVarGenAsym_->extrapolatedUncert());
+
 
     // Store spectrum and response histograms
     if( par_->verbosity() == 2 ) std::cout << "Storing spectrum and resolution histograms... " << std::flush;
@@ -79,9 +86,6 @@ namespace resolutionFit {
     name += ptBinIdx();
     hPtAve_ = parserStdSel->hist("hPtDijet",name);
     name = "hPtAveAbs_PtBin";
-    name += ptBinIdx();
-    hPtAveAbs_ = parserStdSel->hist("hPtDijet",name,true);
-    name = "hResGen_PtBin";
     name += ptBinIdx();
     hResGen_ = parserStdSel->hist("hRespMeas_0",name);
     name = "hPdfRes_PtBin";
@@ -120,13 +124,32 @@ namespace resolutionFit {
     }
     delete cutVarAsym_;
     delete uncertAsym_;
+    delete cutVarGenAsym_;
+    delete uncertGenAsym_;
     delete hPtGen_;
     delete hPtGenJet1_;
     delete hPdfPtTrue_;
     delete hPtAve_;
-    delete hPtAveAbs_;
     delete hResGen_;
     delete hPdfRes_;
+  }
+
+
+  double PtBin::extrapolatedValue(int parIdx, bool corrected) const {
+    double val = extrapolatedVal_.at(parIdx);
+    if( parIdx == 0 && corrected ) {
+      val = sqrt( val*val - extrapolatedGenAsym_*extrapolatedGenAsym_ );
+    }
+    return val;
+  }
+
+
+  double PtBin::extrapolatedAsym(bool corrected) const {
+    double asym = extrapolatedAsym_;
+    if( corrected ) {
+      asym = sqrt( asym*asym - extrapolatedGenAsym_*extrapolatedGenAsym_ );
+    }
+    return asym;
   }
 
   
@@ -135,7 +158,6 @@ namespace resolutionFit {
     if( name == "hPtGen" ) h = static_cast<TH1D*>(hPtGen_->Clone(newName));
     else if( name == "hPtGenJet1" ) h = static_cast<TH1D*>(hPtGenJet1_->Clone(newName));
     else if( name == "hPtAve" ) h = static_cast<TH1D*>(hPtAve_->Clone(newName));
-    else if( name == "hPtAveAbs" ) h = static_cast<TH1D*>(hPtAveAbs_->Clone(newName));
     else if( name == "hPdfPtTrue" ) h = static_cast<TH1D*>(hPdfPtTrue_->Clone(newName));
     else if( name == "hResGen" ) h = static_cast<TH1D*>(hResGen_->Clone(newName));
     else if( name == "hPdfRes" ) h = static_cast<TH1D*>(hPdfRes_->Clone(newName));

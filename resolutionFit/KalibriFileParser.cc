@@ -1,4 +1,4 @@
-// $Id: KalibriFileParser.cc,v 1.9 2010/08/09 12:43:35 mschrode Exp $
+// $Id: KalibriFileParser.cc,v 1.10 2010/08/24 09:36:43 mschrode Exp $
 
 #include "KalibriFileParser.h"
 
@@ -99,7 +99,7 @@ namespace resolutionFit {
       h->SetLineColor(it->second->GetLineColor());
       h->SetLineWidth(it->second->GetLineWidth());
 
-      if( abs) h->Scale(it->second->GetEntries()*it->second->GetBinWidth(1));
+      if(abs) h->Scale(it->second->GetEntries()*it->second->GetBinWidth(1));
     }
 
     return h;

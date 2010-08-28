@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.14 2010/08/21 16:35:39 mschrode Exp $
+// $Id: Parameters.h,v 1.15 2010/08/24 09:37:32 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -15,7 +15,7 @@ class TRandom3;
 namespace resolutionFit {
 
   enum FitMode { FitModeMaxLikeFull, FitModeMaxLikeSimple };
-  enum RefPt { RefPtGen, RefPtAve, RefPtJet };
+  enum BinPt { BinPtGen, BinPtAve, BinPtJet };
   enum Pt3Var { Pt3Rel, Pt3Abs };
 
 
@@ -23,7 +23,7 @@ namespace resolutionFit {
   //!
   //! \author Matthias Schroeder
   //! \date 2010/05/15
-  //! $Id: Parameters.h,v 1.14 2010/08/21 16:35:39 mschrode Exp $
+  //! $Id: Parameters.h,v 1.15 2010/08/24 09:37:32 mschrode Exp $
   // --------------------------------------------
   class Parameters {
   public:
@@ -41,7 +41,7 @@ namespace resolutionFit {
       TString parAxisLabel(int parIdx) const { return par_->parAxisLabel(parIdx); }
 
       int ptBinIdx() const { return ptBinIdx_; }
-      RefPt refPt() const { return par_->refPt(); }
+      BinPt binPt() const { return par_->binPt(); }
       double ptMin() const { return par_->ptMin(ptBinIdx()); }
       double ptMax() const { return par_->ptMax(ptBinIdx()); }
       double etaMin() const { return par_->etaMin(); }
@@ -76,8 +76,8 @@ namespace resolutionFit {
     };
 
     
-    Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, RefPt refPt, int verbosity);
-    Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, const std::vector<int> fileNameIdx, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, RefPt refPt, int verbosity);
+    Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, BinPt binPt, int verbosity);
+    Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, const std::vector<int> fileNameIdx, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, BinPt binPt, int verbosity);
 
     ~Parameters();
 
@@ -97,7 +97,7 @@ namespace resolutionFit {
     double etaMin() const { return etaMin_; }
     double etaMax() const { return etaMax_; }
     TString outNamePrefix() const { return outNamePrefix_; }
-    RefPt refPt() const { return refPt_; }
+    BinPt binPt() const { return binPt_; }
     int nPtBins() const { return static_cast<int>(ptBinEdges_.size())-1; }
     double ptMin(int ptBin) const { return ptBinEdges_.at(ptBin); }
     double ptMax(int ptBin) const { return ptBinEdges_.at(ptBin+1); }
@@ -135,7 +135,8 @@ namespace resolutionFit {
     TString labelPt3Cut() const { return labelPt3Cut(stdSelIdx()); }
     TString labelPt3Cut(int ptBin) const;
     TString labelPtGen() const;
-    TString labelPtRef() const { return "p^{ave}_{T}"; }
+    TString labelPtMeas() const;
+    TString labelPtRef(const TString &plot = "") const;
     TString xAxisTitleResponse() const;
     TString yAxisTitleResponse() const;
     bool extendedLegend() const { return extendedLegend_; }
@@ -186,7 +187,7 @@ namespace resolutionFit {
     const double etaMax_;
     const TString outNamePrefix_;
     const FitMode fitMode_;
-    const RefPt refPt_;
+    const BinPt binPt_;
     const TString styleMode_;
     const int verbosity_;
 

@@ -71,9 +71,12 @@ namespace resolutionFit {
     void plotExtrapolation() const;
     void plotPtAsymmetry() const;
     void plotResolution() const;
+    void plotResolutionDistributions() const;
     void plotSpectra() const;
     void plotMCClosure() const;
     void print() const;
+    void printLaTeX() const;
+    void printPoints() const;
     void createSlides() const;
 
   private:
@@ -96,7 +99,7 @@ namespace resolutionFit {
 
     static double gaussian(double *x, double *par);
     void fitMCClosure();
-    TGraphAsymmErrors *getTGraphOfResolution(const TString &method, const TString &uncertainty) const;
+    TGraphAsymmErrors *getTGraphOfResolution(const TString &method, const TString &uncertainty, bool corrected = false) const;
   };
 }
 #endif
