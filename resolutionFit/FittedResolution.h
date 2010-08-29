@@ -73,6 +73,7 @@ namespace resolutionFit {
     void plotResolution() const;
     void plotResolutionDistributions() const;
     void plotSpectra() const;
+    void plotAdditionalJetActivity() const;
     void plotControlDistributions() const;
     void plotMCClosure() const;
     void print() const;
@@ -89,6 +90,7 @@ namespace resolutionFit {
 
     TF1 *trueRes_;
     TF1 *fittedRes_;
+    TF1 *ptGenAsym_;
 
     std::vector<TString> mcClosureResoLabels_;
     std::vector< std::vector<TF1*> > mcClosureFits_;

@@ -1,4 +1,4 @@
-// $Id: CutVariation.cc,v 1.18 2010/08/28 19:34:19 mschrode Exp $
+// $Id: CutVariation.cc,v 1.19 2010/08/29 15:54:58 mschrode Exp $
 
 #include "CutVariation.h"
 #include "KalibriFileParser.h"
@@ -63,7 +63,7 @@ namespace resolutionFit {
 	double pt3Val = pt3Max(i);
 	if( pt3Bins() ) pt3Val = pt3Mean(i);
 
-	TH1 *hMCRes = parser->hist("hPtGen","resolutionFit::CutVariationMCRes_PtBin"+util::toTString(par_->ptBinIdx())+"_Var"+util::toTString(i));
+	TH1 *hMCRes = parser->hist("hRespMeas_0","resolutionFit::CutVariationMCRes_PtBin"+util::toTString(par_->ptBinIdx())+"_Var"+util::toTString(i));
 	delete parser;
 
 	varPoints_[i] = new VariationPoint(fittedValue,uncert,pt3Val,hMCRes);
@@ -244,22 +244,17 @@ namespace resolutionFit {
 
   CutVariation::VariationPoint::VariationPoint(TH1 *hPtAsym, bool fitGauss, double cutValue)
     : cutValue_(cutValue), hPtAsym_(hPtAsym), hMCRes_(0) {
-    if( fitGauss ) {
-      TF1 *fit = new TF1("fit","gaus",hPtAsym_->GetMean()-2.*hPtAsym_->GetRMS(),hPtAsym_->GetMean()+2.*hPtAsym_->GetRMS());
-      fit->SetParameter(0,4.);
-      fit->SetParameter(1,0.);
-      //    fit->FixParameter(1,0.);
-      fit->SetParameter(2,0.1);
-      if( hPtAsym_->Fit(fit,"Q0IRB") != 0 ) {
-	std::cerr << "WARNING: No convergence" << std::endl;
-      }
-      fitValue_ = sqrt(2.)*std::abs(fit->GetParameter(2));
-      uncert_ = new Uncertainty("Statistical uncertainty",sqrt(2.)*fit->GetParError(2));
-      delete fit;
-    } else {
-      fitValue_ = sqrt(2.)*hPtAsym_->GetRMS();
-      uncert_ = new Uncertainty("Statistical uncertainty",sqrt(2.)*hPtAsym_->GetRMSError());
+    TF1 *fit = new TF1("fit","gaus",hPtAsym_->GetMean()-2.*hPtAsym_->GetRMS(),hPtAsym_->GetMean()+2.*hPtAsym_->GetRMS());
+    fit->SetParameter(0,5.*hPtAsym_->GetRMS()*hPtAsym_->GetEntries());
+    fit->SetParameter(1,0.);
+    fit->SetParameter(2,hPtAsym_->GetRMS());
+    
+    if( hPtAsym_->Fit(fit,"Q0IRB") != 0 ) {
+      std::cerr << "WARNING: No convergence" << std::endl;
     }
+    fitValue_ = sqrt(2.)*std::abs(fit->GetParameter(2));
+    uncert_ = new Uncertainty("Statistical uncertainty",sqrt(2.)*fit->GetParError(2));
+    delete fit;
   }
 
   CutVariation::VariationPoint::VariationPoint()

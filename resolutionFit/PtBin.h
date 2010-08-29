@@ -40,7 +40,7 @@ namespace resolutionFit {
 
     double fittedValue(int parIdx, int cutVarIdx) const { return cutVar_.at(parIdx)->fittedValue(cutVarIdx); }
     double fittedValueUncert(int parIdx, int cutVarIdx) const { return cutVar_.at(parIdx)->uncert(cutVarIdx); }
-    double extrapolatedValue(int parIdx, bool corrected = false) const;
+    double extrapolatedValue(int parIdx) const { return extrapolatedVal_.at(parIdx); }
     double uncertDown(int parIdx) const { return uncert_.at(parIdx)->down(); }
     double uncertUp(int parIdx) const { return uncert_.at(parIdx)->up(); }
     double uncertStatDown(int parIdx) const { return uncert_.at(parIdx)->down(0); }
@@ -57,7 +57,7 @@ namespace resolutionFit {
     double fittedAsymUncert(int cutVarIdx) const {
       return cutVarAsym_->uncert(cutVarIdx);
     }
-    double extrapolatedAsym(bool corrected = false) const;
+    double extrapolatedAsym() const { return extrapolatedAsym_; }
     double uncertDownAsym() const { return uncertAsym_->down(); }
     double uncertUpAsym() const { return uncertAsym_->up(); }
 
@@ -90,7 +90,7 @@ namespace resolutionFit {
       return cutVarAsym_->getPtAsymmetry(cutVarIdx,newName);
     }
     TH1 *getHistPtGenAsym(const TString &newName) const { return getHist("hPtGenAsym",newName); }
-    TH1 *getHistPJet3(const TString &newName) const { return getHist("hPJet",newName); }
+    TH1 *getHistPJet3(const TString &newName) const { return getHist("hPJet3",newName); }
     TH1 *getHistPJet3Rel(const TString &newName) const { return getHist("hPJet3Rel",newName); }
     TH1 *getHistPJet3GenRel(const TString &newName) const { return getHist("hPJet3GenRel",newName); }
     TH1 *getHistPSJ(const TString &newName) const { return getHist("hPSJ",newName); }

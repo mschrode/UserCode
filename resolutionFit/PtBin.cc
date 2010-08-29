@@ -1,4 +1,4 @@
-// $Id: PtBin.cc,v 1.18 2010/08/28 19:34:19 mschrode Exp $
+// $Id: PtBin.cc,v 1.19 2010/08/29 15:54:59 mschrode Exp $
 
 #include "PtBin.h"
 
@@ -63,12 +63,18 @@ namespace resolutionFit {
     extrapolatedAsym_ = cutVarAsym_->extrapolatedValue();
     uncertAsym_ = new Uncertainty("StatisticUncertainty",cutVarAsym_->extrapolatedUncert());
 
-    // Perform cut variation and extrapolation
-    // of ptGen asymmetry
-    cutVarGenAsym_ = new CutVariation(par_,0,"PtGenAsym");
-    cutVarGenAsym_->extrapolate();
-    extrapolatedGenAsym_ = cutVarGenAsym_->extrapolatedValue();
-    uncertGenAsym_ = new Uncertainty("StatisticUncertainty",cutVarGenAsym_->extrapolatedUncert());
+    if( par_->fitPtGenAsym() ) {
+      // Perform cut variation and extrapolation
+      // of ptGen asymmetry
+      cutVarGenAsym_ = new CutVariation(par_,0,"PtGenAsym");
+      cutVarGenAsym_->extrapolate();
+      extrapolatedGenAsym_ = cutVarGenAsym_->extrapolatedValue();
+      uncertGenAsym_ = new Uncertainty("StatisticUncertainty",cutVarGenAsym_->extrapolatedUncert());
+    } else {
+      cutVarGenAsym_ = 0;
+      extrapolatedGenAsym_ = 0.;
+      uncertGenAsym_ = new Uncertainty();
+    }
 
 
     // Store spectrum and response histograms
@@ -119,7 +125,7 @@ namespace resolutionFit {
     }
     delete cutVarAsym_;
     delete uncertAsym_;
-    delete cutVarGenAsym_;
+    if( cutVarGenAsym_ ) delete cutVarGenAsym_;
     delete uncertGenAsym_;
     delete hPtJet1_;
     delete hPtJet2_;
@@ -141,31 +147,12 @@ namespace resolutionFit {
   }
 
 
-  double PtBin::extrapolatedValue(int parIdx, bool corrected) const {
-    double val = extrapolatedVal_.at(parIdx);
-    if( parIdx == 0 && corrected ) {
-      val = sqrt( val*val - extrapolatedGenAsym_*extrapolatedGenAsym_ );
-    }
-    return val;
-  }
-
-
-  double PtBin::extrapolatedAsym(bool corrected) const {
-    double asym = extrapolatedAsym_;
-    if( corrected ) {
-      asym = sqrt( asym*asym - extrapolatedGenAsym_*extrapolatedGenAsym_ );
-    }
-    return asym;
-  }
-
-  
   TH1 *PtBin::getHist(const TString &name, const TString &newName) const {
     TH1 *h = 0;
     if( name == "hPtGen" ) h = static_cast<TH1D*>(hPtGen_->Clone(newName));
     else if( name == "hPtGenJet1" ) h = static_cast<TH1D*>(hPtGenJet1_->Clone(newName));
     else if( name == "hPtAve" ) h = static_cast<TH1D*>(hPtAve_->Clone(newName));
     else if( name == "hPdfPtTrue" ) h = static_cast<TH1D*>(hPdfPtTrue_->Clone(newName));
-    else if( name == "hResGen" ) h = static_cast<TH1D*>(hResGen_->Clone(newName));
     else if( name == "hPdfRes" ) h = static_cast<TH1D*>(hPdfRes_->Clone(newName));
     else if( name == "hPtGenAsym" ) h = static_cast<TH1D*>(hPtGenAsym_->Clone(newName));
     else if( name == "hPtJet1" ) h = static_cast<TH1D*>(hPtJet1_->Clone(newName));

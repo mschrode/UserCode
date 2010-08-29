@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.16 2010/08/28 19:34:19 mschrode Exp $
+// $Id: Parameters.h,v 1.17 2010/08/29 15:54:59 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -25,7 +25,7 @@ namespace resolutionFit {
   //!
   //! \author Matthias Schroeder
   //! \date 2010/05/15
-  //! $Id: Parameters.h,v 1.16 2010/08/28 19:34:19 mschrode Exp $
+  //! $Id: Parameters.h,v 1.17 2010/08/29 15:54:59 mschrode Exp $
   // --------------------------------------------
   class Parameters {
   public:
@@ -64,6 +64,9 @@ namespace resolutionFit {
 
       bool hasMCClosure() const { return par_->hasMCClosure(); }
       TString fileNameMCClosure() const { return par_->fileNameMCClosure(ptBinIdx()); }
+
+      bool fitPtGenAsym() const { return par_->fitPtGenAsym(); }
+      bool hasCorrPtGenAsym() const { return par_->hasCorrPtGenAsym(); }
 
       int nSystUncerts() const { return par_->nSystUncerts(); }
       TString labelSystUncert(int k) const { return par_->labelSystUncert(k); }
@@ -158,6 +161,10 @@ namespace resolutionFit {
     double mcTruthPseudoMeas(int i) const { return mcTruthPseudoMeas_.at(i); }
     double mcTruthRelUncert() const { return mcTruthRelUncert_; }
 
+    bool fitPtGenAsym() const { return fitPtGenAsym_; }
+    bool hasCorrPtGenAsym() const { return hasCorrPtGenAsym_; }
+    double corrPtGenAsymPar(int i) const { return ptGenAsymPar_.at(i); }
+
     bool fitExtrapolatedSigma() const { return fitExtrapolatedSigma_; }
     bool fitRatio() const { return fitRatio_; }
     bool hasStartOffset() const { return startResOffset_ > 0 ? true : false; }
@@ -181,6 +188,8 @@ namespace resolutionFit {
     void addStartOffset(double delta) { startResOffset_ = delta; }
     void fitExtrapolatedSigma(bool fit) { fitExtrapolatedSigma_ = fit; }
     void fitRatio(bool fit) { fitRatio_ = fit; }
+    void fitPtGenAsym(bool fit);
+    void setParPtGenAsym(double a0, double a1, double a2);
     void setLumi(double lumi) { lumi_ = lumi; }
     void isData(bool data) { isData_ = data; }
     void extendedLegend(bool ext) { extendedLegend_ = ext; }
@@ -223,6 +232,10 @@ namespace resolutionFit {
     std::vector<double> mcTruthPtBinEdges_;
     std::vector<double> mcTruthPseudoMeas_;
     double mcTruthRelUncert_;
+
+    bool fitPtGenAsym_;
+    bool hasCorrPtGenAsym_;
+    std::vector<double> ptGenAsymPar_;
 
     bool fitExtrapolatedSigma_;
     bool fitRatio_;

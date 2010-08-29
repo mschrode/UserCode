@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.17 2010/08/28 19:34:19 mschrode Exp $
+// $Id: Parameters.cc,v 1.18 2010/08/29 15:54:59 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -25,7 +25,6 @@ namespace resolutionFit {
       fileNameIdx_.push_back(i);
     }
     init(fileBaseNameStdSel, ptBinEdges, type);
-    hasTruthSpectra_ = false;
 
     assert( static_cast<int>(fileNameIdx_.size()) == nPtBins() );
     print();
@@ -42,7 +41,6 @@ namespace resolutionFit {
     
     fileNameIdx_ = fileNameIdx;
     init(fileBaseNameStdSel, ptBinEdges, type);
-    hasTruthSpectra_ = false;
 
     assert( static_cast<int>(fileNameIdx_.size()) == nPtBins() );
     print();
@@ -51,7 +49,10 @@ namespace resolutionFit {
 
   void Parameters::init(const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, ResponseFunction::Type type) {
     respFunc_ = new ResponseFunction(type);
-    
+
+    hasTruthSpectra_ = false;
+    fitPtGenAsym_ = false;
+    hasCorrPtGenAsym_ = false;
     ptBinEdges_ = ptBinEdges;
     ptBinEdges_.erase(ptBinEdges_.begin()+fileNameIdx_.size()+1,ptBinEdges_.end());
     trueResPar_ = std::vector<double>(3,0.);
@@ -168,6 +169,23 @@ namespace resolutionFit {
     for(int i = 0; i < nBins; ++i) {
       mcTruthPseudoMeas_.push_back(rand_->Gaus(1.,relUncert));
     }
+  }
+
+
+  void Parameters::fitPtGenAsym(bool fit) {
+    fitPtGenAsym_ = fit;
+    hasCorrPtGenAsym_ = fit;
+    if( fitPtGenAsym() && ptGenAsymPar_.size() > 0 ) std::cerr << "WARNING: Parameters for ptGen asymmetry already set. Will be overriden by fit!" << std::endl;
+  }
+
+
+  void Parameters::setParPtGenAsym(double a0, double a1, double a2) {
+    ptGenAsymPar_.push_back(a0);
+    ptGenAsymPar_.push_back(a1);
+    ptGenAsymPar_.push_back(a2);
+    hasCorrPtGenAsym_ = true;
+
+    if( fitPtGenAsym() ) std::cerr << "WARNING: Parameters for ptGen asymmetry will be overriden by fit!" << std::endl;
   }
 
 

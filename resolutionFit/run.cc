@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.30 2010/08/28 19:34:19 mschrode Exp $
+// $Id: run.cc,v 1.31 2010/08/29 15:54:59 mschrode Exp $
 
 #ifndef RUN_RESOLUTION_FIT
 #define RUN_RESOLUTION_FIT
@@ -43,8 +43,8 @@ int main(int argc, char *argv[]) {
     TString respType = argv[1];
     int etaBin = atoi(argv[2]);
     if( respType == "Gauss" ) {
-      outNamePrefix = "TestExtrapolation2_";
-      inNamePrefix = "~/results/ResolutionFit/TestExtrapolation_2/Res_Spring10QCDDiJet_SimpleGauss_PtAveCuts_Eta0_PpRel";
+      outNamePrefix = "TestExtrapolation1_";
+      inNamePrefix = "~/results/ResolutionFit/TestExtrapolation_1/Res_Spring10QCDDiJet_SimpleGauss_PtGenCuts_Eta0_PpRel";
       //      specNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_PtGenSpectrum0030-3500_Eta00-10_Pt3";
 
       //      outNamePrefix = "ResFit_132440-143328_DiJetAve15U_SimpleGauss_PpCuts_";
@@ -71,7 +71,9 @@ int main(int argc, char *argv[]) {
       	ptBinEdges.push_back(800.);
       	ptBinEdges.push_back(1000.);
      
-	par = new resolutionFit::Parameters(0.,1.3,2.7,inNamePrefix+"10_",ptBinEdges,2,14,outNamePrefix+"Eta00-13_",resolutionFit::ResponseFunction::Gauss,resolutionFit::FitModeMaxLikeSimple,resolutionFit::BinPtAve,verbosity);
+	par = new resolutionFit::Parameters(0.,1.3,2.7,inNamePrefix+"10_",ptBinEdges,0,12,outNamePrefix+"Eta00-13_",resolutionFit::ResponseFunction::Gauss,resolutionFit::FitModeMaxLikeSimple,resolutionFit::BinPtGen,verbosity);
+	//	par->fitPtGenAsym(true);
+	par->setParPtGenAsym(2.48795,0.158797,0.010961);
 	par->isData(false);
 	par->setLumi(-1.);
 
@@ -113,7 +115,7 @@ int main(int argc, char *argv[]) {
 	//par->fitRatio(true);
 
 	//	par->addFileBaseNameMCClosure("~/results/ResolutionFit/MCClosure_CaloOrdered_Rel3rdJet010/Res_Spring10QCDDiJet_Gauss_Eta0_");
-	//par->addFileBaseNameMCClosure(inNamePrefix+"10_");
+	par->addFileBaseNameMCClosure(inNamePrefix+"10_");
       } else {
 	std::cerr << "ERROR: '" << etaBin << "' is not a valid eta bin for '" << respType << "' response.\n";
 	exit(1);
@@ -139,6 +141,7 @@ int main(int argc, char *argv[]) {
      fit->plotResolution();
      fit->plotPtAsymmetry();
      fit->plotSpectra();
+     fit->plotAdditionalJetActivity();
      fit->plotControlDistributions();
      fit->plotMCClosure();
     
