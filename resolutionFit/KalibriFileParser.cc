@@ -1,4 +1,4 @@
-// $Id: KalibriFileParser.cc,v 1.10 2010/08/24 09:36:43 mschrode Exp $
+// $Id: KalibriFileParser.cc,v 1.11 2010/08/28 19:34:19 mschrode Exp $
 
 #include "KalibriFileParser.h"
 
@@ -33,6 +33,17 @@ namespace resolutionFit {
     hists_["hPtGenAsym_0"] = 0;
     hists_["hPtJet1"] = 0;
     hists_["hPtJet2"] = 0;
+    hists_["hPtJet3"] = 0;
+    hists_["hPtJet4"] = 0;
+    hists_["hPJet3"] = 0;
+    hists_["hPJet3Rel"] = 0;
+    hists_["hPJet3GenRel"] = 0;
+    hists_["hPSJ"] = 0;
+    hists_["hPSJRel"] = 0;
+    hists_["hPSJGenRel"] = 0;
+    hists_["hEta"] = 0;
+    hists_["hDeltaPhi12"] = 0;
+
 
     // Parse file
     if( parse(fileName) ) exit(-1);
@@ -73,7 +84,7 @@ namespace resolutionFit {
     TH1 *h = 0;
     HistIt it = hists_.find(name);
     if( it == hists_.end() ) {
-      std::cerr << "WARNING: No histogram with name '" << name << "'" << std::endl;
+      std::cerr << "WARNING (KalibriFileParser): No histogram with name '" << name << "'" << std::endl;
     } else {
       // This is weird: a simple TH1::Clone(newName) to get
       // h produces a crash if the next TFile is opened i.e.
@@ -99,7 +110,7 @@ namespace resolutionFit {
       h->SetLineColor(it->second->GetLineColor());
       h->SetLineWidth(it->second->GetLineWidth());
 
-      if(abs) h->Scale(it->second->GetEntries()*it->second->GetBinWidth(1));
+      //if(abs) h->Scale(it->second->GetEntries()*it->second->GetBinWidth(1));      
     }
 
     return h;
@@ -114,7 +125,7 @@ namespace resolutionFit {
   // --------------------------------------------
   int KalibriFileParser::parse(const TString &fileName) {
     int ioError = 0;
-    if( verbose_ == 2 ) std::cout << "Parsing file '" << fileName << "'" << std::endl;
+    if( verbose_ == 2 ) std::cout << "(KalibriFileParser) Parsing file '" << fileName << "'" << std::endl;
     
     // Opening file    
     if( verbose_ == 2 ) std::cout << "  Opening file... " << std::flush;
@@ -163,6 +174,7 @@ namespace resolutionFit {
 	  h->SetDirectory(0);
 	  h->UseCurrentStyle();
 	  it->second = h;
+	  if( verbose_ == 2 ) std::cout << "\n   (h->GetName() == '" << h->GetName() << "')... " << std::endl;
 	}
       }
       if( verbose_ == 2 ) std::cout << "ok" << std::endl;

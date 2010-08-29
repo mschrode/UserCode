@@ -1,4 +1,4 @@
-// $Id: PtBin.cc,v 1.17 2010/08/24 09:37:08 mschrode Exp $
+// $Id: PtBin.cc,v 1.18 2010/08/28 19:34:19 mschrode Exp $
 
 #include "PtBin.h"
 
@@ -73,35 +73,30 @@ namespace resolutionFit {
 
     // Store spectrum and response histograms
     if( par_->verbosity() == 2 ) std::cout << "Storing spectrum and resolution histograms... " << std::flush;
-    TString name = "hPtGen_PtBin";
-    name += ptBinIdx();
-    hPtGen_ = parserStdSel->hist("hPtGen",name);
-    name = "hPtGenJet1_PtBin";
-    name += ptBinIdx();
-    hPtGenJet1_ = parserStdSel->hist("hPtGenJet1",name);
-    name = "hPdfPtTrue_PtBin";
-    name += ptBinIdx();
-    hPdfPtTrue_ = parserStdSel->hist("hTruthPDF",name);
-    name = "hPtAve_PtBin";
-    name += ptBinIdx();
-    hPtAve_ = parserStdSel->hist("hPtDijet",name);
-    name = "hPtAveAbs_PtBin";
-    name += ptBinIdx();
-    hResGen_ = parserStdSel->hist("hRespMeas_0",name);
-    name = "hPdfRes_PtBin";
-    name += ptBinIdx();
-    hPdfRes_ = parserStdSel->hist("hRespFit_0",name);
-    name = "hPtGenAsym_PtBin";
-    name += ptBinIdx();
-    hPtGenAsym_ = parserStdSel->hist("hPtGenAsym_0",name);
+    hPtJet1_ = parserStdSel->hist("hPtJet1","hPtJet1_PtBin"+util::toTString(ptBinIdx()));
+    hPtJet2_ = parserStdSel->hist("hPtJet2","hPtJet2_PtBin"+util::toTString(ptBinIdx()));
+    hPtJet3_ = parserStdSel->hist("hPtJet3","hPtJet3_PtBin"+util::toTString(ptBinIdx()));
+    hPtJet4_ = parserStdSel->hist("hPtJet4","hPtJet4_PtBin"+util::toTString(ptBinIdx()));
+    hPtGen_ = parserStdSel->hist("hPtGen","hPtGen_PtBin"+util::toTString(ptBinIdx()));
+    hPtGenJet1_ = parserStdSel->hist("hPtGenJet1","hPtGenJet1_PtBin"+util::toTString(ptBinIdx()));
+    hPdfPtTrue_ = parserStdSel->hist("hTruthPDF","hPdfPtTrue_PtBin"+util::toTString(ptBinIdx()));
+    hPtAve_ = parserStdSel->hist("hPtDijet","hPtAve_PtBin"+util::toTString(ptBinIdx()));
+    hPdfRes_ = parserStdSel->hist("hRespFit_0","hPdfRes_PtBin"+util::toTString(ptBinIdx()));
+    hPtGenAsym_ = parserStdSel->hist("hPtGenAsym_0","hPtGenAsym_PtBin"+util::toTString(ptBinIdx()));
+    hPJet3_ = parserStdSel->hist("hPJet3","hPJet3_PtBin"+util::toTString(ptBinIdx()));
+    hPJet3Rel_ = parserStdSel->hist("hPJet3Rel","hPJet3Rel_PtBin"+util::toTString(ptBinIdx()));
+    hPJet3GenRel_ = parserStdSel->hist("hPJet3GenRel","hPJet3GenRel_PtBin"+util::toTString(ptBinIdx()));
+    hPSJ_ = parserStdSel->hist("hPSJ","hPSJ_PtBin"+util::toTString(ptBinIdx()));
+    hPSJRel_ = parserStdSel->hist("hPSJRel","hPSJRel_PtBin"+util::toTString(ptBinIdx()));
+    hPSJGenRel_ = parserStdSel->hist("hPSJGenRel","hPSJGenRel_PtBin"+util::toTString(ptBinIdx()));
+    hEta_ = parserStdSel->hist("hEta","hEta_PtBin"+util::toTString(ptBinIdx()));
+    hDeltaPhi12_ = parserStdSel->hist("hDeltaPhi12","hDeltaPhi12_PtBin"+util::toTString(ptBinIdx()));
 
     delete parserStdSel;
 
     if( par_->hasMCClosure() ) {
       KalibriFileParser *parserMCClosure = new KalibriFileParser(par_->fileNameMCClosure(),par_->verbosity());
-      name = "hMCRes_PtBin";
-      name += ptBinIdx();
-      hMCRes_ = parserMCClosure->hist("hRespMeas_0",name);
+      //      hMCRes_ = parserMCClosure->hist("hRespMeas_0","hMCRes_PtBin"+util::toTString(ptBinIdx()));
       delete parserMCClosure;
     }
 
@@ -126,12 +121,23 @@ namespace resolutionFit {
     delete uncertAsym_;
     delete cutVarGenAsym_;
     delete uncertGenAsym_;
+    delete hPtJet1_;
+    delete hPtJet2_;
+    delete hPtJet3_;
+    delete hPtJet4_;
     delete hPtGen_;
     delete hPtGenJet1_;
     delete hPdfPtTrue_;
     delete hPtAve_;
-    delete hResGen_;
     delete hPdfRes_;
+    delete hPJet3_;
+    delete hPJet3Rel_;
+    delete hPJet3GenRel_;
+    delete hPSJ_;
+    delete hPSJRel_;
+    delete hPSJGenRel_;
+    delete hEta_;
+    delete hDeltaPhi12_;
   }
 
 
@@ -162,7 +168,19 @@ namespace resolutionFit {
     else if( name == "hResGen" ) h = static_cast<TH1D*>(hResGen_->Clone(newName));
     else if( name == "hPdfRes" ) h = static_cast<TH1D*>(hPdfRes_->Clone(newName));
     else if( name == "hPtGenAsym" ) h = static_cast<TH1D*>(hPtGenAsym_->Clone(newName));
-    else if( name == "hMCRes" ) h = static_cast<TH1D*>(hMCRes_->Clone(newName));
+    else if( name == "hPtJet1" ) h = static_cast<TH1D*>(hPtJet1_->Clone(newName));
+    else if( name == "hPtJet2" ) h = static_cast<TH1D*>(hPtJet2_->Clone(newName));
+    else if( name == "hPtJet3" ) h = static_cast<TH1D*>(hPtJet3_->Clone(newName));
+    else if( name == "hPtJet4" ) h = static_cast<TH1D*>(hPtJet4_->Clone(newName));
+    else if( name == "hPJet3" ) h = static_cast<TH1D*>(hPJet3_->Clone(newName));
+    else if( name == "hPJet3Rel" ) h = static_cast<TH1D*>(hPJet3Rel_->Clone(newName));
+    else if( name == "hPJet3GenRel" ) h = static_cast<TH1D*>(hPJet3GenRel_->Clone(newName));
+    else if( name == "hPSJ" ) h = static_cast<TH1D*>(hPSJ_->Clone(newName));
+    else if( name == "hPSJRel" ) h = static_cast<TH1D*>(hPSJRel_->Clone(newName));
+    else if( name == "hPSJGenRel" ) h = static_cast<TH1D*>(hPSJGenRel_->Clone(newName));
+    else if( name == "hEta" ) h = static_cast<TH1D*>(hEta_->Clone(newName));
+    else if( name == "hDeltaPhi12" ) h = static_cast<TH1D*>(hDeltaPhi12_->Clone(newName));
+
     else {
       std::cerr << "ERROR PtBin::getHist: No histogram of name '" << name << "'" << std::endl;
       exit(-1);

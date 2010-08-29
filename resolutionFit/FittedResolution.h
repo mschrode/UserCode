@@ -73,6 +73,7 @@ namespace resolutionFit {
     void plotResolution() const;
     void plotResolutionDistributions() const;
     void plotSpectra() const;
+    void plotControlDistributions() const;
     void plotMCClosure() const;
     void print() const;
     void printLaTeX() const;

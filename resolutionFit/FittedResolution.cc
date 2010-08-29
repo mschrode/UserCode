@@ -69,6 +69,7 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------------------------
   FittedResolution::~FittedResolution() {
+    if( par_->verbosity() > 1 ) std::cout << "FittedResolution::~FittedResolution(): Entering\n";
     delete trueRes_;
     delete fittedRes_;
     for(int i = 0; i < nMCClosureResFits(); ++i) {
@@ -78,6 +79,7 @@ namespace resolutionFit {
 	delete mcClosureFits_[i][p];
       }
     }
+    if( par_->verbosity() > 1 ) std::cout << "FittedResolution::~FittedResolution(): Leaving\n";
   }
 
 
@@ -794,7 +796,7 @@ namespace resolutionFit {
 	  else if( i == 2 ) pt3Idx = par_->nPt3Cuts()-1;
 
 	  canGenRes->cd();
-	  TH1 *h = (*it)->getHistPtGenRes(pt3Idx,"ResolutionDistributions:hResGen12"+util::toTString(pt3Idx));
+	  TH1 *h = (*it)->getHistMCRes(pt3Idx,"ResolutionDistributions:hResGen12"+util::toTString(pt3Idx));
 	  util::HistOps::setAxisTitles(h,"p^{"+par_->labelMeas()+"}_{T,12} / p^{"+par_->labelTruth()+"}_{T,12}","GeV","jets",true);
 	  h->SetLineColor(util::StyleSettings::color(ptBin));
 	  h->GetXaxis()->SetRangeUser(-0.4,0.4);
@@ -819,6 +821,79 @@ namespace resolutionFit {
     }
   }
 
+
+  // -------------------------------------------------------------------------------------
+  void FittedResolution::plotControlDistributions() const {
+    // Loop over ptbins
+    for(std::vector<PtBin*>::const_iterator it = ptBins_.begin();
+	it != ptBins_.end(); it++) {
+      int ptBin = (it-ptBins_.begin());
+
+      TCanvas *can = new TCanvas("canControlDistributions","Control Distributions",500,500);      
+      can->cd();
+
+      // Label
+      TPaveText *label = util::LabelFactory::createPaveText(2);
+      label->AddText(par_->labelLumi()+", "+par_->labelEtaBin()+", "+par_->labelDeltaPhiCut()+", <PT3CUT>");
+      label->AddText(par_->labelPtBin(ptBin));
+
+      // Jet pt spectra
+      TH1 *hPtJet1 = (*it)->getHistPtJet1("ControlDistributions:hPtJet1");
+      util::HistOps::setYRange(hPtJet1,2,true);
+      hPtJet1->SetMarkerStyle(20);
+      hPtJet1->Draw("PE1");
+      label->Draw("same");
+      can->SetLogy();
+      can->SaveAs(par_->outNamePrefix()+"PtJet1_PtBin"+util::toTString(ptBin)+".eps","eps");
+
+      TH1 *hPtJet2 = (*it)->getHistPtJet2("ControlDistributions:hPtJet2");
+      hPtJet2->SetMarkerStyle(20);
+      hPtJet2->Draw("PE1");
+      label->Draw("same");
+      can->SetLogy();
+      can->SaveAs(par_->outNamePrefix()+"PtJet2_PtBin"+util::toTString(ptBin)+".eps","eps");
+
+      TH1 *hPtJet3 = (*it)->getHistPtJet3("ControlDistributions:hPtJet3");
+      hPtJet3->SetMarkerStyle(20);
+      hPtJet3->Draw("PE1");
+      label->Draw("same");
+      can->SetLogy();
+      can->SaveAs(par_->outNamePrefix()+"PtJet3_PtBin"+util::toTString(ptBin)+".eps","eps");
+
+      TH1 *hPtJet4 = (*it)->getHistPtJet4("ControlDistributions:hPtJet4");
+      hPtJet4->SetMarkerStyle(20);
+      hPtJet4->Draw("PE1");
+      label->Draw("same");
+      can->SetLogy();
+      can->SaveAs(par_->outNamePrefix()+"PtJet4_PtBin"+util::toTString(ptBin)+".eps","eps");
+
+      TH1 *hEta = (*it)->getHistEta("ControlDistributions:hEta");
+      hEta->SetMarkerStyle(20);
+      util::HistOps::setYRange(hEta,2);
+      hEta->Draw("PE1");
+      label->Draw("same");
+      can->SetLogy(0);
+      can->SaveAs(par_->outNamePrefix()+"Eta_PtBin"+util::toTString(ptBin)+".eps","eps");
+
+      TH1 *hDeltaPhi12 = (*it)->getHistDeltaPhi12("ControlDistributions:hDeltaPhi12");
+      util::HistOps::setYRange(hDeltaPhi12,2);
+      hDeltaPhi12->SetMarkerStyle(20);
+      hDeltaPhi12->Draw("PE1");
+      label->Draw("same");
+      can->SetLogy(0);
+      can->SaveAs(par_->outNamePrefix()+"DeltaPhi12_PtBin"+util::toTString(ptBin)+".eps","eps");
+
+      // Clean up
+      delete hPtJet1;
+      delete hPtJet2;
+      delete hPtJet3;
+      delete hPtJet4;      
+      delete hEta;
+      delete hDeltaPhi12;
+      delete label;
+      delete can;
+    } // End of loop over ptbins
+  }
 
 
   // -------------------------------------------------------------------------------------
@@ -1220,6 +1295,7 @@ namespace resolutionFit {
   //! constraints and create graphs of scale and resolution
   // -------------------------------------------------------------------------------------
   void FittedResolution::fitMCClosure() {
+    if( par_->verbosity() > 1 ) std::cout << "FittedResolution::fitMCClosure() Entering\n";
     // Different fits of MC truth resolution
     mcClosureResoLabels_.push_back("<R> = free parameter");
     mcClosureResoLabels_.push_back("<R> = 1");
@@ -1291,6 +1367,8 @@ namespace resolutionFit {
       mcClosureGScale_[i]->SetMarkerColor(util::StyleSettings::color(i));
       mcClosureGScale_[i]->SetLineColor(mcClosureGScale_[i]->GetMarkerColor());
     }
+
+    if( par_->verbosity() > 1 ) std::cout << "FittedResolution::fitMCClosure() Leaving\n";
   }
 
 

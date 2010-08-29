@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.16 2010/08/24 09:37:32 mschrode Exp $
+// $Id: Parameters.cc,v 1.17 2010/08/28 19:34:19 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -12,8 +12,8 @@
 
 
 namespace resolutionFit {
-  Parameters::Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, BinPt binPt, int verbosity)
-    : etaMin_(etaMin), etaMax_(etaMax),
+  Parameters::Parameters(double etaMin, double etaMax, double deltaPhi12, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, BinPt binPt, int verbosity)
+    : etaMin_(etaMin), etaMax_(etaMax), deltaPhi12_(deltaPhi12),
       outNamePrefix_(outNamePrefix),
       styleMode_(gStyle->GetTitle()),
       fitMode_(fitMode),
@@ -31,8 +31,8 @@ namespace resolutionFit {
     print();
   }
 
-  Parameters::Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, const std::vector<int> fileNameIdx, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, BinPt binPt, int verbosity)
-    : etaMin_(etaMin), etaMax_(etaMax),
+  Parameters::Parameters(double etaMin, double etaMax, double deltaPhi12, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, const std::vector<int> fileNameIdx, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, BinPt binPt, int verbosity)
+    : etaMin_(etaMin), etaMax_(etaMax), deltaPhi12_(deltaPhi12),
       outNamePrefix_(outNamePrefix), 
       styleMode_(gStyle->GetTitle()),
       fitMode_(fitMode),

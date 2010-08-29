@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.15 2010/08/24 09:37:32 mschrode Exp $
+// $Id: Parameters.h,v 1.16 2010/08/28 19:34:19 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -10,6 +10,8 @@
 #include "TString.h"
 
 #include "ResponseFunction.h"
+#include "../util/utils.h"
+
 
 class TRandom3;
 namespace resolutionFit {
@@ -23,7 +25,7 @@ namespace resolutionFit {
   //!
   //! \author Matthias Schroeder
   //! \date 2010/05/15
-  //! $Id: Parameters.h,v 1.15 2010/08/24 09:37:32 mschrode Exp $
+  //! $Id: Parameters.h,v 1.16 2010/08/28 19:34:19 mschrode Exp $
   // --------------------------------------------
   class Parameters {
   public:
@@ -76,8 +78,8 @@ namespace resolutionFit {
     };
 
     
-    Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, BinPt binPt, int verbosity);
-    Parameters(double etaMin, double etaMax, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, const std::vector<int> fileNameIdx, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, BinPt binPt, int verbosity);
+    Parameters(double etaMin, double etaMax, double deltaPhi12, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, BinPt binPt, int verbosity);
+    Parameters(double etaMin, double etaMax, double deltaPhi12, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, const std::vector<int> fileNameIdx, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, BinPt binPt, int verbosity);
 
     ~Parameters();
 
@@ -96,6 +98,7 @@ namespace resolutionFit {
 
     double etaMin() const { return etaMin_; }
     double etaMax() const { return etaMax_; }
+    double deltaPhi12() const { return deltaPhi12_; }
     TString outNamePrefix() const { return outNamePrefix_; }
     BinPt binPt() const { return binPt_; }
     int nPtBins() const { return static_cast<int>(ptBinEdges_.size())-1; }
@@ -131,6 +134,7 @@ namespace resolutionFit {
     TString labelEtaBin() const;
     TString labelJetAlgo() const;
     TString labelLumi() const;
+    TString labelDeltaPhiCut() const { return "|#Delta#phi| < "+util::toTString(deltaPhi12()); }
     TString labelPtBin(int ptBin) const;
     TString labelPt3Cut() const { return labelPt3Cut(stdSelIdx()); }
     TString labelPt3Cut(int ptBin) const;
@@ -185,6 +189,7 @@ namespace resolutionFit {
   private:
     const double etaMin_;
     const double etaMax_;
+    const double deltaPhi12_;
     const TString outNamePrefix_;
     const FitMode fitMode_;
     const BinPt binPt_;

@@ -1,4 +1,4 @@
-// $Id: CutVariation.cc,v 1.17 2010/08/24 09:35:35 mschrode Exp $
+// $Id: CutVariation.cc,v 1.18 2010/08/28 19:34:19 mschrode Exp $
 
 #include "CutVariation.h"
 #include "KalibriFileParser.h"
@@ -59,14 +59,14 @@ namespace resolutionFit {
 	}
 	statUncert = sqrt( statUncert*statUncert + mcStatUncert_*mcStatUncert_ );
 	Uncertainty *uncert = new Uncertainty("Statistical uncertainty",statUncert);
-	delete parser;
 
 	double pt3Val = pt3Max(i);
 	if( pt3Bins() ) pt3Val = pt3Mean(i);
 
-	TH1 *hPtGenRes = parser->hist("hRespMeas_0","resolutionFit::CutVariationPtGenRes_PtBin"+util::toTString(par_->ptBinIdx())+"_Var"+util::toTString(i));
+	TH1 *hMCRes = parser->hist("hPtGen","resolutionFit::CutVariationMCRes_PtBin"+util::toTString(par_->ptBinIdx())+"_Var"+util::toTString(i));
+	delete parser;
 
-	varPoints_[i] = new VariationPoint(fittedValue,uncert,pt3Val,hPtGenRes);
+	varPoints_[i] = new VariationPoint(fittedValue,uncert,pt3Val,hMCRes);
       }
     } else if( quantity == "PtAsym" ) {
       // Read asymmetry distributions and mean pt from file
@@ -239,11 +239,11 @@ namespace resolutionFit {
   }
 
 
-  CutVariation::VariationPoint::VariationPoint(double fitValue, Uncertainty *uncert, double cutValue, TH1 *hPtGenRes)
-    : fitValue_(fitValue), uncert_(uncert), cutValue_(cutValue), hPtAsym_(0), hPtGenRes_(hPtGenRes) {};
+  CutVariation::VariationPoint::VariationPoint(double fitValue, Uncertainty *uncert, double cutValue, TH1 *hMCRes)
+    : fitValue_(fitValue), uncert_(uncert), cutValue_(cutValue), hPtAsym_(0), hMCRes_(hMCRes) {};
 
   CutVariation::VariationPoint::VariationPoint(TH1 *hPtAsym, bool fitGauss, double cutValue)
-    : cutValue_(cutValue), hPtAsym_(hPtAsym), hPtGenRes_(0) {
+    : cutValue_(cutValue), hPtAsym_(hPtAsym), hMCRes_(0) {
     if( fitGauss ) {
       TF1 *fit = new TF1("fit","gaus",hPtAsym_->GetMean()-2.*hPtAsym_->GetRMS(),hPtAsym_->GetMean()+2.*hPtAsym_->GetRMS());
       fit->SetParameter(0,4.);
@@ -263,12 +263,12 @@ namespace resolutionFit {
   }
 
   CutVariation::VariationPoint::VariationPoint()
-    : fitValue_(0.), uncert_(new Uncertainty()), cutValue_(0.), hPtAsym_(0), hPtGenRes_(0) {};
+    : fitValue_(0.), uncert_(new Uncertainty()), cutValue_(0.), hPtAsym_(0), hMCRes_(0) {};
 
   CutVariation::VariationPoint::~VariationPoint() {
     delete uncert_;
     if( hPtAsym_ ) delete hPtAsym_;
-    if( hPtGenRes_ ) delete hPtGenRes_;
+    if( hMCRes_ ) delete hMCRes_;
   }
 
 
@@ -277,7 +277,7 @@ namespace resolutionFit {
   }
 
 
-  TH1 *CutVariation::VariationPoint::histPtGenRes(const TString &name) const {
-    return hPtGenRes_ ? static_cast<TH1D*>(hPtGenRes_->Clone(name)) : 0;
+  TH1 *CutVariation::VariationPoint::histMCRes(const TString &name) const {
+    return hMCRes_ ? static_cast<TH1D*>(hMCRes_->Clone(name)) : 0;
   }
 }

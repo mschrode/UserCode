@@ -71,14 +71,18 @@ namespace resolutionFit {
     double uncertDownGenAsym() const { return uncertGenAsym_->down(); }
     double uncertUpGenAsym() const { return uncertGenAsym_->up(); }
 
+    TH1 *getHistPtJet1(const TString &newName) const { return getHist("hPtJet1",newName); }
+    TH1 *getHistPtJet2(const TString &newName) const { return getHist("hPtJet2",newName); }
+    TH1 *getHistPtJet3(const TString &newName) const { return getHist("hPtJet3",newName); }
+    TH1 *getHistPtJet4(const TString &newName) const { return getHist("hPtJet4",newName); }
     TH1 *getHistPtGen(const TString &newName) const { return getHist("hPtGen",newName); }
     TH1 *getHistPtGenJet1(const TString &newName) const { return getHist("hPtGenJet1",newName); }
     TH1 *getHistPtAve(const TString &newName) const { return getHist("hPtAve",newName); }
     TH1 *getHistPtAveAbs(const TString &newName) const { return getHist("hPtAve",newName); }
     TH1 *getHistPdfPtTrue(const TString &newName) const { return getHist("hPdfPtTrue",newName); }
-    TH1 *getHistPtGenRes(const TString &newName) const { return getHistPtGenRes(par_->stdSelIdx(),newName); }
-    TH1 *getHistPtGenRes(int cutVarIdx, const TString &newName) const { 
-      return cutVar_[0]->getPtGenRes(cutVarIdx,newName); 
+    TH1 *getHistMCRes(const TString &newName) const { return getHistMCRes(par_->stdSelIdx(),newName); }
+    TH1 *getHistMCRes(int cutVarIdx, const TString &newName) const { 
+      return cutVar_[0]->getMCRes(cutVarIdx,newName); 
     }
     TH1 *getHistPdfRes(const TString &newName) const { return getHist("hPdfRes",newName); }
     TH1 *getHistPtAsym(const TString &newName) const { return getHistPtAsym(par_->stdSelIdx(),newName); }
@@ -86,7 +90,15 @@ namespace resolutionFit {
       return cutVarAsym_->getPtAsymmetry(cutVarIdx,newName);
     }
     TH1 *getHistPtGenAsym(const TString &newName) const { return getHist("hPtGenAsym",newName); }
-    TH1 *getHistMCRes(const TString &newName) const { return getHist("hMCRes",newName); }
+    TH1 *getHistPJet3(const TString &newName) const { return getHist("hPJet",newName); }
+    TH1 *getHistPJet3Rel(const TString &newName) const { return getHist("hPJet3Rel",newName); }
+    TH1 *getHistPJet3GenRel(const TString &newName) const { return getHist("hPJet3GenRel",newName); }
+    TH1 *getHistPSJ(const TString &newName) const { return getHist("hPSJ",newName); }
+    TH1 *getHistPSJRel(const TString &newName) const { return getHist("hPSJRel",newName); }
+    TH1 *getHistPSJGenRel(const TString &newName) const { return getHist("hPSJGenRel",newName); }
+    TH1 *getHistEta(const TString &newName) const { return getHist("hEta",newName); }
+    TH1 *getHistDeltaPhi12(const TString &newName) const { return getHist("hDeltaPhi12",newName); }
+
 
     TF1 *getTF1OfVariation(int parIdx, const TString &name) const { return cutVar_.at(parIdx)->getTF1(name); }
     TF1 *getTF1OfVariationAsym(const TString &name) const { return cutVarAsym_->getTF1(name); }
@@ -110,6 +122,10 @@ namespace resolutionFit {
     CutVariation* cutVarGenAsym_;
     Uncertainty* uncertGenAsym_;
 
+    TH1* hPtJet1_;
+    TH1* hPtJet2_;
+    TH1* hPtJet3_;
+    TH1* hPtJet4_;
     TH1* hPtGen_;
     TH1* hPtGenJet1_;
     TH1* hPdfPtTrue_;
@@ -117,7 +133,15 @@ namespace resolutionFit {
     TH1* hResGen_;
     TH1* hPdfRes_;
     TH1* hPtGenAsym_;
-    TH1 *hMCRes_;
+    TH1 *hPJet3_;
+    TH1 *hPJet3Rel_;
+    TH1 *hPJet3GenRel_;
+    TH1 *hPSJ_;
+    TH1 *hPSJRel_;
+    TH1 *hPSJGenRel_;
+    TH1 *hEta_;
+    TH1 *hDeltaPhi12_;
+
 
     TH1 *getHist(const TString &name, const TString &newName) const;
   };

@@ -40,8 +40,8 @@ namespace resolutionFit {
     TH1 *getPtAsymmetry(int i, const TString &name) const {
       return varPoints_.at(i)->histPtAsym(name);
     }
-    TH1 *getPtGenRes(int i, const TString &name) const {
-      return varPoints_.at(i)->histPtGenRes(name);
+    TH1 *getMCRes(int i, const TString &name) const {
+      return varPoints_.at(i)->histMCRes(name);
     }
 
     void extrapolate();
@@ -50,7 +50,7 @@ namespace resolutionFit {
     class VariationPoint {
     public:
       VariationPoint();
-      VariationPoint(double fitValue, Uncertainty *uncert, double cutValue, TH1 *hPtGenRes);
+      VariationPoint(double fitValue, Uncertainty *uncert, double cutValue, TH1 *hMCRes);
       VariationPoint(TH1 *hPtAsym, bool fitGauss, double cutValue);
       ~VariationPoint();
       
@@ -59,14 +59,14 @@ namespace resolutionFit {
       double uncertUp() const { return uncert_->up(); }
       double cutValue() const { return cutValue_; }
       TH1 *histPtAsym(const TString &name) const;
-      TH1 *histPtGenRes(const TString &name) const;
+      TH1 *histMCRes(const TString &name) const;
       
     private:
       double fitValue_;
       Uncertainty *uncert_;
       const double cutValue_;
       TH1 *hPtAsym_;
-      TH1 *hPtGenRes_;
+      TH1 *hMCRes_;
     };
 
     const Parameters::PtBinParameters *par_;

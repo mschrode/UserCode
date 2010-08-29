@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.29 2010/08/24 09:37:41 mschrode Exp $
+// $Id: run.cc,v 1.30 2010/08/28 19:34:19 mschrode Exp $
 
 #ifndef RUN_RESOLUTION_FIT
 #define RUN_RESOLUTION_FIT
@@ -43,35 +43,35 @@ int main(int argc, char *argv[]) {
     TString respType = argv[1];
     int etaBin = atoi(argv[2]);
     if( respType == "Gauss" ) {
-      //outNamePrefix = "Test_Closure__";
-      //inNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_SimpleGauss_PtAveCuts_Pt3Rel_Eta00-13/Res_Spring10QCDDiJet_SimpleGauss_PtAveCuts_Eta00-13_Pt3Rel";
+      outNamePrefix = "TestExtrapolation2_";
+      inNamePrefix = "~/results/ResolutionFit/TestExtrapolation_2/Res_Spring10QCDDiJet_SimpleGauss_PtAveCuts_Eta0_PpRel";
       //      specNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_PtGenSpectrum0030-3500_Eta00-10_Pt3";
 
-      outNamePrefix = "ResFit_132440-143328_DiJetAve15U_SimpleGauss_PpCuts_";
-      inNamePrefix = "~/results/ResolutionFit/JetMET_Run2010A-PromptReco-v4_DCSONLY_132440-143328_DiJetAve15U_SimpleGauss_Pt3Rel_Eta00-13/Res_Data_SimpleGauss_PtAveCuts_Eta0_Pt3Rel";
+      //      outNamePrefix = "ResFit_132440-143328_DiJetAve15U_SimpleGauss_PpCuts_";
+      //      inNamePrefix = "~/results/ResolutionFit/JetMET_Run2010A-PromptReco-v4_DCSONLY_132440-143328_DiJetAve15U_SimpleGauss_Pt3Rel_Eta00-13/Res_Data_SimpleGauss_PtAveCuts_Eta0_Pt3Rel";
 
       if( etaBin == 0 ) {
 	std::cout << "Setting up parameters for eta bin " << etaBin << std::endl;
 	ptBinEdges.clear();
-      	ptBinEdges.push_back(40.);
-  	ptBinEdges.push_back(60.);
+//       	ptBinEdges.push_back(40.);
+//   	ptBinEdges.push_back(60.);
   	ptBinEdges.push_back(80.);
      	ptBinEdges.push_back(100.);
-//      	ptBinEdges.push_back(120.);
-//      	ptBinEdges.push_back(140.);
-//      	ptBinEdges.push_back(170.);
-//      	ptBinEdges.push_back(200.);
-//     	ptBinEdges.push_back(250.);
-//     	ptBinEdges.push_back(300.);
-//  	ptBinEdges.push_back(350.);
+      	ptBinEdges.push_back(120.);
+      	ptBinEdges.push_back(140.);
+      	ptBinEdges.push_back(170.);
+      	ptBinEdges.push_back(200.);
+     	ptBinEdges.push_back(250.);
+     	ptBinEdges.push_back(300.);
+  	ptBinEdges.push_back(350.);
 
-//    	ptBinEdges.push_back(400.);
-//     	ptBinEdges.push_back(500.);
-//     	ptBinEdges.push_back(600.);
-//      	ptBinEdges.push_back(800.);
-//      	ptBinEdges.push_back(1000.);
+    	ptBinEdges.push_back(400.);
+     	ptBinEdges.push_back(500.);
+     	ptBinEdges.push_back(600.);
+      	ptBinEdges.push_back(800.);
+      	ptBinEdges.push_back(1000.);
      
-	par = new resolutionFit::Parameters(0.,1.3,inNamePrefix+"10_",ptBinEdges,0,2,outNamePrefix+"Eta00-13_",resolutionFit::ResponseFunction::Gauss,resolutionFit::FitModeMaxLikeSimple,resolutionFit::BinPtAve,verbosity);
+	par = new resolutionFit::Parameters(0.,1.3,2.7,inNamePrefix+"10_",ptBinEdges,2,14,outNamePrefix+"Eta00-13_",resolutionFit::ResponseFunction::Gauss,resolutionFit::FitModeMaxLikeSimple,resolutionFit::BinPtAve,verbosity);
 	par->isData(false);
 	par->setLumi(-1.);
 
@@ -135,22 +135,23 @@ int main(int argc, char *argv[]) {
     resolutionFit::FittedResolution *fit = new resolutionFit::FittedResolution(ptBins,par);
 
     // Plots
-    fit->plotExtrapolation();
-    fit->plotResolution();
-    fit->plotPtAsymmetry();
-    fit->plotSpectra();
-    fit->plotMCClosure();
+     fit->plotExtrapolation();
+     fit->plotResolution();
+     fit->plotPtAsymmetry();
+     fit->plotSpectra();
+     fit->plotControlDistributions();
+     fit->plotMCClosure();
     
     // Print
     fit->print();
-    fit->printPoints();
+    //    fit->printPoints();
     //fit->createSlides();
 
     // Clean up
     std::cout << "Cleaning up" << std::endl;
     delete fit;
     for(std::vector<resolutionFit::PtBin*>::iterator it = ptBins.begin();
-	it != ptBins.end(); it++) {
+ 	it != ptBins.end(); it++) {
       delete *it;
     }
     delete par;
