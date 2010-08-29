@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.11 2010/08/21 13:40:09 mschrode Exp $
+// $Id: HistOps.h,v 1.12 2010/08/28 19:31:55 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "TAttPad.h"
+#include "TF1.h"
 #include "TGraphAsymmErrors.h"
 #include "TGraphErrors.h"
 #include "TH1.h"
@@ -28,7 +29,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.11 2010/08/21 13:40:09 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.12 2010/08/28 19:31:55 mschrode Exp $
   class HistOps
   {
   public:
@@ -87,10 +88,12 @@ namespace util
       double padHeight = 1. - gStyle->GetPadTopMargin() - gStyle->GetPadBottomMargin();
       double labelHeight = util::LabelFactory::lineHeight()*(1+nLabelLines) + util::LabelFactory::labelTopOffset();
       if( log ) {
-	if( min <= 0. ) min = 3E-10;
-	max = exp((1.-labelHeight)*(log10(max/pow(min,labelHeight))));
+	if( min <= 0. ) min = 3E-1;
+	//	max = exp((1.-labelHeight)*(log10(max/pow(min,labelHeight))));
+	max = pow((log10(max) - log10(min)*0.7*labelHeight/padHeight)/(1.-0.7*labelHeight/padHeight),10.);
       } else {
-	max = max + labelHeight/padHeight*(max-min)/(1.-labelHeight/padHeight);
+	//	max = max + labelHeight/padHeight*(max-min)/(1.-labelHeight/padHeight);
+	max = (max - min*labelHeight/padHeight)/(1.-labelHeight/padHeight);
       }
     }
 
