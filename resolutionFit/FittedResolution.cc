@@ -300,6 +300,7 @@ namespace resolutionFit {
 	    h->SetBinContent(bin,par_->trueGaussSigma((*it)->meanPt()));
 	  }
 	}
+	h->GetYaxis()->SetRangeUser(0.8*par_->trueGaussSigma((*it)->meanPt()),2.*0.8*par_->trueGaussSigma((*it)->meanPt()));
 	h->SetLineStyle(2);
 
 	// Get graph and extrapolation
@@ -322,6 +323,10 @@ namespace resolutionFit {
 	leg->AddEntry(g,"Maximum likelihood","P");
 	leg->AddEntry(f,"Fit to MaxLike","L");
 
+	TLegend *legAsym = util::LabelFactory::createLegendCol(2,0.47);
+	legAsym->AddEntry(g,"PtAsym","P");
+	legAsym->AddEntry(f,"Fit to PtAsym","L");
+
 	TLegend *legComp = util::LabelFactory::createLegendCol(4,0.47);
 	legComp->AddEntry(g,"Maximum likelihood","P");
 	legComp->AddEntry(f,"Fit to MaxLike","L");
@@ -338,6 +343,14 @@ namespace resolutionFit {
 	leg->Draw("same");
 	can->SaveAs(par_->outNamePrefix()+"ExtrapolatedPar"+util::toTString(parIdx)+"_PtBin"+util::toTString(ptBin)+".eps","eps");
 	if( parIdx == 0 ) {
+	  can->cd();
+	  h->Draw();
+	  gAsym->Draw("PE1same");
+	  fAsym->Draw("same");
+	  txt->Draw("same");
+	  legAsym->Draw("same");
+	  can->SaveAs(par_->outNamePrefix()+"ExtrapolatedPar"+util::toTString(parIdx)+"Asym_PtBin"+util::toTString(ptBin)+".eps","eps");
+
 	  can->cd();
 	  h->Draw();
 	  g->Draw("PE1same");
@@ -357,6 +370,7 @@ namespace resolutionFit {
 	delete gAsym;
 	delete txt;
 	delete leg;
+	delete legAsym;
 	delete legComp;
 	delete can;
       } // End of loop over fitted parameters
@@ -608,8 +622,8 @@ namespace resolutionFit {
     h->SetLineStyle(trueRes_->GetLineStyle());
     h->SetLineColor(trueRes_->GetLineColor());
     h->GetYaxis()->SetTitle("#sigma_{fit} / #sigma_{MC}");
-    //    h->GetYaxis()->SetRangeUser(0.65,1.45+0.8*nLegEntries*lineHeight_);
-    h->GetYaxis()->SetRangeUser(0.85,1.85);
+    h->GetYaxis()->SetRangeUser(0.75,1.45+0.8*nLegEntries*lineHeight_);
+    //h->GetYaxis()->SetRangeUser(0.85,1.85);
 
 
     // Recreate labels
