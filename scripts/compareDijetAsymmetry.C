@@ -10,6 +10,7 @@
 #include "TFile.h"
 #include "TH1.h"
 #include "TLegend.h"
+#include "TLine.h"
 #include "TPaveText.h"
 #include "TRandom.h"
 #include "TString.h"
@@ -65,18 +66,18 @@ TChain *createTChain(const TString &fileListName) {
 void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
   util::StyleSettings::presentationNoTitle();
 
-  const TString prefix = "JetMET_Run2010A-PromptReco-v4_614nb_Pt3RelCuts_Eta13-30_";
+  const TString prefix = "JetMET_Run2010A-PromptReco-v4_132440-144011_DiJetAve15U_Pt3RelCuts_Eta00-13_";
   const int maxNJet = 50;
   const double minEMF = 0.01;
   const int minJetN90Hits = 2;
   const double maxJetFHPD = 0.98;
   const double maxJetFRBX = 0.98;
   const double minDeltaPhi = 2.7;
-  const double minEta = 1.3;
-  const double maxEta = 3.;
-  const double minPtAve = 20.;
+  const double minEta = 0.;
+  const double maxEta = 1.3;
+  const double minPtAve = 10.;
   const double maxPt3Rel = 0.1;
-  const double lumi = 0.614;
+  const double lumi = 2.214;
   const double lumiFrac = lumi/0.1;
   const int mcColor = 5;
   TRandom *rand = new TRandom(0);
@@ -85,7 +86,8 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
   // 1: MC
   unsigned int nChains = 2;
 
-  TChain *data = createTChain("/afs/naf.desy.de/user/m/mschrode/Kalibri/input/Kalibri_JetMET_Run2010A-PromptReco-v4_DCSONLY"); //614 nb
+  //  TChain *data = createTChain("/afs/naf.desy.de/user/m/mschrode/Kalibri/input/Kalibri_JetMET_Run2010A-PromptReco-v4_DCSONLY"); //614 nb
+  TChain *data = createTChain("/afs/naf.desy.de/user/m/mschrode/Kalibri/input/Kalibri_JetMET_Run2010A-PromptReco-v4_DCSONLY_132440-144011_DiJetAve15U"); //2.214 pb
   TChain *mc = createTChain("/afs/naf.desy.de/user/m/mschrode/Kalibri/input/Kalibri_Spring10QCDDiJet_AK5Calo");
 
 
@@ -107,14 +109,15 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
   ptAveBinEdges.push_back(80.);
   ptAveBinEdges.push_back(100.);
   ptAveBinEdges.push_back(120.);
-  ptAveBinEdges.push_back(140.);
-  ptAveBinEdges.push_back(170.);
-  ptAveBinEdges.push_back(200.);
-  ptAveBinEdges.push_back(250.);
-  ptAveBinEdges.push_back(300.);
-  ptAveBinEdges.push_back(350.);
-  ptAveBinEdges.push_back(400.);
-  ptAveBinEdges.push_back(1000.);
+//   ptAveBinEdges.push_back(140.);
+//   ptAveBinEdges.push_back(170.);
+//   ptAveBinEdges.push_back(200.);
+//   ptAveBinEdges.push_back(250.);
+//   ptAveBinEdges.push_back(300.);
+//   ptAveBinEdges.push_back(350.);
+//   ptAveBinEdges.push_back(400.);
+//   ptAveBinEdges.push_back(600.);
+//   ptAveBinEdges.push_back(1000.);
 
   std::vector<double> ptAveBinEdgesLog(50);
   util::HistOps::equidistLogBins(ptAveBinEdgesLog,ptAveBinEdgesLog.size()-1,ptAveBinEdges.front(),ptAveBinEdges.back());
@@ -183,7 +186,7 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
     h2->Sumw2();
     hPtAsymVsPtAveCorr[c] = h2;
 
-    h2 = new TH2D("hPtBiasAsymVsPtAveCorr"+util::toTString(c),"",ptAveBinEdges.size()-1,&(ptAveBinEdges.front()),15,0.,1.);
+    h2 = new TH2D("hPtBiasAsymVsPtAveCorr"+util::toTString(c),"",ptAveBinEdges.size()-1,&(ptAveBinEdges.front()),31,0.,1.);
     h2->Sumw2();
     hPtBiasAsymVsPtAveCorr[c] = h2;
 
@@ -639,6 +642,40 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
     leg->Draw("same");
     can->SetLogy();
     can->SaveAs(prefix+"PtBiasAsymCorrLog_PtAveBin"+util::toTString(i)+".eps","eps");
+
+    // Indicate start of tails
+    if( hPtBiasAsymCorr[0][i]->Fit("gaus","ILL0QR","",0.,hPtBiasAsymCorr[0][i]->GetMean()+2.*hPtBiasAsymCorr[0][i]->GetRMS()) == 0 ) {
+      hPtBiasAsymCorr[0][i]->GetYaxis()->SetRangeUser(3E-2,7*pow(10,log10(hPtBiasAsymCorr[0][i]->GetMaximum())+3));
+      hPtBiasAsymCorr[0][i]->Draw("PE1");
+      TF1 *fit = hPtBiasAsymCorr[0][i]->GetFunction("gaus");
+      fit->SetRange(0.,1.);
+      fit->SetLineWidth(2);
+      fit->SetLineColor(2);
+      fit->Draw("same");
+      double mean = fit->GetParameter(1);
+      double sigma = fit->GetParameter(2);
+      double min = 0.;
+      double max = 0.;
+      util::HistOps::findYRange(hPtBiasAsymCorr[0][i],min,max);
+      min = 3E-2;
+      TLine *lFitRange = new TLine(hPtBiasAsymCorr[0][i]->GetMean()+2.*hPtBiasAsymCorr[0][i]->GetRMS(),min,
+				   hPtBiasAsymCorr[0][i]->GetMean()+2.*hPtBiasAsymCorr[0][i]->GetRMS(),max);
+      lFitRange->SetLineWidth(1);
+      lFitRange->SetLineColor(4);
+      lFitRange->Draw("same");
+      for(int k = 0; k < 6; ++k) {
+	double x = mean + (2.+k)*sigma;
+	if( x > 1. ) break;
+	TLine *line = new TLine(x,min,x,max);
+	line->SetLineStyle(2);
+	line->SetLineWidth(1);
+	line->SetLineColor(4);
+	line->Draw("same");
+      }
+      labPtAveBin[i]->Draw("same");
+      can->SetLogy();
+      can->SaveAs(prefix+"StartTails_PtAveBin"+util::toTString(i)+".eps","eps");
+    }    
   }
   for(size_t i = 0; i < hPtAsymVsPtJet3Uncorr.size(); ++i) {
     TCanvas *can = new TCanvas("canPtAsymVsPtJet3Uncorr"+util::toTString(i),"Asym vs pt3",500,500);
