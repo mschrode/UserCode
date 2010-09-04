@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.13 2010/08/29 15:54:05 mschrode Exp $
+// $Id: HistOps.h,v 1.14 2010/09/04 11:56:37 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -14,6 +14,7 @@
 #include "TH1.h"
 #include "TH1D.h"
 #include "TH2.h"
+#include "TPad.h"
 #include "TString.h"
 #include "TStyle.h"
 
@@ -29,7 +30,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.13 2010/08/29 15:54:05 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.14 2010/09/04 11:56:37 mschrode Exp $
   class HistOps
   {
   public:
@@ -339,6 +340,60 @@ namespace util
       return h;
     }
 
+    // -------------------------------------------------------------------------------------
+    static TCanvas *createRatioTopCanvas() {
+      nFrames_++;      
+      TCanvas *topCan = new TCanvas("TopRatio"+toTString(nFrames_),"",500,500);
+      topCan->SetBottomMargin(0.2 + 0.8*topCan->GetBottomMargin()-0.2*topCan->GetTopMargin());
+      return topCan;
+    }
+
+    // -------------------------------------------------------------------------------------
+    static TPad *createRatioBottomPad() {
+      nFrames_++;
+      TPad *ratioPad = new TPad("BottomPad"+toTString(nFrames_),"",0,0,1,1);
+      ratioPad->SetTopMargin(0.8 - 0.8*ratioPad->GetBottomMargin()+0.2*ratioPad->GetTopMargin());
+      ratioPad->SetFillStyle(0);
+      ratioPad->SetFrameFillColor(10);
+      ratioPad->SetFrameBorderMode(0);
+      return ratioPad;
+    }
+
+    // -------------------------------------------------------------------------------------
+    static TH1 *createRatioTopFrame(const TH1 *h) {
+      nFrames_++;
+      TH1D *hFrame = static_cast<TH1D*>(h->Clone("util::HistOps::hRatioTopFrame"+toTString(nFrames_)));
+      double min = 1.;
+      double max = 0.;
+      findYRange(h,min,max);
+      hFrame->Reset();
+      hFrame->GetYaxis()->SetRangeUser(min,max);
+      hFrame->GetXaxis()->SetTitle("");
+      hFrame->GetXaxis()->SetLabelSize(0);
+      hFrame->GetYaxis()->SetTickLength(gStyle->GetTickLength("Y")/0.8);
+      return hFrame;
+    }
+
+    // -------------------------------------------------------------------------------------
+    static TH1 *createRatioTopFrame(double xMin, double xMax, double yMin, double yMax, const TString &yTitle) {
+      nFrames_++;
+      TH1D *h = new TH1D("util::HistOps::hRatioTopFrame"+toTString(nFrames_),"",1000,xMin,xMax);
+      setAxisTitles(h,"","",yTitle);
+      h->GetYaxis()->SetRangeUser(yMin,yMax);
+      h->GetXaxis()->SetLabelSize(0);
+      h->GetYaxis()->SetTickLength(gStyle->GetTickLength("Y")/0.8);
+      return h;
+    }
+
+    // -------------------------------------------------------------------------------------
+    static TH1 *createRatioBottomFrame(const TH1 *h, const TString &xTitle, const TString &xUnit, double yMin = 0.81, double yMax = 1.19) {
+      nFrames_++;
+      TH1D *hFrame = createRatioFrame(h,"",yMin,yMax);
+      setAxisTitles(hFrame,xTitle,xUnit,"");
+      hFrame->GetYaxis()->SetNdivisions(505);
+      hFrame->GetYaxis()->SetTickLength(gStyle->GetTickLength("Y")/0.2);
+      return hFrame;
+    }
 
     // -------------------------------------------------------------------------------------
     static void fillSlices(const TH2 *h2, std::vector<TH1*> &hSlices, const TString &namePrefix) {
