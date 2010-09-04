@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.12 2010/08/28 19:31:55 mschrode Exp $
+// $Id: HistOps.h,v 1.13 2010/08/29 15:54:05 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -29,7 +29,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.12 2010/08/28 19:31:55 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.13 2010/08/29 15:54:05 mschrode Exp $
   class HistOps
   {
   public:
@@ -83,16 +83,14 @@ namespace util
 
 
     // -------------------------------------------------------------------------------------
-    static void findYRange(const TH1 *h, int nLabelLines, double& min, double& max, bool log = false) {
+    static void findYRange(const TH1 *h, int nLabelLines, double& min, double& max, double logMin = -1.) {
       findYRange(h,min,max);
       double padHeight = 1. - gStyle->GetPadTopMargin() - gStyle->GetPadBottomMargin();
       double labelHeight = util::LabelFactory::lineHeight()*(1+nLabelLines) + util::LabelFactory::labelTopOffset();
-      if( log ) {
-	if( min <= 0. ) min = 3E-1;
-	//	max = exp((1.-labelHeight)*(log10(max/pow(min,labelHeight))));
+      if( logMin > 0. ) {
+	min = logMin;
 	max = pow((log10(max) - log10(min)*0.7*labelHeight/padHeight)/(1.-0.7*labelHeight/padHeight),10.);
       } else {
-	//	max = max + labelHeight/padHeight*(max-min)/(1.-labelHeight/padHeight);
 	max = (max - min*labelHeight/padHeight)/(1.-labelHeight/padHeight);
       }
     }
@@ -111,10 +109,10 @@ namespace util
 
 
     // -------------------------------------------------------------------------------------
-    static void setYRange(TH1 *h, int nLabelLines, bool log = false) {
+    static void setYRange(TH1 *h, int nLabelLines, double logMin = -1.) {
       double min = 0.;
       double max = 0.;
-      findYRange(h,nLabelLines,min,max,log);
+      findYRange(h,nLabelLines,min,max,logMin);
       h->GetYaxis()->SetRangeUser(min,max);
     }
 
