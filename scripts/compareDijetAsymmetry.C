@@ -66,7 +66,7 @@ TChain *createTChain(const TString &fileListName) {
 void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
   util::StyleSettings::presentationNoTitle();
 
-  const TString prefix = "JetMET_Run2010A-PromptReco-v4_132440-144011_DiJetAve15U_Pt3RelCuts_Eta00-13_";
+  const TString prefix = "JetMET_Run2010A-PromptReco-v4_132440-144011_DiJetAve50U_Pt3RelCuts_Eta00-13_";
   const int maxNJet = 50;
   const double minEMF = 0.01;
   const int minJetN90Hits = 2;
@@ -75,7 +75,7 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
   const double minDeltaPhi = 2.7;
   const double minEta = 0.;
   const double maxEta = 1.3;
-  const double minPtAve = 10.;
+  const double minPtAve = 60.;
   const double maxPt3Rel = 0.1;
   const double lumi = 2.214;
   const double lumiFrac = lumi/0.1;
@@ -87,7 +87,7 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
   unsigned int nChains = 2;
 
   //  TChain *data = createTChain("/afs/naf.desy.de/user/m/mschrode/Kalibri/input/Kalibri_JetMET_Run2010A-PromptReco-v4_DCSONLY"); //614 nb
-  TChain *data = createTChain("/afs/naf.desy.de/user/m/mschrode/Kalibri/input/Kalibri_JetMET_Run2010A-PromptReco-v4_DCSONLY_132440-144011_DiJetAve15U"); //2.214 pb
+  TChain *data = createTChain("/afs/naf.desy.de/user/m/mschrode/Kalibri/input/Kalibri_JetMET_Run2010A-PromptReco-v4_DCSONLY_132440-144011_DiJetAve50U"); //2.214 pb
   TChain *mc = createTChain("/afs/naf.desy.de/user/m/mschrode/Kalibri/input/Kalibri_Spring10QCDDiJet_AK5Calo");
 
 
@@ -101,23 +101,23 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
 
   // Histograms
   std::vector<double> ptAveBinEdges;
-  ptAveBinEdges.push_back(10.);
-  ptAveBinEdges.push_back(20.);
-  ptAveBinEdges.push_back(30.);
-  ptAveBinEdges.push_back(40.);
+//   ptAveBinEdges.push_back(10.);
+//   ptAveBinEdges.push_back(20.);
+//   ptAveBinEdges.push_back(30.);
+//   ptAveBinEdges.push_back(40.);
   ptAveBinEdges.push_back(60.);
   ptAveBinEdges.push_back(80.);
   ptAveBinEdges.push_back(100.);
   ptAveBinEdges.push_back(120.);
-//   ptAveBinEdges.push_back(140.);
-//   ptAveBinEdges.push_back(170.);
-//   ptAveBinEdges.push_back(200.);
-//   ptAveBinEdges.push_back(250.);
-//   ptAveBinEdges.push_back(300.);
-//   ptAveBinEdges.push_back(350.);
-//   ptAveBinEdges.push_back(400.);
-//   ptAveBinEdges.push_back(600.);
-//   ptAveBinEdges.push_back(1000.);
+  ptAveBinEdges.push_back(140.);
+  ptAveBinEdges.push_back(170.);
+  ptAveBinEdges.push_back(200.);
+  ptAveBinEdges.push_back(250.);
+  ptAveBinEdges.push_back(300.);
+  ptAveBinEdges.push_back(350.);
+  ptAveBinEdges.push_back(400.);
+  ptAveBinEdges.push_back(600.);
+  ptAveBinEdges.push_back(1000.);
 
   std::vector<double> ptAveBinEdgesLog(50);
   util::HistOps::equidistLogBins(ptAveBinEdgesLog,ptAveBinEdgesLog.size()-1,ptAveBinEdges.front(),ptAveBinEdges.back());
@@ -397,16 +397,16 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
     util::HistOps::fillSlices(hPtAsymVsPtAveCorr[c],hPtAsymCorr[c],"hPtAsymCorr"+util::toTString(c));
     util::HistOps::fillSlices(hPtBiasAsymVsPtAveCorr[c],hPtBiasAsymCorr[c],"hPtBiasAsymCorr"+util::toTString(c));
 
-    hPtAsymCorrWidthGauss[c] = util::HistOps::createTH1D("hPtAsymCorrWidthGauss"+util::toTString(c),ptAveBinEdges.size()-1,&(ptAveBinEdges.front()),"p^{ave}_{T}","GeV","#sigma(Asymmetry)");
+    hPtAsymCorrWidthGauss[c] = util::HistOps::createTH1D("hPtAsymCorrWidthGauss"+util::toTString(c),ptAveBinEdges.size()-1,&(ptAveBinEdges.front()),"p^{ave}_{T}","GeV","#sigma(Asymmetry) / p^{ave}_{T}");
     if( c == 0 ) hPtAsymCorrWidthGauss[c]->SetMarkerStyle(20);
     else hPtAsymCorrWidthGauss[c]->SetFillColor(mcColor);
     
-    hPtAsymCorrWidthStd[c] = util::HistOps::createTH1D("hPtAsymCorrWidthStd"+util::toTString(c),ptAveBinEdges.size()-1,&(ptAveBinEdges.front()),"p^{ave}_{T}","GeV","StdDev(Asymmetry)");
+    hPtAsymCorrWidthStd[c] = util::HistOps::createTH1D("hPtAsymCorrWidthStd"+util::toTString(c),ptAveBinEdges.size()-1,&(ptAveBinEdges.front()),"p^{ave}_{T}","GeV","StdDev(Asymmetry) / p^{ave}_{T}");
     if( c == 0 ) hPtAsymCorrWidthStd[c]->SetMarkerStyle(20);
     else hPtAsymCorrWidthStd[c]->SetFillColor(mcColor);
 
     for(size_t p = 0; p < hPtAsymUncorr[c].size(); ++p) {
-      util::HistOps::setAxisTitles(hPtBiasAsymCorr[c][p],"Biased Asymmetry","","events",false);
+      util::HistOps::setAxisTitles(hPtBiasAsymCorr[c][p],"|Asymmetry|","","events",false);
       if( c == 0 ) hPtBiasAsymCorr[c][p]->SetMarkerStyle(20);
       else hPtBiasAsymCorr[c][p]->SetFillColor(mcColor);
 
@@ -414,7 +414,7 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
       if( c == 0 ) hPtAsymUncorr[c][p]->SetMarkerStyle(20);
       else hPtAsymUncorr[c][p]->SetFillColor(mcColor);
       
-      util::HistOps::setAxisTitles(hPtAsymCorr[c][p],"Corrected Asymmetry","","events",false);
+      util::HistOps::setAxisTitles(hPtAsymCorr[c][p],"Asymmetry","","events",false);
       if( c == 0 ) hPtAsymCorr[c][p]->SetMarkerStyle(20);
       else hPtAsymCorr[c][p]->SetFillColor(mcColor);
       hPtAsymCorrWidthStd[c]->SetBinContent(1+p,hPtAsymCorr[c][p]->GetRMS());
@@ -425,8 +425,8 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
       }
     }
   }
-  TH1 *hPtAsymCorrWidthRatioGauss = util::HistOps::createRatioPlot(hPtAsymCorrWidthGauss[0],hPtAsymCorrWidthGauss[1],"#sigma(Asymmetry) Data / MC",0.7,1.5);
-  TH1 *hPtAsymCorrWidthRatioStd = util::HistOps::createRatioPlot(hPtAsymCorrWidthStd[0],hPtAsymCorrWidthStd[1],"StdDev(Asymmetry) Data / MC",0.7,1.5);
+  TH1 *hPtAsymCorrWidthRatioGauss = util::HistOps::createRatioPlot(hPtAsymCorrWidthGauss[0],hPtAsymCorrWidthGauss[1],"#sigma(Asymmetry)  Data / MC",0.7,1.5);
+  TH1 *hPtAsymCorrWidthRatioStd = util::HistOps::createRatioPlot(hPtAsymCorrWidthStd[0],hPtAsymCorrWidthStd[1],"StdDev(Asymmetry)  Data / MC",0.7,1.5);
 
 
 
@@ -435,7 +435,7 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
   for(size_t i = 0; i < labPtAveBin.size(); ++i) {
     labPtAveBin[i] = util::LabelFactory::createPaveText(3,-0.7);
     labPtAveBin[i]->AddText("L = "+util::toTString(lumi)+" pb^{-1},  "+util::toTString(minEta)+" < |#eta| < "+util::toTString(maxEta));
-    labPtAveBin[i]->AddText("|#Delta#phi| > "+util::toTString(minDeltaPhi)+",  p^{rel}_{T} < "+util::toTString(maxPt3Rel));
+    labPtAveBin[i]->AddText("|#Delta#phi| > "+util::toTString(minDeltaPhi)+",  p_{T,3} < "+util::toTString(maxPt3Rel)+"p^{ave}_{T}");
     labPtAveBin[i]->AddText(util::toTString(ptAveBinEdges[i])+" < p^{ave}_{T} < "+util::toTString(ptAveBinEdges[i+1])+" GeV");
   }
   TPaveText *labSpec = util::LabelFactory::createPaveText(3,-0.7);
@@ -495,7 +495,9 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
 
   TCanvas *can5 = new TCanvas("canPtAsymCorrWidthGauss","PtAsym Width Gauss",500,500);
   can5->cd();
-  util::HistOps::setYRange(hPtAsymCorrWidthGauss[1],3);
+  //  util::HistOps::setYRange(hPtAsymCorrWidthGauss[1],3);
+  hPtAsymCorrWidthGauss[1]->GetYaxis()->SetRangeUser(0.,0.2);
+  hPtAsymCorrWidthGauss[1]->GetXaxis()->SetMoreLogLabels();
   hPtAsymCorrWidthGauss[1]->Draw("HISTE");
   hPtAsymCorrWidthGauss[0]->Draw("PE1same");
   labSpec->Draw("same");
@@ -507,6 +509,7 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
   can6->cd();
   util::HistOps::createRatioFrame(hPtAsymCorrWidthRatioGauss,"#sigma(Asymmetry) Data / MC",0.7,1.8)->Draw();
   hPtAsymCorrWidthRatioGauss->Draw("PE1same");
+  hPtAsymCorrWidthRatioGauss->GetXaxis()->SetMoreLogLabels();
   labSpec->Draw("same");
   leg->Draw("same");
   can6->SetLogx();
@@ -604,6 +607,7 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
   for(size_t i = 0; i < hPtAsymCorr[0].size(); ++i) {
     TCanvas *can = new TCanvas("canPtAsymCorr"+util::toTString(i),"Asym Corr "+util::toTString(1+i),500,500);
     can->cd();
+    hPtAsymCorr[1][i]->GetXaxis()->SetRangeUser(-0.5,0.5);
     util::HistOps::setYRange(hPtAsymCorr[1][i],3);
     hPtAsymCorr[1][i]->Draw("HISTE");
     hPtAsymCorr[0][i]->Draw("PE1same");
@@ -614,9 +618,15 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
   for(size_t i = 0; i < hPtAsymCorr[0].size(); ++i) {
     TCanvas *can = new TCanvas("canPtAsymCorrLog"+util::toTString(i),"Asym Corr "+util::toTString(1+i)+" (Log)",500,500);
     can->cd();
+    hPtAsymCorr[1][i]->GetXaxis()->SetRangeUser(-1.,1.);
     hPtAsymCorr[1][i]->GetYaxis()->SetRangeUser(3E-2,7*pow(10,log10(hPtAsymCorr[1][i]->GetMaximum())+3));
     hPtAsymCorr[1][i]->Draw("HISTE");
     hPtAsymCorr[0][i]->Draw("PE1same");
+    hPtAsymCorr[0][i]->Fit("gaus","I0QLL","",-2.*hPtAsymCorr[0][i]->GetRMS(),2.*hPtAsymCorr[0][i]->GetRMS());
+    TF1 *fit = hPtAsymCorr[0][i]->GetFunction("gaus");
+    fit->SetRange(-1.,1.);
+    fit->SetLineWidth(1);
+    fit->Draw("same");
     labPtAveBin[i]->Draw("same");
     leg->Draw("same");
     can->SetLogy();
