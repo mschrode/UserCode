@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.18 2010/08/29 15:54:59 mschrode Exp $
+// $Id: Parameters.cc,v 1.19 2010/08/29 19:15:31 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -215,8 +215,8 @@ namespace resolutionFit {
 
     TString label = "";
     if( parIdx == 0 ) {
-      if( maxLikeFit ) label = "#sigma / p_{T}";
-      else label = "#sqrt{2} #sigma_{A}";
+      if( maxLikeFit ) label = "#sigma / <p^{true}_{T}>";
+      else label = "#sqrt{2} #sigma_{A} / p^{ave}_{T}";
     }
     else if( parIdx == 1 ) label = "#alpha";
     else if( parIdx == 2 ) label = "n";
@@ -289,6 +289,7 @@ namespace resolutionFit {
     if( pt3Bins() ) label += util::toTString(pt3Min(pt3Bin))+" < ";
     if( pt3Var() == Pt3Rel ) label += "p^{rel}_{T,3}";
     else if( pt3Var() == Pt3Abs ) label += "p_{T,3}";
+    else if( pt3Var() == Pp3Rel ) label = "p_{||,3} / <p^{ave}_{T}>";
     label += " < "+util::toTString(pt3Max(pt3Bin));
     if( pt3Var() == Pt3Abs ) label += " GeV";
     return label;
@@ -302,7 +303,7 @@ namespace resolutionFit {
 
 
   TString Parameters::labelTruth() const {
-    TString label = "particle";
+    TString label = "true";
     return label;
   }
 
@@ -319,10 +320,14 @@ namespace resolutionFit {
 
   TString Parameters::labelPtRef(const TString &plot) const {
     TString label = "p^{ref}_{T}";
-    if( fitMode() == FitModeMaxLikeSimple ) label = "p^{ave}_{T}";
-    else if( fitMode() == FitModeMaxLikeFull ) {
-      if( plot == "MaxLike" ) label = labelPtGen();
-      else if( plot == "PtAsym" ) label = "p^{ave}_{T}";
+    if( binPt() == BinPtGen ) {
+      label = labelPtGen();
+    } else if(binPt() == BinPtAve ) {
+      if( fitMode() == FitModeMaxLikeSimple ) label = "p^{ave}_{T}";
+      else if( fitMode() == FitModeMaxLikeFull ) {
+	if( plot == "MaxLike" ) label = labelPtGen();
+	else if( plot == "PtAsym" ) label = "p^{ave}_{T}";
+      }
     }
     return label;
   }

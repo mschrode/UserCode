@@ -1,4 +1,4 @@
-// $Id: CutVariation.cc,v 1.19 2010/08/29 15:54:58 mschrode Exp $
+// $Id: CutVariation.cc,v 1.20 2010/08/29 19:15:31 mschrode Exp $
 
 #include "CutVariation.h"
 #include "KalibriFileParser.h"
@@ -39,7 +39,7 @@ namespace resolutionFit {
 	  } else if( par_->binPt() == BinPtAve ) {
 	    if( par_->fitMode() == FitModeMaxLikeFull ) {
 	      meanPt_ = parser->meanPdfPtTrue();
-	      meanPtUncert_ = 0.;
+	      meanPtUncert_ = parser->meanPtAveUncert(); // TODO: User correct uncertainty
 	    } else if( par_->fitMode() == FitModeMaxLikeSimple ) {
 	      meanPt_ = parser->meanPtAve();
 	      meanPtUncert_ = parser->meanPtAveUncert();
@@ -183,15 +183,16 @@ namespace resolutionFit {
     if( gMax > yMax ) yMax = gMax;    
 
     double deltaY = yMax - yMin;
-    yMin -= 0.2*deltaY;
+    yMin -= 0.4*deltaY;
     if( yMin < 0. ) yMin = 0.;
-    yMax += 0.7*deltaY;
+    yMax += 1.2*deltaY;
 
     TH1 *hFrame = new TH1D(name,"",1000,xMin,xMax);
     hFrame->SetNdivisions(505);
     TString xTitle;
     if( par_->pt3Var() == Pt3Rel ) xTitle = "p^{rel}_{T,3}";
     else if( par_->pt3Var() == Pt3Abs ) xTitle = "p_{T,3}";
+    else if( par_->pt3Var() == Pp3Rel ) xTitle = "p_{||,3} / <p^{ave}_{T}>";
     if( !pt3Bins() ) xTitle += " threshold";
     if( par_->pt3Var() == Pt3Abs ) xTitle += " (GeV)";
     hFrame->SetXTitle(xTitle);

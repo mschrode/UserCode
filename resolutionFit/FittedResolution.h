@@ -27,6 +27,10 @@ namespace resolutionFit {
       assert( ptBin>=0 && ptBin<nPtBins() );
       return ptBins_[ptBin]->meanPt();
     }
+    double meanPtUncert(int ptBin) const {
+      assert( ptBin>=0 && ptBin<nPtBins() );
+      return ptBins_[ptBin]->meanPtUncert();
+    }
     double meanPtAve(int ptBin) const {
       assert( ptBin>=0 && ptBin<nPtBins() );
       return ptBins_[ptBin]->meanPtAve();
@@ -90,6 +94,7 @@ namespace resolutionFit {
 
     TF1 *trueRes_;
     TF1 *fittedRes_;
+    TF1 *fittedResAsym_;
     TF1 *ptGenAsym_;
 
     std::vector<TString> mcClosureResoLabels_;

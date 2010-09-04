@@ -98,13 +98,14 @@ namespace resolutionFit {
     TH1 *getHistPSJGenRel(const TString &newName) const { return getHist("hPSJGenRel",newName); }
     TH1 *getHistEta(const TString &newName) const { return getHist("hEta",newName); }
     TH1 *getHistDeltaPhi12(const TString &newName) const { return getHist("hDeltaPhi12",newName); }
-
+    TH1 *getHistDeltaPtJet12(const TString &newName) const { return getHist("hDeltaPtJet12",newName); }
 
     TF1 *getTF1OfVariation(int parIdx, const TString &name) const { return cutVar_.at(parIdx)->getTF1(name); }
     TF1 *getTF1OfVariationAsym(const TString &name) const { return cutVarAsym_->getTF1(name); }
     TGraphAsymmErrors *getTGraphOfVariation(int parIdx) const { return cutVar_.at(parIdx)->getTGraph(); }
     TGraphAsymmErrors *getTGraphOfVariationAsym() const { return cutVarAsym_->getTGraph(); }
     TH1 *getFrameOfVariation(int parIdx, const TString &name) const { return cutVar_.at(parIdx)->getFrame(name); }
+    TH1 *getFrameOfVariationAsym(const TString &name) const { return cutVarAsym_->getFrame(name); }
 
 
   private:
@@ -141,6 +142,7 @@ namespace resolutionFit {
     TH1 *hPSJGenRel_;
     TH1 *hEta_;
     TH1 *hDeltaPhi12_;
+    TH1 *hDeltaPtJet12_;
 
 
     TH1 *getHist(const TString &name, const TString &newName) const;

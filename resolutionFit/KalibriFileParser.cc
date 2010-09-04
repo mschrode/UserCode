@@ -1,4 +1,4 @@
-// $Id: KalibriFileParser.cc,v 1.11 2010/08/28 19:34:19 mschrode Exp $
+// $Id: KalibriFileParser.cc,v 1.12 2010/08/29 15:54:59 mschrode Exp $
 
 #include "KalibriFileParser.h"
 
@@ -43,6 +43,7 @@ namespace resolutionFit {
     hists_["hPSJGenRel"] = 0;
     hists_["hEta"] = 0;
     hists_["hDeltaPhi12"] = 0;
+    hists_["hDeltaPtJet12"] = 0;
 
 
     // Parse file
@@ -168,8 +169,8 @@ namespace resolutionFit {
 	TString name = it->first;
 	file.GetObject(name,h);
 	if( !h ) {
-	  std::cerr << "  ERROR: '" << name << "' not found." << std::endl;
-	  ioError = -2;
+	  std::cerr << "  WARNING: '" << name << "' not found." << std::endl;
+	  h = new TH1D(name,"",1,0,1);
 	} else {
 	  h->SetDirectory(0);
 	  h->UseCurrentStyle();

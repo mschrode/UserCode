@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.17 2010/08/29 15:54:59 mschrode Exp $
+// $Id: Parameters.h,v 1.18 2010/08/29 19:15:31 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -18,14 +18,14 @@ namespace resolutionFit {
 
   enum FitMode { FitModeMaxLikeFull, FitModeMaxLikeSimple };
   enum BinPt { BinPtGen, BinPtAve, BinPtJet };
-  enum Pt3Var { Pt3Rel, Pt3Abs };
+  enum Pt3Var { Pt3Rel, Pt3Abs, Pp3Rel };
 
 
   //! \brief Store parameters like binning and file names centrally
   //!
   //! \author Matthias Schroeder
   //! \date 2010/05/15
-  //! $Id: Parameters.h,v 1.17 2010/08/29 15:54:59 mschrode Exp $
+  //! $Id: Parameters.h,v 1.18 2010/08/29 19:15:31 mschrode Exp $
   // --------------------------------------------
   class Parameters {
   public:

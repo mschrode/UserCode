@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.32 2010/08/29 19:15:31 mschrode Exp $
+// $Id: run.cc,v 1.33 2010/08/29 20:57:07 mschrode Exp $
 
 #ifndef RUN_RESOLUTION_FIT
 #define RUN_RESOLUTION_FIT
@@ -43,18 +43,23 @@ int main(int argc, char *argv[]) {
     TString respType = argv[1];
     int etaBin = atoi(argv[2]);
     if( respType == "Gauss" ) {
-      outNamePrefix = "TestExtrapolation4_";
-      inNamePrefix = "~/results/ResolutionFit/TestExtrapolation_4/Res_Spring10QCDDiJet_SimpleGauss_PtAveCuts_Eta0_PpRel";
-      //      specNamePrefix = "~/results/ResolutionFit/Spring10QCDDiJet_PtGenSpectrum0030-3500_Eta00-10_Pt3";
+//       outNamePrefix = "TestExtrapolation5_Data_";
+//       inNamePrefix = "~/results/ResolutionFit/TestExtrapolation_5_Data/Res_Data_SimpleGauss_PtAveCuts_Eta0_PpCuts";
 
-      //      outNamePrefix = "ResFit_132440-143328_DiJetAve15U_SimpleGauss_PpCuts_";
-      //      inNamePrefix = "~/results/ResolutionFit/JetMET_Run2010A-PromptReco-v4_DCSONLY_132440-143328_DiJetAve15U_SimpleGauss_Pt3Rel_Eta00-13/Res_Data_SimpleGauss_PtAveCuts_Eta0_Pt3Rel";
+//         outNamePrefix = "TestLikelihood5_Data_";
+//         inNamePrefix = "~/results/ResolutionFit/TestLikelihood_5_Data/Res_Data_Gauss_PtAveCuts_Eta0_PpCuts";
+
+         outNamePrefix = "TestLikelihood5_";
+         inNamePrefix = "~/results/ResolutionFit/TestLikelihood_5/Res_Spring10QCDDiJet_Gauss_PtAveCuts_Eta0_PpRel";
+
+//       outNamePrefix = "TestExtrapolation5_";
+//       inNamePrefix = "~/results/ResolutionFit/TestExtrapolation_5/Res_Spring10QCDDiJet_SimpleGauss_PtAveCuts_Eta0_PpRel";
 
       if( etaBin == 0 ) {
 	std::cout << "Setting up parameters for eta bin " << etaBin << std::endl;
 	ptBinEdges.clear();
-//       	ptBinEdges.push_back(40.);
-//   	ptBinEdges.push_back(60.);
+//     	ptBinEdges.push_back(40.);
+	ptBinEdges.push_back(60.);
   	ptBinEdges.push_back(80.);
      	ptBinEdges.push_back(100.);
       	ptBinEdges.push_back(120.);
@@ -62,19 +67,21 @@ int main(int argc, char *argv[]) {
       	ptBinEdges.push_back(170.);
       	ptBinEdges.push_back(200.);
      	ptBinEdges.push_back(250.);
-     	ptBinEdges.push_back(300.);
-  	ptBinEdges.push_back(350.);
 
-    	ptBinEdges.push_back(400.);
-     	ptBinEdges.push_back(500.);
-     	ptBinEdges.push_back(600.);
-      	ptBinEdges.push_back(800.);
-      	ptBinEdges.push_back(1000.);
-     
-	par = new resolutionFit::Parameters(0.,1.3,2.7,inNamePrefix+"10_",ptBinEdges,2,14,outNamePrefix+"Eta00-13_",resolutionFit::ResponseFunction::Gauss,resolutionFit::FitModeMaxLikeSimple,resolutionFit::BinPtAve,verbosity);
+    	ptBinEdges.push_back(300.);
+    	ptBinEdges.push_back(350.);
+     	ptBinEdges.push_back(400.);
+      	ptBinEdges.push_back(500.);
+      	ptBinEdges.push_back(600.);
+       	ptBinEdges.push_back(800.);
+       	ptBinEdges.push_back(1000.);
+	
+	par = new resolutionFit::Parameters(0.,1.3,2.7,inNamePrefix+"10_",ptBinEdges,1,14,outNamePrefix+"Eta00-13_",resolutionFit::ResponseFunction::Gauss,resolutionFit::FitModeMaxLikeFull,resolutionFit::BinPtAve,verbosity);
 	//par->fitPtGenAsym(true);
-	//par->setParPtGenAsym(2.48795,0.158797,0.010961); old
-	par->setParPtGenAsym(2.44232,0.161563,0.0109346);
+	par->setParPtGenAsym(2.54877,0.149045,0.0109168); // 2.5sigma
+
+// 	par->isData(true);
+// 	par->setLumi(2.2);
 	par->isData(false);
 	par->setLumi(-1.);
 
@@ -91,13 +98,12 @@ int main(int argc, char *argv[]) {
 	par->setTrueGaussResPar(3.04407,1.16007,0.0348195); // MC truth Eta 0. - 1.3
 	//par->setTrueGaussResPar(2.94481,0.815236,0.0578183); // MC truth Eta 1.3 - 3
 
-	par->addPt3Threshold(resolutionFit::Pt3Rel,0.04,inNamePrefix+"04_");
-	par->addPt3Threshold(resolutionFit::Pt3Rel,0.06,inNamePrefix+"06_");
-	par->addPt3Threshold(resolutionFit::Pt3Rel,0.08,inNamePrefix+"08_");
-	par->addPt3Threshold(resolutionFit::Pt3Rel,0.10,inNamePrefix+"10_");
-	par->addPt3Threshold(resolutionFit::Pt3Rel,0.12,inNamePrefix+"12_");
- 	par->addPt3Threshold(resolutionFit::Pt3Rel,0.15,inNamePrefix+"15_");
-	//par->addPt3Threshold(resolutionFit::Pt3Rel,0.20,inNamePrefix+"Pt3Rel20_");
+	par->addPt3Threshold(resolutionFit::Pp3Rel,0.04,inNamePrefix+"04_");
+	par->addPt3Threshold(resolutionFit::Pp3Rel,0.06,inNamePrefix+"06_");
+	par->addPt3Threshold(resolutionFit::Pp3Rel,0.08,inNamePrefix+"08_");
+	par->addPt3Threshold(resolutionFit::Pp3Rel,0.10,inNamePrefix+"10_");
+	par->addPt3Threshold(resolutionFit::Pp3Rel,0.12,inNamePrefix+"12_");
+ 	par->addPt3Threshold(resolutionFit::Pp3Rel,0.15,inNamePrefix+"15_");
 	
 // 	par->addPt3Threshold(resolutionFit::Pt3Abs,6.,inNamePrefix+"Pt3Gen06_");
 // 	par->addPt3Threshold(resolutionFit::Pt3Abs,8.,inNamePrefix+"Pt3Gen08_");
@@ -114,8 +120,6 @@ int main(int argc, char *argv[]) {
 
 	//	par->addStartOffset(1.005);
 	//par->fitRatio(true);
-
-	//	par->addFileBaseNameMCClosure(inNamePrefix+"10_");
       } else {
 	std::cerr << "ERROR: '" << etaBin << "' is not a valid eta bin for '" << respType << "' response.\n";
 	exit(1);
@@ -146,8 +150,8 @@ int main(int argc, char *argv[]) {
      fit->plotMCClosure();
     
     // Print
-    fit->print();
-    //    fit->printPoints();
+    //fit->print();
+    //fit->printPoints();
     //fit->createSlides();
 
     // Clean up

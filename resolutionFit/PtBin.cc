@@ -1,4 +1,4 @@
-// $Id: PtBin.cc,v 1.19 2010/08/29 15:54:59 mschrode Exp $
+// $Id: PtBin.cc,v 1.20 2010/08/29 19:15:31 mschrode Exp $
 
 #include "PtBin.h"
 
@@ -97,7 +97,7 @@ namespace resolutionFit {
     hPSJGenRel_ = parserStdSel->hist("hPSJGenRel","hPSJGenRel_PtBin"+util::toTString(ptBinIdx()));
     hEta_ = parserStdSel->hist("hEta","hEta_PtBin"+util::toTString(ptBinIdx()));
     hDeltaPhi12_ = parserStdSel->hist("hDeltaPhi12","hDeltaPhi12_PtBin"+util::toTString(ptBinIdx()));
-
+    hDeltaPtJet12_ = parserStdSel->hist("hDeltaPtJet12","hDeltaPt12_PtBin"+util::toTString(ptBinIdx()));
     delete parserStdSel;
 
     if( par_->hasMCClosure() ) {
@@ -167,7 +167,7 @@ namespace resolutionFit {
     else if( name == "hPSJGenRel" ) h = static_cast<TH1D*>(hPSJGenRel_->Clone(newName));
     else if( name == "hEta" ) h = static_cast<TH1D*>(hEta_->Clone(newName));
     else if( name == "hDeltaPhi12" ) h = static_cast<TH1D*>(hDeltaPhi12_->Clone(newName));
-
+    else if( name == "hDeltaPtJet12" ) h = static_cast<TH1D*>(hDeltaPtJet12_->Clone(newName));
     else {
       std::cerr << "ERROR PtBin::getHist: No histogram of name '" << name << "'" << std::endl;
       exit(-1);
