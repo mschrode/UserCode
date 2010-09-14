@@ -1,4 +1,4 @@
-// $Id: StyleSettings.h,v 1.9 2010/07/27 10:07:53 mschrode Exp $
+// $Id: StyleSettings.h,v 1.10 2010/09/14 11:32:16 mschrode Exp $
 
 #ifndef STYLE_SETTINGS_H
 #define STYLE_SETTINGS_H
@@ -16,11 +16,11 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: StyleSettings.h,v 1.9 2010/07/27 10:07:53 mschrode Exp $
+  //!  $Id: StyleSettings.h,v 1.10 2010/09/14 11:32:16 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class StyleSettings {
   public:
-    enum Style = { Screen, Presentation, Paper };
+    enum Style { Screen, Presentation, Paper };
     
     static Style style() {
       Style st = Screen;
