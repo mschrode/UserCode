@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.20 2010/09/04 11:57:53 mschrode Exp $
+// $Id: Parameters.cc,v 1.21 2010/09/14 11:34:58 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -289,9 +289,16 @@ namespace resolutionFit {
     if( pt3Bins() ) label += util::toTString(pt3Min(pt3Bin))+" < ";
     if( pt3Var() == Pt3Rel ) label += "p^{rel}_{T,3}";
     else if( pt3Var() == Pt3Abs ) label += "p_{T,3}";
-    else if( pt3Var() == Pp3Rel ) label = (fitMode()==FitModeMaxLikeFull) ? "p_{||,3} / <p^{true}_{T}>" : "p_{||,3} / <p^{ave}_{T}>";
+    else if( pt3Var() == Pp3Rel ) label = "p_{||,3}";
     label += " < "+util::toTString(pt3Max(pt3Bin));
     if( pt3Var() == Pt3Abs ) label += " GeV";
+    else label += (fitMode()==FitModeMaxLikeFull) ? " <p^{true}_{T}>" : " <p^{ave}_{T}>";
+    return label;
+  }
+
+  
+  TString Parameters::labelPtSoftCut() const {
+    TString label = (fitMode()==FitModeMaxLikeFull) ? "p_{||,Soft} < 0.015 <p^{true}_{T}>" : "p_{||,Soft} < 0.015 <p^{ave}_{T}>";
     return label;
   }
 

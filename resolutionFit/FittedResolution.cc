@@ -173,6 +173,7 @@ namespace resolutionFit {
 	fPtAsym->SetParameter(2,resPtAsym[ptBin]);
 	fPtAsym->SetParameter(0,1./sqrt(2.*M_PI)/fPtAsym->GetParameter(2));	
 	fPtAsym->SetLineWidth(lineWidth_);
+	fPtAsym->SetLineStyle(2);
 	fPtAsym->SetLineColor(4);
 	
 	// Pt asymmetry from MaxLike
@@ -184,18 +185,25 @@ namespace resolutionFit {
 	fMaxLike->SetLineColor(2);
 
 	// Labels
-	//TPaveText *label = util::LabelFactory::createPaveText(3,-0.45);
-	TPaveText *label = util::LabelFactory::createPaveText(1);
-	//	label->AddText(par_->labelLumi()+",  "+par_->labelEtaBin());
-	label->AddText(par_->labelPtBin(ptBin)+",  "+par_->labelPt3Cut(c));
-	//label->AddText(par_->labelPt3Cut(c));
-
-	//	TLegend *leg = util::LabelFactory::createLegendCol(3,0.55);
-	TLegend *leg = util::LabelFactory::createLegendWithOffset(3,1);
-	leg->SetTextSize(0.04);
-	leg->AddEntry(hPtAsym,"Measurement","P");
+	TPaveText *label = 0;
+	TLegend *leg = 0;
+	if( util::StyleSettings::style() == util::StyleSettings::Presentation ) {
+	  label = util::LabelFactory::createPaveText(1);
+	  label->AddText(par_->labelPtBin(ptBin)+",  "+par_->labelPt3Cut(c));
+	  leg = util::LabelFactory::createLegendWithOffset(3,1);
+	  leg->SetTextSize(0.04);
+	} else {
+	  label = util::LabelFactory::createPaveText(4,-0.4);	  
+	  label->AddText(par_->labelLumi()+",  "+par_->labelEtaBin());	
+	  label->AddText(par_->labelPtSoftCut());
+	  label->AddText(par_->labelPt3Cut(c));
+	  label->AddText(par_->labelPtBin(ptBin));
+	  leg = util::LabelFactory::createLegendCol(3,0.5);
+	}
+	if( par_->isData() ) leg->AddEntry(hPtAsym,"Data","P");
+	else leg->AddEntry(hPtAsym,"Measurement","P");
 	leg->AddEntry(fPtAsym,"Binned Fit","L");
-	leg->AddEntry(fMaxLike,"Maximum Likelihood Fit","L");
+	leg->AddEntry(fMaxLike,"Likelihood Fit","L");
 
 	// Draw
 	TCanvas *can = new TCanvas("PtAsymmetry","PtAsymmetry ("+util::toTString(ptBin)+" "+util::toTString(c)+")",500,500);
@@ -283,7 +291,7 @@ namespace resolutionFit {
       gResMaxLike->SetMarkerColor(2);
       gResMaxLike->SetLineColor(2);
       TGraphErrors *gResPtAsym = new TGraphErrors(ptMeanPtAsym.size(),&(ptMeanPtAsym.front()),&(resPtAsym.front()),&(ptMeanPtAsymErr.front()),&(resPtAsymErr.front()));
-      gResPtAsym->SetMarkerStyle(24);
+      gResPtAsym->SetMarkerStyle(25);
       gResPtAsym->SetMarkerColor(4);
       gResPtAsym->SetLineColor(4);
       TGraphErrors *gRatio = new TGraphErrors(ptMeanMaxLike.size(),&(ptMeanMaxLike.front()),&(resRatio.front()),&(ptMeanMaxLikeErr.front()),&(resRatioErr.front()));
@@ -291,18 +299,22 @@ namespace resolutionFit {
       gRatio->SetMarkerColor(2);
       gRatio->SetLineColor(gRatio->GetMarkerColor());
 
-//       TPaveText *label = util::LabelFactory::createPaveText(2,-0.5);
-//       label->AddText(par_->labelLumi()+",  "+par_->labelEtaBin());
-//       label->AddText(par_->labelPt3Cut(c));
-
-      TPaveText *label = util::LabelFactory::createPaveText(1);
-      label->AddText(par_->labelPt3Cut(c));
-
-      //TLegend *leg = util::LabelFactory::createLegendCol(2,0.5);
-      TLegend *leg = util::LabelFactory::createLegendWithOffset(2,1);
-      leg->SetTextSize(0.045);
+      TPaveText *label = 0;
+      TLegend *leg = 0;
+      if( util::StyleSettings::style() == util::StyleSettings::Presentation ) {
+	label = util::LabelFactory::createPaveText(1);
+	label->AddText(par_->labelPtSoftCut()+",  "+par_->labelPt3Cut(c));
+	leg = util::LabelFactory::createLegendWithOffset(2,1);
+	leg->SetTextSize(0.045);
+      } else {
+	label = util::LabelFactory::createPaveText(3,-0.4);
+	label->AddText(par_->labelLumi()+",  "+par_->labelEtaBin());
+	label->AddText(par_->labelPt3Cut(c));
+	label->AddText(par_->labelPtSoftCut());
+	leg = util::LabelFactory::createLegendCol(3,0.5);
+      }
       leg->AddEntry(gResPtAsym,"Binned Fit","P");
-      leg->AddEntry(gResMaxLike,"Maximum Likehood Fit","P");
+      leg->AddEntry(gResMaxLike,"Likelihood Fit","P");
 
       TH1 *hFrame = new TH1D("FittedResolutions",";"+par_->labelPtRef()+" (GeV);#sigma(Asymmetry) / "+par_->labelPtRef(),1000,0.9*ptMin(),1.1*ptMax());
       double yMin = *(std::min_element(gResMaxLike->GetY(),gResMaxLike->GetY()+gResMaxLike->GetN()));
@@ -334,7 +346,7 @@ namespace resolutionFit {
       TCanvas *bRatioTopCan = util::HistOps::createRatioTopCanvas();
       TPad *bRatioBottomPad = util::HistOps::createRatioBottomPad();
       TH1 *bRatioTopFrame = util::HistOps::createRatioTopFrame(hFrame);
-      TH1 *bRatioBottomFrame = util::HistOps::createRatioBottomFrame(hFrame,"p^{ave}_{T}","GeV",0.81,1.19);
+      TH1 *bRatioBottomFrame = util::HistOps::createRatioBottomFrame(hFrame,par_->labelPtRef(),"GeV",0.81,1.19);
     
       bRatioTopCan->cd();
       bRatioTopFrame->GetYaxis()->SetRangeUser(1E-3,2.5*yMax);
@@ -417,18 +429,24 @@ namespace resolutionFit {
 	fAsym->SetLineStyle(2);
 	
 	// Draw label
-	//	TPaveText *txt = util::LabelFactory::createPaveText(2,-0.5);
-	TPaveText *txt = util::LabelFactory::createPaveText(1);
-	//	txt->AddText(par_->labelLumi()+", "+par_->labelEtaBin());
-	txt->AddText(par_->labelPtBin(ptBin));
-
-	//	TLegend *leg = util::LabelFactory::createLegendCol(2,0.47);
-	TLegend *leg = util::LabelFactory::createLegendWithOffset(2,1);
-	leg->AddEntry(g,"Maximum Likelihood Fit","P");
+	TPaveText *txt = 0;
+	TLegend *leg = 0;
+	TLegend *legAsym = 0;
+	if( util::StyleSettings::style() == util::StyleSettings::Presentation ) {
+	  txt = util::LabelFactory::createPaveText(1);
+	  txt->AddText(par_->labelPtBin(ptBin));
+	  leg = util::LabelFactory::createLegendWithOffset(2,1);
+	  legAsym = util::LabelFactory::createLegendWithOffset(2,1);
+	} else {
+	  txt = util::LabelFactory::createPaveText(3,-0.4);
+	  txt->AddText(par_->labelLumi()+", "+par_->labelEtaBin());
+	  txt->AddText(par_->labelPtSoftCut());
+	  txt->AddText(par_->labelPtBin(ptBin));
+	  leg = util::LabelFactory::createLegendCol(2,0.45);
+	  legAsym = util::LabelFactory::createLegendCol(2,0.45);
+	}
+	leg->AddEntry(g,"Likelihood Fit","P");
 	leg->AddEntry(f,"Extrapolation","L");
-
-	//	TLegend *legAsym = util::LabelFactory::createLegendCol(2,0.47);
-	TLegend *legAsym = util::LabelFactory::createLegendWithOffset(2,1);
 	legAsym->AddEntry(g,"Binned Fit","P");
 	legAsym->AddEntry(f,"Extrapolation","L");
 
@@ -578,24 +596,25 @@ namespace resolutionFit {
     h->GetYaxis()->SetRangeUser(0.,max);
 
     // Create labels
-    TPaveText *txt = 0;
-    if( par_->extendedLegend() ) {
-      txt = util::LabelFactory::createPaveText(2);
-      txt->AddText("PYTHIA, #sqrt{s} = 7 TeV, "+par_->labelLumi());
-      txt->AddText("Anti-k_{T} d = 0.5 jets, "+par_->labelEtaBin());
-    } else {
-      //txt = util::LabelFactory::createPaveText(1,-0.4);
-      txt = util::LabelFactory::createPaveText(1,0.8);
-      txt->AddText(par_->labelLumi()+", "+par_->labelEtaBin());
-    }
-
     int nLegEntries = 2;
     if( par_->hasCorrPtGenAsym() ) nLegEntries += 2;
     if( par_->fitPtGenAsym() ) nLegEntries++;
     if( par_->fitExtrapolatedSigma() ) nLegEntries++;
 
-    //TLegend *legMaxLike = util::LabelFactory::createLegendCol(nLegEntries,0.6);
-    TLegend *legMaxLike = util::LabelFactory::createLegendColWithOffset(nLegEntries,0.8,1);
+    TPaveText *txt = 0;
+    TLegend *legMaxLike = 0;
+    TLegend *legPtAsym = 0;
+    if( util::StyleSettings::style() == util::StyleSettings::Presentation ) {
+      txt = util::LabelFactory::createPaveText(1,-0.4);
+      legMaxLike = util::LabelFactory::createLegendColWithOffset(nLegEntries,0.8,1);
+      legPtAsym = util::LabelFactory::createLegendColWithOffset(nLegEntries,0.8,1);
+    } else {
+      txt = util::LabelFactory::createPaveText(1,0.6);
+      legMaxLike = util::LabelFactory::createLegendColWithOffset(nLegEntries,0.6,1);
+      legPtAsym = util::LabelFactory::createLegendColWithOffset(nLegEntries,0.6,1);
+    }
+    txt->AddText(par_->labelLumi()+", "+par_->labelEtaBin());
+
     legMaxLike->AddEntry(gMaxLikeStat,"Likelihood Fit","P");
     if( par_->hasCorrPtGenAsym() ) {
       if( par_->fitPtGenAsym() ) {
@@ -609,8 +628,6 @@ namespace resolutionFit {
     if( par_->fitExtrapolatedSigma() ) legMaxLike->AddEntry(fittedRes_,"Interpolated Resolution","L");
     legMaxLike->AddEntry(trueRes_,"MC Truth Resolution","L");
 
-    //    TLegend *legPtAsym = util::LabelFactory::createLegendCol(nLegEntries,0.6);
-    TLegend *legPtAsym = util::LabelFactory::createLegendColWithOffset(nLegEntries,0.8,1);
     legPtAsym->AddEntry(gPtAsymStat,"Asymmetry","P");
     if( par_->hasCorrPtGenAsym() ) {
       if( par_->fitPtGenAsym() ) {
@@ -972,15 +989,25 @@ namespace resolutionFit {
       util::HistOps::setYRange(hPdfPtTrue,5);
 
       // Labels
-      //      TPaveText *txt = util::LabelFactory::createPaveText(2,-0.55);
-      TPaveText *txt = util::LabelFactory::createPaveText(1);
-      txt->AddText(par_->labelPtBin(ptBin)+",  "+par_->labelPt3Cut());
-      //      txt->AddText(par_->labelEtaBin()+",  "+par_->labelPt3Cut());
-      TLegend *legPtGen = util::LabelFactory::createLegendCol(2,0.45);
+      TPaveText *txt = 0;
+      TLegend *legPtGen = 0;
+      TLegend *legPtGenJet1 = 0;
+      if( util::StyleSettings::style() == util::StyleSettings::Presentation ) {
+	txt = util::LabelFactory::createPaveText(1);
+	txt->AddText(par_->labelPtBin(ptBin)+",  "+par_->labelPt3Cut());
+	legPtGen = util::LabelFactory::createLegendCol(2,0.45);
+	legPtGenJet1 = util::LabelFactory::createLegendColWithOffset(2,-0.6,1);
+      } else {
+	txt = util::LabelFactory::createPaveText(4,-0.4);
+	txt->AddText(par_->labelEtaBin());	
+	txt->AddText(par_->labelPtSoftCut());
+	txt->AddText(par_->labelPt3Cut());
+	txt->AddText(par_->labelPtBin(ptBin));
+	legPtGen = util::LabelFactory::createLegendCol(2,0.5);
+	legPtGenJet1 = util::LabelFactory::createLegendCol(2,0.45);
+      }
       legPtGen->AddEntry(hPtGen,"MC truth: p^{gen}_{T,1+2}","P");
       legPtGen->AddEntry(hPdfPtTrue,"Spectrum  f(p^{"+par_->labelTruth()+"}_{T})","L");
-      //TLegend *legPtGenJet1 = util::LabelFactory::createLegendCol(2,0.45);
-      TLegend *legPtGenJet1 = util::LabelFactory::createLegendColWithOffset(2,-0.6,1);
       legPtGenJet1->AddEntry(hPtGenJet1,"MC truth: p^{gen}_{T,1}","P");
       legPtGenJet1->AddEntry(hPdfPtTrue,"Spectrum  f(p^{"+par_->labelTruth()+"}_{T})","L");
 
