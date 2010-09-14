@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.33 2010/08/29 20:57:07 mschrode Exp $
+// $Id: run.cc,v 1.34 2010/09/04 11:57:53 mschrode Exp $
 
 #ifndef RUN_RESOLUTION_FIT
 #define RUN_RESOLUTION_FIT
@@ -46,19 +46,19 @@ int main(int argc, char *argv[]) {
 //       outNamePrefix = "TestExtrapolation5_Data_";
 //       inNamePrefix = "~/results/ResolutionFit/TestExtrapolation_5_Data/Res_Data_SimpleGauss_PtAveCuts_Eta0_PpCuts";
 
-//         outNamePrefix = "TestLikelihood5_Data_";
-//         inNamePrefix = "~/results/ResolutionFit/TestLikelihood_5_Data/Res_Data_Gauss_PtAveCuts_Eta0_PpCuts";
+//          outNamePrefix = "TestLikelihood5_Data_";
+//          inNamePrefix = "~/results/ResolutionFit/TestLikelihood_5_Data/Res_Data_Gauss_PtAveCuts_Eta0_PpCuts";
 
-         outNamePrefix = "TestLikelihood5_";
-         inNamePrefix = "~/results/ResolutionFit/TestLikelihood_5/Res_Spring10QCDDiJet_Gauss_PtAveCuts_Eta0_PpRel";
+      outNamePrefix = "TestLikelihood5_";
+      inNamePrefix = "~/results/ResolutionFit/TestLikelihood_5/Res_Spring10QCDDiJet_Gauss_PtAveCuts_Eta0_PpRel";
 
 //       outNamePrefix = "TestExtrapolation5_";
-//       inNamePrefix = "~/results/ResolutionFit/TestExtrapolation_5/Res_Spring10QCDDiJet_SimpleGauss_PtAveCuts_Eta0_PpRel";
+//       inNamePrefix = "~/results/ResolutionFit/TestExtrapolation_5_allBins/Res_Spring10QCDDiJet_SimpleGauss_PtAveCuts_Eta0_PpRel";
 
       if( etaBin == 0 ) {
 	std::cout << "Setting up parameters for eta bin " << etaBin << std::endl;
 	ptBinEdges.clear();
-//     	ptBinEdges.push_back(40.);
+// 	ptBinEdges.push_back(40.);
 	ptBinEdges.push_back(60.);
   	ptBinEdges.push_back(80.);
      	ptBinEdges.push_back(100.);
@@ -68,22 +68,22 @@ int main(int argc, char *argv[]) {
       	ptBinEdges.push_back(200.);
      	ptBinEdges.push_back(250.);
 
-    	ptBinEdges.push_back(300.);
-    	ptBinEdges.push_back(350.);
-     	ptBinEdges.push_back(400.);
-      	ptBinEdges.push_back(500.);
-      	ptBinEdges.push_back(600.);
-       	ptBinEdges.push_back(800.);
-       	ptBinEdges.push_back(1000.);
+     	ptBinEdges.push_back(300.);
+     	ptBinEdges.push_back(350.);
+      	ptBinEdges.push_back(400.);
+       	ptBinEdges.push_back(500.);
+       	ptBinEdges.push_back(600.);
+	ptBinEdges.push_back(800.);
+	ptBinEdges.push_back(1000.);
 	
 	par = new resolutionFit::Parameters(0.,1.3,2.7,inNamePrefix+"10_",ptBinEdges,1,14,outNamePrefix+"Eta00-13_",resolutionFit::ResponseFunction::Gauss,resolutionFit::FitModeMaxLikeFull,resolutionFit::BinPtAve,verbosity);
 	//par->fitPtGenAsym(true);
 	par->setParPtGenAsym(2.54877,0.149045,0.0109168); // 2.5sigma
 
-// 	par->isData(true);
-// 	par->setLumi(2.2);
-	par->isData(false);
-	par->setLumi(-1.);
+//  	par->isData(true);
+//  	par->setLumi(2.2);
+ 	par->isData(false);
+ 	par->setLumi(-1.);
 
 	
 	//par->setTrueGaussResPar(3.249,1.0954,0.0457); // Spring10 QCDDiJet
@@ -120,6 +120,9 @@ int main(int argc, char *argv[]) {
 
 	//	par->addStartOffset(1.005);
 	//par->fitRatio(true);
+
+	//par->addFileBaseNameMCClosure(inNamePrefix+"10_");
+
       } else {
 	std::cerr << "ERROR: '" << etaBin << "' is not a valid eta bin for '" << respType << "' response.\n";
 	exit(1);
@@ -145,8 +148,8 @@ int main(int argc, char *argv[]) {
      fit->plotResolution();
      fit->plotPtAsymmetry();
      fit->plotSpectra();
-     fit->plotAdditionalJetActivity();
-     fit->plotControlDistributions();
+     //fit->plotAdditionalJetActivity();
+     //fit->plotControlDistributions();
      fit->plotMCClosure();
     
     // Print

@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.18 2010/08/29 19:15:31 mschrode Exp $
+// $Id: Parameters.h,v 1.19 2010/09/04 11:57:53 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -25,7 +25,7 @@ namespace resolutionFit {
   //!
   //! \author Matthias Schroeder
   //! \date 2010/05/15
-  //! $Id: Parameters.h,v 1.18 2010/08/29 19:15:31 mschrode Exp $
+  //! $Id: Parameters.h,v 1.19 2010/09/04 11:57:53 mschrode Exp $
   // --------------------------------------------
   class Parameters {
   public:
@@ -143,6 +143,7 @@ namespace resolutionFit {
     TString labelPt3Cut(int ptBin) const;
     TString labelPtGen() const;
     TString labelPtMeas() const;
+    TString labelPtTrue() const;
     TString labelPtRef(const TString &plot = "") const;
     TString xAxisTitleResponse() const;
     TString yAxisTitleResponse() const;

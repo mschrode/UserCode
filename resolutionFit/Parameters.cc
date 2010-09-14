@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.19 2010/08/29 19:15:31 mschrode Exp $
+// $Id: Parameters.cc,v 1.20 2010/09/04 11:57:53 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -268,7 +268,7 @@ namespace resolutionFit {
 
   TString Parameters::labelLumi() const {
     TString label;
-    if( lumi() < 0 ) label = "MC Stats";
+    if( lumi() < 0 ) label = "MC Statistic";
     else label = "L = "+util::toTString(lumi())+" pb^{-1}";
     return label;
   }
@@ -289,7 +289,7 @@ namespace resolutionFit {
     if( pt3Bins() ) label += util::toTString(pt3Min(pt3Bin))+" < ";
     if( pt3Var() == Pt3Rel ) label += "p^{rel}_{T,3}";
     else if( pt3Var() == Pt3Abs ) label += "p_{T,3}";
-    else if( pt3Var() == Pp3Rel ) label = "p_{||,3} / <p^{ave}_{T}>";
+    else if( pt3Var() == Pp3Rel ) label = (fitMode()==FitModeMaxLikeFull) ? "p_{||,3} / <p^{true}_{T}>" : "p_{||,3} / <p^{ave}_{T}>";
     label += " < "+util::toTString(pt3Max(pt3Bin));
     if( pt3Var() == Pt3Abs ) label += " GeV";
     return label;
@@ -314,6 +314,11 @@ namespace resolutionFit {
 
 
   TString Parameters::labelPtGen() const {
+    return "p^{gen}_{T}";
+  }
+
+
+  TString Parameters::labelPtTrue() const {
     return "p^{"+labelTruth()+"}_{T}";
   }
 

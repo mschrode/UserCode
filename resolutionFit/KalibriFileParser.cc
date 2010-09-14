@@ -1,4 +1,4 @@
-// $Id: KalibriFileParser.cc,v 1.12 2010/08/29 15:54:59 mschrode Exp $
+// $Id: KalibriFileParser.cc,v 1.13 2010/09/04 11:57:53 mschrode Exp $
 
 #include "KalibriFileParser.h"
 
@@ -170,7 +170,7 @@ namespace resolutionFit {
 	file.GetObject(name,h);
 	if( !h ) {
 	  std::cerr << "  WARNING: '" << name << "' not found." << std::endl;
-	  h = new TH1D(name,"",1,0,1);
+	  it->second = new TH1D(name,"",1,0,1);
 	} else {
 	  h->SetDirectory(0);
 	  h->UseCurrentStyle();
