@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.14 2010/09/04 11:56:37 mschrode Exp $
+// $Id: HistOps.h,v 1.15 2010/09/04 15:23:07 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -30,7 +30,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.14 2010/09/04 11:56:37 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.15 2010/09/04 15:23:07 mschrode Exp $
   class HistOps
   {
   public:
@@ -169,10 +169,8 @@ namespace util
 
     // -------------------------------------------------------------------------------------
     static TH1D *createRatioFrame(double xMin, double xMax, double yMin, double yMax, const TString &xTitle, const TString &yTitle) {
-      TString name = "util::HistOps::hRatioFrame";
-      name += nFrames_;
       ++nFrames_;
-      TH1D *h = new TH1D(name,"",1000,xMin,xMax);
+      TH1D *h = new TH1D("util::HistOps::hRatioFrame"+toTString(nFrames_),"",1000,xMin,xMax);
       for(int xBin = 1; xBin <= h->GetNbinsX(); ++xBin) {
 	h->SetBinContent(xBin,1.);
       }
@@ -203,8 +201,10 @@ namespace util
 
     // -------------------------------------------------------------------------------------
     static TH1D *createRatioFrame(const TH1 *h, const TString &yTitle, double yMin, double yMax) {
+      ++nFrames_;
       TString name = "Frame_";
       name += h->GetName();
+      name += nFrames_;
       TH1D *hFrame = 0;
       bool hasConstBinWidth = true;
       for(int bin = 2; bin <= h->GetNbinsX(); ++bin) {
@@ -390,7 +390,7 @@ namespace util
       nFrames_++;
       TH1D *hFrame = createRatioFrame(h,"",yMin,yMax);
       setAxisTitles(hFrame,xTitle,xUnit,"");
-      hFrame->GetYaxis()->SetNdivisions(505);
+      hFrame->GetYaxis()->SetNdivisions(205);
       hFrame->GetYaxis()->SetTickLength(gStyle->GetTickLength("Y")/0.2);
       return hFrame;
     }

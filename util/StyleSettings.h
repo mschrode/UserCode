@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: StyleSettings.h,v 1.9 2010/07/27 10:07:53 mschrode Exp $
 
 #ifndef STYLE_SETTINGS_H
 #define STYLE_SETTINGS_H
@@ -16,10 +16,19 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: $
+  //!  $Id: StyleSettings.h,v 1.9 2010/07/27 10:07:53 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class StyleSettings {
   public:
+    enum Style = { Screen, Presentation, Paper };
+    
+    static Style style() {
+      Style st = Screen;
+      TString mode = gStyle->GetTitle();
+      if( mode = "Presentation" ) st = Presentation;
+      else if( mode = "Paper" ) st = Paper;
+      return st;
+    }
     static void screen() { setStyle("Screen",true); }
     static void screenNoTitle() { setStyle("Screen",false); }
     static void paper() { setStyle("Paper",true); }
