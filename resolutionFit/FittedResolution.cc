@@ -1986,13 +1986,15 @@ namespace resolutionFit {
       graph->SetMarkerStyle(26);
     } else {
       if( corrected ) {
-	graph->SetMarkerStyle(25);
+	if( util::StyleSettings::style() == util::StyleSettings::Presentation ) graph->SetMarkerStyle(21);
+	else graph->SetMarkerStyle(25);
 	if( par_->isData() ) {
 	  graph->SetMarkerColor(2);
 	  graph->SetLineColor(graph->GetMarkerColor());
 	}
       } else {
-	graph->SetMarkerStyle(24);
+	if( util::StyleSettings::style() == util::StyleSettings::Presentation ) graph->SetMarkerStyle(20);
+	else graph->SetMarkerStyle(24);
 	if( par_->isData() ) {
 	  graph->SetMarkerColor(2);
 	  graph->SetLineColor(graph->GetMarkerColor());
