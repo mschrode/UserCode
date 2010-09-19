@@ -1,7 +1,9 @@
-% $Id: Note_ResFit_ToyMC.tex,v 1.4 2010/07/08 14:32:36 mschrode Exp $
+% $Id: Note_ResFit_ToyMC.tex,v 1.5 2010/07/13 17:26:14 mschrode Exp $
 
 
 \section{Study with a Toy Monte Carlo Simulation}\label{sec:ResFit:ToyMC}
+
+\fixme{Shorter}
 
 The method presented in the previous Section~\ref{sec:ResFit:Method}
 is studied using a simple simulation, \textit{Toy Monte Carlo}.
@@ -27,8 +29,8 @@ Two independent measurements of the jet \pt have been simulated by
 weighting \pttrue with random numbers drawn from a Gaussian response
 \begin{equation}
   \label{eq:ResFit:ToyMC:Response}
-  r_{\mathbf{\xi}}\left(\ptmeas|\pttrue\right) = 
-  \frac{1}{\sqrt{2\pi}\sigma}\exp\left[-\frac{1}{2}\left(\frac{\ptmeas - \pttrue}{\sigma}\right)^{2}\right]
+  r_{\mathbf{\xi}}\left(\pt|\pttrue\right) = 
+  \frac{1}{\sqrt{2\pi}\sigma}\exp\left[-\frac{1}{2}\left(\frac{\pt - \pttrue}{\sigma}\right)^{2}\right]
 \end{equation}
 (Here and in the following the jet index $i$ has been omitted.)
 The standard deviation, i.e. the jet resolution, $\sigma$ has been parametrised as a function of \pttrue and
@@ -69,7 +71,7 @@ in~\eqref{eq:ResFit:ToyMC:Sigma}.
   \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_ResolutionBin7} \\      
 \end{tabular}
 \caption{Simple simulation of a sample of ideal dijet events.
-  Generated true response \mbox{$\ptmeas / \pttrue$} (histogram) and
+  Generated true response \mbox{$\pt / \pttrue$} (histogram) and
   the response (solid line) from the maximum likelihood fit in two
   different \pttrue bins.
   The latter has been evaluated for the mean \pttrue in these bins.
@@ -159,7 +161,7 @@ Events are selected by requiring the measured \pt of the
 first\footnote{This is that one jet of the two leading jets the
   selection requirement is placed on, i.e. not necessarily the leading
   jet (comp. Section~\ref{sec:ResFit:Method:Biases}).} jet to
-meet \mbox{$\ptmin = 80 < \ptmeasi{1} < \ptmax = 800\gev$} (comp. Fig.~\ref{fig:ResFit:ToyMC:PtCuts:Spectrum}).
+meet \mbox{$\ptmin = 80 < \pti{1} < \ptmax = 800\gev$} (comp. Fig.~\ref{fig:ResFit:ToyMC:PtCuts:Spectrum}).
 
 \begin{figure}[ht]
   \centering
@@ -170,7 +172,7 @@ meet \mbox{$\ptmin = 80 < \ptmeasi{1} < \ptmax = 800\gev$} (comp. Fig.~\ref{fig:
   \caption{Demonstration of the migration effects caused by a data
     driven event selection.
     Shown is the \pttrue spectrum (circular markers) after
-    requiring \mbox{$80 < \ptmeas < 800\gev$}, in linear scale
+    requiring \mbox{$80 < \pt < 800\gev$}, in linear scale
     (\textit{left}) and logarithmic scale scale (\textit{right}).
     The spectrum is well described by the modified pdf
     $\tilde{f}(\pttrue)$.
@@ -186,10 +188,10 @@ meet \mbox{$\ptmin = 80 < \ptmeasi{1} < \ptmax = 800\gev$} (comp. Fig.~\ref{fig:
     \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_ResolutionBin1} &
     \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_ResolutionBin7} \\
   \end{tabular}
-  \caption{Generated Gaussian response \mbox{$\ptmeas / \pttrue$}
+  \caption{Generated Gaussian response \mbox{$\pt / \pttrue$}
     (circular markers) and the fitted
     response (solid line) in two different \pttrue bins after
-    requiring \mbox{$80 < \ptmeas < 800\gev$}.
+    requiring \mbox{$80 < \pt < 800\gev$}.
     Note the migration effects (\textit{left}): the narrow peak at the
     right side is populated by the first jets in each event, i.e. that have been cut on, and hence these are jets fluctuating upwards into the \pt bin.
     The wider peak centred around 1 is populated by the unconstrained
@@ -213,7 +215,7 @@ meet \mbox{$\ptmin = 80 < \ptmeasi{1} < \ptmax = 800\gev$} (comp. Fig.~\ref{fig:
     The shaded areas represent the propagated statistical
     uncertainty on the fitted parameter values, taking into account the
     parameter correlations.
-    The fit has been performed with dijet events selected by requiring \mbox{$80 < \ptmeas < 800\gev$}.}
+    The fit has been performed with dijet events selected by requiring \mbox{$80 < \pt < 800\gev$}.}
   \label{fig:ResFit:ToyMC:PtCuts:FittedSigma}
 \end{figure}
 
@@ -225,7 +227,8 @@ meet \mbox{$\ptmin = 80 < \ptmeasi{1} < \ptmax = 800\gev$} (comp. Fig.~\ref{fig:
     the fitted values.
     The uncertainties assigned to the fitted values
     are the statistical uncertainties from the fit.
-    The fit has been performed with dijet events selected by requiring \mbox{$80 < \ptmeas < 800\gev$}.}
+    The fit has been performed with dijet events selected by requiring
+    \mbox{$80 < \pt < 800\gev$}.}
   \centering
   \begin{tabular}[ht]{lccc}
     \toprule

@@ -5,6 +5,8 @@
 \usepackage{cancel}
 \usepackage{xspace}
 
+\newcommand{\fixme}[1]{\textcolor{red}{{\textbf{FIXME: }\textit{#1}}}}
+
 % Sectioning
 \newcommand{\qsec}[1]{Section~\ref{#1}}
 \newcommand{\qfig}[1]{Fig.~\ref{#1}}
@@ -35,20 +37,19 @@
 \newcommand{\ptvec}{\ensuremath{\vec{p}_{\text{T}}}\xspace}
 \newcommand{\ptsub}[1]{\ensuremath{p_{\text{T},#1}}\xspace}
 \newcommand{\ptvecsub}[1]{\ensuremath{\vec{p}_{\text{T},#1}}\xspace}
-\newcommand{\ptdijet}{\ensuremath{p^{\text{dijet}}_{\text{T}}}\xspace}
+\newcommand{\ptave}{\ensuremath{p^{\text{dijet}}_{\text{T}}}\xspace}
 \newcommand{\ptgen}{\ensuremath{p^{\text{gen}}_{\text{T}}}\xspace}
 \newcommand{\pthat}{\ensuremath{\hat{p}_{\text{T}}}\xspace}
 \newcommand{\pttrue}{\ensuremath{p^{\text{true}}_{\text{T}}}\xspace}
 \newcommand{\pttruehigh}[1]{\ensuremath{p^{\text{true,#1}}_{\text{T}}}\xspace}
 \newcommand{\ptrel}{\ensuremath{p^{\text{rel}}_{\text{T},3}}\xspace}
-\newcommand{\ptmeas}{\ensuremath{p^{\text{meas}}_{\text{T}}}\xspace}
-\newcommand{\ptmeasi}[1]{\ensuremath{p^{\text{meas}}_{\text{T},#1}}\xspace}
 \newcommand{\ptcalo}{\ensuremath{p^{\text{calo}}_{\text{T}}}\xspace}
 \newcommand{\ptcaloi}[1]{\ensuremath{p^{\text{calo}}_{\text{T},#1}}\xspace}
 \newcommand{\ptmin}{\ensuremath{\pt^{\text{min}}}\xspace}
 \newcommand{\ptmax}{\ensuremath{\pt^{\text{max}}}\xspace}
-\newcommand{\ptparticle}{\ensuremath{p^{\text{particle}}_{\text{T}}}\xspace}
 \newcommand{\ptreco}{\ensuremath{\pt(\text{reco})}\xspace}
+\newcommand{\pp}{\ensuremath{p_{||}}\xspace}
+\newcommand{\ppi}[1]{\ensuremath{p_{||,#1}}\xspace}
 
 % Symbols
 \newcommand{\dif}[1]{\ensuremath{\text{d}#1}\xspace}
