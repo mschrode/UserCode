@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.35 2010/09/14 11:34:58 mschrode Exp $
+// $Id: run.cc,v 1.36 2010/09/14 22:06:24 mschrode Exp $
 
 #ifndef RUN_RESOLUTION_FIT
 #define RUN_RESOLUTION_FIT
@@ -43,8 +43,8 @@ int main(int argc, char *argv[]) {
     TString respType = argv[1];
     int etaBin = atoi(argv[2]);
     if( respType == "Gauss" ) {
-//       outNamePrefix = "TestExtrapolation5_Data_";
-//       inNamePrefix = "~/results/ResolutionFit/TestExtrapolation_5_Data/Res_Data_SimpleGauss_PtAveCuts_Eta0_PpCuts";
+      outNamePrefix = "MaxLikeSimple_Data132440-144011_";
+      inNamePrefix = "~/results/ResolutionFit/TestExtrapolation_5_Data/Res_Data_SimpleGauss_PtAveCuts_Eta0_PpCuts";
 
 //          outNamePrefix = "TestLikelihood5_Data_";
 //          inNamePrefix = "~/results/ResolutionFit/TestLikelihood_5_Data/Res_Data_Gauss_PtAveCuts_Eta0_PpCuts";
@@ -55,8 +55,8 @@ int main(int argc, char *argv[]) {
 //       outNamePrefix = "TestExtrapolation5_";
 //       inNamePrefix = "~/results/ResolutionFit/TestExtrapolation_5_allBins/Res_Spring10QCDDiJet_SimpleGauss_PtAveCuts_Eta0_PpRel";
 
-      outNamePrefix = "MaxLike_";
-      inNamePrefix = "~/CMS/ResolutionFitResults/TestLikelihood_5/Res_Spring10QCDDiJet_Gauss_PtAveCuts_Eta0_PpRel";
+//       outNamePrefix = "MaxLike_";
+//       inNamePrefix = "~/CMS/ResolutionFitResults/TestLikelihood_5/Res_Spring10QCDDiJet_Gauss_PtAveCuts_Eta0_PpRel";
 
 //       outNamePrefix = "MaxLike_Data132440-144011_";
 //       inNamePrefix = "~/CMS/ResolutionFitResults/TestLikelihood_5_Data/Res_Data_Gauss_PtAveCuts_Eta0_PpCuts";
@@ -74,22 +74,22 @@ int main(int argc, char *argv[]) {
       	ptBinEdges.push_back(200.);
      	ptBinEdges.push_back(250.);
 
-       	ptBinEdges.push_back(300.);
-       	ptBinEdges.push_back(350.);
-        	ptBinEdges.push_back(400.);
-         	ptBinEdges.push_back(500.);
-         	ptBinEdges.push_back(600.);
-  	ptBinEdges.push_back(800.);
-  	ptBinEdges.push_back(1000.);
+//        	ptBinEdges.push_back(300.);
+//        	ptBinEdges.push_back(350.);
+// 	ptBinEdges.push_back(400.);
+// 	ptBinEdges.push_back(500.);
+// 	ptBinEdges.push_back(600.);
+//   	ptBinEdges.push_back(800.);
+//   	ptBinEdges.push_back(1000.);
 	
-	par = new resolutionFit::Parameters(0.,1.3,2.7,inNamePrefix+"10_",ptBinEdges,1,14,outNamePrefix+"Eta00-13_",resolutionFit::ResponseFunction::Gauss,resolutionFit::FitModeMaxLikeFull,resolutionFit::BinPtAve,verbosity);
+	par = new resolutionFit::Parameters(0.,1.3,2.7,inNamePrefix+"10_",ptBinEdges,1,7,outNamePrefix+"Eta00-13_",resolutionFit::ResponseFunction::Gauss,resolutionFit::FitModeMaxLikeSimple,resolutionFit::BinPtAve,verbosity);
 	//par->fitPtGenAsym(true);
 	par->setParPtGenAsym(2.54877,0.149045,0.0109168); // 2.5sigma
 
-//    	par->isData(true);
-//    	par->setLumi(2.2);
-   	par->isData(false);
-   	par->setLumi(-1.);
+    	par->isData(true);
+    	par->setLumi(2.2);
+//    	par->isData(false);
+//    	par->setLumi(-1.);
 
 	
 	//par->setTrueGaussResPar(3.249,1.0954,0.0457); // Spring10 QCDDiJet
