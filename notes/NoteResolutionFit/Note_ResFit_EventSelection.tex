@@ -2,6 +2,28 @@
 
 \subsection{Samples}
 
+The maximum likelihood method is also tested on a sample of simulated QCD multijet events in $pp$ collisions at 7\tev centre-of-mass energy.
+They have been generated with PYTHIA and processed through the full CMS detector simulation application based on GEANT4\footnote{The used data set is \texttt{/QCDFlat\_Pt15to3000/Spring10-START3X\_V26\_S09-v1/GEN-SIM-RECO}}.
+The events are weighted corresponding to an integrated luminosity of 50\pbinv.
+
+
 \subsection{Event Selection}
+
+
+Jets are reconstructed from calorimeter towers using the anti-$k_{T}$ jet clustering algorithm~\cite{bib:akj} with parameter size $d=0.5$.
+Jet energy corrections~\cite{bib:cmspas:jec} are applied to remove the $\eta$ and \pt dependence of the jet energy scale.
+Dijet events are selected in the following way:
+\begin{enumerate}
+\item The third jet is required to have small \pt compared to the leading two jets by imposing \mbox{$\ptrel < x$}, with \mbox{$\ptrel = \frac{2\pti{3}}{\pti{1} + \pti{2}}$}, in order to ensure a dijet topology.
+  The value of $x$ is varied in course of the analysis as discussed in Section~\ref{sec:ResFit:QCDMC:AddJetAct}.
+\item Both leading jets are required to be in the same pseudorapidity bin, which are defined in Table~\ref{tab:ResFit:QCDMC:MCTruthReso}.
+  This accounts for the dependence of the jet \pt response on $\eta$ due to
+  \begin{itemize}
+  \item different calorimeter geometries and material budgets in front of the calorimeters in different pseudorapidity regions;
+  \item the fact that the intrinsic calorimeter resolution is energy rather than \pt dependent.
+  \end{itemize}
+\item In order to reject jets clustered from noise in the hadronic calorimeter component, the fraction $f_{\text{em}}$ of energy deposited in the electromagnetic component is required to be \mbox{$f_{\text{em}} > 0.01$} for both leading jets~\cite{bib:cmspas:jetid}.
+\end{enumerate}
+The jet \ptgen spectrum of the leading two jets after the dijet selection above is shown in Figure~\ref{fig:ResFit:QCDMC:MCTruthReso} (\textit{left}).
 
 \subsection{Trigger Efficiencies}

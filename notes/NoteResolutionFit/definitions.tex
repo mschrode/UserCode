@@ -1,4 +1,4 @@
-% $ Id: $
+% $Id: $
 
 % Required pacakges
 \usepackage{amsmath}
@@ -10,6 +10,7 @@
 % Sectioning
 \newcommand{\qsec}[1]{Section~\ref{#1}}
 \newcommand{\qfig}[1]{Fig.~\ref{#1}}
+\newcommand{\qsubfig}[2]{Fig.~\ref{#1}~(\textit{#2})}
 \newcommand{\qtab}[1]{Table~\ref{#1}}
 \newcommand{\qeq}[1]{\eqref{#1}}
 
@@ -37,7 +38,9 @@
 \newcommand{\ptvec}{\ensuremath{\vec{p}_{\text{T}}}\xspace}
 \newcommand{\ptsub}[1]{\ensuremath{p_{\text{T},#1}}\xspace}
 \newcommand{\ptvecsub}[1]{\ensuremath{\vec{p}_{\text{T},#1}}\xspace}
-\newcommand{\ptave}{\ensuremath{p^{\text{dijet}}_{\text{T}}}\xspace}
+\newcommand{\ptave}{\ensuremath{p^{\text{ave}}_{\text{T}}}\xspace}
+\newcommand{\ptavemin}{\ensuremath{p^{\text{ave,min}}_{\text{T}}}\xspace}
+\newcommand{\ptavemax}{\ensuremath{p^{\text{ave,max}}_{\text{T}}}\xspace}
 \newcommand{\ptgen}{\ensuremath{p^{\text{gen}}_{\text{T}}}\xspace}
 \newcommand{\pthat}{\ensuremath{\hat{p}_{\text{T}}}\xspace}
 \newcommand{\pttrue}{\ensuremath{p^{\text{true}}_{\text{T}}}\xspace}

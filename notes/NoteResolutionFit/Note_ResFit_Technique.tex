@@ -1,9 +1,7 @@
-% $Id: Note_ResFit_Technique.tex,v 1.7 2010/07/13 17:26:14 mschrode Exp $
+% $Id: Note_ResFit_Technique.tex,v 1.8 2010/09/19 18:12:08 mschrode Exp $
 
 
 \section{Description of the Method}\label{sec:ResFit:Method}
-
-\subsection{Definition of the dijet likelihood}\label{sec:ResFit:Method:Likelihood}
 
 \fixme{Imbalance, assumptions}
 
@@ -18,7 +16,7 @@ The underlying assumptions of the presented method are
 Based on these, the pdf of a measured dijet event configuration is defined as
 \begin{equation}
   \label{eq:ResFit:DijetPdf}
-  g_{\mathbf{\xi}}\left(\pti{1},\pti{2}\right) \propto \int^{\infty}_{0}\dif{\pttrue}\,f\left(\pttrue\right)
+  g_{\mathbf{\xi}}\left(\pti{1},\pti{2}\right) \propto \int^{\infty}_{0}\dif{\pttrue}\;f\left(\pttrue\right)
   \cdot r_{\mathbf{\xi}}\left(\pti{1}|\pttrue\right)
   \cdot r_{\mathbf{\xi}}\left(\pti{2}|\pttrue\right).
 \end{equation}
@@ -37,18 +35,21 @@ Here,
   It is parametrised with a suitable function depending on the set of
   parameters $\mathbf{\xi}$, e.g. a Gauss or Crystal Ball function.
 \end{itemize}
+\fixme{itemize $\rightarrow$ sentences}
 It is important to note that
 $g_{\mathbf{\xi}}(\pti{1},\pti{2})$ does not depend on \pttrue
 as this is the integration variable.
 
 If $f(\pttrue)$ and $r_{\mathbf{\xi}}(\pti{i}|\pttrue)$ are properly normalised in the considered interval \mbox{$\pttruehigh{min} < \pttrue < \pttruehigh{max}$} such that
-\begin{eqnarray*}
-  1 & = & \int^{\pttruehigh{max}}_{\pttruehigh{max}}\dif{\pttrue}\,f\left(\pttrue\right) \\
-  1 & = & \int^{\infty}_{0}\dif{\pti{i}}\,r_{\mathbf{\xi}}\left(\pti{i}|\pttrue\right)
-\end{eqnarray*}
+\begin{align}
+  \begin{split}
+    1 & = \int^{\pttruehigh{max}}_{\pttruehigh{max}}\dif{\pttrue}\;f\left(\pttrue\right) \\
+    1 & = \int^{\infty}_{0}\dif{\pti{i}}\;r_{\mathbf{\xi}}\left(\pti{i}|\pttrue\right)
+  \end{split}
+\end{align}
 then also the dijet pdf is properly normalised to
 \begin{equation*}
-  1 = \int^{\infty}_{0}\dif{\pti{1}}\,\int^{\infty}_{0}\dif{\pti{2}}\, g_{\mathbf{\xi}}\left(\pti{1},\pti{2}\right),
+  1 = \int^{\infty}_{0}\dif{\pti{1}}\;\int^{\infty}_{0}\dif{\pti{2}}\; g_{\mathbf{\xi}}\left(\pti{1},\pti{2}\right),
 \end{equation*}
 provided the integration order of $\pti{i}$ and $\pttrue$ can be interchanged.
 
@@ -70,41 +71,24 @@ The pdf of the jet \pt response \mbox{$R_{i}\equiv\pti{i} / \pttrue$} is obtaine
 
 \fixme{Elaborate on $r$ in pdf $\rightarrow$ arbitrary response function}
 
-
-
-\subsection{Description of the selection bias in a data driven event selection}\label{sec:ResFit:Method:Biases}
-
-The method described above is not entirely data driven in the sense that the binning is performed in terms
-of the jet $\pttrue$.
-This quantity is not known for collider data and has to be replaced by a measurable quantity. 
-
-Binning in terms of the jet \pt leads to a measurement bias due to migration effects at the edges of 
-the selected \pt range, referred to as (\textit{selection bias}) in the following.
-The source of the bias is a combination of the steeply falling dijet \pt spectrum and a finite jet energy resolution:
-First, there are jets that fluctuate into the selected \pt interval, and second, there are more jets that fluctuate high than jets that fluctuate low in \pt.
-The selected sample would therefore be biased toward jets of lower $\pttrue$ that fluctuated high in the detector.
-
-The dijet probability density function in ~\eqref{eq:ResFit:DijetPdf} is modified in order to avoid the described selection bias.
-For reasons of simple mathematical description, events are selected for a particular interval if the \pt of either the leading or the second leading jet satisfies $\ptmin < \pt < \ptmax$.
-If the condition is met by both jets, they enter the histogram twice.
-In order to include a description of this selection into the dijet probability density function, first, the allowed range of measured \pt is restricted for the jet the \pt cut is applied to.
-Second, the probability density function of the true \pt is extended to incorporate the events migrating into the allowed \pt range:
+\fixme{Now Gaussian response\dots}
+The dijet pdf~\qeq{eq:ResFit:DijetPdf} has been defined as a function
+of \pti{1} and \pti{2}.
+In what follows, the coordinates
+\begin{align}
+  \label{eq:ResFit:TransformedCoordinates}
+  \begin{split}
+    \Delta\pt  &  = \frac{1}{2}\left(\pti{1}-\pti{2}\right) \\
+    \ptave     &  = \frac{1}{2}\left(\pti{1}+\pti{2}\right)
+  \end{split}
+\end{align} 
+which are especially suited for a Gaussian response are being used.
+With these coordinates, the dijet pdf~\qeq{eq:ResFit:DijetPdf} becomes
 \begin{equation}
-  \label{eq:ResFit:Method:ModifiedSpectrum}
-  \tilde{f}\left(\pttrue\right) = \frac{1}{\mathcal{N}_{\tilde{f}}}
-  f\left(\pttrue\right) \int^{\ptmax}_{\ptmin}\dif{x}\,r_{0}\left(x|\pttrue\right) \; ,
+  \label{eq:ResFit:DijetPdfTransformed}
+   g_{\sigma'}\left(\Delta\pt,\ptave\right) \propto
+   \e^{-\frac{1}{2}\left(\frac{\Delta\pt}{\sigma'}\right)^{2}}\cdot
+   \int\dif{\pttrue}\;f\left(\pttrue\right)\cdot
+   \e^{-\frac{1}{2}\left(\frac{\ptave - \pttrue}{\sigma'}\right)^{2}}.
 \end{equation}
-where $r_{0}(x|\pttrue)$ is the jet \pt response function that is taken from the Monte Carlo simulation here.
-The influence of the assumed response $r_{0}(x|\pttrue)$ on the measured response $r(\pt|\pttrue)$ is small (Section~\ref{sec:ResFit:QCDMC:Gauss}) and considered as a systematic uncertainty (Section~\ref{}).
-
-Two things are worth noting about the data driven event selection discussed above:
-First, had the selection criterion always been applied to the first
-jet, i.e. the jet with the highest \pt, an additional bias would have been introduced by the fact that the first jet has usually been fluctuating upwards.
-This bias is not described by the modified probability density function~\eqref{eq:ResFit:Method:ModifiedSpectrum}.
-Second, the binning could also have been done in terms of the average dijet \pt.
-In that case the modification of the probability density function,
-however, would have been more complicated as the selection depends on
-the \pt of both jets.
-
-\fixme{New event selection; this subsection maybe later, at extension of
-  unbinned fit of asymmetry or Toy MC studies?}
+Note that \pti{1} and \pti{2}, and thus likewise \ptave and $\Delta\pt$, are considered to be uncorrelated.

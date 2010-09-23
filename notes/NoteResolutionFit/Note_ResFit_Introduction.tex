@@ -1,4 +1,4 @@
-% $Id: Note_ResFit_Introduction.tex,v 1.9 2010/07/13 17:26:14 mschrode Exp $
+% $Id: Note_ResFit_Introduction.tex,v 1.10 2010/09/19 18:12:08 mschrode Exp $
 
 
 \section{Introduction}
@@ -28,3 +28,30 @@ In case that other event types are included into the likelihood, such as $\gamma
 
 The studies included in this note are performed on jets that have been reconstructed from calorimeter towers, although the method is general and may be applied to any type of detector level jet.
 
+
+
+\fixme{Incorporate\ldots}
+The unbinned fitting method by maximisation of the
+likelihood~\qeq{eq:ResFit:Likelihood} has, however, certain advantages in
+comparison to a more robust binned fit to the histogram of the asymmetry distribution.
+For example, it enables an unambigous
+determination of asymmetric response functions and has a high sensitivity to
+extremely low populated regions of the response function.
+These abilities are in particular important w.r.t. application in
+the QCD background estimation for the SUSY search.
+In this note, a measurement only of a Gaussian response is discussed,
+however.
+Moreover, biases due to the event selection are explicitly considered
+in the likelihood.
+Therefore a better estimator of the particle level jet \pt is provided
+as argument for the fitted resolution.
+Finally, the response can in principle be measured simultaneosly
+also for different event types, such as $\gamma+$jet events and in different
+$\eta$ regions, thus increasing the covered $\pt$ range and the amount
+of available events.
+
+The extension of the dijet pdf with an assumption for the particle
+level jet \pt is discussed in the following; by this extension,
+additionally a description of biases in the event selection can be
+included into the likelihood. and it is a neccessity in order to be
+able to fit arbitrary, not necessarily Gaussian, response functions.
