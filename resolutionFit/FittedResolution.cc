@@ -605,7 +605,7 @@ namespace resolutionFit {
     TLegend *legMaxLike = 0;
     TLegend *legPtAsym = 0;
     if( util::StyleSettings::style() == util::StyleSettings::Presentation ) {
-      txt = util::LabelFactory::createPaveText(1,-0.4);
+      txt = util::LabelFactory::createPaveText(1,0.8);
       legMaxLike = util::LabelFactory::createLegendColWithOffset(nLegEntries,0.8,1);
       legPtAsym = util::LabelFactory::createLegendColWithOffset(nLegEntries,0.8,1);
     } else {
