@@ -1,4 +1,4 @@
-% $Id: Note_ResFit_Technique.tex,v 1.8 2010/09/19 18:12:08 mschrode Exp $
+% $Id: Note_ResFit_Technique.tex,v 1.9 2010/09/23 18:16:42 mschrode Exp $
 
 
 \section{Description of the Method}\label{sec:ResFit:Method}
@@ -92,3 +92,35 @@ With these coordinates, the dijet pdf~\qeq{eq:ResFit:DijetPdf} becomes
    \e^{-\frac{1}{2}\left(\frac{\ptave - \pttrue}{\sigma'}\right)^{2}}.
 \end{equation}
 Note that \pti{1} and \pti{2}, and thus likewise \ptave and $\Delta\pt$, are considered to be uncorrelated.
+
+
+\fixme{Move here\ldots}
+The dijet pdf~\qeq{eq:ResFit:DijetPdf} is in fact equivalent to a pdf of the dijet
+asymmetry with an additional assumption for the underlying particle
+level jet spectrum, as will be shown in this section.
+
+The dijet asymmetry is defined as
+\begin{equation}\label{eq:ResFit:Asymmetry}
+  A = \frac{\pti{1'}-\pti{2'}}{\pti{1'}+\pti{2'}},
+\end{equation}
+where \pti{1'} and \pti{2'} refer to the randomly ordered transverse momenta of the
+leading two jets in an event.
+In case of events with exactly two jets of same particle level jet
+transverse momentum \pt and Gaussian response, the width $\sigma(A)$ of the asymmetry distribution is
+related to the jet \pt resolution $\sigma$ by
+\begin{equation}
+  \label{eq:ResFit:ResFromAsym}
+  \sigma(A) = \frac{1}{\sqrt{2}}\frac{\sigma}{\pt}.
+\end{equation}
+\fixme{What is balanced are the partons!}
+
+If the spectrum $f$ in the dijet pdf~\qeq{eq:ResFit:DijetPdfTransformed} is replaced by \mbox{$f(\pttrue)  = \delta\left(\pttrue - \ptave\right)$}, i.e. the assumption \mbox{$\pttrue = \ptave$}, 
+\qeq{eq:ResFit:DijetPdfTransformed} simplifies to
+\begin{equation}
+\label{eq:ResFit::DijetPdfTransformed:Simple}
+  g_{\sigma'}\left(\Delta\pt\right) \propto
+  \e^{-\frac{1}{2}\left(\frac{\Delta\pt}{\sigma'}\right)^{2}}, 
+\end{equation}
+with \mbox{$\sigma' = \sigma/\sqrt{2}$}.
+This corresponds to the pdf of the asymmetry in the event, assuming
+Gaussian response.

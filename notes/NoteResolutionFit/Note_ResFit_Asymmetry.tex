@@ -1,8 +1,29 @@
 \section{Data Driven Application}
 
-\fixme{List effects in data}
+In the following, the resolution measurement in Collider data is
+discussed.
 
-\subsection{Fit of the Dijet Asymmetry}
+\qsec{sec:ResFit:Asym:SimpleFit} is devoted to the comparison of the performance of a
+binned and an unbinned fit of the dijet asymmetry.
+The completely analogue case is demonstrated in
+\qsec{sec:ResFit:Asym:SimpleFit} where the likelihood is simplified by replacing the spectrum
+with the assumption \mbox{$\pttrue = \ptave$}.
+Since the unbinned fit is more sensitive to non-Gaussian tails, an outlier
+suppression technique is introduced.
+In \qsec{sec:ResFit:Asym:FullFit}, the full dijet pdf, including an assumption for the
+spectrum and a description of selection biases, is finally used to fit the asymmetry;
+the spectrum is also used to derive a better estimator for \ptgen.
+
+As discussed in \qsec{sec:ResFit:AddJets}, additional jets in the events, e.g. from soft gluon radiation, as
+well as out-of-cone effects during the jet clustering bias the dijet asymmery and have to be
+corrected for when measuring the resolution.
+The contributions to the bias are investigated in detail in \qsec{sec:ResFit:AddJets:Contributions} and
+in \qsec{sec:ResFit:AddJets:Extrapolation} a correction method is presented using an extrapolation of
+the resolution to the ideal two jet case.
+
+
+
+\subsection{Fit of the Dijet Asymmetry}\label{sec:ResFit:Asym}
 
 The dijet pdf~\qeq{eq:ResFit:DijetPdf} is in fact equivalent to a pdf of the dijet
 asymmetry with an additional assumption for the underlying particle
@@ -21,21 +42,7 @@ related to the jet \pt resolution $\sigma$ by
   \label{eq:ResFit:ResFromAsym}
   \sigma(A) = \frac{1}{\sqrt{2}}\frac{\sigma}{\pt}.
 \end{equation}
-
-Additional acitivity in the events, e.g. from soft gluon radiation, as
-well as out-of-cone effects during the jet clustering bias the dijet asymmery and have to be
-corrected for when measuring the resolution.
-That is discussed in detail in \qsec {sec:ResFit:AddJets}; the rest of
-this section is devoted to the comparison of the performance of a
-binned and an unbinned fit of the dijet asymmetry.
-The completely analogue case is demonstrated in
-\qsec{sec:ResFit:Asym:SimpleFit} where the likelihood is simplified by replacing the spectrum
-with the assumption \mbox{$\pttrue = \ptave$}.
-Since the unbinned fit is more sensitive to non-Gaussian tails, an outlier
-suppression technique is introduced.
-In \qsec{sec:ResFit:Asym:FullFit}, the full dijet pdf, including an assumption for the
-spectrum, is finally used to fit the asymmetry;
-the spectrum is also used to derive a better estimator for \ptgen.
+\fixme{What is balanced are the partons!}
 
 
 \subsubsection{Simple Maximum Likelihood Fit and Outlier Treatment}\label{sec:ResFit:Asym:SimpleFit}
@@ -147,67 +154,27 @@ This extension to $f$ depends solely on the fitted parameter $\sigma'$ and does 
 
 
 
-
-
 \subsection{Influence of Additional Hadronic Activity and Hadronisation Effects}\label{sec:ResFit:AddJets}
-
-Additional acitivity in the events, e.g. from soft gluon radiation, as
-well as out-of-cone effects during the jet clustering bias the dijet asymmery and have to be
-
 
 \subsubsection{Contributions to the Dijet Asymmetry}\label{sec:ResFit:AddJets:Contributions}
 
+In \qsubfig{fig:ResFit:AddJets:Bias}{left}, the standard deviations of
+the asymmetry distribution, multiplied by a factor $\sqrt{2}$,
+are shown for various \ptgen bins for simulated dijets.
+According to~\qeq{eq:ResFit:ResFromAsym} these should corresond to the
+jet \pt resolution.
+However, they are greater than the MC truth resolutions for the
+following reasons.
 The dijet asymmetry~\qeq{eq:ResFit:Asymmetry} is defined under the assumption of exactly two jets which are balanced in transverse momentum at particle level.
-Additional jet acitivity in the events, e.g. from soft gluon radiation, cause an imbalance of the leading two jets and hence broaden the measured asymmetry distribution.
-This is demonstrated in \qsubfig{fig:ResFit:AddJets:Bias}{left} in simulated data.
-The total standard deviation of the measured dijet asymmetry distribution, multiplied by $\sqrt{2}$ (comp.~\qeq{eq:ResFit:ResFromAsym}), is greater than the MC truth resolution.
-
-
-As illustrated in \qsubfig{fig:ResFit:AddJets:Bias}{right}, not the absolute \pt of the additional jets, however, affects the balance, but rather the component along the dijet axis $\phi_{||}$, defined as the direction normal to the angle bisector of the leading two jets.
-In the following, the parallel \pt components of the third and all further (\textit{soft}) jets are defined as
-\begin{align}
-  \begin{split}
-    \ppi{3}           & =  |\pti{3}\cos(\phi_{3}-\phi_{||})| \\
-    \ppi{\text{Soft}} & =  |\sum_{i>3}\pti{i}\cos(\phi_{i}-\phi_{||})| \,.
-  \end{split}
-\end{align}
-
- thus consists of a contribution from the real asymmetry of the measured leading two jets, i.e. the jet resolution, 
-
-\begin{equation*}
-  Total = \textcolor{red}{\sigma(R_{\text{MC}})} \oplus \textcolor{blue}{\sigma(\ppi{3})} \oplus \textcolor{purple}{\sigma(\ppi{\text{Soft}})} \oplus \textcolor{beamerGreen}{\sqrt{2}\sigma(A_\text{gen})}
-\end{equation*}
-
-
-Per bin, the \pt components along the dijet axis $\phi_{||}$ of the third and all further jets,
-
-
-
-This effect is investigated in detail in \qfig{};
-
-
- as
-well as out-of-cone effects during the jet clustering bias the dijet asymmery and have to be
-
-
-Any additional jet in the event, e.g. from soft gluon radiation, with a component of \pt along the dijet
-axis\footnote{The dijet axis $\phi_{||}$ is defined as the direction normal to the angle bisector of the leading two jets.} causes an imbalance and hence broadens the  which biases the measured resolution, as
-illustrated in Fig.~\ref{fig:qcd:resolMaxlike:biasAddJets}.
-
-
-Additional jet acitivity as
-well as out-of-cone effects during the jet clustering bias the dijet asymmery and have to be
-
-
-The dijet probability density function
-in~\eqref{eq:qcd:resolMaxlike:dijetPdf} is constructed under the
-assumption of \pt balance at particle jet level.
+Additional jet acitivity in the events, e.g. from soft gluon
+radiation, causes an imbalance of the leading two jets and hence
+broadens the measured asymmetry distribution.
 
 \begin{figure}[ht]
   \label{fig:ResFit:AddJets:Bias}
   \centering
   \begin{tabular}{cc}
-    \includegraphics[width=0.45\textwidth]{figures/Spring10QCDDiJet_ParallelComponent_hParallelContributions}\\
+    \includegraphics[width=0.45\textwidth]{figures/Spring10QCDDiJet_ParallelComponent_hParallelContributions} &
     \includegraphics[width=0.45\textwidth]{figures/Sketch_Projections}
   \end{tabular}
   \caption{\mbox{$|\Delta\phi_{12}| > 2.7$} (\textit{Left}) Definition of the dijet axis $\phi_{||}$, the direction normal to the
@@ -224,67 +191,80 @@ assumption of \pt balance at particle jet level.
   }
 \end{figure}
 
+As illustrated in \qsubfig{fig:ResFit:AddJets:Bias}, not the
+absolute \pt of the additional jets actually affects the balance, but rather the component along the dijet axis, $\phi_{||}$, defined as the direction normal to the angle bisector of the leading two jets.
+The parallel \pt components of the third and all further
+(\textit{soft}) jets may be defined as
+\begin{align}
+  \begin{split}
+    \ppi{3}               & =  |\pti{3}\cos(\phi_{3}-\phi_{||})| \\
+    \ppi{\text{Soft}} & =  |\sum_{i>3}\pti{i}\cos(\phi_{i}-\phi_{||})| \,.
+  \end{split}
+\end{align}
+The total standard deviation of the measured dijet asymmetry
+distribution (multiplied by $\sqrt{2}$) can hence be understood as the
+quadratic sum of the underlying dijet asymmetry due to the jet \pt response,
+$\sigma(R_{\text{MC}})$, and the standard deviations of the \pp
+distributions, $\sigma(\ppi{3})$ and
+$\sigma(\ppi{\text{Soft}})$,
+\begin{equation}
+  \label{eq:ResFit:TotalAsym}
+  \text{Total} = \sigma(R_{\text{MC}}) \oplus \sigma(\ppi{3}) \oplus
+  \sigma(\ppi{\text{Soft}}) \oplus \sqrt{2}\sigma(A^{\text{gen}}) \,.
+\end{equation}
+
+The transverse momentum balance assumed for the particle level jets
+actually takes place at parton level.
+Owing to the fragmentation and hadronisation, fluctuations in the
+fraction of energy of the original partons clustered into jets are
+expected (out-of-cone).
+This is an additional process introducing an imbalance in the
+dijet events and the contribution is estimated using the \ptgen
+asymmetry, $A^{\text{gen}}$, in perfect
+two jet events.
+The standard deviation $\sqrt{2}\sigma(A^{\text{gen}})$ is also added in quadrature to
+$\sigma(R_{\text{MC}})$, hence the last term in~\qeq{eq:ResFit:TotalAsym}.
+
+The dijet pdf~\qeq{eq:ResFit:DijetPdf} has been shown to be equivalent
+to the asymmetry and has also been defined under the assumption of \pt
+balance at particle jet level.
+Hence it will be biased by the same effects.
+
+
 
 \subsubsection{Correction for Additional Hadronic Activity}\label{sec:ResFit:AddJets:Extrapolation}
 
-
-
-\fixme{Motivate binned approach}
-
-In order to compensate for the influence of additional jet activity,
-events are selected in reasonably small bins of \ptave.
-The selection bias (Section~\ref{sec:ResFit:Method:Biases}) is incorporated in the probability density function as before, comp. Fig.~\ref{fig:ResFit:QCDMC:Extrapolation:Gauss:ExBin:SpectrumAndExtrapolation} (\textit{left}).
-The approach chosen in the following is to define sufficiently small bins of jet \pt and measure the w.r.t. \pt average response in each bin for different limits \mbox{$\ptrel<x$}.
-This is motivated by the fact that in case of a Gaussian response parametrisation (Section~\ref{sec:ResFit:QCDMC:Gauss}) there is then only one parameter $\bar{\sigma}$, which can be extrapolated relatively straight forward.
-The chosen \pt and $\eta$ binning is listed in Table~\ref{tab:ResFit:QCDMC:Extrapolation:Binning}.
-\begin{table}[ht]
-  \caption{Definition of \pt bins for the fit of the mean Gaussian resolution.}
-  \centering
-  \begin{tabular}{cl|ccccccccc}
-    \toprule
-    \multicolumn{2}{c}{$|\eta|$ bin} & \multicolumn{9}{c}{\pt bin edges $(\text{Ge}\kern-0.06667em\text{V})$} \\
-    \midrule
-    \multirow{2}{*}{$0$} & \multirow{2}{*}{$(0 - 1.2)$} & 80 & 100 & 120 & 140 & 170 & 200 & 250 & 300 & 350 \\
-    && 400 & 500 & 600 & 800 & 1000 \\
-    $1$ & $(1.2 - 2.6)$ & 60 & 80 & 100 & 120 & 150 & 200 & 300 &  500 & 700 \\
-    $2$ & $(2.6 - 3.2)$ & 80 & 100 & 150 &&&&&&\\
-    \bottomrule
-  \end{tabular}
-  \label{tab:ResFit:QCDMC:Extrapolation:Binning}
-\end{table}
-
-Was the Gaussian parametrised with a \pt dependent $\sigma$ as e.g. in~\eqref{eq:ResFit:ToyMC:Sigma}, the correlation of the parameter $\xi_{i}$ of $\sigma$ would have to be taken into account in contrast.
-Note that this is exactly the case for the Crystal Ball response parametrisation (Section~\ref{sec:ResFit:QCDMC:CrystalBall}), and additional work is foreseen to de-correlate the parameters $\sigma$, $\alpha$, and $n$.
-
-
-Per bin, the \pt components along the dijet axis $\phi_{||}$ of the third and all further jets,
-\begin{eqnarray*}
-  \ppi{3} & = & |\pti{3}\cos(\phi_{3}-\phi_{||})| \\
-  \ppi{\text{Soft}} & = & |\sum_{i>3}\pti{i}\cos(\phi_{i}-\phi_{||})|,
-\end{eqnarray*}
-are restricted to
-\begin{eqnarray*}
-  \ppi{3} & < & z\cdot\mean{\pttrue} \\
-  \ppi{\text{Soft}} & < & 0.015\cdot\mean{\pttrue},
-\end{eqnarray*}
+In order to compensate for the presence of additional jets,
+events are selected\footnote{The resulting selection bias is incorporated in the dijet pdf as
+before, comp. \qsec{sec:ResFit:Asym:FullFit}.} in reasonably small bins of \ptave.
+Per bin, the \pp components of the third and all further jets are restricted to
+\begin{align}
+  \label{eq:ResFit:ThirdJetSelection}
+  \begin{split}
+    \ppi{3}                & < z\cdot\mean{\pttrue} \\
+    \ppi{\text{Soft}}  & < 0.015\cdot\mean{\pttrue},
+ \end{split}
+\end{align}
 where $\mean{\pttrue}$ is the mean particle level jet \pt in that bin
-as computed from the assumed spectrum $f(\pttrue)$
-in~\eqref{eq:qcd:resolMaxlike:toyMC:ptCuts:extendedSpectrum}.
+as estimated from the assumed spectrum
+$f$ in~\qeq{eq:ResFit:Asym:ModifiedSpectrum}.
 Several sets of dijet events are selected, each with a different
 threshold $z$ of \ppi{3}, and the mean Gaussian response with \pt
-independent resolution $\sigma$ is fitted by maximising the dijet
-likelihood~\eqref{eq:qcd:resolMaxlike:likelihood} w.r.t. $\sigma$.
-The dependence of the jet \pt resolution on the $z$ is clearly visible in Fig.~\ref{fig:qcd:resolMaxlike:biasAddJets}.
+independent resolution $\sigma$ is measured by maximising the dijet
+likelihood~\qeq{eq:ResFit:Likelihood} w.r.t. $\sigma$.
+The dependence of the jet \pt resolution on the threshold $z$ is
+clearly visible in \qsubfig{fig:ResFit:AddJets:Corr}{right}.
 In order to extrapolate the measurement to the case of a two jet only
 event, the \mbox{$\sigma/\mean{\pttrue}$} are fitted with a linear
-function and the $y$ axis intercept is taken as the unbiased jet \pt
+function and the $y$ axis intercept is used as the unbiased jet \pt
 resolution.
 
 \begin{figure}[ht]
+  \label{fig:ResFit:AddJets:Corr}
   \centering
   \begin{tabular}{cc}
     \includegraphics[width=0.45\textwidth]{figures/Sketch_Projections}
-    \includegraphics[width=0.45\textwidth]{figures/MaxLike_Data132440-144011_Eta00-13_ExtrapolatedPar0_PtBin4}\\
+    %\includegraphics[width=0.45\textwidth]{figures/MaxLike_Data132440-144011_Eta00-13_ExtrapolatedPar0_PtBin4}\\
   \end{tabular}
   \caption{(\textit{Left}) Definition of the dijet axis $\phi_{||}$, the direction normal to the
     angle bisector of the leading two jets in the transverse plane.
@@ -298,119 +278,37 @@ resolution.
     \mbox{$\sigma/\mean{\pttrue}$} on \ppi{3} is linearly
     extrapolated to the case of an ideal dijet event.
   }
-  \label{fig:qcd:resolMaxlike:biasAddJets}
 \end{figure}
 
+In the following, the statistical uncertainty on the fitted $y$ axis
+intercept is used as statistical uncertainty of the measured resolution.
+Due to the selection requirement~\qeq{eq:ResFit:ThirdJetSelection},
+all events selected for a particular value of the threshold $z$ are
+also included in the samples selected with larger values of $z$.
+Hence, the measured resolutions in one \ptave bin are strongly correlated.
+This correlation is not considered in the quoted uncertainties yet.
 
-Fluctuations in the hadronisation processes lead to constituents which
-are not clustered to the jet (\textit{out-of-cone}) and hence affect the measured response.
-This bias is corrected using the MC simulation as it is small, of the
-order of $1\%$:
-The width of the \ptgen asymmetry, $\sigma(A^{\text{gen}})$ is determined for the
+The need for compensating the influence of additional jet activity is
+the reason why a mean, \pt independent Gaussian the resolution is
+measured per \ptave bin.
+In that case there is only one free parameter, $\sigma$, which can be
+extrapolated straight forward.
+Was the response instead parameterised with a \pt dependent function,
+e.g. a Gaussian with width
+\begin{equation*}
+  \sigma\left(\pt\right) = \frac{a}{\pt} \oplus \frac{b}{\sqrt{\pt}}
+  \oplus c \;,
+\end{equation*}
+the parameters $a$, $b$, and $c$ are correlated.
+In that case it is not clear how the extrapolation should be performed.
+
+The contribution due to out-of-cone effects to the bias is small, of
+the order of $1\%$, as shown in
+\qsubfig{fig:ResFit:AddJets:Bias}{left}.
+Hence, this bias is corrected for using the MC simulation:
+The width of the \ptgen asymmetry, $\sigma(A^{\text{gen}})$, is determined for the
  case of perfectly balanced dijet events, using the
 same extrapolation technique as above.
-The measured jet \pt resolution is corrected for out-of-cone effects
-by subtracting $\sqrt{2}\cdot\sigma(A^{\text{gen}})$ in quadrature.
+The extrapolated jet \pt resolution is then corrected by 
+subtracting $\sqrt{2}\cdot\sigma(A^{\text{gen}})$ in quadrature.
 
-
-
-\textit{From original draft}
-
-As discussed in the previous Section~\ref{sec:ResFit:QCDMC:AddJetAct},
-the presence of additional jets in the dijet event biases the
-measurement towards larger resolutions and thus has to be corrected
-for.
-The size of the particle level jet \pt imbalance is correlated with the
-measured relative \pt of the third jet as illustrated in Fig.~\ref{}.
-Hence, in order to compensate for the bias in a data driven manner, different dijet samples with different thresholds of \ptrel (comp. step~1 of the event selection, Section~\ref{sec:ResFit:QCDMC:EvtSel}) are selected and the maximum likelihood fit is performed each time.
-Then, the resulting resolution is extrapolated to the case of a two jet only event i.e. \mbox{$\ptrel\rightarrow0$}.
-
-The approach chosen in the following is to define sufficiently small bins of jet \pt and measure the w.r.t. \pt average response in each bin for different limits \mbox{$\ptrel<x$}.
-This is motivated by the fact that in case of a Gaussian response parametrisation (Section~\ref{sec:ResFit:QCDMC:Gauss}) there is then only one parameter $\bar{\sigma}$, which can be extrapolated relatively straight forward.
-The chosen \pt and $\eta$ binning is listed in Table~\ref{tab:ResFit:QCDMC:Extrapolation:Binning}.
-\begin{table}[ht]
-  \caption{Definition of \pt bins for the fit of the mean Gaussian resolution.}
-  \centering
-  \begin{tabular}{cl|ccccccccc}
-    \toprule
-    \multicolumn{2}{c}{$|\eta|$ bin} & \multicolumn{9}{c}{\pt bin edges $(\text{Ge}\kern-0.06667em\text{V})$} \\
-    \midrule
-    \multirow{2}{*}{$0$} & \multirow{2}{*}{$(0 - 1.2)$} & 80 & 100 & 120 & 140 & 170 & 200 & 250 & 300 & 350 \\
-    && 400 & 500 & 600 & 800 & 1000 \\
-    $1$ & $(1.2 - 2.6)$ & 60 & 80 & 100 & 120 & 150 & 200 & 300 &  500 & 700 \\
-    $2$ & $(2.6 - 3.2)$ & 80 & 100 & 150 &&&&&&\\
-    \bottomrule
-  \end{tabular}
-  \label{tab:ResFit:QCDMC:Extrapolation:Binning}
-\end{table}
-
-Was the Gaussian parametrised with a \pt dependent $\sigma$ as e.g. in~\eqref{eq:ResFit:ToyMC:Sigma}, the correlation of the parameter $\xi_{i}$ of $\sigma$ would have to be taken into account in contrast.
-Note that this is exactly the case for the Crystal Ball response parametrisation (Section~\ref{sec:ResFit:QCDMC:CrystalBall}), and additional work is foreseen to de-correlate the parameters $\sigma$, $\alpha$, and $n$.
-
-In the following, the particle level differential dijet cross section is taken from the interpolated \ptgen distribution Fig.~\ref{fig:ResFit:QCDMC:Extrapolation:Gauss:ExBin:SpectrumAndExtrapolation} (\textit{left}) that has been obtained from the Monte Carlo truth information. 
-
-
-
-\subsubsection{Measurement of the Gaussian response function}\label{sec:ResFit:QCDMC:Gauss}
-
-A sample of dijet events is selected for each $\eta$, \pt bin listed in Table~\ref{tab:ResFit:QCDMC:Extrapolation:Binning}.
-The selection bias (Section~\ref{sec:ResFit:Method:Biases}) is incorporated in the probability density function as before, comp. Fig.~\ref{fig:ResFit:QCDMC:Extrapolation:Gauss:ExBin:SpectrumAndExtrapolation} (\textit{left}).
-
-\begin{figure}[ht]
-  \centering
-  \begin{tabular}{cc}
-    \includegraphics[width=0.45\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_Spectrum_PtBin6} &
-    \includegraphics[width=0.45\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_ExtrapolatedPar0_PtBin6}
-  \end{tabular}
-\caption{(\textit{Left}) The parametrisation of the realistic particle jet \pt spectrum in one \pt bin as used in the dijet likelihood (solid line) in comparison to the prediction from Monte Carlo truth (full circles). 
-  (\textit{Right}) $\bar{\sigma}/\pt$ from Gaussian fits for different maximal \ptrel in the same \pt bin.
-  The solid line is a linear fit to extrapolate $\bar{\sigma}/\pt$ to the ideal case of only two jets in the
-  final state.}
-\label{fig:ResFit:QCDMC:Extrapolation:Gauss:ExBin:SpectrumAndExtrapolation}
-\end{figure}
-
-The mean Gaussian response
-\begin{equation*}
-  r_{\bar{\sigma}}\left(\pt|\pttrue\right) = 
-  \frac{1}{\sqrt{2\pi}\bar{\sigma}}\exp\left[-\frac{1}{2}\left(\frac{\pt - \pttrue}{\bar{\sigma}}\right)^{2}\right]
-\end{equation*}
-is measured in each bin by maximising the likelihood~\eqref{eq:ResFit:Likelihood} w.r.t.~$\bar{\sigma}$.
-The fitted relative Gaussian widths $\bar{\sigma}/\pt$ in one \pt bin are shown in Fig.~\ref{fig:ResFit:QCDMC:Extrapolation:Gauss:ExBin:SpectrumAndExtrapolation} (\textit{right}) for different thresholds on \ptrel.
-Here, \pt is the mean value of the assumed spectrum~$\tilde{f}(\pttrue)$ in that bin, shown Fig.~\ref{fig:ResFit:QCDMC:Extrapolation:Gauss:ExBin:SpectrumAndExtrapolation} (\textit{left}).
-In order to extrapolate the measurements to the case of a two jet only event, the $\bar{\sigma}/\pt$ are fitted with a linear function --- shown as a solid line --- and the $y$ axis intercept is taken as the corrected jet \pt resolution.
-
-The jet \pt spectra, fitted Gaussian resolutions $\bar{\sigma}/\pt$ versus \ptrel, and the extrapolation are shown in Appendix~\ref{sec:ResFit:App:AllResults:Gauss} for all \pt and $\eta$ bins.
-
-\begin{figure}[ht]
-  \centering
-  \begin{tabular}{cc}
-    \includegraphics[width=0.45\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_ExtrapolatedResolution} &
-    \includegraphics[width=0.45\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_ExtrapolatedResolutionRatio}
-  \end{tabular}
-\caption{(\textit{Left}) Fitted Gaussian jet \pt resolutions, $\bar{\sigma}/\pt$, from extrapolations for \mbox{$\ptrel\rightarrow0$} in different \pt bins.
-  The \pt are the mean values of $\tilde{f}(\pttrue)$ in each bin.
-  The error bars indicate the combined statistical uncertainties from the extrapolation and the Monte Carlo statistics.
-  The dashed line shows the Monte Carlo truth resolution for comparison.
-  (\textit{Right}) Ratio of fitted and Monte Carlo truth resolution.}
-\label{fig:ResFit:QCDMC:Extrapolation:Gauss:ResoVsPt}
-\end{figure}
-
-The jet \pt resolution $\bar{\sigma}/\pt$ measurements, corrected for the effect of additional jet activity, are shown for different \pt bins in Fig.~\ref{fig:ResFit:QCDMC:Extrapolation:Gauss:ResoVsPt}.
-(Again, the \pt are the mean values of the assumed spectrum~$\tilde{f}(\pttrue)$ in each bin.)
-The fitted values are in good agreement with the Monte Carlo truth prediction, shown as a dash line.
-The larger deviation in the two low \pt bins is assumed to be caused by the increasing influence of incorrect jet ordering due to the greater resolution on the extrapolation procedure\footnote{This effect is seen when using the dijet asymmetry method to measure jet \pt resolutions~\cite{bib:cmspas:dijetasymm}.}.
-
-The error bars shown in Fig.~\ref{fig:ResFit:QCDMC:Extrapolation:Gauss:ResoVsPt} represent the combined statistical uncertainties of the fit and due to the Monte Carlo sample size:
-\begin{enumerate}
-\item The first contribution is the statistical uncertainty on the parameter of $y$ axis intercept in the linear extrapolation (Fig.~\ref{fig:ResFit:QCDMC:Extrapolation:Gauss:ExBin:SpectrumAndExtrapolation} (\textit{left})).
-\item The second contribution arises from the uncertainty due to the limited Monte Carlo sample size.
- As the event weights are large for small \pt, statistical fluctuations become significant.
- In order to roughly evaluate this uncertainty, the same fits have been performed again without event weights (for the used sample this corresponds to a flattened QCD spectrum).
- The statistical uncertainties obtained in this case on the $y$ axis intercept are added in quadrature to the ones in 1.
- This procedure has to be improved to obtain a statistically correct description of the uncertainty.
-\end{enumerate}
-
-Due to the selection requirement \mbox{$\ptrel < x$}, all events selected for a particular value of $x$ in Fig.~\ref{fig:ResFit:QCDMC:Extrapolation:Gauss:ExBin:SpectrumAndExtrapolation} (\textit{right}) are also included in the samples selected with larger values of $x$.
-Hence, the measured widths $\bar{\sigma}/\pt$ in one \pt are strongly correlated.
-This correlation is not considered in the quoted uncertainties.
-The planned treatment is to either include the correlations explicitly or perform the measurements in exclusive bins of \ptrel.
