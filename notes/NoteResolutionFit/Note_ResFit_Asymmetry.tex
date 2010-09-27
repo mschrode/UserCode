@@ -1,4 +1,4 @@
-\section{Data Driven Application}
+\section{Application to Collider Data}\label{sec:ResFit:DataDriven}
 
 In the following, the resolution measurement in Collider data is
 discussed.
@@ -22,12 +22,7 @@ in \qsec{sec:ResFit:AddJets:Extrapolation} a correction method is presented usin
 the resolution to the ideal two jet case.
 
 
-
 \subsection{Fit of the Dijet Asymmetry}\label{sec:ResFit:Asym}
-
-The dijet pdf~\qeq{eq:ResFit:DijetPdf} is in fact equivalent to a pdf of the dijet
-asymmetry with an additional assumption for the underlying particle
-level jet spectrum, as will be shown in this section.
 
 The dijet asymmetry is defined as
 \begin{equation}\label{eq:ResFit:Asymmetry}
@@ -40,14 +35,13 @@ transverse momentum \pt and Gaussian response, the width $\sigma(A)$ of the asym
 related to the jet \pt resolution $\sigma$ by
 \begin{equation}
   \label{eq:ResFit:ResFromAsym}
-  \sigma(A) = \frac{1}{\sqrt{2}}\frac{\sigma}{\pt}.
+  \sigma(A) = \frac{1}{\sqrt{2}}\frac{\sigma}{\pt} \; .
 \end{equation}
-\fixme{What is balanced are the partons!}
 
 
 \subsubsection{Simple Maximum Likelihood Fit and Outlier Treatment}\label{sec:ResFit:Asym:SimpleFit}
 
-If the spectrum $f$ in the dijet pdf~\qeq{eq:ResFit:DijetPdfTransformed} is replaced by \mbox{$f(\pttrue)  = \delta\left(\pttrue - \ptave\right)$}, i.e. the assumption \mbox{$\pttrue = \ptave$}, 
+If the spectrum $f$ in the dijet pdf~\qeq{eq:ResFit:DijetPdfTransformed} is replaced by \mbox{$f(\pttrue)  = \delta\left(\pttrue - \ptave\right)$}, i.e. assuming \mbox{$\pttrue = \ptave$}, 
 \qeq{eq:ResFit:DijetPdfTransformed} simplifies to
 \begin{equation}
 \label{eq:ResFit::DijetPdfTransformed:Simple}

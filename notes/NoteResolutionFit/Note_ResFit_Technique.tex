@@ -1,80 +1,70 @@
-% $Id: Note_ResFit_Technique.tex,v 1.9 2010/09/23 18:16:42 mschrode Exp $
+% $Id: Note_ResFit_Technique.tex,v 1.10 2010/09/26 14:44:44 mschrode Exp $
 
 
 \section{Description of the Method}\label{sec:ResFit:Method}
 
-\fixme{Imbalance, assumptions}
-
-The underlying assumptions of the presented method are
-\begin{itemize}
-\item an ideal dijet event configuration with exactly two jets that
-  are balanced in true transverse momentum, \mbox{$\pttrue\equiv\ptgen$};
-\item measured jet transverse momenta,
-  \mbox{$\pti{i}\equiv\ptcaloi{i}$}, $i\in[1,2]$, result from uncorrelated
-  calorimeter measurements.
-\end{itemize}
-Based on these, the pdf of a measured dijet event configuration is defined as
+\subsection{Definition of the Dijet Probability Density}
+In case of ideal dijet events with exactly two jets in the final
+state, the transverse momenta of the original partons are balanced due
+to momentum conservation.
+If hadronisation and jet clustering effects are neglected, also
+the absolute transverse momenta of the jets clustered from final state
+particles before interaction with the detector (\textit{particle level
+  jets}) will be equal.
+Assuming further that detector response and resolution effects on both jets are not correlated with each other, the probability density (\textit{pdf}) of a dijet event is defined as
 \begin{equation}
   \label{eq:ResFit:DijetPdf}
-  g_{\mathbf{\xi}}\left(\pti{1},\pti{2}\right) \propto \int^{\infty}_{0}\dif{\pttrue}\;f\left(\pttrue\right)
+  g_{\mathbf{\xi}}\left(\pti{1},\pti{2}\right) \propto \int^{\infty}_{0}\dif{\pttrue}\,f\left(\pttrue\right)
   \cdot r_{\mathbf{\xi}}\left(\pti{1}|\pttrue\right)
-  \cdot r_{\mathbf{\xi}}\left(\pti{2}|\pttrue\right).
+  \cdot r_{\mathbf{\xi}}\left(\pti{2}|\pttrue\right) \; ,
 \end{equation}
-Here,
-\begin{itemize}
-\item $f(\pttrue)$ denotes the pdf of the true jet \pt
-  i.e. the particle level differential dijet cross section.
-  In the following it is assumed to be known
-  and taken from the Monte Carlo simulation
-  (comp. e.g. Fig.~\ref{fig:ResFit:QCDMC:MCTruthReso} (\textit{left})).
-  Uncertainties on the simulated cross section have to be propagated to
-  the measured resolution and added as a systematic uncertainty of the
-  method, which is in fact small as shown in Section~\ref{};
-\item $r_{\mathbf{\xi}}(\pti{i}|\pttrue)$ denotes the pdf of the measured \pt
-  of the $i$-th jet.
-  It is parametrised with a suitable function depending on the set of
-  parameters $\mathbf{\xi}$, e.g. a Gauss or Crystal Ball function.
-\end{itemize}
-\fixme{itemize $\rightarrow$ sentences}
-It is important to note that
-$g_{\mathbf{\xi}}(\pti{1},\pti{2})$ does not depend on \pttrue
-as this is the integration variable.
+where \pti{1} and \pti{2} are the measured absolute transverse momenta of
+the two jets.
+\pttrue denotes the absolute particle level jet \pt, which has been assumed to
+be equal for both jets, and  $f$ the pdf of \pttrue, i.e. the particle level differential jet 
+cross section.
+In what follows, $f$ is taken from the MC
+simulation\footnote{The arising systematic uncertainty is expected to
+  be small but still has to be evaluated.}
+and kept fixed during the maximisation procedure.
+$r_{\mathbf{\xi}}(\pti{i}|\pttrue)$ denotes the pdf to measure \pti{i} for the
+$i$-th jet given \pttrue.
+It is a function that depends on the free parameter set $\mathbf{\xi}$.
 
-If $f(\pttrue)$ and $r_{\mathbf{\xi}}(\pti{i}|\pttrue)$ are properly normalised in the considered interval \mbox{$\pttruehigh{min} < \pttrue < \pttruehigh{max}$} such that
-\begin{align}
-  \begin{split}
-    1 & = \int^{\pttruehigh{max}}_{\pttruehigh{max}}\dif{\pttrue}\;f\left(\pttrue\right) \\
-    1 & = \int^{\infty}_{0}\dif{\pti{i}}\;r_{\mathbf{\xi}}\left(\pti{i}|\pttrue\right)
-  \end{split}
-\end{align}
-then also the dijet pdf is properly normalised to
-\begin{equation*}
-  1 = \int^{\infty}_{0}\dif{\pti{1}}\;\int^{\infty}_{0}\dif{\pti{2}}\; g_{\mathbf{\xi}}\left(\pti{1},\pti{2}\right),
-\end{equation*}
-provided the integration order of $\pti{i}$ and $\pttrue$ can be interchanged.
+It is important to note that $g$ does not depend on \pttrue.
+The latter is an integration variable and hence all possible values
+contribute to $g$ with the individual weights $f(\pttrue)$.
 
 For a sample of $N$ dijet events, a likelihood is defined as
 \begin{equation}
   \label{eq:ResFit:Likelihood}
   \mathcal{L}\left(\mathbf{\xi}\right) = \prod^{N}_{k=1} g_{\mathbf{\xi},k}\left(\pti{1},\pti{2}\right).
 \end{equation}
-Maximisation of $\mathcal{L}(\mathbf{\xi})$ then results in an
-estimate of the optimal values of $\mathbf{\xi}$ for the chosen
-function $r_{\mathbf{\xi}}(\pti{i}|\pttrue)$.
-Note that $r_{\mathbf{\xi}}(\pti{i}|\pttrue)$ is defined as the
-pdf of the measured jet \pt.
-The pdf of the jet \pt response \mbox{$R_{i}\equiv\pti{i} / \pttrue$} is obtained by parameter transformation
+The values of $\mathbf{\xi}$ which maximise $\mathcal{L}$ correspond
+to the response $r_{\mathbf{\xi}}$ that describes the data best.
+The pdf of the jet \pt response \mbox{$R = \pt / \pttrue$} is obtained by parameter transformation
 \begin{equation*}
-  r_{\mathbf{\xi}}\left(R_{i}|\pttrue\right) =
-  r_{\mathbf{\xi}}\left(\pti{i}\left(R_{i}\right)|\pttrue\right)\cdot\left|\frac{\dif{\pti{i}}}{\dif{R_{i}}}\right|.
+  r_{\mathbf{\xi}}\left(R|\pttrue\right) =
+  r_{\mathbf{\xi}}\left(\pt\left(R\right)|\pttrue\right)\cdot\left|\frac{\dif{\pt}}{\dif{R}}\right|.
 \end{equation*}
 
-\fixme{Elaborate on $r$ in pdf $\rightarrow$ arbitrary response function}
 
-\fixme{Now Gaussian response\dots}
-The dijet pdf~\qeq{eq:ResFit:DijetPdf} has been defined as a function
-of \pti{1} and \pti{2}.
-In what follows, the coordinates
+\subsection{Case of a Gaussian Response}
+
+No assumption about the functional form of $r_{\mathbf{\xi}}$ has been
+made so far.
+It can be parametrised with any function and hence also
+describe unambigously extreme, non-Gaussian outliers of the response which are in
+in particular responsible for QCD events with large \mht.
+However in what follows, a Gaussian function is assumed for the time
+being in order to develop the method and measure the main bulk of the
+response.
+The Gaussian have a fixed mean value of one, i.e. the
+correct jet energy scale is asumed, and be dependent on the free width
+parameter \mbox{$\mathcal{\xi} = \sigma$}.
+In that case a different choice of coordinates than $\pti{1}$ and
+$\pti{2}$ is preferential.
+With
 \begin{align}
   \label{eq:ResFit:TransformedCoordinates}
   \begin{split}
@@ -82,45 +72,18 @@ In what follows, the coordinates
     \ptave     &  = \frac{1}{2}\left(\pti{1}+\pti{2}\right)
   \end{split}
 \end{align} 
-which are especially suited for a Gaussian response are being used.
-With these coordinates, the dijet pdf~\qeq{eq:ResFit:DijetPdf} becomes
+the dijet pdf~\qeq{eq:ResFit:DijetPdf} becomes
 \begin{equation}
   \label{eq:ResFit:DijetPdfTransformed}
    g_{\sigma'}\left(\Delta\pt,\ptave\right) \propto
    \e^{-\frac{1}{2}\left(\frac{\Delta\pt}{\sigma'}\right)^{2}}\cdot
    \int\dif{\pttrue}\;f\left(\pttrue\right)\cdot
-   \e^{-\frac{1}{2}\left(\frac{\ptave - \pttrue}{\sigma'}\right)^{2}}.
+   \e^{-\frac{1}{2}\left(\frac{\ptave - \pttrue}{\sigma'}\right)^{2}}
+   \; ,
 \end{equation}
-Note that \pti{1} and \pti{2}, and thus likewise \ptave and $\Delta\pt$, are considered to be uncorrelated.
-
-
-\fixme{Move here\ldots}
-The dijet pdf~\qeq{eq:ResFit:DijetPdf} is in fact equivalent to a pdf of the dijet
-asymmetry with an additional assumption for the underlying particle
-level jet spectrum, as will be shown in this section.
-
-The dijet asymmetry is defined as
-\begin{equation}\label{eq:ResFit:Asymmetry}
-  A = \frac{\pti{1'}-\pti{2'}}{\pti{1'}+\pti{2'}},
-\end{equation}
-where \pti{1'} and \pti{2'} refer to the randomly ordered transverse momenta of the
-leading two jets in an event.
-In case of events with exactly two jets of same particle level jet
-transverse momentum \pt and Gaussian response, the width $\sigma(A)$ of the asymmetry distribution is
-related to the jet \pt resolution $\sigma$ by
-\begin{equation}
-  \label{eq:ResFit:ResFromAsym}
-  \sigma(A) = \frac{1}{\sqrt{2}}\frac{\sigma}{\pt}.
-\end{equation}
-\fixme{What is balanced are the partons!}
-
-If the spectrum $f$ in the dijet pdf~\qeq{eq:ResFit:DijetPdfTransformed} is replaced by \mbox{$f(\pttrue)  = \delta\left(\pttrue - \ptave\right)$}, i.e. the assumption \mbox{$\pttrue = \ptave$}, 
-\qeq{eq:ResFit:DijetPdfTransformed} simplifies to
-\begin{equation}
-\label{eq:ResFit::DijetPdfTransformed:Simple}
-  g_{\sigma'}\left(\Delta\pt\right) \propto
-  \e^{-\frac{1}{2}\left(\frac{\Delta\pt}{\sigma'}\right)^{2}}, 
-\end{equation}
-with \mbox{$\sigma' = \sigma/\sqrt{2}$}.
-This corresponds to the pdf of the asymmetry in the event, assuming
-Gaussian response.
+where \mbox{$\sigma' = \sigma/\sqrt{2}$}.
+It is evident from~\qeq{eq:ResFit:DijetPdfTransformed} that the dijet
+pdf is in fact equivalent to a pdf of the \pt imbalance, i.e. the dijet
+asymmetry, with an additional assumption for the particle level jet
+\pt spectrum.
+This will be further discussed and exploited in \qsec{sec:ResFit:DataDriven}.
