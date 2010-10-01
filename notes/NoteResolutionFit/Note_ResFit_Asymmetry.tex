@@ -89,7 +89,13 @@ four times, leading to an unbiased result.
     the unbinned fit (solid circles).}
 \end{figure}
 
-The asymmetry distribution measured in Collider data for \mbox{$140 < \ptave < 170\gev$}, \mbox{$\ppi{3} < 0.1\cdot\mean{\ptave}$}, and \mbox{$\ppi{\text{Soft}} < 0.015\cdot\mean{\ptave}$} is shown in \qsubfig{fig:ResFit:Asym:Simple}{left}.
+The dijet asymmetry distribution measured in Collider data for \mbox{$140 <
+  \ptave < 170\gev$} is shown in
+\qsubfig{fig:ResFit:Asym:Simple}{left}.
+Additional jet activity is suppressed by restricting the \pt component
+along the dijet axis, \mbox{$\ppi{3} < 0.1\cdot\mean{\ptave}$} and
+\mbox{$\ppi{\text{Soft}} < 0.015\cdot\mean{\ptave}$} (comp. \qsec{sec:ResFit:AddJets:Contributions} for
+a definition of \ppi).
 It is well described by the result of the discussed simplified unbinned fit, i.e. a Gaussian with width $\sigma'$, and there is good agreement to a direct binned fit of the histogram.
 In \qsubfig{fig:ResFit:Asym:Simple}{right}, the widths $\sigma'$ measured in different \ptave bins with the unbinned technique are further compared to the results of binned fits.
 Again, there is good agreement.
@@ -288,6 +294,7 @@ measured per \ptave bin.
 In that case there is only one free parameter, $\sigma$, which can be
 extrapolated straight forward.
 Was the response instead parameterised with a \pt dependent function,
+
 e.g. a Gaussian with width
 \begin{equation*}
   \sigma\left(\pt\right) = \frac{a}{\pt} \oplus \frac{b}{\sqrt{\pt}}

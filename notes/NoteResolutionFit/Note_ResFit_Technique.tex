@@ -1,4 +1,4 @@
-% $Id: Note_ResFit_Technique.tex,v 1.10 2010/09/26 14:44:44 mschrode Exp $
+% $Id: Note_ResFit_Technique.tex,v 1.11 2010/09/27 20:55:57 mschrode Exp $
 
 
 \section{Description of the Method}\label{sec:ResFit:Method}
@@ -8,13 +8,13 @@ In case of ideal dijet events with exactly two jets in the final
 state, the transverse momenta of the original partons are balanced due
 to momentum conservation.
 If hadronisation and jet clustering effects are neglected, also
-the absolute transverse momenta of the jets clustered from final state
+the absolute transverse momenta of the jets clustered from stable
 particles before interaction with the detector (\textit{particle level
   jets}) will be equal.
 Assuming further that detector response and resolution effects on both jets are not correlated with each other, the probability density (\textit{pdf}) of a dijet event is defined as
 \begin{equation}
   \label{eq:ResFit:DijetPdf}
-  g_{\mathbf{\xi}}\left(\pti{1},\pti{2}\right) \propto \int^{\infty}_{0}\dif{\pttrue}\,f\left(\pttrue\right)
+  g_{\mathbf{\xi}}\left(\pti{1},\pti{2}\right) \propto \int\dif{\pttrue}\,f\left(\pttrue\right)
   \cdot r_{\mathbf{\xi}}\left(\pti{1}|\pttrue\right)
   \cdot r_{\mathbf{\xi}}\left(\pti{2}|\pttrue\right) \; ,
 \end{equation}
@@ -32,7 +32,7 @@ $i$-th jet given \pttrue.
 It is a function that depends on the free parameter set $\mathbf{\xi}$.
 
 It is important to note that $g$ does not depend on \pttrue.
-The latter is an integration variable and hence all possible values
+The latter is an integration variable and hence all possible values of \pttrue
 contribute to $g$ with the individual weights $f(\pttrue)$.
 
 For a sample of $N$ dijet events, a likelihood is defined as
@@ -68,14 +68,14 @@ With
 \begin{align}
   \label{eq:ResFit:TransformedCoordinates}
   \begin{split}
-    \Delta\pt  &  = \frac{1}{2}\left(\pti{1}-\pti{2}\right) \\
-    \ptave     &  = \frac{1}{2}\left(\pti{1}+\pti{2}\right)
+    \ptave     &  = \frac{1}{2}\left(\pti{1}+\pti{2}\right) \\
+    \Delta\pt  &  = \frac{1}{2}\left(\pti{1}-\pti{2}\right)
   \end{split}
 \end{align} 
 the dijet pdf~\qeq{eq:ResFit:DijetPdf} becomes
 \begin{equation}
   \label{eq:ResFit:DijetPdfTransformed}
-   g_{\sigma'}\left(\Delta\pt,\ptave\right) \propto
+   g_{\sigma'}\left(\ptave,\Delta\pt\right) \propto
    \e^{-\frac{1}{2}\left(\frac{\Delta\pt}{\sigma'}\right)^{2}}\cdot
    \int\dif{\pttrue}\;f\left(\pttrue\right)\cdot
    \e^{-\frac{1}{2}\left(\frac{\ptave - \pttrue}{\sigma'}\right)^{2}}

@@ -1,12 +1,11 @@
-\section{Samples and Event Selection}
+\section{Samples and Event Selection}\label{sec:ResFit:EvtSel}
 
 A sample of QCD events corresponding to an integrated luminosity of $2.2\pbinv$ is
 selected\footnote{The data has been selected from the \texttt{JetMET\_Run2010A-PromptReco-v4} data set.} by triggering on the minimum average transverse momentum, \mbox{$\ptave = (\pti{1} + \pti{2})/2$}, of the leading two jets in each event\footnote{Events in bins with \mbox{$\ptave < 80\gev$} are selected with the \texttt{HLT\_DiJetAve15U} , all other with the \texttt{HLT\_DiJetAve50U} trigger.}.
-Events originating from detector noise are rejected by applying certain quality criteria to the reconstructed primary vertex and the tracker measurement (Beam-Scraping-Event filter).
-\fixme{Copy formulation from somewhere}
+Events originating from beam-halo and other beam-background processes are rejected~\cite{bib:cmspas:vertex} and a good reconstructed primary vertex is required fixme{reference}.
 
 In order to estimate the particle level jet \pt spectrum and for means of closure tests, also simulated QCD multijet events are used.
-They have been generated in bins of \pthat with PYTHIA6 and processed through the full GEANT4 based CMS detector simulation\footnote{These are the \pthat binned samples \texttt{/QCDDiJet\_PtXXtoXX/Spring10-START3X\_V26\_S09-v1/GEN-SIM-RECO} of the Spring10 production.}.
+They have been generated in bins of \pthat with PYTHIA6 \fixme{reference} and processed through the full GEANT4 \fixme{reference} based CMS detector simulation\footnote{These are the \pthat binned samples \texttt{/QCDDiJet\_PtXXtoXX/Spring10-START3X\_V26\_S09-v1/GEN-SIM-RECO} of the Spring10 production.}.
 
 Jets are reconstructed from calorimeter towers using the
 anti-$k_{T}$ jet clustering algorithm~\cite{bib:akj} with parameter size \mbox{$d=0.5$}.
@@ -15,7 +14,7 @@ $\eta$ and \pt dependence of the jet energy scale\footnote{The default Spring10 
 two leading jets\footnote{They are required to meet the loose JetID.}.
 In order to select dijet events, the two leading jets are required to be
 back-to-back in the transverse plane, \mbox{$|\Delta\phi_{i}| > 2.7$} for \mbox{$i \in [1,2]$}.
-Additionally they have to lie within the same pseudorapidity range \mbox{$|\eta_{i}| < 1.3$} range.
+Additionally they have to lie within the same pseudorapidity range \mbox{$|\eta_{i}| < 1.3$}.
 This accounts for the dependence of the jet \pt response on $\eta$ owing to the fact that the intrinsic calorimeter resolution is energy rather than \pt dependent as well as to the different calorimeter geometries and material budgets in front of the calorimeters in different pseudorapidity regions.
 
 As discussed in \qsec{sec:ResFit:DataDriven}, events are further selected in bins of \ptave and additional

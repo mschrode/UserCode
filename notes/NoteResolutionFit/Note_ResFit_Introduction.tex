@@ -1,57 +1,34 @@
-% $Id: Note_ResFit_Introduction.tex,v 1.11 2010/09/23 18:16:42 mschrode Exp $
+% $Id: Note_ResFit_Introduction.tex,v 1.12 2010/09/27 16:43:44 mschrode Exp $
 
 
 \section{Introduction}
 
-The analysis of jet final states provides an important way to investigate Standard Model and beyond processes and requires a precise knowledge of the jet transverse momentum, \textit{\pt}, resolution.
+The analysis of jet final states provides an important way to investigate Standard Model and beyond processes and requires a precise knowledge of the jet transverse momentum resolution.
+For example, missing transverse energy, \met, owing to mismeasured QCD events is an important background to the search for Supersymmetry, \textit{SUSY}, in the all-hadronic channel.
+It is foreseen to predict this contribution by smearing QCD seed events with the full jet \pt response function \fixme{cite: RA2 note}.
 
-\fixme{SUSY example, importance of tails}
+For a well calibrated calorimeter, the measured jet \pt corresponds on average to \ptgen, the transverse momentum of the incoming jet clustered from stable particles before interaction with the detector (\textit{particle level jets}).
+Here and in what follows, \textit{jet \pt response} is defined as the ratio \mbox{$R = \pt/\ptgen$}.
+For a fixed \ptgen, the distribution of R follows a Gaussian in good approximation.
+Therefore the \textit{jet \pt resolution} is defined as the standard deviation of the response distribution. 
 
-For a well calibrated calorimeter, the measured jet \pt corresponds on average to the \pt of the incoming jet of stable particles (\textit{particle level jet}).
-The distribution of jet response, \textit{R}, is defined as the ratio of the measured and the particle level jet \pt and for a constant \ptgen it follows a Gaussian in good approximation~\cite{jetography}.
-Therefore jet resolution is defined as the standard deviation of the jet response distribution.
-
-In this note a method is presented to derive the jet transverse momentum, \pt, resolution from QCD dijet events in collider data.
-Dijet events have a large cross section e.g. in comparison to $\gamma$-jet events and hence provide a higher \pt reach and an early sensitivity also to non-Gaussian tails of the jet response function.
-
-A likelihood function is constructed with probability densities, \textit{pdf}s, of the \pt imbalance in the dijet event.
-The pdfs are a convolution of the particle level jet differential cross section with suitable parametrisation of the jet \pt response functions.
-As a consequence, the measured resolution is parametrised as a function of particle level jet \pt.
-In addition, a description of selection biases arising from requirements on the measured jet \pt is incorporated.
-Since the method is based on an unbinned maximum likelihood fit, only a smaller sample of dijet events is required in comparison to a binned approach, resulting in --- for a given luminosity --- either a larger \pt reach or superior sensitivity to tiny non-Gaussian components.
-
-The method is strictly valid in the ideal case of events with only two jets in the final state, that are balanced in \pt at the particle level, and under the assumption that detector response and resolution effects on both jets are not correlated with each other.
-In real QCD events, however, the \pt balance of the two jets is affected by the presence of additional jet activity from e.g. gluon radiation and the measurement has to be corrected for this effect.
-Also momentum conservation is strictly only valid for the partons; the \pt of the particle jets is affected by fragmentation, hadronisation, and the chosen jet algorithm.
-
-In case that other event types are included into the likelihood, such as $\gamma+$jets, suitable probability density functions must be defined.
+In this note, a measurement of the response function in a sample of QCD dijet events from $pp$ collisions at \mbox{$\sqrt{s} = 7\tev$} and corresponding to an integrated luminosity of $2.2\pbinv$ is presented.
+It is performed using an unbinned maximum likelihood fit of the \pt asymmetry in the events.
+The likelihood contains a suitable parametrisation of the jet \pt response function as well as an assumption for the particle level jet differential cross section.
+The unbinned method has certain advantages in comparison to a more robust binned fit of the histograms of the asymmetry distributions \fixme{cite:Hauke}.
+For example, it enables an unambigous determination of arbitrary, also asymmetric, response functions and it has a high sensitivity to extremely low populated regions of the response function.
+These features are in particular important w.r.t. application in the SUSY search as QCD events with large \met are typically caused by the tiny ,$\mathcal{O}(10^{-3})$, non-Gaussian outliers in the response function.
+For the studies included in this note, however, only a Gaussian response function is assumed for the time being in order to develop the method and measure the main bulk of the response.
+Moreover, biases due to the event selection are explicitly considered in the likelihood.
+Therefore a better estimator of \ptgen is provided as argument for the fitted resolution.
+Finally, the response can in principle be measured simultaneosly also for different event types, such as $\gamma+$jet events and in different $\eta$ regions, thus increasing the covered $\pt$ range and the amount of available events.
 
 The studies included in this note are performed on jets that have been reconstructed from calorimeter towers, although the method is general and may be applied to any type of detector level jet.
+Dijets have been chosen owing to their relatively large cross section; the likelihood could also be defined for other events such as $\gamma$+jet events, however.
 
-
-
-\fixme{Incorporate\ldots}
-The unbinned fitting method by maximisation of the
-likelihood~\qeq{eq:ResFit:Likelihood} has, however, certain advantages in
-comparison to a more robust binned fit to the histogram of the asymmetry distribution.
-For example, it enables an unambigous
-determination of asymmetric response functions \fixme{is it? it's equivalent to asymmetry fit; yes but additionally spectrum $\rightarrow$ information about direction, no symmetrization} and has a high sensitivity to
-extremely low populated regions of the response function.
-These abilities are in particular important w.r.t. application in
-the QCD background estimation for the SUSY search.
-In this note, a measurement only of a Gaussian response is discussed,
-however.
-Moreover, biases due to the event selection are explicitly considered
-in the likelihood.
-Therefore a better estimator of the particle level jet \pt is provided
-as argument for the fitted resolution.
-Finally, the response can in principle be measured simultaneosly
-also for different event types, such as $\gamma+$jet events and in different
-$\eta$ regions, thus increasing the covered $\pt$ range and the amount
-of available events.
-
-The extension of the dijet pdf with an assumption for the particle
-level jet \pt is discussed in the following; by this extension,
-additionally a description of biases in the event selection can be
-included into the likelihood. and it is a neccessity in order to be
-able to fit arbitrary, not necessarily Gaussian, response functions.
+This note is organised as follows:
+The general method, including the defintion of the dijet likelihood, is described in \qsec{sec:ResFit:Method}.
+After listing the event selection in \qsec{sec:ResFit:EvtSel}, the application to Collider data is discussed in \qsec{sec:ResFit:DataDriven}.
+Biases owing to the selection, showering effects, as well as additional jet activity are investigated and corrected for.
+Moreover the performance of the unbinned fit is compared to a binned solution.
+Finally, in \qsec{sec:ResFit:Results}, the measured resolution is presented.
