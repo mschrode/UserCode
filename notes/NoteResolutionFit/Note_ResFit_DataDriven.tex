@@ -15,7 +15,7 @@ spectrum and a description of selection biases, is finally used to fit the asymm
 the spectrum is also used to derive a better estimator for \ptgen.
 
 As discussed in \qsec{sec:ResFit:DataDriven:AddJets}, additional jets in the events, e.g. from soft gluon radiation, as
-well as out-of-cone effects during the jet clustering bias the dijet asymmery and have to be
+well as out-of-cone effects during the jet clustering bias the dijet asymmetry and have to be
 corrected for when measuring the resolution.
 The contributions to the bias are investigated in detail in \qsec{sec:ResFit:DataDriven:AddJets:Contributions} and
 in \qsec{sec:ResFit:DataDriven:AddJets:Extrapolation} a correction method is presented using an extrapolation of
@@ -80,7 +80,7 @@ This can be achieved, however, with an iterative procedure by restricting
 the allowed range of $\Delta\pt$.
 As observed in data and MC simulation (\fixme{reference to plot}), tails start to appear for \mbox{$|\Delta\pt| > 2\sigma'$}.
 Hence, the unbinned fit is performed only for events with \mbox{$|\Delta\pt| < 2\sigma'$}.
-In order to preserve unitarity of the dijet pdf, the normailisation
+In order to preserve unitarity of the dijet pdf, the normalisation
 of~\qeq{eq:ResFit::DijetPdfTransformed:Simple} is adapted accordingly.
 \fixme{State complete pdf in Appendix}
 
@@ -115,7 +115,7 @@ With the choice of coordinates~\qeq{eq:ResFit:TransformedCoordinates}, this corr
 \end{equation*}
 resulting in~\qeq{eq:ResFit:DijetPdfTransformed}.
 As mentioned before, the spectrum is taken from the MC simulation (\qsubfig{fig:ResFit:DataDriven:Spectrum}{left}) and not modified during the fit.
-The resulting systematic uncertatinties are small, \qsec{sec:ResFit:Systematics}.
+The resulting systematic uncertainties are small, \qsec{sec:ResFit:Systematics}.
 
 \begin{figure}[ht]
  \centering
@@ -161,14 +161,14 @@ This extension to $f$ depends solely on the fitted parameter $\sigma'$ and does 
 In \qsubfig{fig:ResFit:DataDriven:AddJets:Bias}{right}, the standard deviations of
 the asymmetry distribution, multiplied by a factor $\sqrt{2}$,
 are shown for various \ptgen bins for simulated dijets.
-According to~\qeq{eq:ResFit:ResFromAsym} these should corresond to the
+According to~\qeq{eq:ResFit:ResFromAsym} these should correspond to the
 jet \pt resolution.
 However, they are greater than the MC truth resolutions\footnote{The
   determination of the MC truth resolution is discussed in
   Appendix~\ref{sec:ResFit:App:MCTruth}.} $\sigma(R_{\text{MC}})$ for
 the following reasons:
 The dijet asymmetry~\qeq{eq:ResFit:Asymmetry} is defined under the assumption of exactly two jets which are balanced in transverse momentum at particle level.
-Additional jet acitivity in the events, e.g. from soft gluon
+Additional jet activity in the events, e.g. from soft gluon
 radiation, causes an imbalance of the leading two jets and hence
 broadens the measured asymmetry distribution.
 

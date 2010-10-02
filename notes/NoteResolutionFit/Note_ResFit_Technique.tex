@@ -7,10 +7,8 @@
 In case of ideal dijet events with exactly two jets in the final
 state, the transverse momenta of the original partons are balanced due
 to momentum conservation.
-If hadronisation and jet clustering effects are neglected, also
-the absolute transverse momenta of the jets clustered from stable
-particles before interaction with the detector (\textit{particle level
-  jets}) will be equal.
+If hadronisation and jet clustering effects are neglected, also the
+\ptgen of the subsequent particle level jets will be equal.
 Assuming further that detector response and resolution effects on both jets are not correlated with each other, the probability density (\textit{pdf}) of a dijet event is defined as
 \begin{equation}
   \label{eq:ResFit:DijetPdf}
@@ -18,14 +16,16 @@ Assuming further that detector response and resolution effects on both jets are 
   \cdot r_{\mathbf{\xi}}\left(\pti{1}|\pttrue\right)
   \cdot r_{\mathbf{\xi}}\left(\pti{2}|\pttrue\right) \; ,
 \end{equation}
-where \pti{1} and \pti{2} are the measured absolute transverse momenta of
-the two jets.
-\pttrue denotes the absolute particle level jet \pt, which has been assumed to
-be equal for both jets, and  $f$ the pdf of \pttrue, i.e. the particle level differential jet 
+where \pti{i} and \pttrue are the absolute transverse momenta of the
+$i$-th jet, \mbox{$i = 1,2$}, at detector level and at particle level, respectively.
+Note that the notation \pttrue instead of \ptgen has been chosen in order to emphasise the assumed \pt
+balance at particle level, whereas in general \mbox{$\ptgeni{1} \neq \ptgeni{2}$} owing to the above
+mentioned effects.
+Furthermore, $f$ denotes the pdf of \pttrue, i.e. the particle level differential jet 
 cross section.
 In what follows, $f$ is taken from the MC
-simulation\footnote{The arising systematic uncertainty is expected to
-  be small but still has to be evaluated.}
+simulation\footnote{The arising systematic uncertainty is evaluated in
+  \qsec{sec:ResFit:Systematics}.}
 and kept fixed during the maximisation procedure.
 $r_{\mathbf{\xi}}(\pti{i}|\pttrue)$ denotes the pdf to measure \pti{i} for the
 $i$-th jet given \pttrue.
@@ -54,13 +54,13 @@ The pdf of the jet \pt response \mbox{$R = \pt / \pttrue$} is obtained by parame
 No assumption about the functional form of $r_{\mathbf{\xi}}$ has been
 made so far.
 It can be parametrised with any function and hence also
-describe unambigously extreme, non-Gaussian outliers of the response which are in
-in particular responsible for QCD events with large \mht.
+describe unambiguously extreme, non-Gaussian outliers of the response which are in
+in particular responsible for QCD events with large \met.
 However in what follows, a Gaussian function is assumed for the time
 being in order to develop the method and measure the main bulk of the
 response.
 The Gaussian have a fixed mean value of one, i.e. the
-correct jet energy scale is asumed, and be dependent on the free width
+correct jet energy scale is assumed, and be dependent on the free width
 parameter \mbox{$\mathcal{\xi} = \sigma$}.
 In that case a different choice of coordinates than $\pti{1}$ and
 $\pti{2}$ is preferential.
