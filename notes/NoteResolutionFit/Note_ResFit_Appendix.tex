@@ -1,8 +1,42 @@
 \appendix
 
 
-\section{Listing of the Complete Probability Density
-  Functions}\label{sec:ResFit:App:Pdf}
+\section{Listing of the Complete Probability Density Functions}\label{sec:ResFit:App:Pdf}
+
+In the following, the complete dijet pdfs are listed, including the normalisation.
+
+The simplified pdf~\qeq{eq:ResFit::DijetPdfTransformed:Simple} of the asymmetry with \mbox{$f(\pttrue)  = \delta\left(\pttrue - \ptave\right)$} is given by
+\begin{align}
+  \begin{split}
+    \label{eq:ResFit:App:SimplePdf}
+    g_{\sigma'}\left(\Delta\pt\right) & = \frac{1}{\mathcal{N}}\cdot\left\{
+      \begin{array}{rl}
+        \exp\left[-\frac{1}{2}\left(\frac{\Delta\pt}{\sigma'}\right)^{2}\right] & \quad\text{for } |\Delta\pt| < |\Delta\pt|_{\text{max}} \\
+        & \\
+        0 & \quad\text{otherwise}
+      \end{array}
+    \right. \;, \\
+    \mathcal{N} & = \sqrt{2\pi}\sigma'\text{erf}\left(\frac{\Delta\pt}{\sqrt{2}\sigma'}\right) \;.
+  \end{split}
+\end{align}  
+
+The full pdf~\qeq{eq:ResFit:DijetPdfTransformed} including the spectrum~\qeq{eq:ResFit:DataDriven:ModifiedSpectrum} is given by
+\begin{align}
+  \begin{split}
+    \label{eq:ResFit:App:FullPdf}
+    g_{\sigma'}\left(\ptave,\Delta\pt\right) & =
+    \frac{1}{\mathcal{N}}\cdot\left\{
+      \begin{array}{rl}
+        \exp\left[-\frac{1}{2}\left(\frac{\Delta\pt}{\sigma'}\right)^{2}\right]\cdot\int\dif{\pttrue}\bigg\{f_{0}\left(\pttrue\right)\Big[\text{erf}\left(\frac{\ptavemax-\pttrue}{\sqrt{2}\sigma'}\right)  & \quad\text{for } |\Delta\pt| < |\Delta\pt|_{\text{max}}\text{ and} \\
+        - \text{erf}\left(\frac{\ptavemin-\pttrue}{\sqrt{2}\sigma'}\right)\Big]\exp\left[-\frac{1}{2}\left(\frac{\ptave - \pttrue}{\sigma'}\right)^{2}\right]\bigg\} & \quad\ptavemin < \ptave < \ptavemax \\
+        & \\
+        0 & \quad\text{otherwise}
+      \end{array}
+    \right. \;, \\
+    \mathcal{N} & = \pi\sigma'^{2}\text{erf}\left(\frac{\Delta\pt}{\sqrt{2}\sigma'}\right)\int\dif{\pttrue}\;f_{0}\left(\pttrue\right)\left[\text{erf}\left(\frac{\ptavemax-\pttrue}{\sqrt{2}\sigma'}\right) - \text{erf}\left(\frac{\ptavemin-\pttrue}{\sqrt{2}\sigma'}\right)\right]^{2}
+    \;.
+  \end{split}
+\end{align}
 
 
 

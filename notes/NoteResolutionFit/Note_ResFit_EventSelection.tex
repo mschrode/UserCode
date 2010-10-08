@@ -2,10 +2,10 @@
 
 A sample of QCD events corresponding to an integrated luminosity of $2.2\pbinv$ is
 selected\footnote{The data has been selected from the \texttt{JetMET\_Run2010A-PromptReco-v4} data set.} by triggering on the minimum average transverse momentum, \mbox{$\ptave = (\pti{1} + \pti{2})/2$}, of the leading two jets in each event\footnote{Events in bins with \mbox{$\ptave < 80\gev$} are selected with the \texttt{HLT\_DiJetAve15U} , all other with the \texttt{HLT\_DiJetAve50U} trigger.}.
-Events originating from beam-halo and other beam-background processes are rejected~\cite{bib:cmspas:vertex} and a good reconstructed primary vertex is required \fixme{reference}.
+Events originating from beam-halo and other beam-background processes are rejected~\cite{bib:cmspas:monster} and a good reconstructed primary vertex is required~\cite{bib:cmspas:vertex}.
 
 In order to estimate the particle level jet \pt spectrum and for means of closure tests, also simulated QCD multijet events are used.
-They have been generated in bins of \pthat with PYTHIA6 \fixme{reference} and processed through the full GEANT4 \fixme{reference} based CMS detector simulation\footnote{These are the \pthat binned samples \texttt{/QCDDiJet\_PtXXtoXX/Spring10-START3X\_V26\_S09-v1/GEN-SIM-RECO} of the Spring10 production.}.
+They have been generated in bins of \pthat with PYTHIA6~\cite{bib:pythia} and processed through the full GEANT4~\cite{bib:geant} based CMS detector simulation\footnote{These are the \pthat binned samples \texttt{/QCDDiJet\_PtXXtoXX/Spring10-START3X\_V26\_S09-v1/GEN-SIM-RECO} of the Spring10 production.}.
 
 Jets are reconstructed from calorimeter towers using the
 anti-$k_{T}$ jet clustering algorithm~\cite{bib:akj} with parameter size \mbox{$d=0.5$}.
