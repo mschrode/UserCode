@@ -55,6 +55,18 @@ Gaussian response.
 \begin{figure}[ht]
  \centering
   \begin{tabular}{cc}
+    \includegraphics[width=0.45\textwidth]{figures/hTailsPtAsym} &
+    \includegraphics[width=0.45\textwidth]{figures/hTailsDeltaPt} \\
+\end{tabular}
+ \caption{Start of the non-Gaussian tails as expected from the MC simulation (circles) in the asymmetry (\textit{left}) and the corresponding \mbox{$\Delta\pt$} (\textit{right}) distribution.
+   In each case, the central part of the distribution has been fitted with a Gaussian (solid line), which has been extrapolated further (dashed line) to guide the eye.
+   Additionally, \mbox{$(2+n)\cdot\sigma'$} distances (dotted lines) are shown.}
+  \label{fig:ResFit:DataDriven:Tails}
+\end{figure}
+
+\begin{figure}[ht]
+ \centering
+  \begin{tabular}{cc}
     \includegraphics[width=0.45\textwidth]{figures/MaxLikeSimple_Data132440-144011_Eta00-13_PtAsymmetry_PtBin4_Pt3Cut3} &
     \includegraphics[width=0.45\textwidth]{figures/MaxLikeSimple_Data132440-144011_Eta00-13_PtAsymmetryWidthBottomRatio_Pt3Cut3} \\
 \end{tabular}
@@ -74,18 +86,16 @@ Gaussian response.
 In real data, however, there are non-Gaussian tails biasing the fit of the asymmetry.
 In case of a binned fit of the histogram, the influence of the tails is suppressed by
 fitting only the bulk of the distribution, defined as two standard deviations around the mean.
-In case of the unbinned fit, it is not as straight
-forward to select only the bulk events.
-This can be achieved, however, with an iterative procedure by restricting
-the allowed range of $\Delta\pt$.
-As observed in data and MC simulation (\fixme{reference to plot}), tails start to appear for \mbox{$|\Delta\pt| > 2\sigma'$}.
-Hence, the unbinned fit is performed only for events with \mbox{$|\Delta\pt| < 2\sigma'$}.
-In order to preserve unitarity of the dijet pdf, the normalisation
-of~\qeq{eq:ResFit::DijetPdfTransformed:Simple} is adapted accordingly.
+In case of the unbinned fit, it is not as straight forward to select only the bulk events.
+This can be achieved, however, with an iterative procedure by restricting the allowed range of \mbox{$\Delta\pt$}.
+As observed in the MC simulation (\qfig{fig:ResFit:DataDriven:Tails}), tails start to appear for \mbox{$|\Delta\pt| \gtrsim 3\sigma'$}.
+(At this point, not enough Collider data has been analysed to measure the starting point of the tails.)
+Concluding from this, the unbinned fit is performed only for events with \mbox{$|\Delta\pt| < 2\sigma'$}; the tighter region is chosen to keep a safety margin in order to account for possible inaccuracies of the simulation.
+Unitarity of the dijet pdf is preserved by adapting the normalisation of~\qeq{eq:ResFit::DijetPdfTransformed:Simple} accordingly.
 (The complete pdf is given in~\qeq{eq:ResFit:App:SimplePdf} in Appendix~\ref{sec:ResFit:App:Pdf}.)
 
 The threshold on $|\Delta\pt|$ in the above choice is proportional to $\sigma'$, which is the fitted parameter, and would be varied accordingly during the maximisation.
-This, however, biases the result towards smaller \fixme{???} values.
+This, however, biases the result towards smaller values.
 Therefore the threshold is kept fixed and the maximisation is iterated
 four times, leading to an unbiased result.
 
