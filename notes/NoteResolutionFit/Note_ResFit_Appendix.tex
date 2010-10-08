@@ -1,480 +1,146 @@
 \appendix
 
 
+\section{Listing of the Complete Probability Density
+  Functions}\label{sec:ResFit:App:Pdf}
+
+
+
 \section{Determination of the Gaussian MC Truth Resolution}\label{sec:ResFit:App:MCTruth}
 
-In order to serve as a reference for a closure test of the maximum
-likelihood method, the resolution of the simulated jets is
-determined using MC truth information.
+The resolution of the simulated jets, derived from MC truth information, is used as a reference in the closure tests of the maximum likelihood method.
+For its determination, the same MC sample and corrected jets as before (comp. \qsec{sec:ResFit:EvtSel}) have
+been used, however none of the additional selection, \eg the requirement
+on $|\Delta\phi_{i}|$, has been performed.
+Also, events have not been weighted to the realisitic QCD spectrum but
+rather the actual generated number of events has been used in order
+to achieve roughly the same statistical precision over the whole \pt range.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.45\textwidth]{figures/hMCTruthReso}
+  \caption{MC truth resolution for \mbox{$|\eta| < 1.3$}.
+  The widths (circles) of Gaussian fits to the response distributions
+  \mbox{$\pt/\ptgen$} in different \ptgen bins are interpolated with the
+  smooth function~\qeq{eq:ResFit:MCTruthReso} (solid line).}
+  \label{fig:ResFit:App:MCTruthReso}
+\end{figure}
+
 For each event, the two particle level jets with the highest \ptgen
 are selected and the detector level jet closest in
 \mbox{$\Delta R = \sqrt{(\Delta\eta)^{2} + (\Delta\phi)^{2}}$} is assigned to each.
 The event is discarded if for one of the pairs $\Delta R > 0.2$.
-Then for different bins of \ptgen and $\eta$, the response $\pt/\ptgen$ of each pair is filled into a
-histogram and the bulk of the distribution, defined by the interval of $1.5$ standard deviations around the mean, is fitted with a Gaussian.
-In each $\eta$ bin, the widths $\sigma/\ptgen$ of the fitted Gaussians are
-interpolated for different \ptgen with the function
-\begin{equation*}
-  \sigma(\ptgen/\ptgen) = \frac{a}{\ptgen} \oplus
-  \frac{b}{\sqrt{\pt}} \oplus c \; .
-\end{equation*}
+Then, for different bins of \ptgen and $\eta$, the response $\pt/\ptgen$ of each pair is filled into a
+histogram and the bulk of the distribution, defined by the interval of
+$1.5$ standard deviations around the mean, is fitted with a Gaussian.
+The widths $\sigma_{\text{MC}}$ of the fitted Gaussians in different \ptgen
+bins are shown in \qfig{fig:ResFit:App:MCTruthReso} for \mbox{$|\eta| < 1.3$}.
+They are interpolated with the function
+\begin{equation}
+  \label{eq:ResFit:MCTruthReso}
+  \sigma_{MC}(\ptgen) = \frac{a_{1}}{\ptgen/\gev} \oplus
+  \frac{a_{2}}{\sqrt{\pt/\gev}} \oplus a_{3} \; ,
+\end{equation}
+which has been used as MC truth resolution throughout this note.
+The fitted parameter values are listed in \qtab{tab:ResFit:MCTruthReso}.
 
-\fixme{Add plot here}
+\begin{table}[ht]
+  \caption{Parameter values of the MC truth resolution \qeq{eq:ResFit:MCTruthReso}.
+    The uncertainties assigned to the fitted values are the
+    statistical uncertainties from the interpolation.}
+  \centering
+  \begin{tabular}[ht]{ccccc}
+    \toprule
+    $|\eta_{\text{min}}|$ & $|\eta_{\text{max}}|$ & $a_{1}$ & $a_{2}$ & $a_{3}$ \\
+    \midrule
+    $0$ & $1.3$ & $3.044 \pm 0.069$ & $1.1601 \pm 0.0056$ & $0.03482 \pm 0.00046$ \\
+   \bottomrule
+  \end{tabular}
+  \label{tab:ResFit:MCTruthReso}
+\end{table}
+
 
 
 \section{Study with a Toy Monte Carlo Simulation}\label{sec:ResFit:App:ToyMC}
 
-% \fixme{Shorter}
+A very basic closure test of the maximum likelihood fit has been performed using a toy MC simulation.
+
+A sample of $30\,000$ ideal dijet events has been generated assuming a simple exponential particle level jet \pt spectrum
+\begin{equation}
+  \label{eq:ResFit:ToyMC:Spectrum}
+  f\left(\pttrue\right) \propto \exp\left(-\pttrue / \tau\right),
+  \qquad \tau = 80 \;,
+\end{equation}
+ranging from \mbox{$50 < \pttrue < 1\,000\gev$} (comp. \qfig{fig:ResFit:App:ToyMC:Spectrum}).
+Two independent measurements of the jet \pt have been simulated by weighting \pttrue with random numbers according to a Gaussian response pdf \mbox{$r_{\mathbf{\xi}}(\pt|\pttrue) = \mathcal{G}(\pt;\pttrue,\sigma)$}.
+The standard deviation, \ie the jet resolution, $\sigma$ has been parametrised as a function of \pttrue and the parameters $\xi_{j}$, \mbox{$j\in [1,3]$}, as
+\begin{equation}
+  \label{eq:ResFit:ToyMC:Sigma}
+  \sigma_{\xi_{j}}\left(\pt\right) = \xi_{1}\gev \oplus \xi_{2}\,\sqrt{\pt\gev}\oplus \xi_{3}\pt \;;
+\end{equation}
+the values of the parameters $\xi_{j}$ are listed in \qtab{tab:ResFit:ToyMC:FitResult}.
+Examples of simulated response distributions are shown in \qfig{fig:ResFit:App:ToyMC:Response} for two different \pttrue bins.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_SpectrumLog}
+  \caption{Toy Monte Carlo simulation of a sample of ideal dijet events.
+    Generated \pttrue spectrum (circles) and the underlying pdf (solid line).}
+  \label{fig:ResFit:App:ToyMC:Spectrum}
+\end{figure}
+
+\begin{table}[ht]
+  \caption{Parameter values of the Gaussian jet \pt resolution $\sigma$.
+    Listed are the true values used for the generation and the fitted values.
+    The uncertainties assigned to the fitted values are the statistical uncertainties from the fit.
+    \fixme{List global correlation coefficients.}}
+  \centering
+  \begin{tabular}[ht]{lccc}
+    \toprule
+     & $\xi_{1}$ & $\xi_{2}$ & $\xi_{3}$ \\
+    \midrule
+    True value & $4$           & $1.2$           & $0.05$ \\
+    Fit result & $4.5 \pm 0.7$ & $1.18 \pm 0.05$ & $0.051 \pm 0.004$ \\
+    \bottomrule
+  \end{tabular}
+  \label{tab:ResFit:ToyMC:FitResult}
+\end{table}
+
+\begin{figure}[ht]
+  \centering
+  \begin{tabular}{cc}
+    \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_ResolutionBin1} &
+    \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_ResolutionBin7} \\      
+  \end{tabular}
+  \caption{Generated true response \mbox{$\pt / \pttrue$} (circles) and the response (solid line) from the maximum likelihood fit in two different \pttrue bins.
+    The latter has been evaluated for the mean \pttrue in these bins.
+    Note, here ``fit'' does not refer to a fit to the shown histogram but the maximisation of the likelihood~\eqref{eq:ResFit:Likelihood}.
+  }
+  \label{fig:ResFit:App:ToyMC:Response}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \begin{tabular}{cc}
+    \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_Sigma} &
+    \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_SigmaRelDifference} \\
+  \end{tabular}
+  \caption{(\textit{Left}) Relative Gaussian resolution \mbox{$\sigma(\pt)/\pt$} evaluated with the fitted parameter values (solid line) in comparison to the true resolution (dashed line) and (\textit{right}) the relative difference \mbox{$\sigma_{\text{fit}} / \sigma_{\text{true}}$}.
+    The shaded areas represent the propagated statistical uncertainty on the fitted parameter values, taking into account the parameter correlations.}
+  \label{fig:ResFit:App:ToyMC:FittedSigma}
+\end{figure}
+
+The jet \pt resolution is measured in this sample by maximisation of the dijet likelihood~\qeq{eq:ResFit:Likelihood}.
+The jet \pt spectrum is taken directly from the simulation~\qeq{eq:ResFit:ToyMC:Spectrum}, whereupon the response is assumed to be Gaussian and the resolution $\sigma$ to depend on \pttrue as in~\qeq{eq:ResFit:ToyMC:Sigma}.
+In difference to the procedure in data, \mbox{$\sigma = \sigma_{\xi_{j}}(\pttrue)$} is thus a \pttrue dependent function and the fitted parameters are the $\xi_{j}$.
+Before, a \pt independent mean $\sigma$ has been fitted in bins of \ptave, which was necessary in order to extrapolate to the two jet only event topology and correct for the bias from additional jet activity (comp. \qsec{sec:ResFit:DataDriven:AddJets:Extrapolation}).
+The fitted parameter values $\xi_{j}$ are listed in \qtab{tab:ResFit:ToyMC:FitResult}; they agree with the true values within the statistical uncertainties.
+An example of the resulting response distribution in comparison to the true distribution is shown in \qfig{fig:ResFit:App:ToyMC:Response} for two different \pttrue bins.
+
+The Gaussian resolution $\sigma_{\xi_{j}}(\pt)/\pt$, evaluated with the fitted parameter values $\xi_{j}$, is shown in \qfig{fig:ResFit:App:ToyMC:FittedSigma} in comparison to the true width at generation.
+There is good agreement.
+For \pt up to $\approx 600\gev$, where there is sufficient statistics in the generated sample (comp. \qfig{fig:ResFit:App:ToyMC:Spectrum}), the uncertainties are about $1\%$ at low \pt rising to about $3\%$.
+For larger \pt the uncertainties rise up to $4.5\%$.
 
-% The method presented in the previous Section~\ref{sec:ResFit:App:Method}
-% is studied using a simple simulation, \textit{Toy Monte Carlo}.
-% First, the basic likelihood fit described in
-% Section~\ref{sec:ResFit:App:Method:Likelihood} is performed (Section~\ref{sec:ResFit:App:ToyMC:PtGenCuts}),
-% whereby events have been selected using Monte Carlo truth information.
-% Second, a data driven event selection has been applied and the
-% modified likelihood, described in
-% Section~\ref{sec:ResFit:App:Method:Biases}, is maximised (Section~\ref{sec:ResFit:App:ToyMC:PtCaloCuts}).
-
-
-% \subsection{Generated sample}\label{sec:ResFit:App:ToyMC:Sample}
-
-% A sample of $30\,000$ ideal dijet events has been generated assuming a
-% simple exponential particle level jet \pt spectrum
-% \begin{equation}
-%   \label{eq:ResFit:ToyMC:Spectrum}
-%   f\left(\pttrue\right) \propto \exp\left(-\pttrue / \tau\right),
-%   \qquad \tau = 80.
-% \end{equation}
-% ranging from \mbox{$50 < \pttrue < 1000\gev$} (comp. Fig.~\ref{fig:ResFit:App:ToyMC:Sample:Spectrum}).
-% Two independent measurements of the jet \pt have been simulated by
-% weighting \pttrue with random numbers drawn from a Gaussian response
-% \begin{equation}
-%   \label{eq:ResFit:ToyMC:Response}
-%   r_{\mathbf{\xi}}\left(\pt|\pttrue\right) = 
-%   \frac{1}{\sqrt{2\pi}\sigma}\exp\left[-\frac{1}{2}\left(\frac{\pt - \pttrue}{\sigma}\right)^{2}\right]
-% \end{equation}
-% (Here and in the following the jet index $i$ has been omitted.)
-% The standard deviation, i.e. the jet resolution, $\sigma$ has been parametrised as a function of \pttrue and
-% the parameters $\xi_{i}$, \mbox{$i\in [0,2]$}, as
-% \begin{equation}
-%   \label{eq:ResFit:ToyMC:Sigma}
-%   \sigma = \xi_{0}\gev
-%   \oplus \xi_{1}\,\sqrt{\pt\gev}\oplus \xi_{2}\pt.
-% \end{equation}
-% The values of the parameters $\mathbf{\xi}$ are listed in
-% Tab.~\ref{tab:ResFit:ToyMC:PtGenCuts:FitResult}.
-% An example of a simulated response distribution is shown in Fig. ~\ref{fig:ResFit:App:ToyMC:PtGenCuts:Response}.
-
-% \begin{figure}[ht]
-%   \centering
-%   \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_SpectrumLog}
-%   \caption{Toy Monte Carlo simulation of a sample of ideal dijet events.
-%     Generated \pttrue spectrum (circular markers) and the underlying pdf (solid line).}
-%   \label{fig:ResFit:App:ToyMC:Sample:Spectrum}
-% \end{figure}
-
-
-% \subsection{Measurement of the resolution with a truth information based event selection}\label{sec:ResFit:App:ToyMC:PtGenCuts}
-
-% The jet energy resolution of the dijet sample is to be measured as described in Section~\ref{sec:ResFit:Method:Likelihood}.
-% Dijet events are have been selected from the sample described above by
-% requiring \mbox{$\ptmin < \pttrue < \ptmax$}.
-% The jet \pt spectrum is taken directly from the
-% simulation~\eqref{eq:ResFit:ToyMC:Spectrum}, while the jet \pt
-% response is assumed to be Gaussian and the resolution $\sigma$ to
-% depend on \pttrue and the parameters $\mathbf{\xi}$ as
-% in~\eqref{eq:ResFit:ToyMC:Sigma}.
-
-% \begin{figure}[ht]
-% \centering
-% \begin{tabular}{cc}
-%   \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_ResolutionBin1} &
-%   \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_ResolutionBin7} \\      
-% \end{tabular}
-% \caption{Simple simulation of a sample of ideal dijet events.
-%   Generated true response \mbox{$\pt / \pttrue$} (histogram) and
-%   the response (solid line) from the maximum likelihood fit in two
-%   different \pttrue bins.
-%   The latter has been evaluated for the mean \pttrue in these bins.
-%   Note, here ``fit'' does not refer to a fit to the shown histogram but the maximisation of the likelihood~\eqref{eq:ResFit:Likelihood}.
-% }
-% \label{fig:ResFit:App:ToyMC:PtGenCuts:Response}
-% \end{figure}
-
-
-% \begin{table}[ht]
-%   \caption{Parameter values of the Gaussian jet \pt resolution
-%     $\sigma$.
-%     Listed are the true values used for the generation and
-%     the fitted values.
-%     The uncertainties assigned to the fitted values
-%     are the statistical uncertainties from the fit.
-%     The parameter correlations are shown in Fig.~\ref{fig:ResFit:App:ToyMC:PtGenCuts:ParCorr}.}
-%   \centering
-%   \begin{tabular}[ht]{lccc}
-%     \toprule
-%     $\xi_{i}$ & $0$ & $1$ & $2$ \\
-%     \midrule
-%     True value & $4$           & $1.2$           & $0.05$ \\
-%     Fit result & $4.5 \pm 0.7$ & $1.18 \pm 0.05$ & $0.051 \pm 0.004$ \\
-%     \bottomrule
-%   \end{tabular}
-%   \label{tab:ResFit:ToyMC:PtGenCuts:FitResult}
-% \end{table}
-
-
-% \begin{figure}[ht]
-%   \centering
-%   \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_Correlations}
-%   \caption{Correlation coefficients of the fitted parameter values
-%     $\mathbf{\xi}$ of the Gaussian jet \pt resolution $\sigma$. 
-%     Parameter $3$ corresponds to the slope $\tau$ of the
-%     spectrum, which is fixed during the fit, and is to be ignored.}
-%   \label{fig:ResFit:App:ToyMC:PtGenCuts:ParCorr}
-% \end{figure}
-
-% The fitted parameter values $\mathbf{\xi}$ are listed in Tab.~\ref{tab:ResFit:ToyMC:PtGenCuts:FitResult};
-% they agree with the true values within the statistical uncertainties.
-
-% The parameters are strongly (anti-) correlated (comp. Fig.~\ref{fig:ResFit:App:ToyMC:PtGenCuts:ParCorr}).
-% In the present \pttrue interval from \mbox{$\ptmin = 50\gev$} to \mbox{$\ptmax = 1000\gev$}, the used parametrisation of the Gaussian resolution $\sigma$ is over-determined.
-% The $\xi_{0}$ term in~\eqref{eq:ResFit:ToyMC:Sigma} is most important at very low \pt while the $\xi_{2}$ term dominates at very large \pt.
-% Hence, omitting either the terms with $\xi_{0}$ and $\xi_{2}$ or the
-% term with $\xi_{1}$ would have been sufficient to describe the measured events.
-
-% \begin{figure}[ht]
-%   \centering
-%   \begin{tabular}{cc}
-%     \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_Sigma} &
-%     \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtGenCuts_SigmaRelDifference} \\
-%   \end{tabular}
-%   \caption{(\textit{Left}) Relative Gaussian resolution $\sigma(\pt)/\pt$ evaluated with the fitted
-%     parameter values (solid line) in comparison to the true resolution
-%     (dashed line) and (\textit{right}) the relative difference
-%     $\sigma_{\text{fit}} / \sigma_{\text{true}}$.
-%     The shaded areas represent the propagated statistical
-%     uncertainty on the fitted parameter values, taking into account the
-%     parameter correlations.}
-%   \label{fig:ResFit:App:ToyMC:PtGenCuts:FittedSigma}
-% \end{figure}
-
-% The Gaussian resolution $\sigma(\pt)/\pt$ evaluated with the fitted
-% parameter values is shown in Fig.~\ref{fig:ResFit:App:ToyMC:PtGenCuts:FittedSigma}
-% in comparison to the true width at generation.
-% There is good agreement between the fitted and the true resolution.
-% The uncertainties are about $1\%$ at low \pt rising to
-% about $3\%$ at $\pt \approx 600\gev$ where there is sufficient statistics in
-% the generated sample (comp. Fig~\ref{fig:ResFit:App:ToyMC:Sample:Spectrum}).
-% For larger \pt the uncertainties rise up to $4.5\%$.
-
-% An example of the resulting response distribution in comparison to the true
-% distribution is shown in Fig.~\ref{fig:ResFit:App:ToyMC:PtGenCuts:Response} for
-% two different \pttrue bins.
-
-
-% \subsection{Measurement of the resolution with a data driven event
-%   selection}\label{sec:ResFit:App:ToyMC:PtCaloCuts}
-
-% The modification of the maximum likelihood method for a data driven
-% event selection discussed in Section~\ref{sec:ResFit:Method:Biases} is
-% tested using the Toy Monte Carlo simulation.
-% Events are selected by requiring the measured \pt of the
-% first\footnote{This is that one jet of the two leading jets the
-%   selection requirement is placed on, i.e. not necessarily the leading
-%   jet (comp. Section~\ref{sec:ResFit:Method:Biases}).} jet to
-% meet \mbox{$\ptmin = 80 < \pti{1} < \ptmax = 800\gev$} (comp. Fig.~\ref{fig:ResFit:App:ToyMC:PtCuts:Spectrum}).
-
-% \begin{figure}[ht]
-%   \centering
-%   \begin{tabular}{cc}
-%     \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_SpectrumLog} &
-%     \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_SpectrumLinear} \\
-%   \end{tabular}
-%   \caption{Demonstration of the migration effects caused by a data
-%     driven event selection.
-%     Shown is the \pttrue spectrum (circular markers) after
-%     requiring \mbox{$80 < \pt < 800\gev$}, in linear scale
-%     (\textit{left}) and logarithmic scale scale (\textit{right}).
-%     The spectrum is well described by the modified pdf
-%     $\tilde{f}(\pttrue)$.
-%     (Compare the underlying spectrum Fig.~\ref{fig:ResFit:App:ToyMC:Sample:Spectrum}.)
-%   }
-%   \label{fig:ResFit:App:ToyMC:PtCuts:Spectrum}
-% \end{figure}
-
-
-% \begin{figure}[ht]
-%   \centering
-%   \begin{tabular}{cc}
-%     \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_ResolutionBin1} &
-%     \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_ResolutionBin7} \\
-%   \end{tabular}
-%   \caption{Generated Gaussian response \mbox{$\pt / \pttrue$}
-%     (circular markers) and the fitted
-%     response (solid line) in two different \pttrue bins after
-%     requiring \mbox{$80 < \pt < 800\gev$}.
-%     Note the migration effects (\textit{left}): the narrow peak at the
-%     right side is populated by the first jets in each event, i.e. that have been cut on, and hence these are jets fluctuating upwards into the \pt bin.
-%     The wider peak centred around 1 is populated by the unconstrained
-%     second jet.
-%     (There is more upward than downward fluctuation due to the falling
-%     \pttrue spectrum.)
-%   }
-%   \label{fig:ResFit:App:ToyMC:PtCuts:Response}
-% \end{figure}
-
-% \begin{figure}[ht]
-%   \centering
-%   \begin{tabular}{cc}
-%     \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_Sigma} &
-%     \includegraphics[width=0.45\textwidth]{figures/resFit_ToyMC_PtCuts_SigmaRelDifference} \\
-%   \end{tabular}
-%   \caption{(\textit{Left}) Relative Gaussian resolution $\sigma(\pt)/\pt$ evaluated with the fitted
-%     parameter values (solid line) in comparison to the true resolution
-%     (dashed line) and (\textit{right}) the relative difference
-%     $\sigma_{\text{fit}} / \sigma_{\text{true}}$.
-%     The shaded areas represent the propagated statistical
-%     uncertainty on the fitted parameter values, taking into account the
-%     parameter correlations.
-%     The fit has been performed with dijet events selected by requiring \mbox{$80 < \pt < 800\gev$}.}
-%   \label{fig:ResFit:App:ToyMC:PtCuts:FittedSigma}
-% \end{figure}
-
-
-% \begin{table}[ht]
-%   \caption{Parameter values of the Gaussian jet \pt resolution
-%     $\sigma$.
-%     Listed are the true values used for the generation and
-%     the fitted values.
-%     The uncertainties assigned to the fitted values
-%     are the statistical uncertainties from the fit.
-%     The fit has been performed with dijet events selected by requiring
-%     \mbox{$80 < \pt < 800\gev$}.}
-%   \centering
-%   \begin{tabular}[ht]{lccc}
-%     \toprule
-%     $b_{i}$ & $0$ & $1$ & $2$ \\
-%     \midrule
-%     True value & $4$           & $1.2$                   & $0.05$ \\
-%     Fit result   & $4 \pm 1$ & $1.20 \pm 0.07$ & $0.049 \pm 0.005$ \\
-%     \bottomrule
-%    \end{tabular}
-%  \label{tab:ResFit:ToyMC:PtCuts:FitResult}
-% \end{table}
-
-
-% The fitted parameter values $\mathbf{\xi}$ of the Gaussian resolution $\sigma$ are listed in Tab.~\ref{tab:ResFit:ToyMC:PtCuts:FitResult}.
-% They agree with the true values within the statistical uncertainties.
-% As expected, they feature the same correlation pattern as in the
-% fitted parameters in Section~\ref{sec:ResFit:App:ToyMC:PtGenCuts}.
-
-% The relative Gaussian resolution $\sigma(\pt)/\pt$ evaluated with the fitted parameter values is shown in Fig.~\ref{sec:ResFit:App:ToyMC:PtGenCuts} in comparison to the true resolution at generation.
-% There is good agreement within the statistical uncertainties.
-% As before, the uncertainties are about $1\%$ at low \pt rising to about $3\%$ at $\pt \approx 600\gev$ and up to $4.5\%$ at very large \pt.
-% An example of the resulting response distributions is shown in
-% Fig.~\ref{fig:ResFit:App:ToyMC:PtCuts:Response} for two \pttrue bins.
-
-% From the results presented in this section, it is concluded that the
-% maximum likelihood method is suited to measure the jet \pt resolution
-% of dijets that are perfectly balanced in \pttrue.
-
-% \section{Fit results for all \pt and $\eta$ bins}\label{sec:ResFit:App:AllResults}
-% \subsection{Gaussian response function}\label{sec:ResFit:App:AllResults:Gauss}
-
-% % ----- Gauss Eta0 Spectra -----
-% \begin{figure}[ht]
-%   \centering
-%   \begin{tabular}{ccc}
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_Spectrum_PtBin1} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_Spectrum_PtBin2} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_Spectrum_PtBin3} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_Spectrum_PtBin4} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_Spectrum_PtBin5} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_Spectrum_PtBin6} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_Spectrum_PtBin7} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_Spectrum_PtBin8} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_Spectrum_PtBin9} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_Spectrum_PtBin10} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_Spectrum_PtBin11} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_Spectrum_PtBin12} \\
-%   \end{tabular}
-% \caption{The parametrisation of the realistic particle jet \pt spectrum as used in the dijet likelihood (solid line) in comparison to the prediction from Monte Carlo truth (full circles) in different \pt bins for \mbox{$|\eta|<1.2$}. Migration effects are modelled assuming a Gaussian response function.}
-% \label{fig:ResFit:App:Gauss:Spectrum}
-% \end{figure}
-
-
-% % ----- Gauss Eta0 Extrapolations -----
-% \begin{figure}[ht]
-%   \centering
-%   \begin{tabular}{ccc}
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_ExtrapolatedPar0_PtBin1} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_ExtrapolatedPar0_PtBin2} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_ExtrapolatedPar0_PtBin3} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_ExtrapolatedPar0_PtBin4} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_ExtrapolatedPar0_PtBin5} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_ExtrapolatedPar0_PtBin6} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_ExtrapolatedPar0_PtBin7} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_ExtrapolatedPar0_PtBin8} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_ExtrapolatedPar0_PtBin9} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_ExtrapolatedPar0_PtBin10} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_ExtrapolatedPar0_PtBin11} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_ExtrapolatedPar0_PtBin12} \\
-%   \end{tabular}
-% \caption{Resolutions $\bar{\sigma}/\pt$ from Gaussian fits for different limits on \ptrel in different \pt bins for \mbox{$|\eta|<1.2$}.
-%   The solid line is a linear fit to extrapolate $\bar{\sigma}/\pt$ to the ideal case of only two jets in the
-%   final state.}
-% \label{fig:ResFit:App:Gauss:Extrapolation}
-% \end{figure}
-
-
-% % ----- Gauss Eta0 MC truth closure -----
-% \begin{figure}[ht]
-%   \centering
-%   \begin{tabular}{ccc}
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_MCClosure_PtBin1} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_MCClosure_PtBin2} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_MCClosure_PtBin3} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_MCClosure_PtBin4} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_MCClosure_PtBin5} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_MCClosure_PtBin6} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_MCClosure_PtBin7} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_MCClosure_PtBin8} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_MCClosure_PtBin9} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_MCClosure_PtBin10} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_MCClosure_PtBin11} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_Gauss_Eta0_MCClosure_PtBin12} \\
-%   \end{tabular}
-% \caption{Closure \mbox{$|\eta|<1.2$}.}
-% \label{fig:ResFit:App:Gauss:MCClosure}
-% \end{figure}
-
-% \clearpage
-
-
-% \subsection{Crystal Ball response function}\label{sec:ResFit:App:AllResults:CrystalBall}
-
-% % ----- Crystal Ball Eta0 Spectra -----
-% \begin{figure}[ht]
-%   \centering
-%   \begin{tabular}{ccc}
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_Spectrum_PtBin0} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_Spectrum_PtBin1} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_Spectrum_PtBin2} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_Spectrum_PtBin3} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_Spectrum_PtBin4} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_Spectrum_PtBin5} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_Spectrum_PtBin6} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_Spectrum_PtBin7} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_Spectrum_PtBin8} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_Spectrum_PtBin9} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_Spectrum_PtBin10} & \\
-%   \end{tabular}
-% \caption{The parametrisation of the realistic particle jet \pt spectrum as used in the dijet likelihood (solid line) in comparison to the prediction from Monte Carlo truth (full circles) in different \pt bins for \mbox{$|\eta|<1.2$}. Migration effects are modelled assuming a Crystal Ball response function.}
-% \label{fig:ResFit:App:CB:Spectrum}
-% \end{figure}
-
-
-% % ----- Crystal Ball Eta0 extrapolations -----
-% \begin{figure}[ht]
-%   \centering
-%   \begin{tabular}{ccc}
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar0_PtBin0} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar0_PtBin1} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar0_PtBin2} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar0_PtBin3} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar0_PtBin4} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar0_PtBin5} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar0_PtBin6} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar0_PtBin7} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar0_PtBin8} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar0_PtBin9} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar0_PtBin10} & \\
-%   \end{tabular}
-% \caption{}
-% \label{fig:ResFit:App:CB:ExtrapolatedPar0}
-% \end{figure}
-
-% \begin{figure}[ht]
-%   \centering
-%   \begin{tabular}{ccc}
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar1_PtBin0} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar1_PtBin1} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar1_PtBin2} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar1_PtBin3} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar1_PtBin4} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar1_PtBin5} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar1_PtBin6} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar1_PtBin7} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar1_PtBin8} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar1_PtBin9} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar1_PtBin10} & \\
-%   \end{tabular}
-% \caption{}
-% \label{fig:ResFit:App:CB:ExtrapolatedPar1}
-% \end{figure}
-
-% \begin{figure}[ht]
-%   \centering
-%   \begin{tabular}{ccc}
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar2_PtBin0} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar2_PtBin1} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar2_PtBin2} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar2_PtBin3} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar2_PtBin4} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar2_PtBin5} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar2_PtBin6} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar2_PtBin7} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar2_PtBin8} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar2_PtBin9} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_ExtrapolatedPar2_PtBin10} & \\
-%   \end{tabular}
-% \caption{}
-% \label{fig:ResFit:App:CB:ExtrapolatedPar2}
-% \end{figure}
-
-
-% % ----- Crystal Ball Eta0 MCClosure -----
-% \begin{figure}[ht]
-%   \centering
-%   \begin{tabular}{ccc}
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_MCClosure_PtBin0} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_MCClosure_PtBin1} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_MCClosure_PtBin2} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_MCClosure_PtBin3} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_MCClosure_PtBin4} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_MCClosure_PtBin5} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_MCClosure_PtBin6} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_MCClosure_PtBin7} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_MCClosure_PtBin8} \\
-
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_MCClosure_PtBin9} &
-%     \includegraphics[width=0.3\textwidth]{figures/ResFit_Spring10QCDFlat_CB_Eta0_MCClosure_PtBin10} & \\
-%   \end{tabular}
-% \caption{Closure \mbox{$|\eta|<1.2$}.}
-% \label{fig:ResFit:App:CB:MCClosure}
-% \end{figure}
 
 \clearpage

@@ -14,7 +14,7 @@ In \qsec{sec:ResFit:DataDriven:FullFit}, the full dijet pdf, including an assump
 spectrum and a description of selection biases, is finally used to fit the asymmetry;
 the spectrum is also used to derive a better estimator for \ptgen.
 
-As discussed in \qsec{sec:ResFit:DataDriven:AddJets}, additional jets in the events, e.g. from soft gluon radiation, as
+As discussed in \qsec{sec:ResFit:DataDriven:AddJets}, additional jets in the events, \eg from soft gluon radiation, as
 well as out-of-cone effects during the jet clustering bias the dijet asymmetry and have to be
 corrected for when measuring the resolution.
 The contributions to the bias are investigated in detail in \qsec{sec:ResFit:DataDriven:AddJets:Contributions} and
@@ -41,7 +41,7 @@ related to the jet \pt resolution $\sigma$ by
 
 \subsubsection{Simple Maximum Likelihood Fit and Outlier Treatment}\label{sec:ResFit:DataDriven:SimpleFit}
 
-If the spectrum $f$ in the dijet pdf~\qeq{eq:ResFit:DijetPdfTransformed} is replaced by \mbox{$f(\pttrue)  = \delta\left(\pttrue - \ptave\right)$}, i.e. assuming \mbox{$\pttrue = \ptave$}, 
+If the spectrum $f$ in the dijet pdf~\qeq{eq:ResFit:DijetPdfTransformed} is replaced by \mbox{$f(\pttrue)  = \delta\left(\pttrue - \ptave\right)$}, \ie assuming \mbox{$\pttrue = \ptave$}, 
 \qeq{eq:ResFit:DijetPdfTransformed} simplifies to
 \begin{equation}
 \label{eq:ResFit::DijetPdfTransformed:Simple}
@@ -96,7 +96,7 @@ Additional jet activity is suppressed by restricting their \pt components
 along the dijet axis, \mbox{$\ppi{3} < 0.1\cdot\mean{\ptave}$} and
 \mbox{$\ppi{\text{Soft}} < 0.015\cdot\mean{\ptave}$} (comp. \qsec{sec:ResFit:DataDriven:AddJets:Contributions} for
 a definition of \pp).
-It is well described by the result of the discussed simplified unbinned fit, i.e. a Gaussian with width $\sigma'$, and there is good agreement to a direct binned fit of the histogram.
+It is well described by the result of the discussed simplified unbinned fit, \ie a Gaussian with width $\sigma'$, and there is good agreement to a direct binned fit of the histogram.
 In \qsubfig{fig:ResFit:DataDriven:Simple}{right}, the widths $\sigma'$ measured in different \ptave bins with the unbinned technique are further compared to the results of binned fits.
 Again, there is good agreement.
 
@@ -147,7 +147,7 @@ Second, the \pttrue pdf is extended to incorporate the migration effects:
   f\left(\pttrue\right) = \frac{1}{\mathcal{N}_{f}}
   f_{0}\left(\pttrue\right) \int^{\ptavemax}_{\ptavemin}\dif{x}\;\mathcal{G}\left(x|\sigma',\pttrue\right) \, ,
 \end{equation}
-Here, $f_{0}$ denotes the underlying particle level jet \pt spectrum \qsubfig{fig:ResFit:DataDriven:Spectrum}{left}\footnote{The actual probability densities are evaluated using a linear interpolation of the histogram.} and $\mathcal{G}$ is a Gaussian of width \mbox{$\sigma' = \sigma/\sqrt{2}$}, i.e. the pdf of \ptave for a given \pttrue.
+Here, $f_{0}$ denotes the underlying particle level jet \pt spectrum \qsubfig{fig:ResFit:DataDriven:Spectrum}{left}\footnote{The actual probability densities are evaluated using a linear interpolation of the histogram.} and $\mathcal{G}$ is a Gaussian of width \mbox{$\sigma' = \sigma/\sqrt{2}$}, \ie the pdf of \ptave for a given \pttrue.
 Equation~\qeq{eq:ResFit:DataDriven:ModifiedSpectrum} is validated using simulate data:
 the \ptgen spectrum of selected dijet events is well described by $f(\pttrue)$ as demonstrated in \qsubfig{fig:ResFit:DataDriven:Spectrum}{right}.
 This extension to $f$ depends solely on the fitted parameter $\sigma'$ and does not introduce any new dependencies on the MC simulation.
@@ -168,7 +168,7 @@ However, they are greater than the MC truth resolutions\footnote{The
   Appendix~\ref{sec:ResFit:App:MCTruth}.} $\sigma(R_{\text{MC}})$ for
 the following reasons:
 The dijet asymmetry~\qeq{eq:ResFit:Asymmetry} is defined under the assumption of exactly two jets which are balanced in transverse momentum at particle level.
-Additional jet activity in the events, e.g. from soft gluon
+Additional jet activity in the events, \eg from soft gluon
 radiation, causes an imbalance of the leading two jets and hence
 broadens the measured asymmetry distribution.
 
@@ -298,9 +298,9 @@ The need for compensating the influence of additional jet activity is
 the reason why a mean, \pt independent Gaussian the resolution is
 measured per \ptave bin.
 In that case there is only one free parameter, $\sigma$, which can be
-extrapolated straight forward.
+extrapolated in a straight forward way.
 Was the response instead parameterised with a \pt dependent function,
-e.g. a Gaussian with width \mbox{$\sigma(\pt) = a\pt \oplus
+\eg a Gaussian with width \mbox{$\sigma(\pt) = a\pt \oplus
   b\sqrt{\pt} \oplus c$},
 the parameters $a$, $b$, and $c$ are correlated.
 In that case it is not clear how the extrapolation should be
