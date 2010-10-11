@@ -66,18 +66,18 @@ TChain *createTChain(const TString &fileListName) {
 void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
   util::StyleSettings::presentationNoTitle();
 
-  const TString prefix = "JetMET_Run2010A-PromptReco-v4_132440-144011_DiJetAve50U_Pt3RelCuts_Eta00-13_";
+  const TString prefix = "JetMET_Run2010A-Sep17ReReco_v2_DiJetAve50U_Pt3Rel01_Eta13-30_";
   const int maxNJet = 50;
   const double minEMF = 0.01;
   const int minJetN90Hits = 2;
   const double maxJetFHPD = 0.98;
   const double maxJetFRBX = 0.98;
   const double minDeltaPhi = 2.7;
-  const double minEta = 0.;
-  const double maxEta = 1.3;
-  const double minPtAve = 60.;
+  const double minEta = 1.3;
+  const double maxEta = 3.0;
+  const double minPtAve = 80.;
   const double maxPt3Rel = 0.1;
-  const double lumi = 2.214;
+  const double lumi = 2.9;
   const double lumiFrac = lumi/0.1;
   const int mcColor = 5;
   TRandom *rand = new TRandom(0);
@@ -87,8 +87,11 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
   unsigned int nChains = 2;
 
   //  TChain *data = createTChain("/afs/naf.desy.de/user/m/mschrode/Kalibri/input/Kalibri_JetMET_Run2010A-PromptReco-v4_DCSONLY"); //614 nb
-  TChain *data = createTChain("/afs/naf.desy.de/user/m/mschrode/Kalibri/input/Kalibri_JetMET_Run2010A-PromptReco-v4_DCSONLY_132440-144011_DiJetAve50U"); //2.214 pb
-  TChain *mc = createTChain("/afs/naf.desy.de/user/m/mschrode/Kalibri/input/Kalibri_Spring10QCDDiJet_AK5Calo");
+//   TChain *data = createTChain("/afs/naf.desy.de/user/m/mschrode/Kalibri/input/Kalibri_JetMET_Run2010A-PromptReco-v4_DCSONLY_132440-144011_DiJetAve50U"); //2.214 pb
+//   TChain *mc = createTChain("/afs/naf.desy.de/user/m/mschrode/Kalibri/input/Kalibri_Spring10QCDDiJet_AK5Calo");
+
+  TChain *data = createTChain("/afs/naf.desy.de/user/m/mschrode/Kalibri/input/Kalibri_JetMET_Run2010A-Sep17ReReco_v2_HLT_DiJetAve50UA"); //2.9 pb
+  TChain *mc = createTChain("/afs/naf.desy.de/user/m/mschrode/Kalibri/input/Kalibri_Summer10QCDDiJet_AK5Calo_PtHat50");
 
 
   std::vector<int> nTotal(nChains,0);
@@ -98,6 +101,9 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
   std::vector<int> nPt3Rel(nChains,0);
   std::vector<int> nJetID(nChains,0);
 
+  // Output file
+  TFile outFile(prefix+util::toTString(minEta)+"-"+util::toTString(maxEta)+".root","RECREATE");
+
 
   // Histograms
   std::vector<double> ptAveBinEdges;
@@ -105,7 +111,7 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
 //   ptAveBinEdges.push_back(20.);
 //   ptAveBinEdges.push_back(30.);
 //   ptAveBinEdges.push_back(40.);
-  ptAveBinEdges.push_back(60.);
+//  ptAveBinEdges.push_back(60.);
   ptAveBinEdges.push_back(80.);
   ptAveBinEdges.push_back(100.);
   ptAveBinEdges.push_back(120.);
@@ -227,6 +233,7 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
       float jetFHPD[maxNJet];
       float jetFRBX[maxNJet];
       float jetCorrL2L3[maxNJet];
+      bool jetID[maxNJet];
 
       // Set branch addresses
       if( c > 0 ) chain->SetBranchAddress("Weight",&weight);
@@ -239,6 +246,7 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
       chain->SetBranchAddress("JetFHPD",jetFHPD);
       chain->SetBranchAddress("JetFRBX",jetFRBX);
       chain->SetBranchAddress("JetCorrL2L3",jetCorrL2L3);
+      chain->SetBranchAddress("JetIDLoose",jetID);
   
       // Loop over tree entries and fill histograms
       int nEntries = chain->GetEntries();
@@ -266,14 +274,16 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
 		 std::abs(jetEta[0]) > maxEta || std::abs(jetEta[1]) > maxEta ) isGoodEvt = false;
 	else if( std::abs(TVector2::Phi_mpi_pi(jetPhi[0]-jetPhi[1])) < minDeltaPhi ) isGoodEvt = false;
 	else if( (nObjJet>2 ? jetPt[2] : 0.) > maxPt3Rel*ptAveCorr ) isGoodEvt = false;
-	else if( jetN90Hits[0] < minJetN90Hits || jetN90Hits[1] < minJetN90Hits ) isGoodEvt = false;
-	else if( jetFHPD[0] > maxJetFHPD || jetFHPD[1] > maxJetFHPD ) isGoodEvt = false;
-	else if( (std::abs(jetEta[0]) < 2.55 && jetEMF[0] < minEMF) ||
-		 (std::abs(jetEta[1]) < 2.55 && jetEMF[1] < minEMF) ) isGoodEvt = false;
-	else if( (std::abs(jetEta[0]) > 2.55 && jetEMF[0] < -0.9) ||
-		 (std::abs(jetEta[1]) > 2.55 && jetEMF[1] < -0.9) ) isGoodEvt = false;
-	else if( (std::abs(jetEta[0]) > 2.55 && jetPt[0] > 80. && jetEMF[0] > 1. ) ||
-		 (std::abs(jetEta[1]) > 2.55 && jetPt[1] > 80. && jetEMF[1] > 1. ) ) isGoodEvt = false;
+	else if( !(jetID[0] && jetID[1]) ) isGoodEvt = false;
+
+// 	else if( jetN90Hits[0] < minJetN90Hits || jetN90Hits[1] < minJetN90Hits ) isGoodEvt = false;
+// 	else if( jetFHPD[0] > maxJetFHPD || jetFHPD[1] > maxJetFHPD ) isGoodEvt = false;
+// 	else if( (std::abs(jetEta[0]) < 2.55 && jetEMF[0] < minEMF) ||
+// 		 (std::abs(jetEta[1]) < 2.55 && jetEMF[1] < minEMF) ) isGoodEvt = false;
+// 	else if( (std::abs(jetEta[0]) > 2.55 && jetEMF[0] < -0.9) ||
+// 		 (std::abs(jetEta[1]) > 2.55 && jetEMF[1] < -0.9) ) isGoodEvt = false;
+// 	else if( (std::abs(jetEta[0]) > 2.55 && jetPt[0] > 80. && jetEMF[0] > 1. ) ||
+// 		 (std::abs(jetEta[1]) > 2.55 && jetPt[1] > 80. && jetEMF[1] > 1. ) ) isGoodEvt = false;
 
 	if( isGoodEvt ) {
 	  hPtUncorr[c][0]->Fill(jetPt[0],weight);
@@ -329,29 +339,31 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
 	  nPt3Rel[c]++;
 	  isGoodEvt = false;
 	}
-	else if( jetN90Hits[jIdx[0]->idx_] < minJetN90Hits || jetN90Hits[jIdx[1]->idx_] < minJetN90Hits ) {
-	  nJetID[c]++;
-	  isGoodEvt = false;
-	}
-	else if( jetFHPD[jIdx[0]->idx_] > maxJetFHPD || jetFHPD[jIdx[1]->idx_] > maxJetFHPD ) {
-	  nJetID[c]++;
-	  isGoodEvt = false;
-	}
-	else if( (std::abs(jetEta[jIdx[0]->idx_]) < 2.55 && jetEMF[jIdx[0]->idx_] < minEMF) ||
-		 (std::abs(jetEta[jIdx[1]->idx_]) < 2.55 && jetEMF[jIdx[1]->idx_] < minEMF) ) {
-	  nJetID[c]++;
-	  isGoodEvt = false;
-	}
-	else if( (std::abs(jetEta[jIdx[0]->idx_]) > 2.55 && jetEMF[jIdx[0]->idx_] < -0.9) ||
-		 (std::abs(jetEta[jIdx[1]->idx_]) > 2.55 && jetEMF[jIdx[1]->idx_] < -0.9) ) {
-	  nJetID[c]++;
-	  isGoodEvt = false;
-	}
-	else if( (std::abs(jetEta[jIdx[0]->idx_]) > 2.55 && jetPt[jIdx[0]->idx_] > 80. && jetEMF[jIdx[0]->idx_] > 1. ) ||
-		 (std::abs(jetEta[jIdx[1]->idx_]) > 2.55 && jetPt[jIdx[1]->idx_] > 80. && jetEMF[jIdx[1]->idx_] > 1. ) ) {
-	  nJetID[c]++;
-	  isGoodEvt = false;
-	}
+	else if( !(jetID[jIdx[0]->idx_] && jetID[jIdx[1]->idx_]) ) isGoodEvt = false;
+
+// 	else if( jetN90Hits[jIdx[0]->idx_] < minJetN90Hits || jetN90Hits[jIdx[1]->idx_] < minJetN90Hits ) {
+// 	  nJetID[c]++;
+// 	  isGoodEvt = false;
+// 	}
+// 	else if( jetFHPD[jIdx[0]->idx_] > maxJetFHPD || jetFHPD[jIdx[1]->idx_] > maxJetFHPD ) {
+// 	  nJetID[c]++;
+// 	  isGoodEvt = false;
+// 	}
+// 	else if( (std::abs(jetEta[jIdx[0]->idx_]) < 2.55 && jetEMF[jIdx[0]->idx_] < minEMF) ||
+// 		 (std::abs(jetEta[jIdx[1]->idx_]) < 2.55 && jetEMF[jIdx[1]->idx_] < minEMF) ) {
+// 	  nJetID[c]++;
+// 	  isGoodEvt = false;
+// 	}
+// 	else if( (std::abs(jetEta[jIdx[0]->idx_]) > 2.55 && jetEMF[jIdx[0]->idx_] < -0.9) ||
+// 		 (std::abs(jetEta[jIdx[1]->idx_]) > 2.55 && jetEMF[jIdx[1]->idx_] < -0.9) ) {
+// 	  nJetID[c]++;
+// 	  isGoodEvt = false;
+// 	}
+// 	else if( (std::abs(jetEta[jIdx[0]->idx_]) > 2.55 && jetPt[jIdx[0]->idx_] > 80. && jetEMF[jIdx[0]->idx_] > 1. ) ||
+// 		 (std::abs(jetEta[jIdx[1]->idx_]) > 2.55 && jetPt[jIdx[1]->idx_] > 80. && jetEMF[jIdx[1]->idx_] > 1. ) ) {
+// 	  nJetID[c]++;
+// 	  isGoodEvt = false;
+// 	}
 
   	if( isGoodEvt ) {
   	  hPtCorr[c][0]->Fill(jIdx[0]->pt_,weight);
@@ -695,6 +707,8 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
     can->SaveAs(prefix+"PtAsymVsPtJet3_"+(i==0 ? "Data" : "MC" )+".eps","eps");
   }
 
+  outFile.Write();
+  outFile.Close();
 
   // Cut-Flow
   std::cout << std::endl;
