@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.16 2010/09/14 11:32:12 mschrode Exp $
+// $Id: HistOps.h,v 1.17 2010/10/12 16:55:39 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -35,7 +35,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.16 2010/09/14 11:32:12 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.17 2010/10/12 16:55:39 mschrode Exp $
   class HistOps
   {
   public:
@@ -384,16 +384,8 @@ namespace util
 
     // -------------------------------------------------------------------------------------
     static TH1 *createRatioTopFrame(const TH1 *h) {
-      nFrames_++;
-      TH1D *hFrame = static_cast<TH1D*>(h->Clone("util::HistOps::hRatioTopFrame"+toTString(nFrames_)));
-      double min = 1.;
-      double max = 0.;
-      findYRange(h,min,max);
+      TH1 *hFrame = createRatioTopHist(h);
       hFrame->Reset();
-      hFrame->GetYaxis()->SetRangeUser(min,max);
-      hFrame->GetXaxis()->SetTitle("");
-      hFrame->GetXaxis()->SetLabelSize(0);
-      hFrame->GetYaxis()->SetTickLength(gStyle->GetTickLength("Y")/0.8);
       return hFrame;
     }
 
@@ -406,6 +398,20 @@ namespace util
       h->GetXaxis()->SetLabelSize(0);
       h->GetYaxis()->SetTickLength(gStyle->GetTickLength("Y")/0.8);
       return h;
+    }
+
+    // -------------------------------------------------------------------------------------
+    static TH1 *createRatioTopHist(const TH1 *h) {
+      nFrames_++;
+      TH1D *hFrame = static_cast<TH1D*>(h->Clone("util::HistOps::hRatioTopHist"+toTString(nFrames_)));
+      double min = 1.;
+      double max = 0.;
+      findYRange(h,min,max);
+      hFrame->GetYaxis()->SetRangeUser(min,max);
+      hFrame->GetXaxis()->SetTitle("");
+      hFrame->GetXaxis()->SetLabelSize(0);
+      hFrame->GetYaxis()->SetTickLength(gStyle->GetTickLength("Y")/0.8);
+      return hFrame;
     }
 
     // -------------------------------------------------------------------------------------
