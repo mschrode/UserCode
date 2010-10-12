@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.15 2010/09/04 15:23:07 mschrode Exp $
+// $Id: HistOps.h,v 1.16 2010/09/14 11:32:12 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -24,13 +24,18 @@
 
 namespace util
 {
+  typedef std::vector<TH1*> HistVec;
+  typedef std::vector<TH1*>::iterator HistIt;
+  typedef std::vector<TH1*>::const_iterator HistItConst;
+
+
   //!  \brief    Collection of encapsulated methods on histograms
   //!
   //!  HistOps encapsulates some useful operations on histograms.
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.15 2010/09/04 15:23:07 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.16 2010/09/14 11:32:12 mschrode Exp $
   class HistOps
   {
   public:
@@ -115,6 +120,24 @@ namespace util
       double max = 0.;
       findYRange(h,nLabelLines,min,max,logMin);
       h->GetYaxis()->SetRangeUser(min,max);
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static void setYRange(HistVec &hists, int nLabelLines, double logMin = -1.) {
+      double min = 0.;
+      double max = 0.;
+      for(HistIt it = hists.begin(); it != hists.end(); ++it) {
+	double tmpMin = 0.;
+	double tmpMax = 0.;
+	findYRange(*it,nLabelLines,tmpMin,tmpMax,logMin);
+	if( tmpMin < min ) min = tmpMin;
+	if( tmpMax > max ) max = tmpMax;
+      }
+      for(HistIt it = hists.begin(); it != hists.end(); ++it) {
+	(*it)->GetYaxis()->SetRangeUser(min,max);
+      }
+
     }
 
 
