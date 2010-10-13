@@ -66,15 +66,15 @@ TChain *createTChain(const TString &fileListName) {
 void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
   util::StyleSettings::presentationNoTitle();
 
-  const TString prefix = "JetMET_Run2010A-Sep17ReReco_v2_DiJetAve50U_Pt3Rel01_Eta13-30_";
+  const TString prefix = "JetMET_Run2010A-Sep17ReReco_v2_DiJetAve50U_Pt3Rel01_Eta00-13_";
   const int maxNJet = 50;
-  const double minEMF = 0.01;
-  const int minJetN90Hits = 2;
-  const double maxJetFHPD = 0.98;
-  const double maxJetFRBX = 0.98;
+//   const double minEMF = 0.01;
+//   const int minJetN90Hits = 2;
+//   const double maxJetFHPD = 0.98;
+//   const double maxJetFRBX = 0.98;
   const double minDeltaPhi = 2.7;
-  const double minEta = 1.3;
-  const double maxEta = 3.0;
+  const double minEta = 0.;
+  const double maxEta = 1.3;
   const double minPtAve = 80.;
   const double maxPt3Rel = 0.1;
   const double lumi = 2.9;
@@ -318,7 +318,7 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
  	for(size_t i = 0; i < nJets; ++i) {
  	  jIdx[i] = new JetIndex(i,jetPt[i]*jetCorrL2L3[i]);
  	}
- 	//std::sort(jIdx.begin(),jIdx.begin()+nJets,JetIndex::ptGreaterThan);
+ 	std::sort(jIdx.begin(),jIdx.begin()+nJets,JetIndex::ptGreaterThan);
 
   	// Select events
 	ptAveCorr = 0.5*(jIdx[0]->pt_+jIdx[1]->pt_);
@@ -411,24 +411,24 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
 
     hPtAsymCorrWidthGauss[c] = util::HistOps::createTH1D("hPtAsymCorrWidthGauss"+util::toTString(c),ptAveBinEdges.size()-1,&(ptAveBinEdges.front()),"p^{ave}_{T}","GeV","#sigma(Asymmetry) / p^{ave}_{T}");
     if( c == 0 ) hPtAsymCorrWidthGauss[c]->SetMarkerStyle(20);
-    else hPtAsymCorrWidthGauss[c]->SetFillColor(mcColor);
+    else hPtAsymCorrWidthGauss[c]->SetMarkerStyle(24);
     
     hPtAsymCorrWidthStd[c] = util::HistOps::createTH1D("hPtAsymCorrWidthStd"+util::toTString(c),ptAveBinEdges.size()-1,&(ptAveBinEdges.front()),"p^{ave}_{T}","GeV","StdDev(Asymmetry) / p^{ave}_{T}");
     if( c == 0 ) hPtAsymCorrWidthStd[c]->SetMarkerStyle(20);
-    else hPtAsymCorrWidthStd[c]->SetFillColor(mcColor);
+    else hPtAsymCorrWidthStd[c]->SetMarkerStyle(24);
 
     for(size_t p = 0; p < hPtAsymUncorr[c].size(); ++p) {
       util::HistOps::setAxisTitles(hPtBiasAsymCorr[c][p],"|Asymmetry|","","events",false);
       if( c == 0 ) hPtBiasAsymCorr[c][p]->SetMarkerStyle(20);
-      else hPtBiasAsymCorr[c][p]->SetFillColor(mcColor);
+      else hPtBiasAsymCorr[c][p]->SetMarkerStyle(24);
 
       util::HistOps::setAxisTitles(hPtAsymUncorr[c][p],"Asymmetry","","events",false);
       if( c == 0 ) hPtAsymUncorr[c][p]->SetMarkerStyle(20);
-      else hPtAsymUncorr[c][p]->SetFillColor(mcColor);
+      else hPtAsymUncorr[c][p]->SetMarkerStyle(24);
       
       util::HistOps::setAxisTitles(hPtAsymCorr[c][p],"Asymmetry","","events",false);
       if( c == 0 ) hPtAsymCorr[c][p]->SetMarkerStyle(20);
-      else hPtAsymCorr[c][p]->SetFillColor(mcColor);
+      else hPtAsymCorr[c][p]->SetMarkerStyle(24);
       hPtAsymCorrWidthStd[c]->SetBinContent(1+p,hPtAsymCorr[c][p]->GetRMS());
       hPtAsymCorrWidthStd[c]->SetBinError(1+p,hPtAsymCorr[c][p]->GetRMSError());
       if( hPtAsymCorr[c][p]->Fit("gaus","0QIR","",hPtAsymCorr[c][p]->GetMean()-2.*hPtAsymCorr[c][p]->GetRMS(),hPtAsymCorr[c][p]->GetMean()+2.*hPtAsymCorr[c][p]->GetRMS()) == 0 ) {
@@ -459,6 +459,9 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
   leg->AddEntry(hPtCorr[0][0],"Data","P");
   leg->AddEntry(hPtCorr[1][0],"MC","F");
 
+  TLegend *legAsymWidth = util::LabelFactory::createLegendCol(2,0.3);
+  legAsymWidth->AddEntry(hPtAsymCorrWidthGauss[0],"Data","P");
+  legAsymWidth->AddEntry(hPtAsymCorrWidthGauss[1],"MC","P");
 
 
   // Plots
@@ -475,6 +478,24 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
   hPtAveCorr[0]->Draw("PE1same");
   can1->SetLogy();
   can1->SaveAs(prefix+"PtAveCorrLogy.eps","eps");
+
+  TCanvas *bRatioTopCan = util::HistOps::createRatioTopCanvas();
+  TPad *bRatioBottomPad = util::HistOps::createRatioBottomPad();
+  TH1 *bRatioTopFrame = util::HistOps::createRatioTopHist(hPtAveCorr[1]);
+  TH1 *bRatioBottomFrame = util::HistOps::createRatioBottomFrame(hPtAveCorr[1],"Corrected p^{ave}_{T}","GeV",0.51,1.49);
+  bRatioTopCan->cd();
+  bRatioTopFrame->GetYaxis()->SetRangeUser(3E-2,pow(10,log10(hPtAveCorr[1]->GetMaximum())+3));
+  bRatioTopFrame->Draw("HISTE");
+  hPtAveCorr[0]->Draw("PE1same");
+  labSpec->Draw("same");
+  leg->Draw("same");
+  gPad->SetLogy();
+  bRatioBottomPad->Draw();
+  bRatioBottomPad->cd();
+  bRatioBottomFrame->GetXaxis()->SetMoreLogLabels();
+  bRatioBottomFrame->Draw();
+  util::HistOps::createRatioPlot(hPtAveCorr[0],hPtAveCorr[1])->Draw("PE1same");
+  bRatioTopCan->SaveAs(prefix+"PtAveCorrLogyBottomRatio.eps","eps");
 
   TCanvas *can2 = new TCanvas("canPtAveCorrLog","PtAve Corr (Log)",500,500);
   can2->cd();
@@ -513,7 +534,7 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
   hPtAsymCorrWidthGauss[1]->Draw("HISTE");
   hPtAsymCorrWidthGauss[0]->Draw("PE1same");
   labSpec->Draw("same");
-  leg->Draw("same");
+  legAsymWidth->Draw("same");
   can5->SetLogx();
   can5->SaveAs(prefix+"PtAsymCorrWidthGauss.eps","eps");
 
@@ -533,7 +554,7 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
   hPtAsymCorrWidthStd[1]->Draw("HISTE");
   hPtAsymCorrWidthStd[0]->Draw("PE1same");
   labSpec->Draw("same");
-  leg->Draw("same");
+  legAsymWidth->Draw("same");
   can7->SetLogx();
   can7->SaveAs(prefix+"PtAsymCorrWidthStd.eps","eps");
 
@@ -573,6 +594,9 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
   can11->SetLogz();
   can11->SaveAs(prefix+"PtAsymUncorrVsEMF.eps","eps");
 
+
+
+  // Pt Spectra
   for(size_t i = 0; i < hPtUncorr[0].size(); ++i) {
     TCanvas *can = new TCanvas("canPtUncorr"+util::toTString(i),"Pt Uncorr "+util::toTString(1+i),500,500);
     can->cd();
@@ -595,6 +619,29 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
     can->SetLogy();
     can->SaveAs(prefix+"PtCorr_Jet"+util::toTString(1+i)+".eps","eps");
   }
+  for(size_t i = 0; i < hPtCorr[0].size(); ++i) {
+    TCanvas *bRatioTopCan = util::HistOps::createRatioTopCanvas();
+    TPad *bRatioBottomPad = util::HistOps::createRatioBottomPad();
+    TH1 *bRatioTopFrame = util::HistOps::createRatioTopHist(hPtCorr[1][i]);
+    TH1 *bRatioBottomFrame = util::HistOps::createRatioBottomFrame(hPtCorr[1][i],"Corrected p_{T,"+util::toTString(i+1)+"}","GeV",0.51,1.49);
+    bRatioTopCan->cd();
+    bRatioTopFrame->GetYaxis()->SetRangeUser(3E-2,pow(10,log10(hPtCorr[1][i]->GetMaximum())+3));
+    bRatioTopFrame->Draw("HISTE");
+    hPtCorr[0][i]->Draw("PE1same");
+    labSpec->Draw("same");
+    leg->Draw("same");
+    gPad->SetLogy();
+    bRatioBottomPad->Draw();
+    bRatioBottomPad->cd();
+    bRatioBottomFrame->GetXaxis()->SetMoreLogLabels();
+    bRatioBottomFrame->Draw();
+    util::HistOps::createRatioPlot(hPtCorr[0][i],hPtCorr[1][i])->Draw("PE1same");
+    bRatioTopCan->SaveAs(prefix+"PtCorrBottomRatio_Jet"+util::toTString(1+i)+".eps","eps");
+  }
+
+
+
+  // Pt Asymmetry
   for(size_t i = 0; i < hPtAsymUncorr[0].size(); ++i) {
     TCanvas *can = new TCanvas("canPtAsym"+util::toTString(i),"Asym Uncorr "+util::toTString(1+i),500,500);
     can->cd();
@@ -664,6 +711,8 @@ void compareDijetAsymmetry(int nMaxEvts = -1, int prescale = 1) {
     leg->Draw("same");
     can->SetLogy();
     can->SaveAs(prefix+"PtBiasAsymCorrLog_PtAveBin"+util::toTString(i)+".eps","eps");
+
+
 
     // Indicate start of tails
     if( hPtBiasAsymCorr[0][i]->Fit("gaus","ILL0QR","",0.,hPtBiasAsymCorr[0][i]->GetMean()+2.*hPtBiasAsymCorr[0][i]->GetRMS()) == 0 ) {
