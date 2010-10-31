@@ -83,21 +83,24 @@ Gaussian response.
   \label{fig:ResFit:DataDriven:Simple}
 \end{figure}
 
-In real data, however, there are non-Gaussian tails biasing the fit of the asymmetry.
+However, in general there are non-Gaussian tails biasing the fit of the asymmetry.
 In case of a binned fit of the histogram, the influence of the tails is suppressed by
 fitting only the bulk of the distribution, defined as two standard deviations around the mean.
 In case of the unbinned fit, it is not as straight forward to select only the bulk events.
 This can be achieved, however, with an iterative procedure by restricting the allowed range of \mbox{$\Delta\pt$}.
 As observed in the MC simulation (\qfig{fig:ResFit:DataDriven:Tails}), tails start to appear for \mbox{$|\Delta\pt| \gtrsim 3\sigma'$}.
 (At this point, not enough Collider data has been analysed to measure the starting point of the tails.)
-Concluding from this, the unbinned fit is performed only for events with \mbox{$|\Delta\pt| < 2\sigma'$}; the tighter region is chosen to keep a safety margin in order to account for possible inaccuracies of the simulation.
+Hence, the unbinned fit is performed only for events with \mbox{$|\Delta\pt| < 2\sigma'$}; the tighter region is chosen to keep a safety margin in order to account for possible inaccuracies of the simulation.
 Unitarity of the dijet pdf is preserved by adapting the normalisation of~\qeq{eq:ResFit::DijetPdfTransformed:Simple} accordingly.
 (The complete pdf is given in~\qeq{eq:ResFit:App:SimplePdf} in Appendix~\ref{sec:ResFit:App:Pdf}.)
 
 The threshold on $|\Delta\pt|$ in the above choice is proportional to $\sigma'$, which is the fitted parameter, and would be varied accordingly during the maximisation.
 This, however, biases the result towards smaller values.
-Therefore the threshold is kept fixed and the maximisation is iterated
-four times, leading to an unbiased result.
+Therefore an iterative approach is chosen:
+The threshold is kept fixed and the maximisation is performed leading
+to a first estimate for $\sigma'$.
+Then, the threshold is updated with this estimate and the maximisation is repeated.
+This procedure is iterated four times, leading to an unbiased result.
 
 The dijet asymmetry distribution measured in Collider data for \mbox{$140 <
   \ptave < 170\gev$} is shown in
@@ -142,11 +145,12 @@ The resulting systematic uncertainties are small, \qsec{sec:ResFit:Systematics}.
   \label{fig:ResFit:DataDriven:Spectrum}
 \end{figure}
 
-By this extension, additionally a description of biases in the event selection can be included into the likelihood.
+By this extension, in addition a description of biases in the event selection can be included into the likelihood.
 Binning in (measured) \ptave causes migration effects at the edges of the selected \ptave range due to the finite jet \pt resolution:
 there are jets that fluctuate either into or out of the selected interval.
 This is illustrated in \qsubfig{fig:ResFit:DataDriven:Spectrum}{right} with simulated data using the MC truth information.
-Additionally, because of the steeply falling dijet \pt spectrum, there are more jets that fluctuate high than jets that fluctuate low in \pt and the selected sample is therefore biased towards jets of lower \ptgen that fluctuated high in the detector.
+Additionally, because of the steeply falling dijet \pt spectrum, in
+any interval there are more jets that fluctuated high than jets that fluctuated low in \pt and the selected sample is therefore biased towards jets of lower \ptgen that fluctuated high in the detector.
 
 The dijet pdf~\qeq{eq:ResFit:DijetPdfTransformed} is modified to describe the
 \ptave selection and hence avoid biasing the measured resolution.
@@ -228,7 +232,7 @@ $\sigma(\ppi{\text{Soft}})$,
 
 The transverse momentum balance assumed for the particle level jets
 actually takes place at parton level.
-Owing to the statistical nature of the fragmentation and hadronisation
+Due to the statistical nature of the fragmentation and hadronisation
 process, fluctuations in the
 fraction of energy of the original partons clustered into jets are
 expected (\textit{out-of-cone}).
@@ -305,16 +309,14 @@ The extrapolated jet \pt resolution is then corrected by
 subtracting $\sqrt{2}\cdot\sigma(A^{\text{gen}})$ in quadrature.
 
 The need for compensating the influence of additional jet activity is
-the reason why a mean, \pt independent Gaussian the resolution is
+the reason why a mean, \pt independent resolution is
 measured per \ptave bin.
-In that case there is only one free parameter, $\sigma$, which can be
+In that case, there is only one free parameter, $\sigma$, which can be
 extrapolated in a straight forward way.
-Was the response instead parameterised with a \pt dependent function,
+If the response is instead parameterised with a \pt dependent function,
 \eg a Gaussian with width \mbox{$\sigma(\pt) = a\pt \oplus
   b\sqrt{\pt} \oplus c$},
 the parameters $a$, $b$, and $c$ are correlated.
-In that case it is not clear how the extrapolation should be
-performed.
 The method of the maximum likelihood fit itself is not affected by the
 parameter correlation, however, and can very well measure the
 parameters of a \pt dependent resolution $\sigma(\pt)$ as demonstrated

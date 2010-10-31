@@ -1,26 +1,44 @@
 \section{Samples and Event Selection}\label{sec:ResFit:EvtSel}
 
 A sample of QCD events corresponding to an integrated luminosity of $2.2\pbinv$ is
-selected\footnote{The data has been selected from the \texttt{JetMET\_Run2010A-PromptReco-v4} data set.} by triggering on the minimum average transverse momentum, \mbox{$\ptave = (\pti{1} + \pti{2})/2$}, of the leading two jets in each event\footnote{Events in bins with \mbox{$\ptave < 80\gev$} are selected with the \texttt{HLT\_DiJetAve15U} , all other with the \texttt{HLT\_DiJetAve50U} trigger.}.
+selected from the data set \texttt{JetMET\_Run2010A-PromptReco-v4}, which has been reconstructed with the \texttt{3\_6\_1\_patch7} version of the \texttt{CMSSW} software.
+The data has been collected by triggering on the minimum average uncorrected transverse momentum, \mbox{$\ptave = (\pti{1} + \pti{2})/2$}, of the leading two jets in each event (\texttt{HLT\_DiJetAve15U}, \texttt{HLT\_DiJetAve50U}).
+The different trigger thresholds are given in \qtab{tab:ResFit:PtAveBins}, for a listing of the trigger turn-on compare \eg~\cite{bib:cmspas:trigger}.
 Events originating from beam-halo and other beam-background processes are rejected~\cite{bib:cmspas:monster} and a good reconstructed primary vertex is required~\cite{bib:cmspas:vertex}.
 
-In order to estimate the particle level jet \pt spectrum and for means of closure tests, also simulated QCD multijet events are used.
-They have been generated in bins of \pthat with PYTHIA6~\cite{bib:pythia} and processed through the full GEANT4~\cite{bib:geant} based CMS detector simulation\footnote{These are the \pthat binned samples \texttt{/QCDDiJet\_PtXXtoXX/Spring10-START3X\_V26\_S09-v1/GEN-SIM-RECO} of the Spring10 production.}.
+\begin{table}[ht]
+  \caption{\ptave bins and applied trigger thresholds.}
+  \centering
+  \begin{tabular}[ht]{ccc}
+    \toprule
+    Bin & \ptave range (\gevnospace) & Trigger threshold \\
+    &  & (uncorrected \ptave (\gevnospace)) \\
+    \midrule
+    1 & 60 -- 80 & 15 \\
+    2 & 80 -- 100 & 80 \\
+    3 & 100 -- 120 & 80 \\
+    4 & 120 -- 140 & 80 \\
+    5 & 140 -- 170 & 80 \\
+    6 & 170 -- 200 & 80 \\
+    7 & 200 -- 250 & 80 \\
+    \bottomrule
+  \end{tabular}
+  \label{tab:ResFit:PtAveBins}
+\end{table}
+
+In order to estimate the particle level jet \pt spectrum and for closure tests, also simulated QCD multijet events are used.
+They have been generated in bins of \pthat with PYTHIA6~\cite{bib:pythia} and processed through the full GEANT4~\cite{bib:geant} based CMS detector simulation (\texttt{/QCDDiJet\_PtXXtoXX/Spring10-START3X\_V26\_S09-v1/GEN-SIM-RECO}).
 
 Jets are reconstructed from calorimeter towers using the
 anti-$k_{T}$ jet clustering algorithm~\cite{bib:akj} with parameter size \mbox{$d=0.5$}.
 Jet energy corrections~\cite{bib:cmspas:jec} are applied to remove the 
-$\eta$ and \pt dependence of the jet energy scale\footnote{The default Spring10 L2L3 corrections are applied.} and quality criteria rejecting jets clustered from detector noise~\cite{bib:cmspas:jetid} are applied to the
-two leading jets\footnote{They are required to meet the loose JetID.}.
+$\eta$ and \pt dependence of the jet energy scale (Spring10 \texttt{L2L3} corrections) and quality criteria rejecting jets clustered from detector noise~\cite{bib:cmspas:jetid} are applied to the
+two leading jets (loose Jet-ID).
 In order to select dijet events, the two leading jets are required to be
 back-to-back in the transverse plane, \mbox{$|\Delta\phi_{i}| > 2.7$} for \mbox{$i=1,2$}.
 Additionally they have to lie within the same pseudorapidity range \mbox{$|\eta_{i}| < 1.3$}.
-This accounts for the dependence of the jet \pt response on $\eta$ owing to the fact that the intrinsic calorimeter resolution is energy rather than \pt dependent as well as to the different calorimeter geometries and material budgets in front of the calorimeters in different pseudorapidity regions.
+This accounts for the dependence of the jet \pt response on $\eta$ due to the fact that the intrinsic calorimeter resolution is energy rather than \pt dependent as well as the varying calorimeter resolution in different pseudorapidity regions.
 
-As discussed in \qsec{sec:ResFit:DataDriven}, events are further selected in bins of \ptave and additional
-jet activity is restricted in course of the analysis.
+As discussed in \qsec{sec:ResFit:DataDriven:AddJets:Extrapolation}, events are further selected in bins of \ptave (\qtab{tab:ResFit:PtAveBins}) and events with additional jet activity are rejected in course of the analysis.
 In case of the simulated samples, only events from a limited number of \pthat bins contribute to a given \ptave bin.
 They are weighted in such a way that the realistic QCD \pt spectrum is preserved and the event weight in the lowest of these \pthat bins is one, thus achieving the maximally possible statistical precision.
-
-
-\subsection{Trigger Efficiencies}
