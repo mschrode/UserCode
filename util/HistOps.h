@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.17 2010/10/12 16:55:39 mschrode Exp $
+// $Id: HistOps.h,v 1.18 2010/10/12 16:58:40 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "TAttPad.h"
+#include "TCanvas.h"
 #include "TF1.h"
 #include "TGraphAsymmErrors.h"
 #include "TGraphErrors.h"
@@ -35,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.17 2010/10/12 16:55:39 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.18 2010/10/12 16:58:40 mschrode Exp $
   class HistOps
   {
   public:
