@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.18 2010/10/12 16:58:40 mschrode Exp $
+// $Id: HistOps.h,v 1.19 2010/10/31 11:26:34 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.18 2010/10/12 16:58:40 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.19 2010/10/31 11:26:34 mschrode Exp $
   class HistOps
   {
   public:
@@ -461,7 +461,45 @@ namespace util
       pad->SetRightMargin(0.1+pad->GetRightMargin());
       pad->SetBottomMargin(0.1+pad->GetBottomMargin());
     }
- 
+
+
+    // -------------------------------------------------------------------------------------
+    static TH1D *getUncertaintyBand(const TF1 *mean, double relUncert, double xMin, double xMax, int color = -1, int fillStyle = -1) {
+      TString name = mean->GetName();
+      name += toTString(nFrames_);
+      TH1D *hBand = new TH1D(name,"",1000,xMin,xMax);
+      hBand->SetMarkerStyle(1);
+      hBand->SetFillColor((color < 0) ? mean->GetLineColor()+1 : color);
+      if( fillStyle > 0 ) hBand->SetFillStyle(fillStyle);
+      hBand->SetMarkerColor(hBand->GetFillColor());
+      for(int bin = 1; bin <= hBand->GetNbinsX(); ++bin) {
+	double val = mean->Eval(hBand->GetBinCenter(bin));
+	hBand->SetBinContent(bin,val);
+	hBand->SetBinError(bin,relUncert*val);
+      }
+
+      return hBand;
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static TH1D *getUncertaintyBand(const TH1 *mean, double relUncert, double xMin, double xMax, int color = -1, int fillStyle = -1) {
+      TString name = mean->GetName();
+      name += toTString(nFrames_);
+      TH1D *hBand = new TH1D(name,"",1000,xMin,xMax);
+      hBand->SetMarkerStyle(1);
+      hBand->SetFillColor((color < 0) ? mean->GetLineColor()+1 : color);
+      if( fillStyle > 0 ) hBand->SetFillStyle(fillStyle);
+      hBand->SetMarkerColor(hBand->GetFillColor());
+      for(int bin = 1; bin <= hBand->GetNbinsX(); ++bin) {
+	double val = mean->GetBinContent(bin);
+	hBand->SetBinContent(bin,val);
+	hBand->SetBinError(bin,relUncert*val);
+      }
+
+      return hBand;
+    }
+
 
   private:
     static unsigned int nFrames_;
