@@ -61,7 +61,7 @@ private:
 
 
 Measurement::Measurement(const TString &name, const TF1 *mcTruth, int color, int marker)
-  : name_(name), color_(color), marker_(marker), g_(0), gMC_(0) {
+  : name_(name), color_(color), marker_(marker), g_(0), gRatio_(0), gMC_(0), gMCRatio_(0) {
 
   // MC truth resolution
   mcTruth_ = static_cast<TF1*>(mcTruth->Clone(name+"_MCTruth"));
@@ -156,6 +156,21 @@ void Measurement::print() const {
 
 
 
+TGraphErrors *biasCorrection(const TGraphErrors *gData, const TGraphErrors *gMC, const TF1 *mcTruth) {
+  TGraphErrors *g = new TGraphErrors(gData->GetN());
+  for(int p = 0; p < gData->GetN(); ++p) {
+    g->SetPoint(p,gData->GetX()[p],gData->GetY()[p]-(gMC->GetY()[p]-mcTruth->Eval(gMC->GetX()[p])));
+    g->SetPointError(p,gData->GetErrorX(p),gData->GetErrorY(p));    
+  }
+  g->SetMarkerStyle(gData->GetMarkerStyle());
+  g->SetMarkerColor(gData->GetMarkerColor());
+  g->SetLineColor(gData->GetLineColor());
+
+  return g;
+}
+
+
+
 void plotCombinedResolution() {
   util::StyleSettings::presentationNoTitle();
 
@@ -187,24 +202,24 @@ void plotCombinedResolution() {
   mMaxLike->readMC("resGauss_MaxLike_2010-10-17_MC");
   mMaxLike->print();
 
-//   TPaveText *txt = util::LabelFactory::createPaveText(1,-0.2);
-//   txt->AddText("|#eta| < 1.3");
+  TPaveText *txt = util::LabelFactory::createPaveText(1,-0.2);
+  txt->AddText("|#eta| < 1.3");
 
-//   TLegend *leg = util::LabelFactory::createLegendCol(7,0.8);
-//   leg->AddEntry(g[2],"#gamma + jet balance (data)","P");
-//   leg->AddEntry(g[3],"#gamma + jet balance (MC)","P");
-//   leg->AddEntry(g[4],"#gamma + jet MPF (data)","P");
-//   leg->AddEntry(g[5],"#gamma + jet MPF (MC)","P");
-//   leg->AddEntry(g[0],"Dijet max likelihood (data)","P");
-//   leg->AddEntry(g[1],"Dijet max likelihood (MC)","P");
-//   leg->AddEntry(mc,"MC truth","L");
+  TLegend *legMeas = util::LabelFactory::createLegendCol(7,0.8);
+  legMeas->AddEntry(mPtBal->gData(),"#gamma + jet balance (data)","P");
+  legMeas->AddEntry(mPtBal->gMC(),"#gamma + jet balance (MC)","P");
+  legMeas->AddEntry(mMPF->gData(),"#gamma + jet MPF (data)","P");
+  legMeas->AddEntry(mMPF->gMC(),"#gamma + jet MPF (MC)","P");
+  legMeas->AddEntry(mMaxLike->gData(),"Dijet max likelihood (data)","P");
+  legMeas->AddEntry(mMaxLike->gMC(),"Dijet max likelihood (MC)","P");
+  legMeas->AddEntry(mcTruth,"MC truth","L");
 
 
 
   TCanvas *can0 = new TCanvas("can0","Resolution",500,500);
   can0->cd();
   TH1 *hFrame = new TH1D("hFrame",";p_{T} (GeV);#sigma / p_{T}",1000,xMin,xMax);
-  hFrame->GetYaxis()->SetRangeUser(0.,1.);
+  hFrame->GetYaxis()->SetRangeUser(0.,1.3);
   hFrame->GetXaxis()->SetMoreLogLabels();
   hFrame->Draw();
   mcTruth->Draw("same");
@@ -213,12 +228,14 @@ void plotCombinedResolution() {
   mMPF->gData()->Draw("PE1same");
   mMPF->gMC()->Draw("PE1same");  
   mMaxLike->gData()->Draw("PE1same");
-  mMaxLike->gMC()->Draw("PE1same");  
+  mMaxLike->gMC()->Draw("PE1same"); 
+  txt->Draw("same");
+  legMeas->Draw("same");
   can0->SetLogx();
 
   TCanvas *can1 = new TCanvas("can1","Ratio Meas / MCTruth",500,500);
   can1->cd();
-  TH1 *hRatioFrame = util::HistOps::createRatioFrame(hFrame,"#sigma(Meas) / #sigma(MCTruth)",0.6,2.);
+  TH1 *hRatioFrame = util::HistOps::createRatioFrame(hFrame,"#sigma(Meas) / #sigma(MCTruth)",0.6,2.4);
   hRatioFrame->GetXaxis()->SetMoreLogLabels();
   hRatioFrame->Draw();
   mPtBal->gDataRatio()->Draw("PE1same");
@@ -227,14 +244,17 @@ void plotCombinedResolution() {
   mMPF->gMCRatio()->Draw("PE1same");  
   mMaxLike->gDataRatio()->Draw("PE1same");
   mMaxLike->gMCRatio()->Draw("PE1same");  
+  txt->Draw("same");
+  legMeas->Draw("same");
   can1->SetLogx();
 
   TCanvas *bRatioTopCan = util::HistOps::createRatioTopCanvas();
   TPad *bRatioBottomPad = util::HistOps::createRatioBottomPad();
   TH1 *bRatioTopFrame = util::HistOps::createRatioTopFrame(hFrame);
   TH1 *bRatioBottomFrame = util::HistOps::createRatioBottomFrame(hFrame,"p_{T}","GeV",0.61,1.81);
-  
+
   bRatioTopCan->cd();
+  bRatioTopFrame->GetYaxis()->SetRangeUser(0.,1.3);
   bRatioTopFrame->Draw();
   mcTruth->Draw("same");
   mPtBal->gData()->Draw("PE1same");
@@ -242,7 +262,9 @@ void plotCombinedResolution() {
   mMPF->gData()->Draw("PE1same");
   mMPF->gMC()->Draw("PE1same");  
   mMaxLike->gData()->Draw("PE1same");
-  mMaxLike->gMC()->Draw("PE1same");  
+  mMaxLike->gMC()->Draw("PE1same");
+  txt->Draw("same");  
+  legMeas->Draw("same");
   gPad->SetLogx();
   bRatioBottomPad->Draw();
   bRatioBottomPad->cd();
@@ -257,64 +279,178 @@ void plotCombinedResolution() {
   gPad->SetLogx();
 
 
+  // Interpolated dijet data
+  TF1 *fInterDijet = static_cast<TF1*>(mcTruth->Clone("fInterDijet"));
+  fInterDijet->SetLineWidth(2);
+  fInterDijet->SetLineStyle(1);
+  fInterDijet->SetLineColor(2);
+  mMaxLike->gData()->Fit("fInterDijet","0Q");
 
-  // Uncertainties on MaxLike
-  TGraphErrors *gMaxLikeRatioData = mMaxLike->gDataRatio();
+
+  // Bias correction for gamma-jet measurements
+  TGraphErrors *gMPFCorr = biasCorrection(mMPF->gData(),mMPF->gMC(),mcTruth);
+  TGraphErrors *gPtBalCorr = biasCorrection(mPtBal->gData(),mPtBal->gMC(),mcTruth);
+
+  TLegend *legInterDijet = util::LabelFactory::createLegendCol(5,0.8);
+  legInterDijet->AddEntry(gPtBalCorr,"#gamma + jet balance (bias corr.)","P");
+  legInterDijet->AddEntry(gMPFCorr,"#gamma + jet MPF (bias corr.)","P");
+  legInterDijet->AddEntry(mMaxLike->gData(),"Dijet max likelihood","P");
+  legInterDijet->AddEntry(fInterDijet,"Interpolation (max likelihood)","L");
+  legInterDijet->AddEntry(mcTruth,"MC truth","L");
   
-  // Mean scaling factor
-  gMaxLikeRatioData->Fit("pol0","0Q");
-  double maxLikeScaleMean = gMaxLikeRatioData->GetFunction("pol0")->GetParameter(0);
-  double maxLikeScaleUncert = 0.5*(maxLikeScaleMean-1.);
-  double maxLikeScaleHigh = gMaxLikeRatioData->GetY()[0];
-  double maxLikeScaleLow = gMaxLikeRatioData->GetY()[0];
-  for(int i = 1; i < gMaxLikeRatioData->GetN(); ++i) {
-    if( gMaxLikeRatioData->GetY()[i] > maxLikeScaleHigh ) maxLikeScaleHigh = gMaxLikeRatioData->GetY()[i];
-    else if( gMaxLikeRatioData->GetY()[i] < maxLikeScaleLow ) maxLikeScaleLow = gMaxLikeRatioData->GetY()[i];
-  }
-  TH1 *hMaxLikeScale = new TH1D("hMaxLikeScale",";p_{T} (GeV);#sigma(Meas) / #sigma(MCTruth)",1000,xMin,xMax);
-  hMaxLikeScale->GetYaxis()->SetRangeUser(0.6,2.);
-  hMaxLikeScale->GetXaxis()->SetMoreLogLabels();
-  hMaxLikeScale->SetLineColor(gMaxLikeRatioData->GetLineColor());
-  TH1 *hMaxLikeScaleUncert = static_cast<TH1D*>(hMaxLikeScale->Clone("hMaxLikeScaleUncert"));
-  hMaxLikeScaleUncert->SetFillColor(kRed+2);
-  TH1 *hMaxLikeScaleHighLow = static_cast<TH1D*>(hMaxLikeScaleUncert->Clone("hMaxLikeScaleHighLow"));
+  TCanvas *canInter0 = new TCanvas("canInter0","Interpolated maxlike",500,500);
+  canInter0->cd();
+  hFrame->Draw();
+  util::HistOps::getUncertaintyBand(fInterDijet,0.1,xMin,xMax,kRed-6)->Draw("E3same");
+  mcTruth->Draw("same");
+  mMaxLike->gData()->Draw("PE1same");
+  fInterDijet->Draw("same");
+  gMPFCorr->Draw("PE1same");
+  gPtBalCorr->Draw("PE1same");
+  txt->Draw("same");
+  legInterDijet->Draw("same");
+  canInter0->SetLogx();
 
-  for(int bin = 1; bin <= hMaxLikeScale->GetNbinsX(); ++bin) {
-    hMaxLikeScale->SetBinContent(bin,maxLikeScaleMean);
+  TH1 *hInterDijetRatio = util::HistOps::createRatio(fInterDijet,mcTruth,xMin,xMax,"","");
 
-    hMaxLikeScaleUncert->SetBinContent(bin,maxLikeScaleMean);
-    hMaxLikeScaleUncert->SetBinError(bin,maxLikeScaleUncert);
-
-    hMaxLikeScaleHighLow->SetBinContent(bin,maxLikeScaleLow+0.5*(maxLikeScaleHigh-maxLikeScaleLow));
-    hMaxLikeScaleHighLow->SetBinError(bin,0.5*(maxLikeScaleHigh-maxLikeScaleLow));
-  }
-
-  TCanvas *canMaxLikeExtra1 = new TCanvas("canMaxLikeExtra1","MaxLike: Ratio Meas / MCTruth",500,500);
-  canMaxLikeExtra1->cd();
-  hMaxLikeScaleHighLow->Draw("E3");
-  hMaxLikeScale->Draw("same");
+  TCanvas *canInter1 = new TCanvas("canInter1","Ratio Inter / MCTruth",500,500);
+  canInter1->cd();
+  hRatioFrame->Draw();
+  util::HistOps::getUncertaintyBand(hInterDijetRatio,0.1,xMin,xMax,kRed-6)->Draw("E3same");
   hRatioFrame->Draw("same");
   mMaxLike->gDataRatio()->Draw("PE1same");
-  canMaxLikeExtra1->SetLogx();
+  hInterDijetRatio->Draw("same");
+  util::HistOps::createRatioGraph(gMPFCorr,mcTruth)->Draw("PE1same");
+  util::HistOps::createRatioGraph(gPtBalCorr,mcTruth)->Draw("PE1same");
+  txt->Draw("same");
+  legInterDijet->Draw("same");
+  canInter1->SetLogx();
 
 
-  // Extrapolated resolution
-  TH1 *hMaxLikeExtra = static_cast<TH1D*>(hFrame->Clone("hMaxLikeExtra"));
-  hMaxLikeExtra->SetLineColor(gMaxLikeRatioData->GetLineColor());
-  TH1 *hMaxLikeExtraUncert = static_cast<TH1D*>(hMaxLikeExtra->Clone("hMaxLikeExtraUncert"));
-  hMaxLikeExtraUncert->SetFillColor(hMaxLikeScaleHighLow->GetFillColor());
-  for(int bin = 1; bin <= hMaxLikeExtra->GetNbinsX(); ++bin) {
-    double mc = mcTruth->Eval(hMaxLikeExtra->GetBinCenter(bin));
-    hMaxLikeExtra->SetBinContent(bin,mc*hMaxLikeScale->GetBinContent(bin));
-    hMaxLikeExtraUncert->SetBinContent(bin,mc*hMaxLikeScaleHighLow->GetBinContent(bin));
-    hMaxLikeExtraUncert->SetBinError(bin,mc*hMaxLikeScaleHighLow->GetBinError(bin));
+  // Interpolation: dijet data, bias corrected gamma-jet data
+  TF1 *fInterAll = static_cast<TF1*>(mcTruth->Clone("fInterAll"));
+  fInterAll->SetLineWidth(2);
+  fInterAll->SetLineStyle(1);
+  fInterAll->SetLineColor(1);
+  TGraphErrors *gAll = new TGraphErrors(gMPFCorr->GetN()+gPtBalCorr->GetN()+mMaxLike->gData()->GetN());
+  for(int p = 0; p < gMPFCorr->GetN(); ++p) {
+    gAll->SetPoint(p,gMPFCorr->GetX()[p],gMPFCorr->GetY()[p]);
+    gAll->SetPointError(p,gMPFCorr->GetErrorX(p),gMPFCorr->GetErrorY(p));
   }
+  int nOffset = gMPFCorr->GetN();
+   for(int p = 0; p < gPtBalCorr->GetN(); ++p) {
+     gAll->SetPoint(p+nOffset,gPtBalCorr->GetX()[p],gPtBalCorr->GetY()[p]);
+     gAll->SetPointError(p+nOffset,gPtBalCorr->GetErrorX(p),gPtBalCorr->GetErrorY(p));
+   }
+  nOffset += gMPFCorr->GetN();
+  for(int p = 0; p < mMaxLike->gData()->GetN(); ++p) {
+    gAll->SetPoint(p+nOffset,mMaxLike->gData()->GetX()[p],mMaxLike->gData()->GetY()[p]);
+    gAll->SetPointError(p+nOffset,mMaxLike->gData()->GetErrorX(p),mMaxLike->gData()->GetErrorY(p));
+  }
+  gAll->Fit("fInterAll","0");
 
-  TCanvas *canMaxLikeExtra2 = new TCanvas("canMaxLikeExtra2","MaxLike: Extrapolation",500,500);
-  canMaxLikeExtra2->cd();
-  hMaxLikeExtraUncert->Draw("E3");
-  hMaxLikeExtra->Draw("same");
-  mMaxLike->gData()->Draw("PE1same");
+
+  TLegend *legInterAll = util::LabelFactory::createLegendCol(5,0.8);
+  legInterAll->AddEntry(gPtBalCorr,"#gamma + jet balance (bias corr.)","P");
+  legInterAll->AddEntry(gMPFCorr,"#gamma + jet MPF (bias corr.)","P");
+  legInterAll->AddEntry(mMaxLike->gData(),"Dijet max likelihood","P");
+  legInterAll->AddEntry(fInterAll,"Interpolation","L");
+  legInterAll->AddEntry(mcTruth,"MC truth","L");
+
+  
+  TCanvas *canInterAll0 = new TCanvas("canInterAll0","Interpolated all",500,500);
+  canInterAll0->cd();
+  hFrame->Draw();
+  util::HistOps::getUncertaintyBand(fInterAll,0.1,xMin,xMax,1,3013)->Draw("E3same");
   mcTruth->Draw("same");
-  canMaxLikeExtra2->SetLogx();
+  fInterAll->Draw("same");
+  gMPFCorr->Draw("PE1same");
+  gPtBalCorr->Draw("PE1same");
+  mMaxLike->gData()->Draw("PE1same");
+  txt->Draw("same");
+  legInterAll->Draw("same");
+  canInterAll0->SetLogx();
+
+  TH1 *hInterAllRatio = util::HistOps::createRatio(fInterAll,mcTruth,xMin,xMax,"","");
+
+  TCanvas *canInterAll1 = new TCanvas("canInterAll1","Ratio Inter All / MCTruth",500,500);
+  canInterAll1->cd();
+  hRatioFrame->Draw();
+  util::HistOps::getUncertaintyBand(hInterAllRatio,0.1,xMin,xMax,1,3013)->Draw("E3same");
+  hRatioFrame->Draw("same");
+  hInterAllRatio->Draw("same");
+  util::HistOps::createRatioGraph(gMPFCorr,mcTruth)->Draw("PE1same");
+  util::HistOps::createRatioGraph(gPtBalCorr,mcTruth)->Draw("PE1same");
+  mMaxLike->gDataRatio()->Draw("PE1same");
+  txt->Draw("same");
+  legInterAll->Draw("same");
+  canInterAll1->SetLogx();
+
+
+
+
+
+
+
+  if( false ) {
+    // Uncertainties on MaxLike
+    TGraphErrors *gMaxLikeRatioData = mMaxLike->gDataRatio();
+     
+    // Mean scaling factor
+    gMaxLikeRatioData->Fit("pol0","0Q");
+    double maxLikeScaleMean = gMaxLikeRatioData->GetFunction("pol0")->GetParameter(0);
+    double maxLikeScaleUncert = 0.5*(maxLikeScaleMean-1.);
+    double maxLikeScaleHigh = gMaxLikeRatioData->GetY()[0];
+    double maxLikeScaleLow = gMaxLikeRatioData->GetY()[0];
+    for(int i = 1; i < gMaxLikeRatioData->GetN(); ++i) {
+      if( gMaxLikeRatioData->GetY()[i] > maxLikeScaleHigh ) maxLikeScaleHigh = gMaxLikeRatioData->GetY()[i];
+      else if( gMaxLikeRatioData->GetY()[i] < maxLikeScaleLow ) maxLikeScaleLow = gMaxLikeRatioData->GetY()[i];
+    }
+    TH1 *hMaxLikeScale = new TH1D("hMaxLikeScale",";p_{T} (GeV);#sigma(Meas) / #sigma(MCTruth)",1000,xMin,xMax);
+    hMaxLikeScale->GetYaxis()->SetRangeUser(0.6,2.);
+    hMaxLikeScale->GetXaxis()->SetMoreLogLabels();
+    hMaxLikeScale->SetLineColor(gMaxLikeRatioData->GetLineColor());
+    TH1 *hMaxLikeScaleUncert = static_cast<TH1D*>(hMaxLikeScale->Clone("hMaxLikeScaleUncert"));
+    hMaxLikeScaleUncert->SetFillColor(kRed-6);
+    TH1 *hMaxLikeScaleHighLow = static_cast<TH1D*>(hMaxLikeScaleUncert->Clone("hMaxLikeScaleHighLow"));
+
+    for(int bin = 1; bin <= hMaxLikeScale->GetNbinsX(); ++bin) {
+      hMaxLikeScale->SetBinContent(bin,maxLikeScaleMean);
+
+      hMaxLikeScaleUncert->SetBinContent(bin,maxLikeScaleMean);
+      hMaxLikeScaleUncert->SetBinError(bin,maxLikeScaleUncert);
+
+      hMaxLikeScaleHighLow->SetBinContent(bin,maxLikeScaleLow+0.5*(maxLikeScaleHigh-maxLikeScaleLow));
+      hMaxLikeScaleHighLow->SetBinError(bin,0.5*(maxLikeScaleHigh-maxLikeScaleLow));
+    }
+
+    TCanvas *canMaxLikeExtra1 = new TCanvas("canMaxLikeExtra1","MaxLike: Ratio Meas / MCTruth",500,500);
+    canMaxLikeExtra1->cd();
+    hMaxLikeScaleHighLow->Draw("E3");
+    hMaxLikeScale->Draw("same");
+    hRatioFrame->Draw("same");
+    mMaxLike->gDataRatio()->Draw("PE1same");
+    canMaxLikeExtra1->SetLogx();
+
+
+    // Extrapolated resolution
+    TH1 *hMaxLikeExtra = static_cast<TH1D*>(hFrame->Clone("hMaxLikeExtra"));
+    hMaxLikeExtra->SetLineColor(gMaxLikeRatioData->GetLineColor());
+    TH1 *hMaxLikeExtraUncert = static_cast<TH1D*>(hMaxLikeExtra->Clone("hMaxLikeExtraUncert"));
+    hMaxLikeExtraUncert->SetFillColor(hMaxLikeScaleHighLow->GetFillColor());
+    for(int bin = 1; bin <= hMaxLikeExtra->GetNbinsX(); ++bin) {
+      double mc = mcTruth->Eval(hMaxLikeExtra->GetBinCenter(bin));
+      hMaxLikeExtra->SetBinContent(bin,mc*hMaxLikeScale->GetBinContent(bin));
+      hMaxLikeExtraUncert->SetBinContent(bin,mc*hMaxLikeScaleHighLow->GetBinContent(bin));
+      hMaxLikeExtraUncert->SetBinError(bin,mc*hMaxLikeScaleHighLow->GetBinError(bin));
+    }
+
+    TCanvas *canMaxLikeExtra2 = new TCanvas("canMaxLikeExtra2","MaxLike: Extrapolation",500,500);
+    canMaxLikeExtra2->cd();
+    hMaxLikeExtraUncert->Draw("E3");
+    hMaxLikeExtra->Draw("same");
+    mMaxLike->gData()->Draw("PE1same");
+    mcTruth->Draw("same");
+    canMaxLikeExtra2->SetLogx();
+  }
 }
