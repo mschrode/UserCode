@@ -1,4 +1,4 @@
-// $Id: fitTailsFromAsym.C,v 1.1 2010/11/04 19:52:23 mschrode Exp $
+// $Id: fitTailsFromAsym.C,v 1.2 2010/11/10 09:53:45 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -95,6 +95,9 @@ public:
   double nTotal(unsigned int i) const { return nTotal_.at(i); }
   double nTail(unsigned int i) const { return nTail_.at(i); }
 
+  void smearAsymmetry(const Sample* dataSample);
+
+
 private:
   //const SampleType type_;
   const int type_;
@@ -128,6 +131,7 @@ private:
   TH1* hist(const TH1* h) const;
   TH1* hist(unsigned int i, const util::HistVec &h) const;
   void setStyle(TH1 *h) const;
+  void smearAsymmetry(const std::vector<double> &scaling, const util::HistVec &hOrig, util::HistVec &hSmeared, bool abs = false) const;
   void smearAsymmetry(double scaling, const util::HistVec &hOrig, util::HistVec &hSmeared, bool abs = false) const;
   void smearHistogram(const TH1* hOrig, TH1* &hSmeared, double nTotal, double width, double scaling, bool abs = false) const;
 };
@@ -157,20 +161,20 @@ Sample::Sample(const TString &fileName, int type, const TString &sampleName, uns
     ioIsOk = false;
   }
 
-//   // Average pt
-//   for(int i = 0; ioIsOk && (i < 4); ++i) {
-//     TH1 *hPtJet = 0;
-//     file.GetObject("hPtJet"+util::toTString(i),hPtJet);
-//     if( hPtJet ) {
-//       hPtJet->SetDirectory(0);
-//       newName = name()+"_PtJet"+util::toTString(i);
-//       hPtJet->SetName(newName);
-//       setStyle(hPtJet);
-//       hPtJet_.push_back(hPtJet);
-//     } else {
-//       ioIsOk = false;
-//     }
-//   }
+  //   // Average pt
+  //   for(int i = 0; ioIsOk && (i < 4); ++i) {
+  //     TH1 *hPtJet = 0;
+  //     file.GetObject("hPtJet"+util::toTString(i),hPtJet);
+  //     if( hPtJet ) {
+  //       hPtJet->SetDirectory(0);
+  //       newName = name()+"_PtJet"+util::toTString(i);
+  //       hPtJet->SetName(newName);
+  //       setStyle(hPtJet);
+  //       hPtJet_.push_back(hPtJet);
+  //     } else {
+  //       ioIsOk = false;
+  //     }
+  //   }
 
   // Pt asymmetry
   bool binExists = true;
@@ -240,33 +244,34 @@ Sample::Sample(const TString &fileName, int type, const TString &sampleName, uns
 }
 
 
+
 // --------------------------------------------------
 Sample::~Sample() {
-//   delete hPtAve_;
-//   for(util::HistIt it = hPtJet_.begin(); it != hPtJet_.end(); ++it) {
-//     delete *it;
-//   }
-//   for(util::HistIt it = hPtAsym_.begin(); it != hPtAsym_.end(); ++it) {
-//     delete *it;
-//   }
-//   for(util::HistIt it = hPtAsymSmeared_.begin(); it != hPtAsymSmeared_.end(); ++it) {
-//     delete *it;
-//   }
-//   for(util::HistIt it = hPtAbsAsym_.begin(); it != hPtAbsAsym_.end(); ++it) {
-//     delete *it;
-//   }
-//   for(util::HistIt it = hPtAbsAsymSmeared_.begin(); it != hPtAbsAsymSmeared_.end(); ++it) {
-//     delete *it;
-//   }
-//   for(util::HistIt it = hTails_.begin(); it != hTails_.end(); ++it) {
-//     delete *it;
-//   }
-//   for(util::HistIt it = hTailsClean_.begin(); it != hTailsClean_.end(); ++it) {
-//     delete *it;
-//   }
-//   for(std::vector<TF1*>::iterator it = fTailFits_.begin(); it != fTailFits_.end(); ++it) {
-//     delete *it;
-//   }
+  //   delete hPtAve_;
+  //   for(util::HistIt it = hPtJet_.begin(); it != hPtJet_.end(); ++it) {
+  //     delete *it;
+  //   }
+  //   for(util::HistIt it = hPtAsym_.begin(); it != hPtAsym_.end(); ++it) {
+  //     delete *it;
+  //   }
+  //   for(util::HistIt it = hPtAsymSmeared_.begin(); it != hPtAsymSmeared_.end(); ++it) {
+  //     delete *it;
+  //   }
+  //   for(util::HistIt it = hPtAbsAsym_.begin(); it != hPtAbsAsym_.end(); ++it) {
+  //     delete *it;
+  //   }
+  //   for(util::HistIt it = hPtAbsAsymSmeared_.begin(); it != hPtAbsAsymSmeared_.end(); ++it) {
+  //     delete *it;
+  //   }
+  //   for(util::HistIt it = hTails_.begin(); it != hTails_.end(); ++it) {
+  //     delete *it;
+  //   }
+  //   for(util::HistIt it = hTailsClean_.begin(); it != hTailsClean_.end(); ++it) {
+  //     delete *it;
+  //   }
+  //   for(std::vector<TF1*>::iterator it = fTailFits_.begin(); it != fTailFits_.end(); ++it) {
+  //     delete *it;
+  //   }
 }
 
 
@@ -315,16 +320,42 @@ void Sample::fitWidth(const util::HistVec &h, std::vector<double> &width, std::v
 }
 
 
+
+// --------------------------------------------------
+void Sample::smearAsymmetry(const Sample* dataSample) {
+  // Width ratio data / MC
+  std::vector<double> scales(dataSample->nBins());
+  for(unsigned int i = 0; i < dataSample->nBins(); ++i) {
+    scales[i] = ( dataSample->widthAsym(i)/widthAsym(i) - 1. );
+  }
+
+  // Smearing asymmetry
+  smearAsymmetry(scales,hPtAsym_,hPtAsymSmeared_);
+  fitWidth(hPtAsymSmeared_,widthAsymSmeared_,widthAsymErrSmeared_);
+  
+  // Extract tails from smeared asymmetry
+  getTails(hPtAsymSmeared_);
+}
+
+
+
 // --------------------------------------------------
 void Sample::smearAsymmetry(double scaling, const util::HistVec &hOrig, util::HistVec &hSmeared, bool abs) const {
+  std::vector<double> scales(hOrig.size(),scaling);
+  smearAsymmetry(scales,hOrig,hSmeared,abs);
+}
+ 
+ 
+// --------------------------------------------------
+void Sample::smearAsymmetry(const std::vector<double> &scaling, const util::HistVec &hOrig, util::HistVec &hSmeared, bool abs) const {
   for(util::HistIt it = hSmeared.begin(); it != hSmeared.end(); ++it) {
     delete *it;
   }
   hSmeared.clear();
-  hSmeared = util::HistVec(nBins());
+  hSmeared = util::HistVec(hOrig.size());
 
-  for(unsigned int i = 0; i < nBins(); ++i) {
-    smearHistogram(hOrig[i],hSmeared[i],nTotal(i),widthAsym(i),scaling,abs);
+  for(unsigned int i = 0; i < hOrig.size(); ++i) {
+    smearHistogram(hOrig[i],hSmeared[i],nTotal(i),widthAsym(i),scaling[i],abs);
   }
 }
 
@@ -430,24 +461,25 @@ bool Sample::getTail(const TH1* hAsym, TH1* &hTail, TH1* &hTailClean, TF1* &gaus
   double sigma = hTail->GetRMS();
   success =  !(hTail->Fit(gauss,"I0Q","",0.,2.5*sigma));
   if( success ) {
+    sigma = gauss->GetParameter(2);
     success = !(hTail->Fit(gauss,"I0Q","",0.,2.*sigma));
     if( success ) {
       sigma = gauss->GetParameter(2);
       int binMin = 1;
       int binMax = hTail->FindBin(5.*sigma);
-       for(int bin = binMin; bin <= binMax; ++bin) {
-	 double min = hTail->GetXaxis()->GetBinLowEdge(bin);
-	 double max = hTail->GetXaxis()->GetBinUpEdge(bin);
-	 double gaussPdf = gauss->Integral(min,max)/hTail->GetBinWidth(1);
-	 double tailPdf = hTail->GetBinContent(bin) - gaussPdf;
-	 hTail->SetBinContent(bin,tailPdf);
-       }
-       for(int bin = 1; bin <= hTailClean->GetNbinsX(); ++bin) {
-	 if( hTail->GetBinContent(bin) > 0.4*gauss->Eval(hTail->GetBinCenter(bin)) ) {
-	   hTailClean->SetBinContent(bin,hTail->GetBinContent(bin));
-	   hTailClean->SetBinError(bin,hTail->GetBinError(bin));
-	 }
-       }
+      for(int bin = binMin; bin <= binMax; ++bin) {
+	double min = hTail->GetXaxis()->GetBinLowEdge(bin);
+	double max = hTail->GetXaxis()->GetBinUpEdge(bin);
+	double gaussPdf = gauss->Integral(min,max)/hTail->GetBinWidth(1);
+	double tailPdf = hTail->GetBinContent(bin) - gaussPdf;
+	hTail->SetBinContent(bin,tailPdf);
+      }
+      for(int bin = 1; bin <= hTailClean->GetNbinsX(); ++bin) {
+	if( hTail->GetBinContent(bin) > 0.4*gauss->Eval(hTail->GetBinCenter(bin)) ) {
+	  hTailClean->SetBinContent(bin,hTail->GetBinContent(bin));
+	  hTailClean->SetBinError(bin,hTail->GetBinError(bin));
+	}
+      }
     }
   }
   
@@ -458,8 +490,8 @@ bool Sample::getTail(const TH1* hAsym, TH1* &hTail, TH1* &hTailClean, TF1* &gaus
 
 // --------------------------------------------------
 void Sample::setStyle(TH1 *h) const {
-//   if( type() == Data ) h->SetMarkerStyle(20);
-//   else if( type() == MC ) h->SetFillColor(5);
+  //   if( type() == Data ) h->SetMarkerStyle(20);
+  //   else if( type() == MC ) h->SetFillColor(5);
   
   h->SetLineWidth(1);
   if( type() == 0 ) {
@@ -536,20 +568,18 @@ SampleAdmin::SampleAdmin(const TString &fileData, const TString &fileMC, std::ve
   TString tmpName = name()+"_"+util::toTString(ptMin())+"-"+util::toTString(ptMax());
   data_ = new Sample(fileData,0,tmpName,0);
   mc_ = new Sample(fileMC,1,tmpName,mcStartBin);
-
-//   std::cout << "  Data '" << fileData << "': " << data_->nBins() << " ptBins" << std::endl;
-//   std::cout << "  MC '" << fileData << "': " << mc_->nBins() << " ptBins" << std::endl;
+  mc_->smearAsymmetry(data_);
 
   // Checks
   assert( data_->nBins() == nPtBins() );
   assert( mc_->nBins() == nPtBins() );
   
-//   std::cout << "\n  WIDTH OF PT-ASYMMETRY\n";
-//   for(unsigned int i = 0; i < nPtBins(); ++i) {
-//     std::cout << "    " << i << std::flush;
-//     std::cout << " (" << ptMin(i) << " - " << ptMax(i) << "): " << std::flush;
-//     std::cout << widthAsymData(i) << " +/- " << widthAsymErrData(i) << " (Data), " << widthAsymMC(i) << " +/- " << widthAsymErrMC(i) << " (MC)" << std::endl;
-//   }  
+  //   std::cout << "\n  WIDTH OF PT-ASYMMETRY\n";
+  //   for(unsigned int i = 0; i < nPtBins(); ++i) {
+  //     std::cout << "    " << i << std::flush;
+  //     std::cout << " (" << ptMin(i) << " - " << ptMax(i) << "): " << std::flush;
+  //     std::cout << widthAsymData(i) << " +/- " << widthAsymErrData(i) << " (Data), " << widthAsymMC(i) << " +/- " << widthAsymErrMC(i) << " (MC)" << std::endl;
+  //   }  
 }
 
 
@@ -732,8 +762,8 @@ void plotDataMCDiff(TH1* hData, TH1* hMC, TPaveText* label1, TPaveText* label2) 
   sigmaMC->Draw("same");
   hData->Draw("PE1same");
   sigmaData->Draw("same");  
-//   labelAll->Draw("same");
-//   labelEta->Draw("same");
+  //   labelAll->Draw("same");
+  //   labelEta->Draw("same");
   TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,0.3,1);
   leg->AddEntry(hData,"Data","P");
   leg->AddEntry(sigmaData,"Fit Data","L");
@@ -801,15 +831,15 @@ void fitTailsFromAsym() {
 
   std::vector<SampleAdmin*> admins;
 
-//   // HLT test
+  //   // HLT test
   std::vector<double> ptBinEdges;
-//   ptBinEdges.push_back(200.);
-//   ptBinEdges.push_back(250.);
-//   ptBinEdges.push_back(300.);
-//   ptBinEdges.push_back(400.);
-//   ptBinEdges.push_back(1000.);
+  //   ptBinEdges.push_back(200.);
+  //   ptBinEdges.push_back(250.);
+  //   ptBinEdges.push_back(300.);
+  //   ptBinEdges.push_back(400.);
+  //   ptBinEdges.push_back(1000.);
   
-//   admins.push_back(new SampleAdmin("Kalibri_MC__200-1000DiJetAve__145E-1pb__Calo.root","Kalibri_MC__200-1000DiJetAve__145E-1pb__Calo.root",ptBinEdges,10.,0.1));
+  //   admins.push_back(new SampleAdmin("Kalibri_MC__200-1000DiJetAve__145E-1pb__Calo.root","Kalibri_MC__200-1000DiJetAve__145E-1pb__Calo.root",ptBinEdges,10.,0.1));
 
 
   // HLT 50
