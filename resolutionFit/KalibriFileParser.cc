@@ -1,4 +1,4 @@
-// $Id: KalibriFileParser.cc,v 1.13 2010/09/04 11:57:53 mschrode Exp $
+// $Id: KalibriFileParser.cc,v 1.14 2010/09/14 11:34:58 mschrode Exp $
 
 #include "KalibriFileParser.h"
 
@@ -8,6 +8,9 @@
 #include "TFile.h"
 #include "TH1.h"
 #include "TH1D.h"
+#include "TString.h"
+
+#include "../util/utils.h"
 
 namespace resolutionFit {
 
@@ -19,35 +22,36 @@ namespace resolutionFit {
   //!  - 1: some useful information (default)
   //!  - 2: a lot of information for debugging
   // --------------------------------------------
-  KalibriFileParser::KalibriFileParser(const TString &fileName, int verbose, bool readFittedValues)
-    : verbose_(verbose), readFittedValues_(readFittedValues) {
+  KalibriFileParser::KalibriFileParser(const TString &fileName, unsigned int ptBin, int verbose, bool readFittedValues)
+    : binId_("_"+util::toTString(ptBin)), verbose_(verbose), readFittedValues_(readFittedValues) {
+
     // Histograms to be read from file
-    hists_["hPtGen"] = 0;
-    hists_["hPtGenJet1"] = 0;
-    hists_["hPtDijet"] = 0;
-    hists_["hTruthPDF"] = 0;
-    hists_["hRespMeas_0"] = 0;
-    hists_["hRespFit_0"] = 0;
-    hists_["hPtAsym_0"] = 0;
-    hists_["hFitPtAsym_0"] = 0;
-    hists_["hPtGenAsym_0"] = 0;
-    hists_["hPtJet1"] = 0;
-    hists_["hPtJet2"] = 0;
-    hists_["hPtJet3"] = 0;
-    hists_["hPtJet4"] = 0;
-    hists_["hPJet3"] = 0;
-    hists_["hPJet3Rel"] = 0;
-    hists_["hPJet3GenRel"] = 0;
-    hists_["hPSJ"] = 0;
-    hists_["hPSJRel"] = 0;
-    hists_["hPSJGenRel"] = 0;
+    hists_[("hPtGen"+binId_)] = 0;
+    hists_[("hPtGenJet1"+binId_)] = 0;
+    hists_[("hPtAveAbs"+binId_)] = 0;
+    hists_[("hTruthPDF"+binId_)] = 0;
+    hists_[("hRespMeas"+binId_)] = 0;
+    hists_[("hRespFit"+binId_)] = 0;
+    hists_[("hPtAsym"+binId_)] = 0;
+    hists_[("hFitPtAsym"+binId_)] = 0;
+    hists_[("hPtGenAsym"+binId_)] = 0;
+    hists_[("hPtJet1"+binId_)] = 0;
+    hists_[("hPtJet2"+binId_)] = 0;
+    hists_[("hPtJet3"+binId_)] = 0;
+    hists_[("hPtJet4"+binId_)] = 0;
+    hists_[("hPJet3"+binId_)] = 0;
+    hists_[("hPJet3Rel"+binId_)] = 0;
+    hists_[("hPJet3GenRel"+binId_)] = 0;
+    hists_[("hPSJ"+binId_)] = 0;
+    hists_[("hPSJRel"+binId_)] = 0;
+    hists_[("hPSJGenRel"+binId_)] = 0;
     hists_["hEta"] = 0;
     hists_["hDeltaPhi12"] = 0;
-    hists_["hDeltaPtJet12"] = 0;
+    hists_[("hDeltaPtJet12"+binId_)] = 0;
 
 
     // Parse file
-    if( parse(fileName) ) exit(-1);
+    if( parse(fileName,ptBin) ) exit(-1);
 
     // Calculate mean pt values
     meanPtGen_ = 0.;
@@ -82,10 +86,14 @@ namespace resolutionFit {
   //! care of by the calling instance!
   // --------------------------------------------
   TH1 *KalibriFileParser::hist(const TString &name, const TString &newName, bool abs) const {
+
+    TString histName = name;
+    if( name != "hEta" && name != "hDeltaPhi12" ) histName += binId_;
+
     TH1 *h = 0;
-    HistIt it = hists_.find(name);
+    HistIt it = hists_.find(histName);
     if( it == hists_.end() ) {
-      std::cerr << "WARNING (KalibriFileParser): No histogram with name '" << name << "'" << std::endl;
+      std::cerr << "WARNING (KalibriFileParser): No histogram with name '" << histName << "'" << std::endl;
     } else {
       // This is weird: a simple TH1::Clone(newName) to get
       // h produces a crash if the next TFile is opened i.e.
@@ -102,16 +110,14 @@ namespace resolutionFit {
 		   it->second->GetXaxis()->GetXmax());
       for(int bin = 1; bin <= h->GetNbinsX(); bin++) {
 	h->SetBinContent(bin,it->second->GetBinContent(bin));
-	if( it->first != "hRespFit_0" && it->first != "hTruthPDF") {
-	  h->SetBinError(bin,it->second->GetBinError(bin));
-	} else {
+	if( (it->first).Contains("hRespFit_") || (it->first).Contains("hTruthPDF_") ) {
 	  h->SetBinError(bin,0.);
+	} else {
+	  h->SetBinError(bin,it->second->GetBinError(bin));
 	}
       }
       h->SetLineColor(it->second->GetLineColor());
       h->SetLineWidth(it->second->GetLineWidth());
-
-      //if(abs) h->Scale(it->second->GetEntries()*it->second->GetBinWidth(1));      
     }
 
     return h;
@@ -124,7 +130,7 @@ namespace resolutionFit {
   //! from the numbers stored in the file. It is
   //! intended to be called only once by constructors.
   // --------------------------------------------
-  int KalibriFileParser::parse(const TString &fileName) {
+  int KalibriFileParser::parse(const TString &fileName, unsigned int ptBin) {
     int ioError = 0;
     if( verbose_ == 2 ) std::cout << "(KalibriFileParser) Parsing file '" << fileName << "'" << std::endl;
     
@@ -150,14 +156,19 @@ namespace resolutionFit {
 	} else {
 	  if( verbose_ == 2 ) std::cout << "ok" << std::endl;
 	  h->SetDirectory(0);
-	  for(int i = 0; i < h->GetNbinsX(); i++) {
-	    values_.push_back(h->GetBinContent(1+i));
-	    statUncert_.push_back(h->GetBinError(1+i));
+
+	  values_.push_back(h->GetBinContent(1+ptBin));
+	  statUncert_.push_back(h->GetBinError(1+ptBin));
+
+// 	  for(int i = 0; i < h->GetNbinsX(); i++) {
+// 	    values_.push_back(h->GetBinContent(1+i));
+// 	    statUncert_.push_back(h->GetBinError(1+i));
 	    if( verbose_ == 2 ) {
-	      std::cout << "  Value " << i << ": " << values_.back() << std::flush;
+	      //	      std::cout << "  Value " << i << ": " << values_.back() << std::flush;
+	      std::cout << "  Value: " << values_.back() << std::flush;
 	      std::cout << " +/- " << statUncert_.back() << std::endl;
 	    }
-	  }
+	    //	  }
 	}
       }
 
@@ -195,13 +206,13 @@ namespace resolutionFit {
     if( verbose_ == 2 ) std::cout << "Setting mean pt values" << std::endl;
 
     for(HistIt it = hists_.begin(); it != hists_.end(); it++) {
-      if( it->first == "hPtGen" ) {
+      if( it->first == ("hPtGen"+binId_) ) {
 	meanPtGen_ = it->second->GetMean();
 	meanPtGenUncert_ = it->second->GetMeanError();
-      } else if( it->first == "hPtDijet" ) {
+      } else if( it->first == ("hPtAveAbs"+binId_) ) {
 	meanPtDijet_ = it->second->GetMean();
 	meanPtDijetUncert_ = it->second->GetMeanError();
-      } else if( it->first == "hTruthPDF" ) {
+      } else if( it->first == ("hTruthPDF"+binId_) ) {
 	meanPdfPtTrue_ = it->second->GetMean();
 	meanPdfPtTrueUncert_ = standardDeviation(it->second);
       }

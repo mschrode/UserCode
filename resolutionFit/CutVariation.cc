@@ -1,4 +1,4 @@
-// $Id: CutVariation.cc,v 1.20 2010/08/29 19:15:31 mschrode Exp $
+// $Id: CutVariation.cc,v 1.21 2010/09/04 11:57:53 mschrode Exp $
 
 #include "CutVariation.h"
 #include "KalibriFileParser.h"
@@ -23,14 +23,14 @@ namespace resolutionFit {
     if( quantity == "MaxLikeFit" ) {
       // Read uncertainty from MC statistics
       if( par_->hasMCStatUncert() ) {
-	KalibriFileParser *parser = new KalibriFileParser(par_->fileNameMCStatUncert(),par_->verbosity());
+	KalibriFileParser *parser = new KalibriFileParser(par_->fileNameMCStatUncert(),par_->ptBinIdx(),par_->verbosity());
 	mcStatUncert_ = parser->statUncert(parIdx());
 	delete parser;
       }
       // Read values from file
       varPoints_ = std::vector<VariationPoint*>(nPt3Cuts());
       for(int i = 0; i < nPt3Cuts(); i++) {
-	KalibriFileParser *parser = new KalibriFileParser(par_->fileNamePt3CutVariations(i),par_->verbosity());
+	KalibriFileParser *parser = new KalibriFileParser(par_->fileNamePt3CutVariations(i),par_->ptBinIdx(),par_->verbosity());
 	// Mean pt for all varied cuts (set only once)
 	if( i == 0 ) {
 	  if( par_->binPt() == BinPtGen ) { 
@@ -63,7 +63,7 @@ namespace resolutionFit {
 	double pt3Val = pt3Max(i);
 	if( pt3Bins() ) pt3Val = pt3Mean(i);
 
-	TH1 *hMCRes = parser->hist("hRespMeas_0","resolutionFit::CutVariationMCRes_PtBin"+util::toTString(par_->ptBinIdx())+"_Var"+util::toTString(i));
+	TH1 *hMCRes = parser->hist("hRespMeas","resolutionFit::CutVariationMCRes_PtBin"+util::toTString(par_->ptBinIdx())+"_Var"+util::toTString(i));
 	delete parser;
 
 	varPoints_[i] = new VariationPoint(fittedValue,uncert,pt3Val,hMCRes);
@@ -72,7 +72,7 @@ namespace resolutionFit {
       // Read asymmetry distributions and mean pt from file
       varPoints_ = std::vector<VariationPoint*>(nPt3Cuts());
       for(int i = 0; i < nPt3Cuts(); i++) {
-	KalibriFileParser *parser = new KalibriFileParser(par_->fileNamePt3CutVariations(i),par_->verbosity(),false);
+	KalibriFileParser *parser = new KalibriFileParser(par_->fileNamePt3CutVariations(i),par_->ptBinIdx(),par_->verbosity(),false);
 	// Mean pt for all varied cuts (set only once)
 	if( i == 0 ) {
 	  if( par_->binPt() == BinPtGen ) { 
@@ -89,7 +89,7 @@ namespace resolutionFit {
 	name += par_->ptBinIdx();
 	name += "_Var";
 	name += i;
-	TH1 *hAsym = parser->hist("hPtAsym_0",name);
+	TH1 *hAsym = parser->hist("hPtAsym",name);
 	double pt3Val = pt3Max(i);
 	if( pt3Bins() ) pt3Val = pt3Mean(i);
 	varPoints_[i] = new VariationPoint(hAsym,true,pt3Val);
@@ -100,7 +100,7 @@ namespace resolutionFit {
       // Read ptGen asymmetry distributions and mean pt from file
       varPoints_ = std::vector<VariationPoint*>(nPt3Cuts());
       for(int i = 0; i < nPt3Cuts(); i++) {
-	KalibriFileParser *parser = new KalibriFileParser(par_->fileNamePt3CutVariations(i),par_->verbosity(),false);
+	KalibriFileParser *parser = new KalibriFileParser(par_->fileNamePt3CutVariations(i),par_->ptBinIdx(),par_->verbosity(),false);
 	// Mean pt for all varied cuts (set only once)
 	if( i == 0 ) {
 	  meanPt_ = parser->meanPtGen();
@@ -112,7 +112,7 @@ namespace resolutionFit {
 	name += par_->ptBinIdx();
 	name += "_Var";
 	name += i;
-	TH1 *hAsym = parser->hist("hPtGenAsym_0",name);
+	TH1 *hAsym = parser->hist("hPtGenAsym",name);
 	double pt3Val = pt3Max(i);
 	if( pt3Bins() ) pt3Val = pt3Mean(i);
 	varPoints_[i] = new VariationPoint(hAsym,false,pt3Val);

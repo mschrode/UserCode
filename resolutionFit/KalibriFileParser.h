@@ -1,4 +1,4 @@
-// $Id: KalibriFileParser.h,v 1.7 2010/08/18 16:18:06 mschrode Exp $
+// $Id: KalibriFileParser.h,v 1.8 2010/08/24 09:36:43 mschrode Exp $
 
 #ifndef KALIBRI_FILE_PARSER_H
 #define KALIBRI_FILE_PARSER_H
@@ -36,12 +36,12 @@ namespace resolutionFit {
   //!
   //! \author Matthias Schroeder
   //! \date 2009/03/05
-  //! $Id: KalibriFileParser.h,v 1.7 2010/08/18 16:18:06 mschrode Exp $
+  //! $Id: KalibriFileParser.h,v 1.8 2010/08/24 09:36:43 mschrode Exp $
   // --------------------------------------------
   class KalibriFileParser {
   public:
     //! Constructor
-    KalibriFileParser(const TString &fileName, int verbose = 1, bool readFittedValues = true);
+    KalibriFileParser(const TString &fileName, unsigned int ptBin, int verbose = 1, bool readFittedValues = true);
     //! Destructor
     ~KalibriFileParser();
 
@@ -77,6 +77,7 @@ namespace resolutionFit {
   private:
     typedef std::map<TString,TH1*>::const_iterator HistIt;
 
+    const TString binId_;
     const int verbose_;		//! Verbosity level
     const bool readFittedValues_;
 
@@ -92,7 +93,7 @@ namespace resolutionFit {
     double meanPdfPtTrueUncert_;	//! Uncertainty on mean value of ptTrue pdf
 
     //! Parse the ROOT file with name \p fileName
-    int parse(const TString &fileName);
+    int parse(const TString &fileName, unsigned int ptBin);
     //! Set the mean values (attributes) from the corresponding distributions
     void setMeanPt();
     double standardDeviation(const TH1 *h) const;

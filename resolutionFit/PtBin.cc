@@ -1,4 +1,4 @@
-// $Id: PtBin.cc,v 1.20 2010/08/29 19:15:31 mschrode Exp $
+// $Id: PtBin.cc,v 1.21 2010/09/04 11:57:53 mschrode Exp $
 
 #include "PtBin.h"
 
@@ -31,7 +31,7 @@ namespace resolutionFit {
     }
 
     // Standard selection for reference
-    KalibriFileParser *parserStdSel = new KalibriFileParser(par_->fileNameStdSel(),par_->verbosity());
+    KalibriFileParser *parserStdSel = new KalibriFileParser(par_->fileNameStdSel(),ptBinIdx(),par_->verbosity());
     for(int parIdx = 0; parIdx < par_->nFittedPars(); ++parIdx) { // Loop over paramters
       // Reference sigma for unvaried case
       double refS = parserStdSel->value(parIdx);
@@ -39,7 +39,7 @@ namespace resolutionFit {
       Uncertainty *uncertSyst = new Uncertainty("SystematicUncertainty");
       // Calculate relative deviation after variation
       for(int i = 0; i < par_->nSystUncerts(); ++i) {
-	KalibriFileParser *parser = new KalibriFileParser(par_->fileNameSystUncertUp(i),par_->verbosity());
+	KalibriFileParser *parser = new KalibriFileParser(par_->fileNameSystUncertUp(i),ptBinIdx(),par_->verbosity());
 	double dUp = parser->value(parIdx) - refS;
 	delete parser;
 	if( par_->verbosity() == 2 ) {
@@ -86,9 +86,9 @@ namespace resolutionFit {
     hPtGen_ = parserStdSel->hist("hPtGen","hPtGen_PtBin"+util::toTString(ptBinIdx()));
     hPtGenJet1_ = parserStdSel->hist("hPtGenJet1","hPtGenJet1_PtBin"+util::toTString(ptBinIdx()));
     hPdfPtTrue_ = parserStdSel->hist("hTruthPDF","hPdfPtTrue_PtBin"+util::toTString(ptBinIdx()));
-    hPtAve_ = parserStdSel->hist("hPtDijet","hPtAve_PtBin"+util::toTString(ptBinIdx()));
-    hPdfRes_ = parserStdSel->hist("hRespFit_0","hPdfRes_PtBin"+util::toTString(ptBinIdx()));
-    hPtGenAsym_ = parserStdSel->hist("hPtGenAsym_0","hPtGenAsym_PtBin"+util::toTString(ptBinIdx()));
+    hPtAve_ = parserStdSel->hist("hPtAveAbs","hPtAve_PtBin"+util::toTString(ptBinIdx()));
+    hPdfRes_ = parserStdSel->hist("hRespFit","hPdfRes_PtBin"+util::toTString(ptBinIdx()));
+    hPtGenAsym_ = parserStdSel->hist("hPtGenAsym","hPtGenAsym_PtBin"+util::toTString(ptBinIdx()));
     hPJet3_ = parserStdSel->hist("hPJet3","hPJet3_PtBin"+util::toTString(ptBinIdx()));
     hPJet3Rel_ = parserStdSel->hist("hPJet3Rel","hPJet3Rel_PtBin"+util::toTString(ptBinIdx()));
     hPJet3GenRel_ = parserStdSel->hist("hPJet3GenRel","hPJet3GenRel_PtBin"+util::toTString(ptBinIdx()));
@@ -101,7 +101,7 @@ namespace resolutionFit {
     delete parserStdSel;
 
     if( par_->hasMCClosure() ) {
-      KalibriFileParser *parserMCClosure = new KalibriFileParser(par_->fileNameMCClosure(),par_->verbosity());
+      KalibriFileParser *parserMCClosure = new KalibriFileParser(par_->fileNameMCClosure(),ptBinIdx(),par_->verbosity());
       //      hMCRes_ = parserMCClosure->hist("hRespMeas_0","hMCRes_PtBin"+util::toTString(ptBinIdx()));
       delete parserMCClosure;
     }

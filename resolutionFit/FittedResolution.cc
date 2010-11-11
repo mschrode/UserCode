@@ -1662,6 +1662,16 @@ namespace resolutionFit {
 	else std::cout << std::endl;
       }
     } 
+
+
+//     std::cout << "\n\nFITTED RESOLUTION\n";
+//     // Loop over ptbins
+//     for(size_t bin = 0; bin < nPtBins(); bin++) {
+//       std::cout << bin << ": " << meanPt(bin) << std::flush;
+//       std::cout << " (" << ptMin(bin) << " - " << ptMax(bin) << "): " << std::flush;
+//       std::cout << ptBins_[bin]->fittedValue(0,par_->stdSelIdx()) << ", " << std::flush;
+//       std::cout << ptBins_[bin]->fittedValue(0,par_->stdSelIdx())*meanPt(bin) << std::endl;
+//     }
   }
 
 
@@ -1685,16 +1695,25 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   void FittedResolution::printPoints() const {
     std::cout << std::endl;
-    for(size_t bin = 0; bin < nPtBins(); bin++) {
-      std::cout << "x.push_back(" << meanPt(bin) << ");" << std::endl;
-      std::cout << "xe.push_back(" << meanPtUncert(bin) << ");" << std::endl;
-//       std::cout << "y.push_back(" << extrapolatedValue(bin,0) << ");" << std::endl;
-//       std::cout << "ye.push_back(" << uncertStat(bin,0) << ");" << std::endl;
+//     for(size_t bin = 0; bin < nPtBins(); bin++) {
+//       std::cout << "x.push_back(" << meanPt(bin) << ");" << std::endl;
+//       std::cout << "xe.push_back(" << meanPtUncert(bin) << ");" << std::endl;
+// //       std::cout << "y.push_back(" << extrapolatedValue(bin,0) << ");" << std::endl;
+// //       std::cout << "ye.push_back(" << uncertStat(bin,0) << ");" << std::endl;
 
+//       double val = extrapolatedValue(bin,0);
+//       if( par_->hasCorrPtGenAsym() ) val = sqrt( val*val - ptGenAsym_->Eval(meanPt(bin))*ptGenAsym_->Eval(meanPt(bin)) );
+//       std::cout << "y.push_back(" << val << ");" << std::endl;
+//       std::cout << "ye.push_back(" << uncertStat(bin,0) << ");" << std::endl;
+//     } 
+
+
+    for(size_t bin = 0; bin < nPtBins(); bin++) {
+      std::cout << meanPt(bin) << "\t   " << meanPtUncert(bin) << "\t   " << std::flush;
+      //std::cout << extrapolatedValue(bin,0) << "\t   " << std::flush;
       double val = extrapolatedValue(bin,0);
       if( par_->hasCorrPtGenAsym() ) val = sqrt( val*val - ptGenAsym_->Eval(meanPt(bin))*ptGenAsym_->Eval(meanPt(bin)) );
-      std::cout << "y.push_back(" << val << ");" << std::endl;
-      std::cout << "ye.push_back(" << uncertStat(bin,0) << ");" << std::endl;
+      std::cout << val << "\t   " << uncertStat(bin,0) << std::endl;
     } 
   }
 

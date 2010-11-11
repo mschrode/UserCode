@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.21 2010/09/14 11:34:58 mschrode Exp $
+// $Id: Parameters.cc,v 1.22 2010/09/14 22:06:24 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -12,49 +12,31 @@
 
 
 namespace resolutionFit {
-  Parameters::Parameters(double etaMin, double etaMax, double deltaPhi12, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, int startIdx, int endIdx, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, BinPt binPt, int verbosity)
+  Parameters::Parameters(double etaMin, double etaMax, double deltaPhi12, const TString &fileNameStdSel, const std::vector<double> &ptBinEdges, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, BinPt binPt, int verbosity)
     : etaMin_(etaMin), etaMax_(etaMax), deltaPhi12_(deltaPhi12),
       outNamePrefix_(outNamePrefix),
       styleMode_(gStyle->GetTitle()),
       fitMode_(fitMode),
       binPt_(binPt),
       verbosity_(verbosity),
+      nameStdSel_(fileNameStdSel),
       isData_(false) {
 
-    for(int i = startIdx; i <= endIdx; ++i) {
-      fileNameIdx_.push_back(i);
-    }
-    init(fileBaseNameStdSel, ptBinEdges, type);
-
-    assert( static_cast<int>(fileNameIdx_.size()) == nPtBins() );
+    init(ptBinEdges, type);
     print();
   }
 
-  Parameters::Parameters(double etaMin, double etaMax, double deltaPhi12, const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, const std::vector<int> fileNameIdx, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, BinPt binPt, int verbosity)
-    : etaMin_(etaMin), etaMax_(etaMax), deltaPhi12_(deltaPhi12),
-      outNamePrefix_(outNamePrefix), 
-      styleMode_(gStyle->GetTitle()),
-      fitMode_(fitMode),
-      binPt_(binPt),
-      verbosity_(verbosity),
-      isData_(false) {
-    
-    fileNameIdx_ = fileNameIdx;
-    init(fileBaseNameStdSel, ptBinEdges, type);
-
-    assert( static_cast<int>(fileNameIdx_.size()) == nPtBins() );
-    print();
-  }
-
-
-  void Parameters::init(const TString &fileBaseNameStdSel, const std::vector<double> &ptBinEdges, ResponseFunction::Type type) {
+  void Parameters::init(const std::vector<double> &ptBinEdges, ResponseFunction::Type type) {
     respFunc_ = new ResponseFunction(type);
 
     hasTruthSpectra_ = false;
     fitPtGenAsym_ = false;
     hasCorrPtGenAsym_ = false;
     ptBinEdges_ = ptBinEdges;
-    ptBinEdges_.erase(ptBinEdges_.begin()+fileNameIdx_.size()+1,ptBinEdges_.end());
+
+    nameMCStat_ = "";
+    nameMCClosure_ = "";
+
     trueResPar_ = std::vector<double>(3,0.);
     rand_ = new TRandom3(0);
     
@@ -62,8 +44,6 @@ namespace resolutionFit {
     fitRatio_ = false;
     startResOffset_ = -1.;
     extendedLegend_ = false;
-    
-    writeFileNames(namesStdSel_,fileBaseNameStdSel);
   }
 
 
@@ -84,7 +64,7 @@ namespace resolutionFit {
   }
 
 
-  void Parameters::addPt3Threshold(Pt3Var pt3Variable, double pt3RelMax, const TString &fileBaseName, const TString &spectrumName) {
+  void Parameters::addPt3Threshold(Pt3Var pt3Variable, double pt3RelMax, const TString &fileName, const TString &spectrumName) {
     if( nPt3Cuts() == 0 ) {
       pt3Bins_ = false;
       if( spectrumName == "" ) hasTruthSpectra_ = false;
@@ -99,10 +79,8 @@ namespace resolutionFit {
       exit(-2);
     } else {
       pt3Max_.push_back(pt3RelMax);
-      std::vector<TString> names;
-      writeFileNames(names,fileBaseName);
-      namesCutVars_.push_back(names);
-      if( names.at(0) == fileNameStdSel(0) ) stdSelIdx_ = namesCutVars_.size()-1;
+      namesCutVars_.push_back(fileName);
+      if( fileName == fileNameStdSel() ) stdSelIdx_ = namesCutVars_.size()-1;
       if( hasTruthSpectra() ) {
 	if( spectrumName == "" ) {
 	  std::cerr << "ERROR: File name for truth spectra must be specified" << std::endl;
@@ -114,7 +92,7 @@ namespace resolutionFit {
   }
 
 
-  void Parameters::addPt3Bin(Pt3Var pt3Variable, double pt3RelMin, double pt3RelMax, double pt3RelMean, const TString &fileBaseName, const TString &spectrumName) {
+  void Parameters::addPt3Bin(Pt3Var pt3Variable, double pt3RelMin, double pt3RelMax, double pt3RelMean, const TString &fileName, const TString &spectrumName) {
     if( nPt3Cuts() == 0 ) {
       pt3Bins_ = true;
       if( spectrumName == "" ) hasTruthSpectra_ = false;
@@ -131,10 +109,8 @@ namespace resolutionFit {
       pt3Min_.push_back(pt3RelMin);
       pt3Max_.push_back(pt3RelMax);
       pt3Mean_.push_back(pt3RelMean);
-      std::vector<TString> names;
-      writeFileNames(names,fileBaseName);
-      namesCutVars_.push_back(names);
-      if( names.at(0) == fileNameStdSel(0) ) stdSelIdx_ = namesCutVars_.size()-1;
+      namesCutVars_.push_back(fileName);
+      if( fileName == fileNameStdSel() ) stdSelIdx_ = namesCutVars_.size()-1;
       if( nPt3Cuts() == 0 ) {
 	if( spectrumName == "" ) hasTruthSpectra_ = false;
 	else hasTruthSpectra_ = true;
@@ -150,13 +126,10 @@ namespace resolutionFit {
   }
 
 
-  void Parameters::addSystUncert(const TString &label, const TString &fileBaseNameDown, const TString &fileBaseNameUp) {
+  void Parameters::addSystUncert(const TString &label, const TString &fileNameDown, const TString &fileNameUp) {
     labelSyst_.push_back(label);
-    std::vector<TString> names;
-    writeFileNames(names,fileBaseNameDown);
-    namesSystDown_.push_back(names);
-    writeFileNames(names,fileBaseNameUp);
-    namesSystUp_.push_back(names);
+    namesSystDown_.push_back(fileNameDown);
+    namesSystUp_.push_back(fileNameUp);
   }
 
 
@@ -186,17 +159,6 @@ namespace resolutionFit {
     hasCorrPtGenAsym_ = true;
 
     if( fitPtGenAsym() ) std::cerr << "WARNING: Parameters for ptGen asymmetry will be overriden by fit!" << std::endl;
-  }
-
-
-  void Parameters::writeFileNames(std::vector<TString> &names, const TString &baseName) const {
-    names.clear();
-    for(std::vector<int>::const_iterator it = fileNameIdx_.begin();
-	it != fileNameIdx_.end(); ++it) {
-      names.push_back(baseName);
-      names.back() += *it;
-      names.back() += "/jsResponse.root";
-    }
   }
 
 
