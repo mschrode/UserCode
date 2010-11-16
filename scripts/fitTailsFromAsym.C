@@ -1,8 +1,9 @@
-// $Id: fitTailsFromAsym.C,v 1.2 2010/11/10 09:53:45 mschrode Exp $
+// $Id: fitTailsFromAsym.C,v 1.3 2010/11/10 21:04:29 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
 #include <iostream>
+#include <fstream>
 #include <vector>
 
 #include "TCanvas.h"
@@ -70,8 +71,7 @@ class Sample {
 public:
   //  enum SampleType { Data, MC };
 
-  //Sample(const TString &fileName, SampleType type, const TString &name);
-  Sample(const TString &fileName, int type, const TString &sampleName, unsigned int startBin);
+  Sample(const TString &fileName, int type, const TString &sampleName, unsigned int startBin, unsigned int endBin, double lumi = -1.);
   ~Sample();
 
   TString name() const { return name_; }
@@ -82,8 +82,6 @@ public:
   TH1 *hPtAve() const { return hist(hPtAve_); }
   TH1 *hPtAsym(unsigned int i) const { return hist(i,hPtAsym_); }
   TH1 *hPtAsymSmeared(unsigned int i) const { return hist(i,hPtAsymSmeared_); }
-  TH1 *hPtAbsAsym(unsigned int i) const { return hist(i,hPtAbsAsym_); }
-  TH1 *hPtAbsAsymSmeared(unsigned int i) const { return hist(i,hPtAbsAsymSmeared_); }
   TH1 *hTailClean(unsigned int i) const { return hist(i,hTailsClean_); }
   TF1 *fTail(unsigned int i) const;
   
@@ -107,8 +105,6 @@ private:
   util::HistVec hPtJet_;
   util::HistVec hPtAsym_;
   util::HistVec hPtAsymSmeared_;
-  util::HistVec hPtAbsAsym_;
-  util::HistVec hPtAbsAsymSmeared_;
 
   util::HistVec hTails_;
   util::HistVec hTailsClean_;
@@ -138,7 +134,7 @@ private:
 
 
 // --------------------------------------------------
-Sample::Sample(const TString &fileName, int type, const TString &sampleName, unsigned int startBin)
+Sample::Sample(const TString &fileName, int type, const TString &sampleName, unsigned int startBin, unsigned int endBin, double lumi)
   : type_(type), name_(sampleName+"_"+util::toTString(type)) {
   count_ = 0;
 
@@ -156,32 +152,17 @@ Sample::Sample(const TString &fileName, int type, const TString &sampleName, uns
     hPtAve_->SetName(newName);
     util::HistOps::setAxisTitles(hPtAve_,"p^{ave}_{T}","GeV","Events");
     hPtAve_->SetTitle("");
+    if( lumi > 0. ) hPtAve_->Scale(lumi);
     setStyle(hPtAve_);
   } else {
     ioIsOk = false;
   }
 
-  //   // Average pt
-  //   for(int i = 0; ioIsOk && (i < 4); ++i) {
-  //     TH1 *hPtJet = 0;
-  //     file.GetObject("hPtJet"+util::toTString(i),hPtJet);
-  //     if( hPtJet ) {
-  //       hPtJet->SetDirectory(0);
-  //       newName = name()+"_PtJet"+util::toTString(i);
-  //       hPtJet->SetName(newName);
-  //       setStyle(hPtJet);
-  //       hPtJet_.push_back(hPtJet);
-  //     } else {
-  //       ioIsOk = false;
-  //     }
-  //   }
-
   // Pt asymmetry
   bool binExists = true;
   unsigned int ptBin = startBin;
-  while( ioIsOk && binExists ) {
+  while( ioIsOk && binExists && ptBin < endBin ) {
     TH1 *hPtAsym = 0;
-    //    file.GetObject("hPtAbsAsym_"+util::toTString(ptBin),hPtAsym);
     file.GetObject("hPtAsym_"+util::toTString(ptBin),hPtAsym);
     if( hPtAsym ) {
       hPtAsym->SetDirectory(0);
@@ -198,25 +179,6 @@ Sample::Sample(const TString &fileName, int type, const TString &sampleName, uns
       binExists = false;
     }    
   }
-
-  // Absolute pt asymmetry
-  binExists = true;
-  ptBin = 0;
-  while( ioIsOk && binExists ) {
-    TH1 *hPtAbsAsym = 0;
-    file.GetObject("hPtAsymBiased_"+util::toTString(ptBin),hPtAbsAsym);
-    if( hPtAbsAsym ) {
-      ++ptBin;
-      hPtAbsAsym->SetDirectory(0);
-      newName = name()+"_PtAbsAsym"+util::toTString(ptBin);
-      hPtAbsAsym->SetName(newName);
-      setStyle(hPtAbsAsym);
-      hPtAbsAsym_.push_back(hPtAbsAsym);
-    } else {
-      binExists = false;
-    }    
-  }
-
 
   file.Close();  
 
@@ -235,7 +197,6 @@ Sample::Sample(const TString &fileName, int type, const TString &sampleName, uns
   } else {
     // Smearing asymmetry
     smearAsymmetry(0.1,hPtAsym_,hPtAsymSmeared_);
-    smearAsymmetry(0.1,hPtAbsAsym_,hPtAbsAsymSmeared_,true);
     fitWidth(hPtAsymSmeared_,widthAsymSmeared_,widthAsymErrSmeared_);
 
     // Extract tails from smeared asymmetry
@@ -255,12 +216,6 @@ Sample::~Sample() {
   //     delete *it;
   //   }
   //   for(util::HistIt it = hPtAsymSmeared_.begin(); it != hPtAsymSmeared_.end(); ++it) {
-  //     delete *it;
-  //   }
-  //   for(util::HistIt it = hPtAbsAsym_.begin(); it != hPtAbsAsym_.end(); ++it) {
-  //     delete *it;
-  //   }
-  //   for(util::HistIt it = hPtAbsAsymSmeared_.begin(); it != hPtAbsAsymSmeared_.end(); ++it) {
   //     delete *it;
   //   }
   //   for(util::HistIt it = hTails_.begin(); it != hTails_.end(); ++it) {
@@ -308,9 +263,15 @@ TF1* Sample::fTail(unsigned int i) const {
 void Sample::fitWidth(const util::HistVec &h, std::vector<double> &width, std::vector<double> &widthErr) const {
   width.clear();
   for(util::HistItConst it = h.begin(); it != h.end(); ++it) {
-    if( (*it)->Fit("gaus","0QIR","",(*it)->GetMean()-2.*(*it)->GetRMS(),(*it)->GetMean()+2.*(*it)->GetRMS()) == 0 ) {
-      width.push_back((*it)->GetFunction("gaus")->GetParameter(2));
-      widthErr.push_back((*it)->GetFunction("gaus")->GetParError(2));
+    double mean = (*it)->GetMean();
+    double sig = 1.5*(*it)->GetRMS();
+    if( (*it)->Fit("gaus","0QIR","",mean-sig,mean+sig) == 0 ) {
+      mean = (*it)->GetFunction("gaus")->GetParameter(1);
+      sig = 1.8*(*it)->GetFunction("gaus")->GetParameter(2);
+      if( (*it)->Fit("gaus","0QIR","",mean-sig,mean+sig) == 0 ) {
+	width.push_back((*it)->GetFunction("gaus")->GetParameter(2));
+	widthErr.push_back((*it)->GetFunction("gaus")->GetParError(2));
+      }
     } else {
       std::cerr << "WARNING in Sample::fitWidth (" << name() << "): No convergence when fitting width of '" << (*it)->GetName() << "'\n";
       width.push_back(0.);
@@ -458,11 +419,11 @@ bool Sample::getTail(const TH1* hAsym, TH1* &hTail, TH1* &hTailClean, TF1* &gaus
   gauss->SetLineColor(kRed);
   if( hAsym->GetFillColor() > 0 ) gauss->SetLineStyle(2);
   
-  double sigma = hTail->GetRMS();
-  success =  !(hTail->Fit(gauss,"I0Q","",0.,2.5*sigma));
+  double sigma = 2.5*hTail->GetRMS();
+  success =  !(hTail->Fit(gauss,"I0QR","",-sigma,sigma));
   if( success ) {
-    sigma = gauss->GetParameter(2);
-    success = !(hTail->Fit(gauss,"I0Q","",0.,2.*sigma));
+    sigma = 1.8*gauss->GetParameter(2);
+    success = !(hTail->Fit(gauss,"I0QR","",-sigma,sigma));
     if( success ) {
       sigma = gauss->GetParameter(2);
       int binMin = 1;
@@ -509,7 +470,7 @@ void Sample::setStyle(TH1 *h) const {
 // --------------------------------------------------
 class SampleAdmin {
 public:
-  SampleAdmin(const TString &fileData, const TString &fileMC, std::vector<double> ptBinEdges, double lumi, double ppCut, unsigned int mcStartBin = 0);
+  SampleAdmin(const TString &fileData, const TString &fileMC, std::vector<double> ptBinEdges, double lumi, double ppCut, unsigned int mcStartBin = 0, unsigned int mcEndBin = 0);
   ~SampleAdmin();
 
   TString name() const { return name_; }
@@ -535,8 +496,6 @@ public:
   void plotSpectra() const;
   void plotAsymmetry() const;
   void plotSmearedAsymmetry() const;
-  void plotAbsAsymmetry() const;
-  void plotSmearedAbsAsymmetry() const;
   void plotTails() const;
   
 private:
@@ -557,7 +516,7 @@ typedef std::vector<SampleAdmin*>::const_iterator AdminIt;
 
 //sampleName+"_"+util::toTString(ptMin())+"-"+util::toTString(ptMax())+"_"
 
-SampleAdmin::SampleAdmin(const TString &fileData, const TString &fileMC, std::vector<double> ptBinEdges, double lumi, double ppCut, unsigned int mcStartBin)
+SampleAdmin::SampleAdmin(const TString &fileData, const TString &fileMC, std::vector<double> ptBinEdges, double lumi, double ppCut, unsigned int mcStartBin, unsigned int mcEndBin)
   : ptBinEdges_(ptBinEdges), lumi_(lumi), ppCut_(ppCut) {
 
   name_= gUID_+"_Pt"+util::toTString(ptMin())+"-"+util::toTString(ptMax()); 
@@ -566,8 +525,8 @@ SampleAdmin::SampleAdmin(const TString &fileData, const TString &fileMC, std::ve
   
   // Create samples holding histograms
   TString tmpName = name()+"_"+util::toTString(ptMin())+"-"+util::toTString(ptMax());
-  data_ = new Sample(fileData,0,tmpName,0);
-  mc_ = new Sample(fileMC,1,tmpName,mcStartBin);
+  data_ = new Sample(fileData,0,tmpName,0,1000);
+  mc_ = new Sample(fileMC,1,tmpName,mcStartBin,mcEndBin,lumi_);
   mc_->smearAsymmetry(data_);
 
   // Checks
@@ -690,23 +649,7 @@ void SampleAdmin::plotSmearedAsymmetry() const {
     tailMC->Draw("same");
     tailData->Draw("same");
     can->SetLogy(1);
-    can->SaveAs(outNamePrefix()+"PtTailFit_"+util::toTString(i)+".eps","eps");
-  }
-}
-
-
-void SampleAdmin::plotAbsAsymmetry() const {
-  for(unsigned int i = 0; i < nPtBins(); ++i) {
-    TString histName = name()+"PtAbsAsym"+util::toTString(i);
-    plot(histName,data_->hPtAbsAsym(i),mc_->hPtAbsAsym(i),true);
-  }
-}
-
-
-void SampleAdmin::plotSmearedAbsAsymmetry() const {
-  for(unsigned int i = 0; i < nPtBins(); ++i) {
-    TString histName = name()+"PtAbsAsym"+util::toTString(i);
-    plot(histName,data_->hPtAbsAsym(i),mc_->hPtAbsAsymSmeared(i),true);
+    can->SaveAs(outNamePrefix()+"TailFit_"+util::toTString(i)+".eps","eps");
   }
 }
 
@@ -730,13 +673,13 @@ void SampleAdmin::plotTails() const {
 }
 
 
-void SampleAdmin::plot(const TString &name, TH1 *hData, TH1 *hMC, bool logy) const {
-  TCanvas *can = new TCanvas(name,name,500,500);
-  can->cd();
-  hMC->Draw("HISTE");
-  hData->Draw("PE1same");
-  if( logy ) can->SetLogy();
-}
+// void SampleAdmin::plot(const TString &name, TH1 *hData, TH1 *hMC, bool logy) const {
+//   TCanvas *can = new TCanvas(name,name,500,500);
+//   can->cd();
+//   hMC->Draw("HISTE");
+//   hData->Draw("PE1same");
+//   if( logy ) can->SetLogy();
+// }
 
 
 void plotDataMCDiff(TH1* hData, TH1* hMC, TPaveText* label1, TPaveText* label2) {
@@ -815,6 +758,134 @@ void plotDataMCDiff(TH1* hData, TH1* hMC, TPaveText* label1, TPaveText* label2) 
 }
 
 
+
+
+void createSlides(const std::vector<SampleAdmin*> &admins) {
+
+  TString name = gUID_+"_Slides.tex";
+  std::ofstream oFile(name);
+
+  unsigned int nAdmins = admins.size();
+
+  // N pt bins
+  unsigned int nPtBins = 0;
+  for(AdminIt it = admins.begin(); it != admins.end(); ++it) {
+    nPtBins += (*it)->nPtBins();
+  }
+  // Eta range
+  TString etaRange = "$"+gEtaMin_+" < |\\eta| < "+gEtaMax_+"$";
+
+
+  // PtAve spectra
+  oFile << "% ----- PtAve Spectra ---------------------------" << std::endl;
+  unsigned int nSlides = nAdmins/3;
+  if( nAdmins%3 > 0 ) nSlides++;
+  for(unsigned int slide = 0; slide < nSlides; ++slide) {
+    oFile << "\n% --------------------------------------------------\n";
+    oFile << "\\begin{frame}\n";
+    oFile << "  \\frametitle{\\ptave Spectra "+etaRange+" (" << slide+1 << "/" << nSlides << ")}\n";
+    oFile << "  \\begin{columns}[T] \n";
+    for(int col = 0; col < 3; ++col) {
+      oFile << "    \\begin{column}{0.3333\\textwidth} \n";
+      oFile << "    \\centering\n";
+      unsigned int adminIdx = 3*slide + col;
+      if( adminIdx < nAdmins ) {
+	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "PtAve}\\\\ \n";
+      }
+      oFile << "  \\end{column} \n";
+    }
+    oFile << "  \\end{columns} \n";
+    oFile << "\\end{frame} \n";
+  }
+
+
+  oFile << "\n\n\n% ----- Pt Asymmetry ---------------------------" << std::endl;
+  nSlides = nPtBins/3;
+  if( nPtBins%3 > 0 ) nSlides++;
+  unsigned int adminIdx = 0;
+  unsigned int ptBinIdx = 0;
+  for(unsigned int slide = 0; slide < nSlides; ++slide) {
+    oFile << "\n% --------------------------------------------------\n";
+    oFile << "\\begin{frame}\n";
+    oFile << "  \\frametitle{\\pt Asymmetry "+etaRange+" (" << slide+1 << "/" << nSlides << ")}\n";
+    oFile << "  \\begin{columns}[T] \n";
+    for(int col = 0; col < 3; ++col, ++ptBinIdx) {
+      oFile << "    \\begin{column}{0.3333\\textwidth} \n";
+      oFile << "    \\centering\n";
+      if( !(ptBinIdx < admins[adminIdx]->nPtBins()) ) {
+	ptBinIdx = 0;
+	adminIdx++;
+      }
+      if( adminIdx < nAdmins ) {
+	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "PtAsym_" << ptBinIdx << "}\\\\ \n";
+	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "PtAsymLog_" << ptBinIdx << "}\\\\ \n";
+      }
+      oFile << "  \\end{column} \n";
+    }
+    oFile << "  \\end{columns} \n";
+    oFile << "\\end{frame} \n";
+  }
+
+
+  oFile << "\n\n\n% ----- Pt Smeared Asymmetry ---------------------------" << std::endl;
+  nSlides = nPtBins/3;
+  if( nPtBins%3 > 0 ) nSlides++;
+  adminIdx = 0;
+  ptBinIdx = 0;
+  for(unsigned int slide = 0; slide < nSlides; ++slide) {
+    oFile << "\n% --------------------------------------------------\n";
+    oFile << "\\begin{frame}\n";
+    oFile << "  \\frametitle{Smeared \\pt Asymmetry "+etaRange+" (" << slide+1 << "/" << nSlides << ")}\n";
+    oFile << "  \\begin{columns}[T] \n";
+    for(int col = 0; col < 3; ++col, ++ptBinIdx) {
+      oFile << "    \\begin{column}{0.3333\\textwidth} \n";
+      oFile << "    \\centering\n";
+      if( !(ptBinIdx < admins[adminIdx]->nPtBins()) ) {
+	ptBinIdx = 0;
+	adminIdx++;
+      }
+      if( adminIdx < nAdmins ) {
+	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "PtSmearAsym_" << ptBinIdx << "}\\\\ \n";
+	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "PtSmearAsymLog_" << ptBinIdx << "}\\\\ \n";
+      }
+      oFile << "  \\end{column} \n";
+    }
+    oFile << "  \\end{columns} \n";
+    oFile << "\\end{frame} \n";
+  }
+
+
+  oFile << "\n\n\n% ----- Tails ---------------------------" << std::endl;
+  nSlides = nPtBins/3;
+  if( nPtBins%3 > 0 ) nSlides++;
+  adminIdx = 0;
+  ptBinIdx = 0;
+  for(unsigned int slide = 0; slide < nSlides; ++slide) {
+    oFile << "\n% --------------------------------------------------\n";
+    oFile << "\\begin{frame}\n";
+    oFile << "  \\frametitle{Tails "+etaRange+" (" << slide+1 << "/" << nSlides << ")}\n";
+    oFile << "  \\begin{columns}[T] \n";
+    for(int col = 0; col < 3; ++col, ++ptBinIdx) {
+      oFile << "    \\begin{column}{0.3333\\textwidth} \n";
+      oFile << "    \\centering\n";
+      if( !(ptBinIdx < admins[adminIdx]->nPtBins()) ) {
+	ptBinIdx = 0;
+	adminIdx++;
+      }
+      if( adminIdx < nAdmins ) {
+	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "TailFit_" << ptBinIdx << "}\\\\ \n";
+	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "Tail_" << ptBinIdx << "}\\\\ \n";
+      }
+      oFile << "  \\end{column} \n";
+    }
+    oFile << "  \\end{columns} \n";
+    oFile << "\\end{frame} \n";
+  }
+
+  oFile.close();
+}
+
+
 void fitTailsFromAsym() {
   gErrorIgnoreLevel = 1001;
   util::StyleSettings::presentation();
@@ -824,52 +895,42 @@ void fitTailsFromAsym() {
   gJetAlgo_ = "AK5 Calo-Jets";
   gDeltaPhiCut_ = "|#Delta#phi| > 2.7";
   gEtaMin_ = "0";
-  gEtaMax_ = "1.3";
+  gEtaMax_ = "1.1";
   gPPCut_ = "p_{||} < "+util::toTString(ppCut);
-  //  gUID_ = "Tails_Eta"+gEtaMin_+"-"+gEtaMax;
-  gUID_ = "TEST";
+  gUID_ = "Tails_Calo_Eta00-11_Pp10";
 
+  
   std::vector<SampleAdmin*> admins;
 
   //   // HLT test
   std::vector<double> ptBinEdges;
-  //   ptBinEdges.push_back(200.);
-  //   ptBinEdges.push_back(250.);
-  //   ptBinEdges.push_back(300.);
-  //   ptBinEdges.push_back(400.);
-  //   ptBinEdges.push_back(1000.);
   
-  //   admins.push_back(new SampleAdmin("Kalibri_MC__200-1000DiJetAve__145E-1pb__Calo.root","Kalibri_MC__200-1000DiJetAve__145E-1pb__Calo.root",ptBinEdges,10.,0.1));
-
-
-  // HLT 50
-  ptBinEdges.clear();
-  ptBinEdges.push_back(90.);
-  ptBinEdges.push_back(100.);
-  ptBinEdges.push_back(120.);
-  admins.push_back(new SampleAdmin("Kalibri_Data__90-120DiJetAve50__29E-1pb__Calo.root","Kalibri_MC__90-120DiJetAve__29E-1pb__Calo.root",ptBinEdges,2.9,ppCut));
+  //90 100 120 150 170 200 250 300 350 400 500 1000
+  //0  1   2   3   4   5   6   7   8   9   10  11
 
   // HLT 70
   ptBinEdges.clear();
   ptBinEdges.push_back(120.);
   ptBinEdges.push_back(150.);
-  admins.push_back(new SampleAdmin("Kalibri_Data__120-150DiJetAve70__2pb__Calo.root","Kalibri_MC__120-150DiJetAve__2pb__Calo.root",ptBinEdges,2.017,ppCut));
+  admins.push_back(new SampleAdmin("input/Tails_Calo_Data_Eta00-11_Pt0120-0150_Pp10/jsResponse.root","input/Tails_Calo_MC_Eta00-11_Pt0090-1000_Pp10/jsResponse.root",ptBinEdges,2.0,ppCut,2,3));
 
   // HLT 100
   ptBinEdges.clear();
   ptBinEdges.push_back(150.);
   ptBinEdges.push_back(170.);
   ptBinEdges.push_back(200.);
-  admins.push_back(new SampleAdmin("Kalibri_Data__150-200DiJetAve70-100__96E-1pb__Calo.root","Kalibri_MC__150-200DiJetAve__96E-1pb__Calo.root",ptBinEdges,9.635,ppCut));
+  admins.push_back(new SampleAdmin("input/Tails_Calo_Data_Eta00-11_Pt0150-0200_Pp10/jsResponse.root","input/Tails_Calo_MC_Eta00-11_Pt0090-1000_Pp10/jsResponse.root",ptBinEdges,9.6,ppCut,3,5));
 
   // HLT 140
   ptBinEdges.clear();
   ptBinEdges.push_back(200.);
   ptBinEdges.push_back(250.);
   ptBinEdges.push_back(300.);
+  ptBinEdges.push_back(350.);
   ptBinEdges.push_back(400.);
+  ptBinEdges.push_back(500.);
   ptBinEdges.push_back(1000.);
-  admins.push_back(new SampleAdmin("Kalibri_Data__200-1000DiJetAve70-100-140__145E-1pb__Calo.root","Kalibri_MC__200-1000DiJetAve__145E-1pb__Calo.root",ptBinEdges,14.590,ppCut));
+  admins.push_back(new SampleAdmin("input/Tails_Calo_Data_Eta00-11_Pt0200-1000_Pp10/jsResponse.root","input/Tails_Calo_MC_Eta00-11_Pt0090-1000_Pp10/jsResponse.root",ptBinEdges,27.4,ppCut,5,11));
 
 
 
@@ -930,7 +991,7 @@ void fitTailsFromAsym() {
   canWA->SaveAs(gUID_+"_WidthAsym.eps","eps");
 
   TH1 *hRatioWidthAsym = util::HistOps::createRatioPlot(hWidthAsymData,hWidthAsymMC);
-  TH1 *hRatioWidthAsymFrame = util::HistOps::createRatioFrame(hRatioWidthAsym,"#sigma(Asymmetry) Data / MC",0.8,2.);
+  TH1 *hRatioWidthAsymFrame = util::HistOps::createRatioFrame(hRatioWidthAsym,"#sigma(Asymmetry) Data / MC",0.8,1.5);
   TCanvas *canWAR = new TCanvas("canWAR","Width Asymmetry Ratio",500,500);
   canWAR->cd();
   hRatioWidthAsymFrame->Draw();
@@ -972,6 +1033,7 @@ void fitTailsFromAsym() {
   canWSA->SaveAs(gUID_+"_WidthSmearedAsym.eps","eps");
 
   TH1 *hRatioWidthSmearAsym = util::HistOps::createRatioPlot(hWidthAsymData,hWidthSmearedAsymMC);
+  hRatioWidthSmearAsym->SetName("hRatioWidthSmearAsym");
   TCanvas *canWSAR = new TCanvas("canWSAR","Width Smearerd Asymmetry Ratio",500,500);
   canWSAR->cd();
   hRatioWidthAsymFrame->Draw();
@@ -1005,7 +1067,7 @@ void fitTailsFromAsym() {
     hNTailData[i]->SetMarkerStyle(20+i);
     util::HistOps::setStyleColor(hNTailData[i],i);
     hNTailMC[i] = static_cast<TH1D*>(hNTailData[i]->Clone("hNTailMC"+util::toTString(i)));
-    hNTailMC[i]->SetMarkerStyle(hNTailData[i]->GetMarkerStyle()+4);
+    hNTailMC[i]->SetFillColor(5);
   }
 
   // Fill histograms with absolute number (from data x-sec)
@@ -1031,25 +1093,26 @@ void fitTailsFromAsym() {
       double sigPred = sqrt(hNTailMC[1]->GetBinContent(ptBin));
       hNTailMC[1]->SetBinError(ptBin,sqrt(sigMCStat*sigMCStat + sigPred*sigPred));
 
-      std::cout << ptBin << " (" << admin->ptMin(sBin) << " - " << admin->ptMax(sBin) << "): " << hNTailData[0]->GetBinContent(ptBin) << " +/- " << hNTailData[0]->GetBinError(ptBin) << " (" << hNTailData[1]->GetBinError(ptBin) << "),  " << hNTailMC[0]->GetBinContent(ptBin) << " +/- " << hNTailMC[0]->GetBinError(ptBin) << " (" << hNTailMC[1]->GetBinError(ptBin) << ")" << std::endl;
+      std::cout << ptBin << " (" << admin->ptMin(sBin) << " - " << admin->ptMax(sBin) << "): \t\t" << hNTailData[0]->GetBinContent(ptBin) << " +/- " << hNTailData[0]->GetBinError(ptBin) << " (" << hNTailData[1]->GetBinError(ptBin) << "),  \t" << hNTailMC[0]->GetBinContent(ptBin) << " +/- " << hNTailMC[0]->GetBinError(ptBin) << " (" << hNTailMC[1]->GetBinError(ptBin) << ")" << std::endl;
     }
   }
   
   // Plot numbers
   TCanvas *canNTail = new TCanvas("canNTail","Number of tail events",500,500);
   canNTail->cd();
-  hNTailMC[0]->GetYaxis()->SetRangeUser(0.,500.);
+  hNTailMC[0]->GetYaxis()->SetRangeUser(0,500.);
   hNTailMC[0]->GetXaxis()->SetMoreLogLabels();
-  hNTailMC[0]->Draw("PE1");
-  for(unsigned int i = 0; i < nErrorModes; ++i) {
-    hNTailMC[i]->Draw("PE1same");
-    hNTailData[i]->Draw("PE1same");
-  }
+  hNTailMC[0]->Draw("HIST");
+  hNTailData[0]->Draw("PE1same");
+//   for(unsigned int i = 0; i < nErrorModes; ++i) {
+//     hNTailMC[i]->Draw("HISTsame");
+//     hNTailData[i]->Draw("PE1same");
+//   }
   labelAll->Draw("same");
   labelEta->Draw("same");
   TLegend* leg3 = util::LabelFactory::createLegendColWithOffset(2,0.3,1);
   leg3->AddEntry(hNTailData[0],"Data","P");
-  leg3->AddEntry(hNTailMC[0],"MC","P");
+  leg3->AddEntry(hNTailMC[0],"MC","F");
   leg3->Draw("same");
   canNTail->SetLogx();
   canNTail->SaveAs(gUID_+"_NumTailEvts.eps","eps");
@@ -1063,13 +1126,28 @@ void fitTailsFromAsym() {
   TCanvas *canScalFac = new TCanvas("canScalFac","Scaling factors",500,500);
   canScalFac->cd();
   hScalFacFrame->GetYaxis()->SetRangeUser(0.,10.);
+  hScalFacFrame->GetXaxis()->SetMoreLogLabels();
   hScalFacFrame->Draw();
-  for(unsigned int i = 0; i < nErrorModes; ++i) {
+  for(unsigned int i = 0; i < 1; ++i) {
     hScalFac[i]->Draw("PE1same");
   }
   labelAll->Draw("same");
   labelEta->Draw("same");
   canScalFac->SetLogx();
   canScalFac->SaveAs(gUID_+"_ScalingFactors.eps","eps");
+
+
+  // Write selected histograms to file
+  TFile outFile((gUID_+".root"),"RECREATE");
+  outFile.WriteTObject(hRatioWidthAsymFrame);
+  outFile.WriteTObject(hRatioWidthAsym);
+  outFile.WriteTObject(hRatioWidthSmearAsym);
+  outFile.WriteTObject(hScalFacFrame);
+  outFile.WriteTObject(hScalFac[0]);
+
+  outFile.Close();
+
+
+  createSlides(admins);
 }
 
