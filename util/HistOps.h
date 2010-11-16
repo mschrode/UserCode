@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.19 2010/10/31 11:26:34 mschrode Exp $
+// $Id: HistOps.h,v 1.20 2010/10/31 14:36:02 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,13 +36,19 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.19 2010/10/31 11:26:34 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.20 2010/10/31 14:36:02 mschrode Exp $
   class HistOps
   {
   public:
     // -------------------------------------------------------------------------------------
     static TH1D *createTH1D(const TString &name, int n, double xMin, double xMax, const TString &title) {
       return new TH1D(name,title,n,xMin,xMax);
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static TH1D *createTH1D(const TString &name, const std::vector<double> &xBinEdges, const TString &title) {
+      return new TH1D(name,title,xBinEdges.size()-1,&(xBinEdges.front()));
     }
 
 
@@ -61,6 +67,15 @@ namespace util
       return h;
     }
 
+
+    // -------------------------------------------------------------------------------------
+    static TH1D *createTH1D(const TString &name, const std::vector<double> &xBinEdges, const TString &xTitle, const TString &xUnit, const TString &yTitle, bool norm = false) {
+      // create histogram without axis label
+      TH1D *h = createTH1D(name,xBinEdges,"");
+      setAxisTitles(h,xTitle,xUnit,yTitle,norm);
+
+      return h;
+    }
 
     // -------------------------------------------------------------------------------------
     static TH1D *createTH1D(const TString &name, int n, const double *xBinEdges, const TString &xTitle, const TString &xUnit, const TString &yTitle, bool norm = false) {
@@ -112,6 +127,12 @@ namespace util
       max *= cMax;
       if( min < minLimit ) min = minLimit;
       h->GetYaxis()->SetRangeUser(min,max);
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static void setYRange(TH1 *h, size_t nLabelLines, double logMin = -1.) {
+      return setYRange(h,static_cast<int>(nLabelLines),logMin);
     }
 
 
