@@ -1,4 +1,4 @@
-// $Id:  $
+// $Id: FileOps.h,v 1.1 2010/11/16 10:01:06 mschrode Exp $
 
 #ifndef FileOps_h
 #define FileOps_h
@@ -50,7 +50,7 @@ namespace util
     }
 
 
-
+    //! Read TH1 histograms from one file
     // -------------------------------------------------------------------------------------
     static util::HistVec readHistVec(const TString &fileName, const TString &histName, const TString &newHistName = "") {
       util::HistVec v;
@@ -70,6 +70,8 @@ namespace util
 	}
       }
       file.Close();
+
+      if( v.size() == 0 ) std::cerr << "WARNING in util::FileOps::readHistVec(): No histogram read!\n";
 
       return v;
     }

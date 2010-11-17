@@ -1,4 +1,4 @@
-// $Id: fitTailsFromAsym.C,v 1.3 2010/11/10 21:04:29 mschrode Exp $
+// $Id: fitTailsFromAsym.C,v 1.4 2010/11/16 10:01:35 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -20,6 +20,8 @@
 #include "../util/LabelFactory.h"
 #include "../util/StyleSettings.h"
 
+#include "globalFunctions.h"
+
 
 
 
@@ -28,7 +30,9 @@ TString gJetAlgo_ = "AK5 Calo-Jets";
 TString gDeltaPhiCut_ = "|#Delta#phi| > 2.7";
 TString gEtaMin_ = "0";
 TString gEtaMax_ = "1.3";
-TString gPPCut_ = "p_{||} < 0.1";
+TString gPPCutMin_ = "0";
+TString gPPCutMax_ = "0.1";
+TString gPPCutLabel_ = "p_{||} < 0.1";
 TString gUID_ = "uid";
 
 
@@ -37,7 +41,7 @@ TPaveText* createLabel(double ptAveMin, double ptAveMax, double lumi = -1.) {
   TPaveText *txt = util::LabelFactory::createPaveText(3,-0.68);
   if( lumi > 0. ) txt->AddText("L = "+util::toTString(lumi)+" pb^{-1},  "+gJetAlgo_+",");
   else txt->AddText(gJetAlgo_+",");
-  txt->AddText(gDeltaPhiCut_+",  "+gPPCut_+"#upoint#bar{p^{ave}_{T}}");
+  txt->AddText(gDeltaPhiCut_+",  "+gPPCutLabel_+"#upoint#bar{p^{ave}_{T}}");
   txt->AddText(util::toTString(ptAveMin)+" < p^{ave}_{T} < "+util::toTString(ptAveMax)+" GeV");
   return txt;
 }
@@ -121,15 +125,12 @@ private:
   mutable unsigned int count_;
 
   void fitWidth(const util::HistVec &h, std::vector<double> &width, std::vector<double> &widthErr) const;
-  double gaussInt(double mean, double sigma, double min, double max) const;
-  bool getTails(const util::HistVec &h);
-  bool getTail(const TH1* hAbsAsym, TH1* &hTail, TH1* &hTailClean, TF1* &gauss) const;
+  void getTails(const util::HistVec &h);
   TH1* hist(const TH1* h) const;
   TH1* hist(unsigned int i, const util::HistVec &h) const;
   void setStyle(TH1 *h) const;
-  void smearAsymmetry(const std::vector<double> &scaling, const util::HistVec &hOrig, util::HistVec &hSmeared, bool abs = false) const;
-  void smearAsymmetry(double scaling, const util::HistVec &hOrig, util::HistVec &hSmeared, bool abs = false) const;
-  void smearHistogram(const TH1* hOrig, TH1* &hSmeared, double nTotal, double width, double scaling, bool abs = false) const;
+  void smearAsymmetry(const std::vector<double> &scaling, const util::HistVec &hOrig, util::HistVec &hSmeared) const;
+  void smearAsymmetry(double scaling, const util::HistVec &hOrig, util::HistVec &hSmeared) const;
 };
 
 
@@ -262,21 +263,13 @@ TF1* Sample::fTail(unsigned int i) const {
 // --------------------------------------------------
 void Sample::fitWidth(const util::HistVec &h, std::vector<double> &width, std::vector<double> &widthErr) const {
   width.clear();
+  widthErr.clear();
   for(util::HistItConst it = h.begin(); it != h.end(); ++it) {
-    double mean = (*it)->GetMean();
-    double sig = 1.5*(*it)->GetRMS();
-    if( (*it)->Fit("gaus","0QIR","",mean-sig,mean+sig) == 0 ) {
-      mean = (*it)->GetFunction("gaus")->GetParameter(1);
-      sig = 1.8*(*it)->GetFunction("gaus")->GetParameter(2);
-      if( (*it)->Fit("gaus","0QIR","",mean-sig,mean+sig) == 0 ) {
-	width.push_back((*it)->GetFunction("gaus")->GetParameter(2));
-	widthErr.push_back((*it)->GetFunction("gaus")->GetParError(2));
-      }
-    } else {
-      std::cerr << "WARNING in Sample::fitWidth (" << name() << "): No convergence when fitting width of '" << (*it)->GetName() << "'\n";
-      width.push_back(0.);
-      widthErr.push_back(100.);
-    }
+    double w = 0.;
+    double e = 10000.;
+    func::fitCoreWidth(*it,w,e);
+    width.push_back(w);
+    widthErr.push_back(e);
   }
 }
 
@@ -301,14 +294,14 @@ void Sample::smearAsymmetry(const Sample* dataSample) {
 
 
 // --------------------------------------------------
-void Sample::smearAsymmetry(double scaling, const util::HistVec &hOrig, util::HistVec &hSmeared, bool abs) const {
+void Sample::smearAsymmetry(double scaling, const util::HistVec &hOrig, util::HistVec &hSmeared) const {
   std::vector<double> scales(hOrig.size(),scaling);
-  smearAsymmetry(scales,hOrig,hSmeared,abs);
+  smearAsymmetry(scales,hOrig,hSmeared);
 }
  
  
 // --------------------------------------------------
-void Sample::smearAsymmetry(const std::vector<double> &scaling, const util::HistVec &hOrig, util::HistVec &hSmeared, bool abs) const {
+void Sample::smearAsymmetry(const std::vector<double> &scaling, const util::HistVec &hOrig, util::HistVec &hSmeared) const {
   for(util::HistIt it = hSmeared.begin(); it != hSmeared.end(); ++it) {
     delete *it;
   }
@@ -316,55 +309,15 @@ void Sample::smearAsymmetry(const std::vector<double> &scaling, const util::Hist
   hSmeared = util::HistVec(hOrig.size());
 
   for(unsigned int i = 0; i < hOrig.size(); ++i) {
-    smearHistogram(hOrig[i],hSmeared[i],nTotal(i),widthAsym(i),scaling[i],abs);
+    func::smearHistogram(hOrig[i],hSmeared[i],nTotal(i),widthAsym(i),scaling[i]);
+    setStyle(hSmeared[i]);
   }
 }
 
 
-// --------------------------------------------------
-void Sample::smearHistogram(const TH1* hOrig, TH1* &hSmeared, double nTotal, double width, double scaling, bool abs) const {
-  TString name = hOrig->GetName();
-  name += "Smeared";
-  hSmeared = static_cast<TH1D*>(hOrig->Clone(name));
-  hSmeared->Reset();
-  setStyle(hSmeared);
-
-  scaling += 1.;
-  if( scaling > 1. ) {
-    //    std::cout << "\n\nWidth = " << width << std::endl;
-    scaling = sqrt( scaling*scaling - 1. )*width;
-    //    std::cout << "Scaling: " << scaling << std::endl;
-  } else {
-    std::cerr << "WARNING in smearHistogram(): scaling = " << scaling << std::endl;
-  }
-  for(int bin = 1; bin <= hOrig->GetNbinsX(); ++bin) {
-    double entries = hOrig->GetBinContent(bin);
-    if( entries ) {
-      double mean = hOrig->GetBinCenter(bin);
-      double norm = 1.;
-      if( abs ) norm = 0.5*(1.+erf(mean/sqrt(2.)/scaling));
-      for(int i = 1; i <= hSmeared->GetNbinsX(); ++i) {
-	double min = hSmeared->GetXaxis()->GetBinLowEdge(i);
-	double max = hSmeared->GetXaxis()->GetBinUpEdge(i);
-	double weight = gaussInt(mean,scaling,min,max)*entries/norm;
-	hSmeared->Fill(hSmeared->GetBinCenter(i),weight);
-      }
-    }
-  }
-  for(int bin = 1; bin <= hSmeared->GetNbinsX(); ++bin) {
-    hSmeared->SetBinError(bin,sqrt(hSmeared->GetBinContent(bin)/nTotal));
-  }
-}
-
 
 // --------------------------------------------------
-double Sample::gaussInt(double mean, double sigma, double min, double max) const {
-  return 0.5*(erf((max-mean)/sqrt(2.)/sigma) - erf((min-mean)/sqrt(2.)/sigma));
-}
-
-
-// --------------------------------------------------
-bool Sample::getTails(const util::HistVec &h) {
+void Sample::getTails(const util::HistVec &h) {
   for(util::HistIt it = hTails_.begin(); it != hTails_.end(); ++it) {
     delete *it;
   }
@@ -383,68 +336,15 @@ bool Sample::getTails(const util::HistVec &h) {
   nTail_.clear();
   nTail_ = std::vector<double>(nBins());
 
-  bool result = true;
   for(unsigned int i = 0; i < nBins(); ++i) {
-    bool tmpResult = getTail(h[i],hTails_[i],hTailsClean_[i],fTailFits_[i]);
-    result = result && tmpResult;
-    
-    nTail_[i] = hTailsClean_[i]->Integral("width");
-
-    //    std::cout << "NTAIL (" << i << "): " << nTail(i) << std::endl; 
-  }
-
-  return result;
-}
-
-
-// --------------------------------------------------
-bool Sample::getTail(const TH1* hAsym, TH1* &hTail, TH1* &hTailClean, TF1* &gauss) const {
-  bool success = false;
-  
-  TString name = hAsym->GetName();
-  name += "_Tails";
-  hTail = static_cast<TH1D*>(hAsym->Clone(name));
-  hTail->SetLineColor(kBlue);
-  hTail->SetMarkerColor(kBlue);
-  
-  name = hAsym->GetName();
-  name += "_TailsClean";
-  hTailClean = static_cast<TH1D*>(hAsym->Clone(name));
-  hTailClean->Reset();
-  
-  name = hAsym->GetName();
-  name += "_GaussFit";
-  gauss = new TF1(name,"gaus",-1.,1.);
-  gauss->SetLineWidth(1);
-  gauss->SetLineColor(kRed);
-  if( hAsym->GetFillColor() > 0 ) gauss->SetLineStyle(2);
-  
-  double sigma = 2.5*hTail->GetRMS();
-  success =  !(hTail->Fit(gauss,"I0QR","",-sigma,sigma));
-  if( success ) {
-    sigma = 1.8*gauss->GetParameter(2);
-    success = !(hTail->Fit(gauss,"I0QR","",-sigma,sigma));
-    if( success ) {
-      sigma = gauss->GetParameter(2);
-      int binMin = 1;
-      int binMax = hTail->FindBin(5.*sigma);
-      for(int bin = binMin; bin <= binMax; ++bin) {
-	double min = hTail->GetXaxis()->GetBinLowEdge(bin);
-	double max = hTail->GetXaxis()->GetBinUpEdge(bin);
-	double gaussPdf = gauss->Integral(min,max)/hTail->GetBinWidth(1);
-	double tailPdf = hTail->GetBinContent(bin) - gaussPdf;
-	hTail->SetBinContent(bin,tailPdf);
-      }
-      for(int bin = 1; bin <= hTailClean->GetNbinsX(); ++bin) {
-	if( hTail->GetBinContent(bin) > 0.4*gauss->Eval(hTail->GetBinCenter(bin)) ) {
-	  hTailClean->SetBinContent(bin,hTail->GetBinContent(bin));
-	  hTailClean->SetBinError(bin,hTail->GetBinError(bin));
-	}
-      }
+    double tmpResult = func::getTail(h[i],hTails_[i],hTailsClean_[i],fTailFits_[i]);
+    if( tmpResult < 0 ) {
+      std::cerr << "ERROR in Sample::getTails(): Fitting of tail in bin " << i << " did not work.\n";
+      nTail_[i] = 0;
+    } else {
+      nTail_[i] = tmpResult;
     }
   }
-  
-  return success;
 }
 
 
@@ -470,7 +370,7 @@ void Sample::setStyle(TH1 *h) const {
 // --------------------------------------------------
 class SampleAdmin {
 public:
-  SampleAdmin(const TString &fileData, const TString &fileMC, std::vector<double> ptBinEdges, double lumi, double ppCut, unsigned int mcStartBin = 0, unsigned int mcEndBin = 0);
+  SampleAdmin(const TString &fileData, const TString &fileMC, std::vector<double> ptBinEdges, double lumi, unsigned int mcStartBin = 0, unsigned int mcEndBin = 0);
   ~SampleAdmin();
 
   TString name() const { return name_; }
@@ -501,7 +401,6 @@ public:
 private:
   const std::vector<double> ptBinEdges_;
   const double lumi_;
-  const double ppCut_;
 
   Sample* data_;
   Sample* mc_;
@@ -516,8 +415,8 @@ typedef std::vector<SampleAdmin*>::const_iterator AdminIt;
 
 //sampleName+"_"+util::toTString(ptMin())+"-"+util::toTString(ptMax())+"_"
 
-SampleAdmin::SampleAdmin(const TString &fileData, const TString &fileMC, std::vector<double> ptBinEdges, double lumi, double ppCut, unsigned int mcStartBin, unsigned int mcEndBin)
-  : ptBinEdges_(ptBinEdges), lumi_(lumi), ppCut_(ppCut) {
+SampleAdmin::SampleAdmin(const TString &fileData, const TString &fileMC, std::vector<double> ptBinEdges, double lumi, unsigned int mcStartBin, unsigned int mcEndBin)
+  : ptBinEdges_(ptBinEdges), lumi_(lumi) {
 
   name_= gUID_+"_Pt"+util::toTString(ptMin())+"-"+util::toTString(ptMax()); 
   outNamePrefix_ = name()+"_";
@@ -610,6 +509,8 @@ void SampleAdmin::plotSmearedAsymmetry() const {
 
     TH1 *hMC = mc_->hPtAsymSmeared(i);
     TH1 *hData = data_->hPtAsym(i);
+    TF1 *tailMC = mc_->fTail(i);
+    TF1 *tailData = data_->fTail(i);
 
     // Linear scale    
     util::HistOps::setYRange(hMC,3);
@@ -622,6 +523,17 @@ void SampleAdmin::plotSmearedAsymmetry() const {
     createLegend(hData,hMC)->Draw("same");
     can->SetLogy(0);
     can->SaveAs(outNamePrefix()+"PtSmearAsym_"+util::toTString(i)+".eps","eps");
+
+    // Superimpose fit
+    can->cd();
+    hMC->Draw("HISTE");
+    hData->Draw("PE1same");
+    createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
+    createLabelEta()->Draw("same");
+    createLegend(hData,hMC,tailData,tailMC)->Draw("same");
+    tailMC->Draw("same");
+    tailData->Draw("same");
+    can->SaveAs(outNamePrefix()+"TailFitLinear_"+util::toTString(i)+".eps","eps");
 
     // Log scale    
     util::HistOps::setYRange(hMC,3,3E-5);
@@ -637,8 +549,6 @@ void SampleAdmin::plotSmearedAsymmetry() const {
     can->SaveAs(outNamePrefix()+"PtSmearAsymLog_"+util::toTString(i)+".eps","eps");
 
     // Superimpose fit
-    TF1 *tailMC = mc_->fTail(i);
-    TF1 *tailData = data_->fTail(i);
     hMC->GetXaxis()->SetRangeUser(0.,1.);
     can->cd();
     hMC->Draw("HISTE");
@@ -886,19 +796,37 @@ void createSlides(const std::vector<SampleAdmin*> &admins) {
 }
 
 
+TString numLabel(const TString &orig, double shift = 10.) {
+  double num = orig.Atof();
+  TString result = util::toTString(num*shift);
+  if( result == "0" ) result += "0";
+  return result;
+}
+
+
 void fitTailsFromAsym() {
   gErrorIgnoreLevel = 1001;
   util::StyleSettings::presentation();
 
-  double ppCut = 0.1;
-
-  gJetAlgo_ = "AK5 Calo-Jets";
-  gDeltaPhiCut_ = "|#Delta#phi| > 2.7";
   gEtaMin_ = "0";
   gEtaMax_ = "1.1";
-  gPPCut_ = "p_{||} < "+util::toTString(ppCut);
-  gUID_ = "Tails_Calo_Eta00-11_Pp10";
+  gPPCutMin_ = "10";
+  gPPCutMax_ = "10";
+  gJetAlgo_ = "Calo";
+  gDeltaPhiCut_ = "|#Delta#phi| > 2.7";
 
+  TString inNameSuffix = "default.root";
+  if( gPPCutMin_ == gPPCutMax_ ) {
+    gUID_ = "Tails_"+gJetAlgo_+"_Eta"+numLabel(gEtaMin_)+"-"+numLabel(gEtaMax_)+"_Pp"+gPPCutMax_;
+    gJetAlgo_ = "AK5 "+gJetAlgo_+"-Jets";
+    gPPCutLabel_ = "p_{||} < 0."+gPPCutMax_;
+    inNameSuffix = "_Pp"+gPPCutMax_+"/jsResponse.root";
+  } else {
+    gUID_ = "Tails_"+gJetAlgo_+"_Eta"+numLabel(gEtaMin_)+"-"+numLabel(gEtaMax_)+"_Pp"+gPPCutMin_+"-"+gPPCutMax_;
+    gJetAlgo_ = "AK5 "+gJetAlgo_+"-Jets";
+    gPPCutLabel_ = "0."+gPPCutMin_+" < p_{||} < 0."+gPPCutMax_;
+    inNameSuffix = "_Pp"+gPPCutMin_+"-"+gPPCutMax_+"/jsResponse.root";
+  }
   
   std::vector<SampleAdmin*> admins;
 
@@ -912,14 +840,14 @@ void fitTailsFromAsym() {
   ptBinEdges.clear();
   ptBinEdges.push_back(120.);
   ptBinEdges.push_back(150.);
-  admins.push_back(new SampleAdmin("input/Tails_Calo_Data_Eta00-11_Pt0120-0150_Pp10/jsResponse.root","input/Tails_Calo_MC_Eta00-11_Pt0090-1000_Pp10/jsResponse.root",ptBinEdges,2.0,ppCut,2,3));
+  admins.push_back(new SampleAdmin("input/Tails_Calo_Data_Eta00-11_Pt0120-0150"+inNameSuffix,"input/Tails_Calo_MC_Eta00-11_Pt0090-1000"+inNameSuffix,ptBinEdges,2.0,2,3));
 
   // HLT 100
   ptBinEdges.clear();
   ptBinEdges.push_back(150.);
   ptBinEdges.push_back(170.);
   ptBinEdges.push_back(200.);
-  admins.push_back(new SampleAdmin("input/Tails_Calo_Data_Eta00-11_Pt0150-0200_Pp10/jsResponse.root","input/Tails_Calo_MC_Eta00-11_Pt0090-1000_Pp10/jsResponse.root",ptBinEdges,9.6,ppCut,3,5));
+  admins.push_back(new SampleAdmin("input/Tails_Calo_Data_Eta00-11_Pt0150-0200"+inNameSuffix,"input/Tails_Calo_MC_Eta00-11_Pt0090-1000"+inNameSuffix,ptBinEdges,9.6,3,5));
 
   // HLT 140
   ptBinEdges.clear();
@@ -930,7 +858,7 @@ void fitTailsFromAsym() {
   ptBinEdges.push_back(400.);
   ptBinEdges.push_back(500.);
   ptBinEdges.push_back(1000.);
-  admins.push_back(new SampleAdmin("input/Tails_Calo_Data_Eta00-11_Pt0200-1000_Pp10/jsResponse.root","input/Tails_Calo_MC_Eta00-11_Pt0090-1000_Pp10/jsResponse.root",ptBinEdges,27.4,ppCut,5,11));
+  admins.push_back(new SampleAdmin("input/Tails_Calo_Data_Eta00-11_Pt0200-1000"+inNameSuffix,"input/Tails_Calo_MC_Eta00-11_Pt0090-1000"+inNameSuffix,ptBinEdges,27.4,5,11));
 
 
 
