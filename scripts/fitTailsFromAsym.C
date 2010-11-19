@@ -1,4 +1,4 @@
-// $Id: fitTailsFromAsym.C,v 1.4 2010/11/16 10:01:35 mschrode Exp $
+// $Id: fitTailsFromAsym.C,v 1.5 2010/11/17 21:05:30 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -151,7 +151,7 @@ Sample::Sample(const TString &fileName, int type, const TString &sampleName, uns
     hPtAve_->SetDirectory(0);
     newName = name()+"_PtAve";
     hPtAve_->SetName(newName);
-    util::HistOps::setAxisTitles(hPtAve_,"p^{ave}_{T}","GeV","Events");
+    util::HistOps::setAxisTitles(hPtAve_,"p^{ave}_{T}","GeV","events");
     hPtAve_->SetTitle("");
     if( lumi > 0. ) hPtAve_->Scale(lumi);
     setStyle(hPtAve_);
@@ -170,7 +170,7 @@ Sample::Sample(const TString &fileName, int type, const TString &sampleName, uns
       newName = name()+"_PtAsym"+util::toTString(ptBin-startBin);
       hPtAsym->SetName(newName);
       hPtAsym->GetXaxis()->SetRangeUser(-0.5,0.5);
-      util::HistOps::setAxisTitles(hPtAsym,"Asymmetry","","Events",true);      
+      util::HistOps::setAxisTitles(hPtAsym,"Asymmetry","","events",true);      
       hPtAsym->SetTitle("");
       setStyle(hPtAsym);
       hPtAsym_.push_back(hPtAsym);
@@ -498,6 +498,60 @@ void SampleAdmin::plotAsymmetry() const {
     createLegend(hData,hMC)->Draw("same");
     can->SetLogy(0);
     can->SaveAs(outNamePrefix()+"PtAsym_"+util::toTString(i)+".eps","eps");
+
+    // Superimpose fit
+    TF1 *tailMC = mc_->fTail(i);
+    TF1 *tailData = data_->fTail(i);
+    can->cd();
+    hMC->Draw("HISTE");
+    hData->Draw("PE1same");
+    tailMC->Draw("same");
+    tailData->Draw("same");
+    createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
+    createLabelEta()->Draw("same");
+    createLegend(hData,hMC,tailData,tailMC)->Draw("same");
+    can->SetLogy(0);
+    can->SaveAs(outNamePrefix()+"PtAsymFit_"+util::toTString(i)+".eps","eps");
+
+    // Ratio data / MC
+    TH1 *hRatio = util::HistOps::createRatioPlot(hData,hMC);
+    TH1 *hRatioFrame = util::HistOps::createRatioFrame(hData,"Data / MC",0.,3.);
+    can->cd();
+    hRatioFrame->Draw();
+    hRatio->Draw("PE1same");
+    createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
+    createLabelEta()->Draw("same");
+    can->SetLogy(0);
+    can->SaveAs(outNamePrefix()+"PtAsymLogRatio_"+util::toTString(i)+".eps","eps");
+
+    hRatioFrame->GetXaxis()->SetRangeUser(-0.4,0.4);
+    can->cd();
+    hRatioFrame->Draw();
+    hRatio->Draw("PE1same");
+    createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
+    createLabelEta()->Draw("same");
+    can->SetLogy(0);
+    can->SaveAs(outNamePrefix()+"PtAsymRatio_"+util::toTString(i)+".eps","eps");
+
+    // Bottom ratio plot
+    can = util::HistOps::createRatioTopCanvas();
+    TPad *bRatioBottomPad = util::HistOps::createRatioBottomPad();
+    TH1 *bRatioTopFrame = util::HistOps::createRatioTopHist(hMC);
+    TH1 *bRatioBottomFrame = util::HistOps::createRatioBottomFrame(hMC,"Asymmetry","",0.61,1.39);
+    can->cd();
+    bRatioTopFrame->GetYaxis()->SetRangeUser(0.,9.5);
+    bRatioTopFrame->Draw("HISTE");
+    hData->Draw("PE1same");
+    createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
+    createLabelEta()->Draw("same");
+    createLegend(hData,hMC)->Draw("same");
+    bRatioBottomPad->Draw();
+    bRatioBottomPad->cd();
+    bRatioBottomFrame->GetXaxis()->SetRangeUser(-0.4,0.4);
+    bRatioBottomFrame->GetXaxis()->SetMoreLogLabels();
+    bRatioBottomFrame->Draw();
+    hRatio->Draw("PE1same");
+    can->SaveAs(outNamePrefix()+"PtAsymBottomRatio_"+util::toTString(i)+".eps","eps");
   }
 }
 
@@ -560,6 +614,49 @@ void SampleAdmin::plotSmearedAsymmetry() const {
     tailData->Draw("same");
     can->SetLogy(1);
     can->SaveAs(outNamePrefix()+"TailFit_"+util::toTString(i)+".eps","eps");
+
+    // Ratio data / MC
+    TH1 *hRatio = util::HistOps::createRatioPlot(hData,hMC);
+    TH1 *hRatioFrame = util::HistOps::createRatioFrame(hData,"Data / MC",0.,3.);
+    can->cd();
+    hRatioFrame->Draw();
+    hRatio->Draw("PE1same");
+    createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
+    createLabelEta()->Draw("same");
+    can->SetLogy(0);
+    can->SaveAs(outNamePrefix()+"PtSmearAsymLogRatio_"+util::toTString(i)+".eps","eps");
+
+    // Ratio data / MC
+    hRatioFrame->GetXaxis()->SetRangeUser(-0.4,0.4);
+    can->cd();
+    hRatioFrame->Draw();
+    hRatio->Draw("PE1same");
+    createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
+    createLabelEta()->Draw("same");
+    can->SetLogy(0);
+    can->SaveAs(outNamePrefix()+"PtSmearAsymRatio_"+util::toTString(i)+".eps","eps");
+
+    // Bottom ratio plot
+    can = util::HistOps::createRatioTopCanvas();
+    TPad *bRatioBottomPad = util::HistOps::createRatioBottomPad();
+    TH1 *bRatioTopFrame = util::HistOps::createRatioTopHist(hMC);
+    TH1 *bRatioBottomFrame = util::HistOps::createRatioBottomFrame(hMC,"Asymmetry","",0.61,1.39);
+    can->cd();
+    bRatioTopFrame->GetXaxis()->SetRangeUser(-0.4,0.4);
+    bRatioTopFrame->GetYaxis()->SetRangeUser(0.,9.5);
+    bRatioTopFrame->Draw("HISTE");
+    hData->Draw("PE1same");
+    createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
+    createLabelEta()->Draw("same");
+    createLegend(hData,hMC)->Draw("same");
+    bRatioBottomPad->Draw();
+    bRatioBottomPad->cd();
+    bRatioBottomFrame->GetXaxis()->SetMoreLogLabels();
+    bRatioBottomFrame->GetXaxis()->SetRangeUser(-0.4,0.4);
+    bRatioBottomFrame->Draw();
+    hRatio->Draw("PE1same");
+    can->SaveAs(outNamePrefix()+"PtSmearAsymBottomRatio_"+util::toTString(i)+".eps","eps");
+
   }
 }
 
@@ -728,7 +825,7 @@ void createSlides(const std::vector<SampleAdmin*> &admins) {
       }
       if( adminIdx < nAdmins ) {
 	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "PtAsym_" << ptBinIdx << "}\\\\ \n";
-	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "PtAsymLog_" << ptBinIdx << "}\\\\ \n";
+	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "PtAsymRatio_" << ptBinIdx << "}\\\\ \n";
       }
       oFile << "  \\end{column} \n";
     }
@@ -736,6 +833,32 @@ void createSlides(const std::vector<SampleAdmin*> &admins) {
     oFile << "\\end{frame} \n";
   }
 
+  oFile << "\n\n\n% ----- Pt Asymmetry Log ---------------------------" << std::endl;
+  nSlides = nPtBins/3;
+  if( nPtBins%3 > 0 ) nSlides++;
+  adminIdx = 0;
+  ptBinIdx = 0;
+  for(unsigned int slide = 0; slide < nSlides; ++slide) {
+    oFile << "\n% --------------------------------------------------\n";
+    oFile << "\\begin{frame}\n";
+    oFile << "  \\frametitle{\\pt Asymmetry "+etaRange+" (" << slide+1 << "/" << nSlides << ")}\n";
+    oFile << "  \\begin{columns}[T] \n";
+    for(int col = 0; col < 3; ++col, ++ptBinIdx) {
+      oFile << "    \\begin{column}{0.3333\\textwidth} \n";
+      oFile << "    \\centering\n";
+      if( !(ptBinIdx < admins[adminIdx]->nPtBins()) ) {
+	ptBinIdx = 0;
+	adminIdx++;
+      }
+      if( adminIdx < nAdmins ) {
+	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "PtAsymLog_" << ptBinIdx << "}\\\\ \n";
+	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "PtAsymLogRatio_" << ptBinIdx << "}\\\\ \n";
+      }
+      oFile << "  \\end{column} \n";
+    }
+    oFile << "  \\end{columns} \n";
+    oFile << "\\end{frame} \n";
+  }
 
   oFile << "\n\n\n% ----- Pt Smeared Asymmetry ---------------------------" << std::endl;
   nSlides = nPtBins/3;
@@ -756,7 +879,34 @@ void createSlides(const std::vector<SampleAdmin*> &admins) {
       }
       if( adminIdx < nAdmins ) {
 	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "PtSmearAsym_" << ptBinIdx << "}\\\\ \n";
+	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "PtSmearAsymRatio_" << ptBinIdx << "}\\\\ \n";
+      }
+      oFile << "  \\end{column} \n";
+    }
+    oFile << "  \\end{columns} \n";
+    oFile << "\\end{frame} \n";
+  }
+
+  oFile << "\n\n\n% ----- Pt Smeared Asymmetry Ratio ---------------------------" << std::endl;
+  nSlides = nPtBins/3;
+  if( nPtBins%3 > 0 ) nSlides++;
+  adminIdx = 0;
+  ptBinIdx = 0;
+  for(unsigned int slide = 0; slide < nSlides; ++slide) {
+    oFile << "\n% --------------------------------------------------\n";
+    oFile << "\\begin{frame}\n";
+    oFile << "  \\frametitle{Smeared \\pt Asymmetry "+etaRange+" (" << slide+1 << "/" << nSlides << ")}\n";
+    oFile << "  \\begin{columns}[T] \n";
+    for(int col = 0; col < 3; ++col, ++ptBinIdx) {
+      oFile << "    \\begin{column}{0.3333\\textwidth} \n";
+      oFile << "    \\centering\n";
+      if( !(ptBinIdx < admins[adminIdx]->nPtBins()) ) {
+	ptBinIdx = 0;
+	adminIdx++;
+      }
+      if( adminIdx < nAdmins ) {
 	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "PtSmearAsymLog_" << ptBinIdx << "}\\\\ \n";
+	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "PtSmearAsymLogRatio_" << ptBinIdx << "}\\\\ \n";
       }
       oFile << "  \\end{column} \n";
     }
@@ -836,18 +986,18 @@ void fitTailsFromAsym() {
   //90 100 120 150 170 200 250 300 350 400 500 1000
   //0  1   2   3   4   5   6   7   8   9   10  11
 
-  // HLT 70
-  ptBinEdges.clear();
-  ptBinEdges.push_back(120.);
-  ptBinEdges.push_back(150.);
-  admins.push_back(new SampleAdmin("input/Tails_Calo_Data_Eta00-11_Pt0120-0150"+inNameSuffix,"input/Tails_Calo_MC_Eta00-11_Pt0090-1000"+inNameSuffix,ptBinEdges,2.0,2,3));
+//   // HLT 70
+//   ptBinEdges.clear();
+//   ptBinEdges.push_back(120.);
+//   ptBinEdges.push_back(150.);
+//   admins.push_back(new SampleAdmin("~/results/ResolutionFit/TailScaling/Tails_Calo_Data_Eta00-11_Pt0120-0150"+inNameSuffix,"~/results/ResolutionFit/TailScaling/Tails_Calo_MC_Eta00-11_Pt0090-1000"+inNameSuffix,ptBinEdges,2.0,2,3));
 
   // HLT 100
   ptBinEdges.clear();
   ptBinEdges.push_back(150.);
   ptBinEdges.push_back(170.);
   ptBinEdges.push_back(200.);
-  admins.push_back(new SampleAdmin("input/Tails_Calo_Data_Eta00-11_Pt0150-0200"+inNameSuffix,"input/Tails_Calo_MC_Eta00-11_Pt0090-1000"+inNameSuffix,ptBinEdges,9.6,3,5));
+  admins.push_back(new SampleAdmin("~/results/ResolutionFit/TailScaling/Tails_Calo_Data_Eta00-11_Pt0150-0200"+inNameSuffix,"~/results/ResolutionFit/TailScaling/Tails_Calo_MC_Eta00-11_Pt0090-1000"+inNameSuffix,ptBinEdges,9.6,3,5));
 
   // HLT 140
   ptBinEdges.clear();
@@ -858,7 +1008,7 @@ void fitTailsFromAsym() {
   ptBinEdges.push_back(400.);
   ptBinEdges.push_back(500.);
   ptBinEdges.push_back(1000.);
-  admins.push_back(new SampleAdmin("input/Tails_Calo_Data_Eta00-11_Pt0200-1000"+inNameSuffix,"input/Tails_Calo_MC_Eta00-11_Pt0090-1000"+inNameSuffix,ptBinEdges,27.4,5,11));
+  admins.push_back(new SampleAdmin("~/results/ResolutionFit/TailScaling/Tails_Calo_Data_Eta00-11_Pt0200-1000"+inNameSuffix,"~/results/ResolutionFit/TailScaling/Tails_Calo_MC_Eta00-11_Pt0090-1000"+inNameSuffix,ptBinEdges,27.4,5,11));
 
 
 
