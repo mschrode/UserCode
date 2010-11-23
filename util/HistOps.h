@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.20 2010/10/31 14:36:02 mschrode Exp $
+// $Id: HistOps.h,v 1.21 2010/11/16 10:00:52 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.20 2010/10/31 14:36:02 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.21 2010/11/16 10:00:52 mschrode Exp $
   class HistOps
   {
   public:
@@ -198,9 +198,9 @@ namespace util
       // y axis label
       TString yAxisTitle;
       if( norm ) yAxisTitle += "1 / N  ";
-      if( yTitle == "jets" || yTitle == "events" ) {
-	if( yTitle == "jets" )        yAxisTitle += "Jets";
-	else if( yTitle == "events" ) yAxisTitle += "Events";
+      if( yTitle == "jets" || yTitle == "events" || yTitle == "Jets" || yTitle == "Events" ) {
+	if( yTitle == "jets" || yTitle == "Jets" )        yAxisTitle += "Jets";
+	else if( yTitle == "events" || yTitle == "Events" ) yAxisTitle += "Events";
 	if( norm ) {
 	  yAxisTitle += (" / "+util::toTString(h->GetBinWidth(1),3));
 	  if( xUnit.Length() ) yAxisTitle += " "+xUnit;
