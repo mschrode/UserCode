@@ -1,12 +1,12 @@
-// $Id: utils.h,v 1.3 2010/07/27 17:08:39 mschrode Exp $
+// $Id: utils.h,v 1.4 2010/08/21 13:40:21 mschrode Exp $
 
 #ifndef UTILS_H
 #define UTILS_H
 
 #include <cmath>
-
 #include <string>
 #include <sstream>
+#include <vector>
 
 #include "TString.h"
 
@@ -15,7 +15,7 @@
 //!
 //!  \author   Matthias Schroeder (www.desy.de/~matsch)
 //!  \date     2010/03/09
-//!  $Id: utils.h,v 1.3 2010/07/27 17:08:39 mschrode Exp $
+//!  $Id: utils.h,v 1.4 2010/08/21 13:40:21 mschrode Exp $
 // -------------------------------------------------------------------------------------
 namespace util {
 
@@ -62,6 +62,22 @@ namespace util {
   // -------------------------------------------------------------------------------------
   static TString toTString(double d, int decPlaces) {
     return toString(d,decPlaces).c_str();
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  static bool findBin(double x, const std::vector<double> &binEdges, unsigned int &bin) {
+    bin = 0;
+    bool inRange = false;
+    if( x >= binEdges.front() && x <= binEdges.back() ) {
+      inRange = true;
+      for(unsigned int i = 0; i < (binEdges.size()-1); ++i) {
+	if( x > binEdges[i] ) bin = i;
+	else break;
+      }
+    }
+    
+    return inRange;
   }
 }
 #endif
