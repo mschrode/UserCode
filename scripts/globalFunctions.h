@@ -6,8 +6,65 @@
 #include "TString.h"
 
 namespace func {
+  bool fitCoreWidth(const TH1* hist, double nSig, double &width, double &widthErr);
+  bool fitCoreWidth(const TH1* hist, double nSig, TF1* &gauss, double &width, double &widthErr);
+  double gaussInt(double mean, double sigma, double min, double max);
+  double getTail(const TH1* hAsym, double nSig, TH1* &hTail, TH1* &hTailClean, TF1* &gauss);
+  double getTailCut(const TH1* hAsym, double cut, TH1* &hTail, TH1* &hTailClean);
+  void smearHistogram(const TH1* hOrig, TH1* &hSmeared, double nTotal, double width, double scaling);
+
+
+
   // --------------------------------------------------
-  double getTail(const TH1* hAsym, TH1* &hTail, TH1* &hTailClean, TF1* &gauss) {
+  double gaussInt(double mean, double sigma, double min, double max) {
+    return 0.5*(erf((max-mean)/sqrt(2.)/sigma) - erf((min-mean)/sqrt(2.)/sigma));
+  }
+
+
+  // --------------------------------------------------
+  bool fitCoreWidth(const TH1* hist, double nSig, double &width, double &widthErr) {
+    TF1* dummy = 0;
+    bool result = fitCoreWidth(hist,nSig,dummy,width,widthErr);
+    delete dummy;
+    return result;
+  }
+
+
+  // --------------------------------------------------
+  bool fitCoreWidth(const TH1* hist, double nSig, TF1* &gauss, double &width, double &widthErr) {
+    bool result  = false;
+
+    TString name = hist->GetName();
+    name += "_GaussFit";
+    gauss = new TF1(name,"gaus",hist->GetXaxis()->GetBinLowEdge(1),hist->GetXaxis()->GetBinUpEdge(hist->GetNbinsX()));
+    gauss->SetLineWidth(1);
+    gauss->SetLineColor(kRed);
+
+    TH1* h = static_cast<TH1*>(hist->Clone("func::fitCoreWidth::h"));
+
+    double mean = h->GetMean();
+    double sig = 1.8*h->GetRMS();
+    if( h->Fit(gauss,"0QIR","",mean-sig,mean+sig) == 0 ) {
+      mean = gauss->GetParameter(1);
+      sig = nSig*gauss->GetParameter(2);
+      if( h->Fit(gauss,"0QIR","",mean-sig,mean+sig) == 0 ) {
+	result = true;
+	width = gauss->GetParameter(2);
+	widthErr = gauss->GetParError(2);
+      }
+    } else {
+      std::cerr << "WARNING in func::fitCoreWidth: No convergence when fitting width of '" << h->GetName() << "'\n";
+      width = 0.;
+      widthErr = 10000.;
+    }
+    delete h;
+
+    return result;
+  }
+
+
+  // --------------------------------------------------
+  double getTail(const TH1* hAsym, double nSig, TH1* &hTail, TH1* &hTailClean, TF1* &gauss) {
     double numTail = -1.;
   
     TString name = hAsym->GetName();
@@ -21,34 +78,23 @@ namespace func {
     hTailClean = static_cast<TH1D*>(hAsym->Clone(name));
     hTailClean->Reset();
   
-    name = hAsym->GetName();
-    name += "_GaussFit";
-    gauss = new TF1(name,"gaus",hAsym->GetXaxis()->GetBinLowEdge(1),hAsym->GetXaxis()->GetBinUpEdge(hAsym->GetNbinsX()));
-    gauss->SetLineWidth(1);
-    gauss->SetLineColor(kRed);
-    if( hAsym->GetFillColor() > 0 ) gauss->SetLineStyle(2);
-    double mean = hTail->GetMean();  
-    double sigma = 2.5*hTail->GetRMS();
-    if( hTail->Fit(gauss,"I0QR","",mean-sigma,mean+sigma) == 0 ) {
-      mean = gauss->GetParameter(1);
-      sigma = 1.8*gauss->GetParameter(2);
-      if( hTail->Fit(gauss,"I0QR","",mean-sigma,mean+sigma) == 0) {
-	sigma = gauss->GetParameter(2);
-	for(int bin = 1; bin <= hTail->GetNbinsX(); ++bin) {
-	  double min = hTail->GetXaxis()->GetBinLowEdge(bin);
-	  double max = hTail->GetXaxis()->GetBinUpEdge(bin);
-	  double gaussPdf = gauss->Integral(min,max)/hTail->GetBinWidth(1);
-	  double tailPdf = hTail->GetBinContent(bin) - gaussPdf;
-	  if( tailPdf < 0. ) tailPdf = 0.;
-	  hTail->SetBinContent(bin,tailPdf);
-
-	  if( tailPdf > gaussPdf ) {
-	    hTailClean->SetBinContent(bin,hTail->GetBinContent(bin));
-	    hTailClean->SetBinError(bin,hTail->GetBinError(bin));
-	  }
+    double width = 0.;
+    double widthErr = 1000.;
+    if( fitCoreWidth(hAsym,nSig,gauss,width,widthErr) ) {
+      for(int bin = 1; bin <= hTail->GetNbinsX(); ++bin) {
+	double min = hTail->GetXaxis()->GetBinLowEdge(bin);
+	double max = hTail->GetXaxis()->GetBinUpEdge(bin);
+	double gaussPdf = gauss->Integral(min,max)/hTail->GetBinWidth(1);
+	double tailPdf = hTail->GetBinContent(bin) - gaussPdf;
+	if( tailPdf < 0. ) tailPdf = 0.;
+	hTail->SetBinContent(bin,tailPdf);
+	
+	if( tailPdf > gaussPdf ) {
+	  hTailClean->SetBinContent(bin,hTail->GetBinContent(bin));
+	  hTailClean->SetBinError(bin,hTail->GetBinError(bin));
 	}
-	numTail = hTailClean->Integral("width");
       }
+      numTail = hTailClean->Integral("width");
     }
   
     return numTail;
@@ -56,29 +102,80 @@ namespace func {
 
 
   // --------------------------------------------------
-  void fitCoreWidth(const TH1 *hist, double &width, double &widthErr) {
-    TH1* h = static_cast<TH1*>(hist->Clone("func::fitCoreWidth::h"));
-    double mean = h->GetMean();
-    double sig = 1.5*h->GetRMS();
-    if( h->Fit("gaus","0QIR","",mean-sig,mean+sig) == 0 ) {
-      mean = h->GetFunction("gaus")->GetParameter(1);
-      sig = 1.8*h->GetFunction("gaus")->GetParameter(2);
-      if( h->Fit("gaus","0QIR","",mean-sig,mean+sig) == 0 ) {
-	width = h->GetFunction("gaus")->GetParameter(2);
-	widthErr = h->GetFunction("gaus")->GetParError(2);
+  double getTailFromGauss(const TH1* hAsym, const TF1* extGauss, double tailStart, double nSig, TH1* &hTail, TH1* &hTailClean, TF1* &gauss) {
+    double numTail = -1.;
+  
+    TString name = hAsym->GetName();
+    name += "_Tails";
+    hTail = static_cast<TH1D*>(hAsym->Clone(name));
+    hTail->SetLineColor(kBlue);
+    hTail->SetMarkerColor(kBlue);
+  
+    name = hAsym->GetName();
+    name += "_TailsClean";
+    hTailClean = static_cast<TH1D*>(hAsym->Clone(name));
+    hTailClean->Reset();
+  
+    // Fit Gaussian
+    double width = 0.;
+    double widthErr = 1000.;
+    fitCoreWidth(hAsym,nSig,gauss,width,widthErr);
+
+    // Extract tail using external Gaussian and tail start
+    TF1 *extGaussTmp = static_cast<TF1*>(extGauss->Clone("func::getTailFromGauss::extGaussTmp"));
+    int optLeftTailStartBin = hTail->FindBin(-1.*std::abs(tailStart));
+    int optRightTailStartBin = hTail->FindBin(std::abs(tailStart));
+    for(int bin = 1; bin <= hTail->GetNbinsX(); ++bin) {
+      double min = hTail->GetXaxis()->GetBinLowEdge(bin);
+      double max = hTail->GetXaxis()->GetBinUpEdge(bin);
+      double gaussPdf = extGaussTmp->Integral(min,max)/hTail->GetBinWidth(1);
+      double tailPdf = hTail->GetBinContent(bin) - gaussPdf;
+      if( tailPdf < 0. ) tailPdf = 0.;
+      hTail->SetBinContent(bin,tailPdf);
+	
+      if( bin <= optLeftTailStartBin || bin >= optRightTailStartBin ) {
+	hTailClean->SetBinContent(bin,hTail->GetBinContent(bin));
+	hTailClean->SetBinError(bin,hTail->GetBinError(bin));
       }
-    } else {
-      std::cerr << "WARNING in func::fitCoreWidth: No convergence when fitting width of '" << h->GetName() << "'\n";
-      width = 0.;
-      widthErr = 10000.;
+      numTail = hTailClean->Integral("width");
     }
-    delete h;
+    delete extGaussTmp;
+  
+    return numTail;
   }
 
 
   // --------------------------------------------------
-  double gaussInt(double mean, double sigma, double min, double max) {
-    return 0.5*(erf((max-mean)/sqrt(2.)/sigma) - erf((min-mean)/sqrt(2.)/sigma));
+  double getTailCut(const TH1* hAsym, double cut, TH1* &hTail, TH1* &hTailClean) {
+    double numTail = -1.;
+  
+    TString name = hAsym->GetName();
+    name += "_Tails";
+    hTail = static_cast<TH1D*>(hAsym->Clone(name));
+    hTail->SetLineColor(kBlue);
+    hTail->SetMarkerColor(kBlue);
+  
+    name = hAsym->GetName();
+    name += "_TailsClean";
+    hTailClean = static_cast<TH1D*>(hAsym->Clone(name));
+    hTailClean->Reset();
+  
+    // Core range = non-tail
+    int binMin = hTail->FindBin(-1.*std::abs(cut));
+    int binMax = hTail->FindBin(std::abs(cut));
+    for(int bin = binMin+1; bin < binMax; ++bin) {
+      hTail->SetBinContent(bin,0.);
+      hTail->SetBinError(bin,0.);
+    }
+    for(int bin = 1; bin < hTail->GetNbinsX(); ++bin) {
+      if( hTail->GetBinContent(bin) ) {
+	hTailClean->SetBinContent(bin,hTail->GetBinContent(bin));
+	hTailClean->SetBinError(bin,hTail->GetBinError(bin));
+      }
+    }
+    numTail = hTailClean->Integral("width");
+  
+    return numTail;
   }
 
 
