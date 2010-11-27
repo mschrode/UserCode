@@ -1,11 +1,11 @@
-// $Id: $
+// $Id: ConfigParser.h,v 1.1 2010/11/26 22:41:09 mschrode Exp $
 
 #ifndef CONFIG_PARSER_H
 #define CONFIG_PARSER_H
 
 #include <iostream>
 #include <fstream>
-#include <sstream>
+//#include <sstream>
 #include <string>
 #include <vector>
 
@@ -15,8 +15,18 @@ namespace util {
   // -------------------------------------------------------------------------------------
   class ConfigParser {
   public:
+    static std::string getTag(const std::string &line, const std::string &delim, size_t &pos);
+    static bool noComment(const std::string &line);
+    static void trim(std::string &str);
+    static void trim(std::string &str, const std::string delims);
+
+
     ConfigParser(const std::string &name) {
       file_ = new std::ifstream(name.c_str());
+      if( !file_->is_open() ) {
+	std::cerr << "ERROR(ConfigParser): error opening file '" << name << "'\n";
+	exit(1);
+      }
     }
 
     ~ConfigParser() {
@@ -33,10 +43,6 @@ namespace util {
     std::ifstream* file_;
 
     double stringToDouble(const std::string &str) const;
-    std::string getTag(const std::string &line, const std::string &delim, size_t &pos) const;
-    bool noComment(const std::string &line) const;
-    void trim(std::string &str) const;
-    void trim(std::string &str, const std::string delims) const;
   };
 
 
@@ -57,6 +63,7 @@ namespace util {
 	  }
 	}
       }
+      file_->seekg(0);
       trim(result);
     } else {
       std::cerr << "ConfigParser: ERROR reading from file\n";
@@ -96,7 +103,7 @@ namespace util {
 
 
   // -------------------------------------------------------------------------------------
-  bool ConfigParser::noComment(const std::string &line) const {
+  bool ConfigParser::noComment(const std::string &line) {
     bool result = false;
     if( line.size() ) {
       if( line[0] != '#' ) {
@@ -108,7 +115,7 @@ namespace util {
   
 
   // -------------------------------------------------------------------------------------
-  std::string ConfigParser::getTag(const std::string &line, const std::string &delim, size_t &pos) const {
+  std::string ConfigParser::getTag(const std::string &line, const std::string &delim, size_t &pos) {
     std::string result = "";
     pos = line.find(delim);
     if( pos != std::string::npos ) {
@@ -120,14 +127,14 @@ namespace util {
 
 
   // -------------------------------------------------------------------------------------
-  void ConfigParser::trim(std::string &str) const {
+  void ConfigParser::trim(std::string &str) {
     while( str.size() && str[0] == ' ' ) str.erase(0,1);
     while( str.size() && str[str.size()-1] == ' ' ) str.erase(str.size()-1,str.size());    
   }
 
 
   // -------------------------------------------------------------------------------------
-  void ConfigParser::trim(std::string &str, const std::string delims) const {
+  void ConfigParser::trim(std::string &str, const std::string delims) {
     while( str.size() && str.find_first_of(delims) == 0 ) str.erase(0,1);
     while( str.size() && str.find_last_of(delims) == str.size()-1 ) str.erase(str.size()-1,str.size());    
   }
@@ -135,11 +142,13 @@ namespace util {
 
   // -------------------------------------------------------------------------------------
   double ConfigParser::stringToDouble(const std::string &str) const {
-    std::istringstream stm;
-    stm.str(str);
-    double d;
-    stm >> d;
-    return d;
+/*     std::istringstream stm; */
+/*     stm.str(str); */
+/*     float f; */
+/*     stm >> f; */
+/*     return f; */
+
+    return atof(str.c_str() );
   }
 }
 #endif
