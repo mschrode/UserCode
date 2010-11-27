@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: writeDijetSkims.C,v 1.1 2010/11/26 22:42:31 mschrode Exp $
 
 #include <algorithm>
 #include <cassert>
@@ -11,10 +11,11 @@
 #include "TChain.h"
 #include "TFile.h"
 #include "TH1.h"
+#include "TROOT.h"
 #include "TString.h"
 #include "TVector2.h"
 
-#include "../util/Binning.h"
+#include "BinningAdmin.h"
 
 
 
@@ -66,52 +67,26 @@ TChain *createTChain(const TString &fileListName) {
 
 
 
-// // -------------------------------------------------------------------------------------
-// bool findBin(double x, const std::vector<double> &binEdges, unsigned int &bin) {
-//   bin = 0;
-//   bool inRange = false;
-//   if( x >= binEdges.front() && x <= binEdges.back() ) {
-//     inRange = true;
-//     for(unsigned int i = 0; i < (binEdges.size()-1); ++i) {
-//       if( x > binEdges[i] ) bin = i;
-//       else break;
-//     }
-//   }
-  
-//   return inRange;
-// }
-
-
-
 // --------------------------------------------------
 void writeDijetSkims() {
 
 
   // ++++ Set parameters +++++++++++++++++++++++++++++++++++++++
 
-  const int nEvts = 10000;
-  const TString binning = "input/testBinning";
-  const TString inFileListName = "input/Kalibri_Calo_Fall10";
+  const int nEvts = -10000;
+  const TString config = "input/BinningAdmin.cfg";
+  const TString inFileListName = "input/Kalibri_PF_Fall10";
+  //  const TString inFileListName = "input/Kalibri_Calo_0200";
   const bool isData = false;
-  const unsigned int maxHltThres = 50;
+  const unsigned int maxHltThres = 140;
   const double minDeltaPhi = 2.7;
-
-//   std::vector<double> etaBinEdges;
-//   etaBinEdges.push_back(0.);
-//   etaBinEdges.push_back(1.1);
-//   etaBinEdges.push_back(1.7);
-//   etaBinEdges.push_back(2.3);
-//   etaBinEdges.push_back(5.0);
 
 
 
   // ++++ Checks and follow-up parameter +++++++++++++++++++++++
 
-//   Ssiz_t startFileName = inFileListName.Last('/')+1;  
-//   const TString outFilePrefix = "~/scratch/KalibriDiJetSkims/"+(inFileListName(startFileName,inFileListName.Length()-startFileName))+"_DiJets";
-
-// Prepare name of output files  
-  TString outFilePrefix = "";//"~/scratch/KalibriDiJetSkims/KalibriDiJetSkim";
+  // Prepare name of output files  
+  TString outFilePrefix = "~/lustre/KalibriDiJetSkims/KalibriDiJetSkim";
 
   if( inFileListName.Contains("Calo") ) outFilePrefix += "_Calo";
   else if( inFileListName.Contains("PF") ) outFilePrefix += "_PF";  
@@ -121,10 +96,12 @@ void writeDijetSkims() {
   else outFilePrefix += "_MC";  
 
 
-//   assert( etaBinEdges.size() > 1 );
-//   const unsigned int nEtaBins = etaBinEdges.size()-1;
+  sampleTools::BinningAdmin binAdmin(config);
 
-  util::Binning bins(binning);
+  const TString hlt = isData ? binAdmin.triggerName(maxHltThres) : "none";
+
+  binAdmin.printBinning();
+  if( isData ) binAdmin.print(hlt);
   
   unsigned int nMaxNJet = 0;
   unsigned int nDijets = 0;
@@ -141,8 +118,9 @@ void writeDijetSkims() {
 
   // Open Kalibri ntuples
   TChain *oldChain = createTChain(inFileListName);
-  //TChain *oldChain = new TChain("DiJetTree"); 
-  //oldChain->Add("/afs/naf.desy.de/user/m/mschrode/lustre/mc/Fall10_QCDDiJetFlat/QCD_Pt_15to3000_TuneZ2_Flat_7TeV_pythia6job_0_ak5Calo.root");
+
+  //TChain *oldChain = new TChain("DiJetTree");
+  //oldChain->Add("QCD_Pt_15to3000_TuneZ2_Flat_7TeV_pythia6job_0_ak5Calo.root");
   
   // Deactivate branches not needed
   oldChain->SetBranchStatus("Track*",0);
@@ -168,6 +146,44 @@ void writeDijetSkims() {
   bool hltDiJetAve100U = false;
   bool hltDiJetAve140U = false;
 
+  // Get other elements written to tree
+  Float_t         JetEt[maxNJet];   //[NobjJet]
+  Float_t         JetE[maxNJet];   //[NobjJet]
+  Int_t           JetN90Hits[maxNJet];   //[NobjJet]
+  Float_t         JetHad[maxNJet];   //[NobjJet]
+  Float_t         JetEMF[maxNJet];   //[NobjJet]
+  Float_t         JetFHPD[maxNJet];   //[NobjJet]
+  Float_t         JetFRBX[maxNJet];   //[NobjJet]
+  Bool_t          JetIDTight[maxNJet];   //[NobjJet]
+  Float_t         JetEtWeightedSigmaPhi[maxNJet];   //[NobjJet]
+  Float_t         JetEtWeightedSigmaEta[maxNJet];   //[NobjJet]
+  Float_t         JetCorrZSP[maxNJet];   //[NobjJet]
+  Float_t         JetCorrL2[maxNJet];   //[NobjJet]
+  Float_t         JetCorrL3[maxNJet];   //[NobjJet]
+  Float_t         JetCorrJPT[maxNJet];   //[NobjJet]
+  Float_t         JetCorrL2L3JPT[maxNJet];   //[NobjJet]
+  Float_t         JetCorrL4JW[maxNJet];   //[NobjJet]
+  Int_t           JetIEta[maxNJet];   //[NobjJet]
+  Int_t           JetIPhi[maxNJet];   //[NobjJet]
+  Float_t         JetGenJetDeltaR[maxNJet];   //[NobjJet]
+  Float_t         GenJetPt[maxNJet];   //[NobjJet]
+  Float_t         GenJetPhi[maxNJet];   //[NobjJet]
+  Float_t         GenJetEta[maxNJet];   //[NobjJet]
+  Float_t         GenJetEt[maxNJet];   //[NobjJet]
+  Float_t         GenJetE[maxNJet];   //[NobjJet]
+  Int_t           NobjGenJet;
+  Float_t         GenJetColPt[maxNJet];   //[NobjGenJet]
+  Float_t         GenJetColPhi[maxNJet];   //[NobjGenJet]
+  Float_t         GenJetColEta[maxNJet];   //[NobjGenJet]
+  Float_t         GenJetColEt[maxNJet];   //[NobjGenJet]
+  Float_t         GenJetColE[maxNJet];   //[NobjGenJet]
+  Float_t         GenJetColEmE[maxNJet];   //[NobjGenJet]
+  Float_t         GenJetColHadE[maxNJet];   //[NobjGenJet]
+  Float_t         GenJetColInvE[maxNJet];   //[NobjGenJet]
+  Float_t         GenJetColAuxE[maxNJet];   //[NobjGenJet]
+  Int_t           GenJetColJetIdx[maxNJet];   //[NobjGenJet]
+
+
   // Set branch addresses
   oldChain->SetBranchAddress("NobjJet",&nObjJet);
   oldChain->SetBranchAddress("JetPt",jetPt);
@@ -175,24 +191,59 @@ void writeDijetSkims() {
   oldChain->SetBranchAddress("JetPhi",jetPhi);
   oldChain->SetBranchAddress("JetCorrL2L3",jetCorrL2L3);
   oldChain->SetBranchAddress("JetIDLoose",jetID);
-  if( isData ) {
-    oldChain->SetBranchAddress("HltDiJetAve50U",&hltDiJetAve50U);
-    oldChain->SetBranchAddress("HltDiJetAve70U",&hltDiJetAve70U);
-    oldChain->SetBranchAddress("HltDiJetAve100U",&hltDiJetAve100U);
-    oldChain->SetBranchAddress("HltDiJetAve140U",&hltDiJetAve140U);
-  }
+  oldChain->SetBranchAddress("HltDiJetAve50U",&hltDiJetAve50U);
+  oldChain->SetBranchAddress("HltDiJetAve70U",&hltDiJetAve70U);
+  oldChain->SetBranchAddress("HltDiJetAve100U",&hltDiJetAve100U);
+  oldChain->SetBranchAddress("HltDiJetAve140U",&hltDiJetAve140U);
+
+  oldChain->SetBranchAddress("JetEt", JetEt);
+  oldChain->SetBranchAddress("JetE", JetE);
+  oldChain->SetBranchAddress("JetN90Hits", JetN90Hits);
+  oldChain->SetBranchAddress("JetHad", JetHad);
+  oldChain->SetBranchAddress("JetEMF", JetEMF);
+  oldChain->SetBranchAddress("JetFHPD", JetFHPD);
+  oldChain->SetBranchAddress("JetFRBX", JetFRBX);
+  oldChain->SetBranchAddress("JetIDTight", JetIDTight);
+  oldChain->SetBranchAddress("JetEtWeightedSigmaPhi", JetEtWeightedSigmaPhi);
+  oldChain->SetBranchAddress("JetEtWeightedSigmaEta", JetEtWeightedSigmaEta);
+  oldChain->SetBranchAddress("JetCorrZSP", JetCorrZSP);
+  oldChain->SetBranchAddress("JetCorrL2", JetCorrL2);
+  oldChain->SetBranchAddress("JetCorrL3", JetCorrL3);
+  oldChain->SetBranchAddress("JetCorrJPT", JetCorrJPT);
+  oldChain->SetBranchAddress("JetCorrL2L3JPT", JetCorrL2L3JPT);
+  oldChain->SetBranchAddress("JetCorrL4JW", JetCorrL4JW);
+  oldChain->SetBranchAddress("JetIEta", JetIEta);
+  oldChain->SetBranchAddress("JetIPhi", JetIPhi);
+  oldChain->SetBranchAddress("JetGenJetDeltaR", JetGenJetDeltaR);
+  oldChain->SetBranchAddress("GenJetPt", GenJetPt);
+  oldChain->SetBranchAddress("GenJetPhi", GenJetPhi);
+  oldChain->SetBranchAddress("GenJetEta", GenJetEta);
+  oldChain->SetBranchAddress("GenJetEt", GenJetEt);
+  oldChain->SetBranchAddress("GenJetE", GenJetE);
+  oldChain->SetBranchAddress("NobjGenJet", &NobjGenJet);
+  oldChain->SetBranchAddress("GenJetColPt", GenJetColPt);
+  oldChain->SetBranchAddress("GenJetColPhi", GenJetColPhi);
+  oldChain->SetBranchAddress("GenJetColEta", GenJetColEta);
+  oldChain->SetBranchAddress("GenJetColEt", GenJetColEt);
+  oldChain->SetBranchAddress("GenJetColE", GenJetColE);
+  oldChain->SetBranchAddress("GenJetColEmE", GenJetColEmE);
+  oldChain->SetBranchAddress("GenJetColHadE", GenJetColHadE);
+  oldChain->SetBranchAddress("GenJetColInvE", GenJetColInvE);
+  oldChain->SetBranchAddress("GenJetColAuxE", GenJetColAuxE);
+  oldChain->SetBranchAddress("GenJetColJetIdx", GenJetColJetIdx);
+  
 
   //Create a new file + a clone of old tree in new file per eta and pt bin
-  std::vector< std::vector<TFile*> > newFiles(bins.nEtaBins());
-  std::vector< std::vector<TTree*> > newTrees(bins.nEtaBins());
-  for(unsigned int etaBin = 0; etaBin < bins.nEtaBins(); ++etaBin) {
-    newFiles[etaBin] = std::vector<TFile*>(bins.nPtBins(etaBin));
-    newTrees[etaBin] = std::vector<TTree*>(bins.nPtBins(etaBin));
-    for(unsigned int ptBin = 0; ptBin < bins.nPtBins(etaBin); ++ptBin) {
+  std::vector< std::vector<TFile*> > newFiles(binAdmin.nEtaBins());
+  std::vector< std::vector<TTree*> > newTrees(binAdmin.nEtaBins());
+  for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
+    newFiles[etaBin] = std::vector<TFile*>(binAdmin.nPtBins(hlt,etaBin));
+    newTrees[etaBin] = std::vector<TTree*>(binAdmin.nPtBins(hlt,etaBin));
+    for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
       TString name = outFilePrefix+"_Eta";
       name += etaBin;
       name += "_Pt";
-      name += ptBin;
+      name += (binAdmin.hltMinPtBin(hlt,etaBin)+ptBin);
       name += ".root";
       newFiles[etaBin][ptBin] = new TFile(name,"RECREATE");
       newTrees[etaBin][ptBin] = oldChain->CloneTree(0);
@@ -205,8 +256,8 @@ void writeDijetSkims() {
   for(int j = 0; j < maxNJet; ++j) {
     corrJetIdx[j] = -1;
   }
-  for(unsigned int etaBin = 0; etaBin < bins.nEtaBins(); ++etaBin) {
-    for(unsigned int ptBin = 0; ptBin < bins.nPtBins(etaBin); ++ptBin) {
+  for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
+    for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
       newTrees[etaBin][ptBin]->Branch("L2L3CorrJetColJetIdx",corrJetIdx,"L2L3CorrJetColJetIdx[NobjJet]/I");
     }
   }
@@ -236,10 +287,18 @@ void writeDijetSkims() {
       continue;
     }
 
-//     if( isData ) {
-//       // HLT cuts
-//     }
-    
+    if( isData ) {
+      // HLT cuts
+      if( maxHltThres == 50 && !hltDiJetAve50U ) 
+ 	continue;
+      else if( maxHltThres == 70 && !(hltDiJetAve50U || hltDiJetAve70U) ) 
+ 	continue;
+      else if( maxHltThres == 100 && !(hltDiJetAve50U || hltDiJetAve70U || hltDiJetAve100U) ) 
+ 	continue;
+      else if( maxHltThres == 140 && !(hltDiJetAve50U || hltDiJetAve70U || hltDiJetAve100U || hltDiJetAve140U) ) 
+ 	continue;
+    }
+  
     // Order L2L3 corrected jets
     for(int j = 0; j < nObjJet; ++j) {
       jIdx[j] = new JetIndex(j,jetPt[j]*jetCorrL2L3[j]);
@@ -251,12 +310,12 @@ void writeDijetSkims() {
     for(int j = 0; j < nObjJet; ++j) {
       delete jIdx[j];
     }
-    
+  
     if( std::abs(TVector2::Phi_mpi_pi(jetPhi[corrJetIdx[0]]-jetPhi[corrJetIdx[1]])) < minDeltaPhi ) {
       ++nDeltaPhi;
       continue;
     }
-    
+  
     if( !jetID[corrJetIdx[0]] || !jetID[corrJetIdx[1]] ) {
       ++nJetID;
       continue;
@@ -264,13 +323,14 @@ void writeDijetSkims() {
 
     // Find eta and pt bin
     unsigned int etaBin = 1000;
-    if( bins.findSameEtaBin(jetEta[corrJetIdx[0]],jetEta[corrJetIdx[1]],etaBin) ) {
-      double ptAve = 0.5*(jetPt[corrJetIdx[0]]+jetPt[corrJetIdx[1]]);
+    if( binAdmin.findSameEtaBin(jetEta[corrJetIdx[0]],jetEta[corrJetIdx[1]],etaBin) ) {
+      double ptAve = 0.5*(jetCorrL2L3[corrJetIdx[0]]*jetPt[corrJetIdx[0]]+jetCorrL2L3[corrJetIdx[1]]*jetPt[corrJetIdx[1]]);
       unsigned int ptAveBin = 1000;
-      if( bins.findPtBin(ptAve,etaBin,ptAveBin) ) {
-	newTrees[etaBin][ptAveBin]->Fill();
+      if( binAdmin.findPtBin(hlt,ptAve,etaBin,ptAveBin) ) {
+ 	ptAveBin -= binAdmin.hltMinPtBin(hlt,etaBin);
+ 	newTrees[etaBin][ptAveBin]->Fill();
       } else {
-	++nPtAve;
+ 	++nPtAve;
       }
     } else {
       ++nEta;
@@ -278,16 +338,16 @@ void writeDijetSkims() {
 
     if( i%50000 == 0 ) {
       std::cout << "Processed " << i << " events" << std::endl;
-      for(unsigned int etaBin = 0; etaBin < bins.nEtaBins(); ++etaBin) {
-	for(unsigned int ptBin = 0; ptBin < bins.nPtBins(etaBin); ++ptBin) {
-	  newTrees[etaBin][ptBin]->AutoSave();
-	}
+      for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
+ 	for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
+ 	  newTrees[etaBin][ptBin]->AutoSave();
+ 	}
       }
     }
   } // End of loop over entries
 
-  for(unsigned int etaBin = 0; etaBin < bins.nEtaBins(); ++etaBin) {
-    for(unsigned int ptBin = 0; ptBin < bins.nPtBins(etaBin); ++ptBin) {
+  for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
+    for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
       newTrees[etaBin][ptBin]->AutoSave();
       //newTrees[etaBin][ptBin]->Print();
     }
@@ -309,17 +369,18 @@ void writeDijetSkims() {
   std::cout << "  " << (nEntries -= nEta ) << " events with Eta(1,2) within binning" << std::endl;
 
   std::cout << "Wrote " << nEntries << " events to files" << std::endl;
-  for(unsigned int etaBin = 0; etaBin < bins.nEtaBins(); ++etaBin) {
-    for(unsigned int ptBin = 0; ptBin < bins.nPtBins(etaBin); ++ptBin) {
-      std::cout << "  " << newTrees[etaBin][ptBin]->GetEntries() << " events with " << bins.etaMin(etaBin) << " < |eta(1,2)| < " << bins.etaMax(etaBin) << " to file '" << newFiles[etaBin][ptBin]->GetName() << "'" << std::endl;
+  for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
+    for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
+      std::cout << "  " << newTrees[etaBin][ptBin]->GetEntries() << " events with " << binAdmin.etaMin(etaBin) << " < |eta(1,2)| < " << binAdmin.etaMax(etaBin) << " to file '" << newFiles[etaBin][ptBin]->GetName() << "'" << std::endl;
     }
   }
     
 
 
   // ++++ Clean up +++++++++++++++++++++++++++++++++++++++++++++
-  for(unsigned int etaBin = 0; etaBin < bins.nEtaBins(); ++etaBin) {
-    for(unsigned int ptBin = 0; ptBin < bins.nPtBins(etaBin); ++ptBin) {
+
+  for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
+    for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
       newFiles[etaBin][ptBin]->Close();
       delete newFiles[etaBin][ptBin];
     }

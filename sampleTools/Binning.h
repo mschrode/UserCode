@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: Binning.h,v 1.1 2010/11/26 22:42:03 mschrode Exp $
 
 #ifndef BINNING_H
 #define BINNING_H
@@ -186,7 +186,7 @@ namespace sampleTools {
     if( x >= binEdges.front() && x <= binEdges.back() ) {
       inRange = true;
       for(unsigned int i = 0; i < (binEdges.size()-1); ++i) {
-	if( x > binEdges[i] ) bin = i;
+	if( x >= binEdges[i] ) bin = i;
 	else break;
       }
     }
