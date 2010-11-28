@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: combineBins.C,v 1.1 2010/11/28 13:50:03 mschrode Exp $
 
 //! Combine Kalibri output histograms from different
 //! eta, pt, and ptSoft bins
@@ -38,7 +38,10 @@ bool getBinnedHists(const TString &fileName, const std::vector<TString> &histNam
       file.GetObject(*hNameIt,h);
       if( h ) {
 	h->SetDirectory(0);
-	h->SetName((*hNameIt)+newNameSuffix);
+	TString name = *hNameIt;
+	if( name.Length() > 1 && name(name.Length()-2,name.Length()-1) == "_0" )
+	  name = name(0,name.Length()-2);
+	h->SetName(name+newNameSuffix);
 	hists.push_back(h);
       } else {
 	std::cerr << "  ERROR getting histogram '" << *hNameIt << "' from file '" << fileName << "'" << std::endl;
