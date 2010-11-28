@@ -1,4 +1,4 @@
-// $Id: fitTailsFromAsym.C,v 1.5 2010/11/17 21:05:30 mschrode Exp $
+// $Id: fitTailsFromAsym.C,v 1.6 2010/11/19 16:29:23 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -34,6 +34,9 @@ TString gPPCutMin_ = "0";
 TString gPPCutMax_ = "0.1";
 TString gPPCutLabel_ = "p_{||} < 0.1";
 TString gUID_ = "uid";
+double gNSigCore_ = 2.;
+double gNSigTailStart_ = 3.;
+bool gFitGauss_ = true;
 
 
 
@@ -75,7 +78,7 @@ class Sample {
 public:
   //  enum SampleType { Data, MC };
 
-  Sample(const TString &fileName, int type, const TString &sampleName, unsigned int startBin, unsigned int endBin, double lumi = -1.);
+  Sample(const TString &fileName, unsigned int etaBin, int type, const TString &sampleName, unsigned int startBin, unsigned int endBin, double lumi = -1.);
   ~Sample();
 
   TString name() const { return name_; }
@@ -87,6 +90,7 @@ public:
   TH1 *hPtAsym(unsigned int i) const { return hist(i,hPtAsym_); }
   TH1 *hPtAsymSmeared(unsigned int i) const { return hist(i,hPtAsymSmeared_); }
   TH1 *hTailClean(unsigned int i) const { return hist(i,hTailsClean_); }
+  double tailCleanStart(unsigned int i) const;
   TF1 *fTail(unsigned int i) const;
   
   double widthAsym(unsigned int i) const { return widthAsym_.at(i); }
@@ -125,7 +129,7 @@ private:
   mutable unsigned int count_;
 
   void fitWidth(const util::HistVec &h, std::vector<double> &width, std::vector<double> &widthErr) const;
-  void getTails(const util::HistVec &h);
+  void getTails(const util::HistVec &h, const Sample* dataSample = 0);
   TH1* hist(const TH1* h) const;
   TH1* hist(unsigned int i, const util::HistVec &h) const;
   void setStyle(TH1 *h) const;
@@ -135,7 +139,7 @@ private:
 
 
 // --------------------------------------------------
-Sample::Sample(const TString &fileName, int type, const TString &sampleName, unsigned int startBin, unsigned int endBin, double lumi)
+Sample::Sample(const TString &fileName, unsigned int etaBin, int type, const TString &sampleName, unsigned int startBin, unsigned int endBin, double lumi)
   : type_(type), name_(sampleName+"_"+util::toTString(type)) {
   count_ = 0;
 
@@ -146,7 +150,7 @@ Sample::Sample(const TString &fileName, int type, const TString &sampleName, uns
 
   // Average pt
   hPtAve_ = 0;
-  file.GetObject("hPtAveAbs",hPtAve_);
+  file.GetObject("hPtAve_Eta0",hPtAve_);
   if( hPtAve_ ) {
     hPtAve_->SetDirectory(0);
     newName = name()+"_PtAve";
@@ -162,13 +166,15 @@ Sample::Sample(const TString &fileName, int type, const TString &sampleName, uns
   // Pt asymmetry
   bool binExists = true;
   unsigned int ptBin = startBin;
-  while( ioIsOk && binExists && ptBin < endBin ) {
+  //  std::cout << "Reading from file " << fileName << std::endl;
+  while( ioIsOk && binExists && (ptBin < endBin) ) {
     TH1 *hPtAsym = 0;
-    file.GetObject("hPtAsym_"+util::toTString(ptBin),hPtAsym);
+    file.GetObject("hPtAsym_Eta"+util::toTString(etaBin)+"_Pt"+util::toTString(ptBin),hPtAsym);
     if( hPtAsym ) {
       hPtAsym->SetDirectory(0);
       newName = name()+"_PtAsym"+util::toTString(ptBin-startBin);
       hPtAsym->SetName(newName);
+      util::HistOps::normHist(hPtAsym,"width");
       hPtAsym->GetXaxis()->SetRangeUser(-0.5,0.5);
       util::HistOps::setAxisTitles(hPtAsym,"Asymmetry","","events",true);      
       hPtAsym->SetTitle("");
@@ -178,7 +184,7 @@ Sample::Sample(const TString &fileName, int type, const TString &sampleName, uns
       ++ptBin;
     } else {
       binExists = false;
-    }    
+    }
   }
 
   file.Close();  
@@ -232,6 +238,19 @@ Sample::~Sample() {
 
 
 // --------------------------------------------------
+double Sample::tailCleanStart(unsigned int i) const {
+  double start = 1.;
+  for(int bin = hTailsClean_[i]->FindBin(0); bin <= hTailsClean_[i]->GetNbinsX(); ++bin) {
+    if( hTailsClean_[i]->GetBinContent(bin) > 0. ) {
+      start = hTailsClean_[i]->GetBinCenter(bin);
+      break;
+    }
+  }
+  return start;
+}
+
+
+// --------------------------------------------------
 TH1* Sample::hist(const TH1* h) const {
   ++count_;
   TString name = h->GetName();
@@ -267,7 +286,7 @@ void Sample::fitWidth(const util::HistVec &h, std::vector<double> &width, std::v
   for(util::HistItConst it = h.begin(); it != h.end(); ++it) {
     double w = 0.;
     double e = 10000.;
-    func::fitCoreWidth(*it,w,e);
+    func::fitCoreWidth(*it,gNSigCore_,w,e);
     width.push_back(w);
     widthErr.push_back(e);
   }
@@ -288,7 +307,7 @@ void Sample::smearAsymmetry(const Sample* dataSample) {
   fitWidth(hPtAsymSmeared_,widthAsymSmeared_,widthAsymErrSmeared_);
   
   // Extract tails from smeared asymmetry
-  getTails(hPtAsymSmeared_);
+  getTails(hPtAsymSmeared_, dataSample);
 }
 
 
@@ -317,7 +336,7 @@ void Sample::smearAsymmetry(const std::vector<double> &scaling, const util::Hist
 
 
 // --------------------------------------------------
-void Sample::getTails(const util::HistVec &h) {
+void Sample::getTails(const util::HistVec &h, const Sample* dataSample) {
   for(util::HistIt it = hTails_.begin(); it != hTails_.end(); ++it) {
     delete *it;
   }
@@ -337,12 +356,29 @@ void Sample::getTails(const util::HistVec &h) {
   nTail_ = std::vector<double>(nBins());
 
   for(unsigned int i = 0; i < nBins(); ++i) {
-    double tmpResult = func::getTail(h[i],hTails_[i],hTailsClean_[i],fTailFits_[i]);
+    double tmpResult = 0.;
+    if( gFitGauss_ ) {
+      if( dataSample ) {
+	tmpResult = func::getTailFromGauss(h[i],dataSample->fTail(i),dataSample->tailCleanStart(i),gNSigCore_,hTails_[i],hTailsClean_[i],fTailFits_[i]);
+      } else {
+	tmpResult = func::getTail(h[i],gNSigCore_,gNSigTailStart_,hTails_[i],hTailsClean_[i],fTailFits_[i]);
+      }
+    } else {
+      double w = widthAsym(i);
+      if( dataSample ) w = dataSample->widthAsym(i);
+      tmpResult = func::getTailCut(h[i],2.5*w,hTails_[i],hTailsClean_[i]);
+      TString name = h[i]->GetName();
+      name += "DummyGaussFit";
+      fTailFits_[i] = new TF1(name,"gaus");
+    }
     if( tmpResult < 0 ) {
       std::cerr << "ERROR in Sample::getTails(): Fitting of tail in bin " << i << " did not work.\n";
       nTail_[i] = 0;
     } else {
       nTail_[i] = tmpResult;
+    }
+    if( type() == 1 ) {
+      fTailFits_[i]->SetLineStyle(2);
     }
   }
 }
@@ -359,7 +395,7 @@ void Sample::setStyle(TH1 *h) const {
     h->SetMarkerStyle(20);
   } else if( type() == 1 ) {
     h->SetMarkerStyle(1);
-    h->SetFillColor(5);
+    h->SetFillColor( (gJetAlgo_.Contains("PF") ? 38 : 5) );
   }
 }
 
@@ -370,7 +406,7 @@ void Sample::setStyle(TH1 *h) const {
 // --------------------------------------------------
 class SampleAdmin {
 public:
-  SampleAdmin(const TString &fileData, const TString &fileMC, std::vector<double> ptBinEdges, double lumi, unsigned int mcStartBin = 0, unsigned int mcEndBin = 0);
+  SampleAdmin(const TString &fileData, const TString &fileMC, std::vector<double> ptBinEdges, unsigned int etaBin, double lumi, unsigned int mcStartBin = 0, unsigned int mcEndBin = 0);
   ~SampleAdmin();
 
   TString name() const { return name_; }
@@ -413,9 +449,8 @@ private:
 
 typedef std::vector<SampleAdmin*>::const_iterator AdminIt;
 
-//sampleName+"_"+util::toTString(ptMin())+"-"+util::toTString(ptMax())+"_"
 
-SampleAdmin::SampleAdmin(const TString &fileData, const TString &fileMC, std::vector<double> ptBinEdges, double lumi, unsigned int mcStartBin, unsigned int mcEndBin)
+SampleAdmin::SampleAdmin(const TString &fileData, const TString &fileMC, std::vector<double> ptBinEdges, unsigned int etaBin, double lumi, unsigned int mcStartBin, unsigned int mcEndBin)
   : ptBinEdges_(ptBinEdges), lumi_(lumi) {
 
   name_= gUID_+"_Pt"+util::toTString(ptMin())+"-"+util::toTString(ptMax()); 
@@ -424,8 +459,8 @@ SampleAdmin::SampleAdmin(const TString &fileData, const TString &fileMC, std::ve
   
   // Create samples holding histograms
   TString tmpName = name()+"_"+util::toTString(ptMin())+"-"+util::toTString(ptMax());
-  data_ = new Sample(fileData,0,tmpName,0,1000);
-  mc_ = new Sample(fileMC,1,tmpName,mcStartBin,mcEndBin,lumi_);
+  data_ = new Sample(fileData,etaBin,0,tmpName,0,1000);
+  mc_ = new Sample(fileMC,etaBin,1,tmpName,mcStartBin,mcEndBin,lumi_);
   mc_->smearAsymmetry(data_);
 
   // Checks
@@ -584,9 +619,13 @@ void SampleAdmin::plotSmearedAsymmetry() const {
     hData->Draw("PE1same");
     createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
     createLabelEta()->Draw("same");
-    createLegend(hData,hMC,tailData,tailMC)->Draw("same");
-    tailMC->Draw("same");
-    tailData->Draw("same");
+    if( gFitGauss_ ) {
+      tailMC->Draw("same");
+      tailData->Draw("same");
+      createLegend(hData,hMC,tailData,tailMC)->Draw("same");
+    } else {
+      createLegend(hData,hMC)->Draw("same");
+    }
     can->SaveAs(outNamePrefix()+"TailFitLinear_"+util::toTString(i)+".eps","eps");
 
     // Log scale    
@@ -609,9 +648,13 @@ void SampleAdmin::plotSmearedAsymmetry() const {
     hData->Draw("PE1same");
     createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
     createLabelEta()->Draw("same");
-    createLegend(hData,hMC,tailData,tailMC)->Draw("same");
-    tailMC->Draw("same");
-    tailData->Draw("same");
+    if( gFitGauss_ ) {
+      tailMC->Draw("same");
+      tailData->Draw("same");
+      createLegend(hData,hMC,tailData,tailMC)->Draw("same");
+    } else {
+      createLegend(hData,hMC)->Draw("same");
+    }
     can->SetLogy(1);
     can->SaveAs(outNamePrefix()+"TailFit_"+util::toTString(i)+".eps","eps");
 
@@ -665,7 +708,11 @@ void SampleAdmin::plotTails() const {
   for(unsigned int i = 0; i < nPtBins(); ++i) {
     TH1 *hMC = mc_->hTailClean(i);
     TH1 *hData = data_->hTailClean(i);
-    util::HistOps::setYRange(hMC,5);
+    double min = 10.;
+    double max = 0.;
+    util::HistOps::findYRange(hData,min,max);
+    hMC->GetYaxis()->SetRangeUser(min,2.*max);
+    //util::HistOps::setYRange(hMC,5);
     hMC->GetXaxis()->SetRangeUser(0.,1.);
     TString canName = name()+"Tail_"+util::toTString(i);
     TCanvas *can = new TCanvas(canName,canName,500,500);
@@ -958,24 +1005,47 @@ void fitTailsFromAsym() {
   gErrorIgnoreLevel = 1001;
   util::StyleSettings::presentation();
 
-  gEtaMin_ = "0";
-  gEtaMax_ = "1.1";
+  unsigned int etaBin = 0;
   gPPCutMin_ = "10";
   gPPCutMax_ = "10";
   gJetAlgo_ = "Calo";
   gDeltaPhiCut_ = "|#Delta#phi| > 2.7";
+  gNSigCore_ = 2.;
+  gNSigTailStart_ = 3.5;
+  gFitGauss_ = true;
 
+
+  if( etaBin == 0 ) {
+    gEtaMin_ = "0.0";
+    gEtaMax_ = "1.1";
+  } else if( etaBin == 1 ) {
+    gEtaMin_ = "1.1";
+    gEtaMax_ = "1.7";
+  } else if( etaBin == 2 ) {
+    gEtaMin_ = "1.7";
+    gEtaMax_ = "2.3";
+  } else if( etaBin == 3 ) {
+    gEtaMin_ = "2.3";
+    gEtaMax_ = "5.0";
+  }
+
+  TString inNamePrefix = "~/results/ResolutionFit/TailScaling/Tails_";
   TString inNameSuffix = "default.root";
   if( gPPCutMin_ == gPPCutMax_ ) {
-    gUID_ = "Tails_"+gJetAlgo_+"_Eta"+numLabel(gEtaMin_)+"-"+numLabel(gEtaMax_)+"_Pp"+gPPCutMax_;
-    gJetAlgo_ = "AK5 "+gJetAlgo_+"-Jets";
-    gPPCutLabel_ = "p_{||} < 0."+gPPCutMax_;
+    gUID_ = "Tails_"+gJetAlgo_+"_Eta"+numLabel(gEtaMin_)+"-"+numLabel(gEtaMax_)+"_PSoft"+gPPCutMax_+"_NSigTail"+numLabel(util::toTString(gNSigTailStart_));
+    inNamePrefix += gJetAlgo_+"_";
     inNameSuffix = "_Pp"+gPPCutMax_+"/jsResponse.root";
+
+    gJetAlgo_ = "AK5 "+gJetAlgo_+"-Jets";
+    //gPPCutLabel_ = "p_{||} < 0."+gPPCutMax_;
+    gPPCutLabel_ = "p_{T,3} < 0."+gPPCutMax_;
   } else {
     gUID_ = "Tails_"+gJetAlgo_+"_Eta"+numLabel(gEtaMin_)+"-"+numLabel(gEtaMax_)+"_Pp"+gPPCutMin_+"-"+gPPCutMax_;
+    inNamePrefix += gJetAlgo_+"_";
+    inNameSuffix = "_Pp"+gPPCutMin_+"-"+gPPCutMax_+"/jsResponse.root";
+
     gJetAlgo_ = "AK5 "+gJetAlgo_+"-Jets";
     gPPCutLabel_ = "0."+gPPCutMin_+" < p_{||} < 0."+gPPCutMax_;
-    inNameSuffix = "_Pp"+gPPCutMin_+"-"+gPPCutMax_+"/jsResponse.root";
   }
   
   std::vector<SampleAdmin*> admins;
@@ -986,19 +1056,28 @@ void fitTailsFromAsym() {
   //90 100 120 150 170 200 250 300 350 400 500 1000
   //0  1   2   3   4   5   6   7   8   9   10  11
 
-//   // HLT 70
-//   ptBinEdges.clear();
-//   ptBinEdges.push_back(120.);
-//   ptBinEdges.push_back(150.);
-//   admins.push_back(new SampleAdmin("~/results/ResolutionFit/TailScaling/Tails_Calo_Data_Eta00-11_Pt0120-0150"+inNameSuffix,"~/results/ResolutionFit/TailScaling/Tails_Calo_MC_Eta00-11_Pt0090-1000"+inNameSuffix,ptBinEdges,2.0,2,3));
 
+
+  // HLT 50
+  ptBinEdges.clear();
+  ptBinEdges.push_back(90.);
+  ptBinEdges.push_back(100.);
+  ptBinEdges.push_back(120.);
+  admins.push_back(new SampleAdmin(inNamePrefix+"Data_Pt0090-0120"+inNameSuffix,inNamePrefix+"MC_Pt0090-1000"+inNameSuffix,ptBinEdges,etaBin,2.9,0,2));
+
+  // HLT 70
+  ptBinEdges.clear();
+  ptBinEdges.push_back(120.);
+  ptBinEdges.push_back(150.);
+  admins.push_back(new SampleAdmin(inNamePrefix+"Data_Pt0120-0150"+inNameSuffix,inNamePrefix+"MC_Pt0090-1000"+inNameSuffix,ptBinEdges,etaBin,7.3,2,3));
+  
   // HLT 100
   ptBinEdges.clear();
   ptBinEdges.push_back(150.);
   ptBinEdges.push_back(170.);
   ptBinEdges.push_back(200.);
-  admins.push_back(new SampleAdmin("~/results/ResolutionFit/TailScaling/Tails_Calo_Data_Eta00-11_Pt0150-0200"+inNameSuffix,"~/results/ResolutionFit/TailScaling/Tails_Calo_MC_Eta00-11_Pt0090-1000"+inNameSuffix,ptBinEdges,9.6,3,5));
-
+  admins.push_back(new SampleAdmin(inNamePrefix+"Data_Pt0150-0200"+inNameSuffix,inNamePrefix+"MC_Pt0090-1000"+inNameSuffix,ptBinEdges,etaBin,14.9,3,5));
+  
   // HLT 140
   ptBinEdges.clear();
   ptBinEdges.push_back(200.);
@@ -1008,7 +1087,7 @@ void fitTailsFromAsym() {
   ptBinEdges.push_back(400.);
   ptBinEdges.push_back(500.);
   ptBinEdges.push_back(1000.);
-  admins.push_back(new SampleAdmin("~/results/ResolutionFit/TailScaling/Tails_Calo_Data_Eta00-11_Pt0200-1000"+inNameSuffix,"~/results/ResolutionFit/TailScaling/Tails_Calo_MC_Eta00-11_Pt0090-1000"+inNameSuffix,ptBinEdges,27.4,5,11));
+  admins.push_back(new SampleAdmin(inNamePrefix+"Data_Pt0200-1000"+inNameSuffix,inNamePrefix+"MC_Pt0090-1000"+inNameSuffix,ptBinEdges,etaBin,32.7,5,11));
 
 
 
@@ -1203,7 +1282,8 @@ void fitTailsFromAsym() {
   TH1 *hScalFacFrame = util::HistOps::createRatioFrame(hScalFac[0],"Tail Scaling Factor",2);
   TCanvas *canScalFac = new TCanvas("canScalFac","Scaling factors",500,500);
   canScalFac->cd();
-  hScalFacFrame->GetYaxis()->SetRangeUser(0.,10.);
+  if( gFitGauss_ ) hScalFacFrame->GetYaxis()->SetRangeUser(0.,8.);
+  else hScalFacFrame->GetYaxis()->SetRangeUser(0.,3.);
   hScalFacFrame->GetXaxis()->SetMoreLogLabels();
   hScalFacFrame->Draw();
   for(unsigned int i = 0; i < 1; ++i) {
@@ -1215,6 +1295,36 @@ void fitTailsFromAsym() {
   canScalFac->SaveAs(gUID_+"_ScalingFactors.eps","eps");
 
 
+  // Rebinned
+  std::vector<double> binEdgesAllTrend;
+  binEdgesAllTrend.push_back(binEdgesAll.front());
+  binEdgesAllTrend.push_back(binEdgesAll.at(3));
+  binEdgesAllTrend.push_back(binEdgesAll.at(6));
+  binEdgesAllTrend.push_back(binEdgesAll.back());
+  TH1* hScalFacTrend = util::HistOps::createTH1D("hScalFacTrend",binEdgesAllTrend,
+						 "p^{ave}_{T}","GeV","Tail Scaling Factor");
+  hScalFacTrend->SetMarkerStyle(20);
+  for(int bin = 1; bin <= hScalFacTrend->GetNbinsX(); ++bin) {
+    double left = hScalFacTrend->GetXaxis()->GetBinLowEdge(bin);
+    double right = hScalFacTrend->GetXaxis()->GetBinUpEdge(bin);
+    
+    if( hScalFac[0]->Fit("pol0","0QR","",left,right) == 0 ) {
+      hScalFacTrend->SetBinContent(bin,hScalFac[0]->GetFunction("pol0")->GetParameter(0));
+      hScalFacTrend->SetBinError(bin,hScalFac[0]->GetFunction("pol0")->GetParError(0));
+    }
+  }
+  hScalFacFrame->GetYaxis()->SetRangeUser(0.,3.5);
+  hScalFacFrame->Draw();
+  for(unsigned int i = 0; i < 1; ++i) {
+    hScalFacTrend->Draw("PE1same");
+  }
+  labelAll->Draw("same");
+  labelEta->Draw("same");
+  canScalFac->SetLogx();
+  canScalFac->SaveAs(gUID_+"_ScalingFactorsTrend.eps","eps");
+
+
+
   // Write selected histograms to file
   TFile outFile((gUID_+".root"),"RECREATE");
   outFile.WriteTObject(hRatioWidthAsymFrame);
@@ -1222,6 +1332,7 @@ void fitTailsFromAsym() {
   outFile.WriteTObject(hRatioWidthSmearAsym);
   outFile.WriteTObject(hScalFacFrame);
   outFile.WriteTObject(hScalFac[0]);
+  outFile.WriteTObject(hScalFacTrend);
 
   outFile.Close();
 

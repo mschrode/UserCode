@@ -64,7 +64,7 @@ namespace func {
 
 
   // --------------------------------------------------
-  double getTail(const TH1* hAsym, double nSig, TH1* &hTail, TH1* &hTailClean, TF1* &gauss) {
+  double getTail(const TH1* hAsym, double nSigCore, double nSigTailStart, TH1* &hTail, TH1* &hTailClean, TF1* &gauss) {
     double numTail = -1.;
   
     TString name = hAsym->GetName();
@@ -80,7 +80,9 @@ namespace func {
   
     double width = 0.;
     double widthErr = 1000.;
-    if( fitCoreWidth(hAsym,nSig,gauss,width,widthErr) ) {
+    if( fitCoreWidth(hAsym,nSigCore,gauss,width,widthErr) ) {
+      int optLeftTailStartBin = hTail->FindBin(-1.*std::abs(nSigTailStart*width));
+      int optRightTailStartBin = hTail->FindBin(std::abs(nSigTailStart*width));
       for(int bin = 1; bin <= hTail->GetNbinsX(); ++bin) {
 	double min = hTail->GetXaxis()->GetBinLowEdge(bin);
 	double max = hTail->GetXaxis()->GetBinUpEdge(bin);
@@ -89,7 +91,7 @@ namespace func {
 	if( tailPdf < 0. ) tailPdf = 0.;
 	hTail->SetBinContent(bin,tailPdf);
 	
-	if( tailPdf > gaussPdf ) {
+	if( bin <= optLeftTailStartBin || bin >= optRightTailStartBin ) {
 	  hTailClean->SetBinContent(bin,hTail->GetBinContent(bin));
 	  hTailClean->SetBinError(bin,hTail->GetBinError(bin));
 	}
