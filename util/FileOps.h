@@ -1,4 +1,4 @@
-// $Id: FileOps.h,v 1.2 2010/11/17 21:05:30 mschrode Exp $
+// $Id: FileOps.h,v 1.3 2010/11/28 13:50:48 mschrode Exp $
 
 #ifndef FileOps_h
 #define FileOps_h
@@ -26,7 +26,7 @@ namespace util
 
   //! Read TH1 histogram from file
   // -------------------------------------------------------------------------------------
-  static TH1* FileOps::readTH1(const TString &fileName, const TString &histName, const TString &newHistName = "") {
+  TH1* FileOps::readTH1(const TString &fileName, const TString &histName, const TString &newHistName) {
     TFile file(fileName,"READ");
     TH1 *h = 0;
     file.GetObject(histName,h);
@@ -44,7 +44,7 @@ namespace util
   
   //! Read TH1 histograms from different files
   // -------------------------------------------------------------------------------------
-  static util::HistVec FileOps::readTH1(const std::vector<TString> &fileNames, const TString &histName, const TString &newHistName = "") {
+  util::HistVec FileOps::readTH1(const std::vector<TString> &fileNames, const TString &histName, const TString &newHistName) {
     util::HistVec v(fileNames.size());
     for(unsigned int i = 0; i < fileNames.size(); ++i) {
       v[i] = readTH1(fileNames[i],histName,newHistName+util::toTString(i));
@@ -57,7 +57,7 @@ namespace util
   
   //! Read TH1 histograms from one file
   // -------------------------------------------------------------------------------------
-  static util::HistVec FileOps::readHistVec(const TString &fileName, const TString &histName, const TString &newHistName = "") {
+  util::HistVec FileOps::readHistVec(const TString &fileName, const TString &histName, const TString &newHistName) {
     util::HistVec v;
     TFile file(fileName,"READ");
     bool binExists = true;
