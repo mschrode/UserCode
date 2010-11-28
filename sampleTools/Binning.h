@@ -1,4 +1,4 @@
-// $Id: Binning.h,v 1.1 2010/11/26 22:42:03 mschrode Exp $
+// $Id: Binning.h,v 1.2 2010/11/27 23:56:12 mschrode Exp $
 
 #ifndef BINNING_H
 #define BINNING_H
@@ -33,6 +33,8 @@ namespace sampleTools {
     double ptMin(unsigned int etaBin, unsigned int ptBin) const { return ptBinEdges_.at(etaBin).at(ptBin); }
     double ptMax(unsigned int etaBin, unsigned int ptBin) const { return ptBinEdges_.at(etaBin).at(ptBin+1); }
     double ptEdge(unsigned int etaBin, unsigned int ptBinEdge) const { return ptBinEdges_.at(etaBin).at(ptBinEdge); }
+    const std::vector<double> ptBinEdges(unsigned int etaBin) const { return ptBinEdges_.at(etaBin); }
+    const std::vector<double> ptBinEdgesInt(unsigned int etaBin) const;
     
     bool findEtaBin(double eta, unsigned int &etaBin) const { return findBin(std::abs(eta),etaBinEdges_,etaBin); }
     bool findSameEtaBin(double eta1, double eta2, unsigned int &etaBin) const;
@@ -192,6 +194,23 @@ namespace sampleTools {
     }
     
     return inRange;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  const std::vector<double> Binning::ptBinEdgesInt(unsigned int etaBin) const {
+    // Should be done in a smarter way
+    std::vector<double> ptBinEdgesInt;
+    ptBinEdgesInt.push_back(ptMin(etaBin));
+    if( nPtBins(etaBin) > 4  && nPtBins(etaBin) < 10 ) {
+      ptBinEdgesInt.push_back(ptMax(etaBin,1));
+    } else {
+      ptBinEdgesInt.push_back(ptMax(etaBin,2));
+      ptBinEdgesInt.push_back(ptMax(etaBin,5));
+    }    
+    ptBinEdgesInt.push_back(ptMax(etaBin));
+    
+    return ptBinEdgesInt;
   }
 
 

@@ -1,4 +1,4 @@
-// $Id: BinningAdmin.h,v 1.2 2010/11/27 23:56:12 mschrode Exp $
+// $Id: BinningAdmin.h,v 1.3 2010/11/28 13:49:13 mschrode Exp $
 
 #ifndef BINNING_ADMIN_H
 #define BINNING_ADMIN_H
@@ -29,6 +29,10 @@ namespace sampleTools {
     double etaMax(unsigned int etaBin) const { return bins_->etaMax(etaBin); }
     double ptMin(unsigned int etaBin, unsigned int ptBin) const { return bins_->ptMin(etaBin,ptBin); }
     double ptMax(unsigned int etaBin, unsigned int ptBin) const { return bins_->ptMax(etaBin,ptBin); }
+    double ptMin(unsigned int etaBin) const { return bins_->ptMin(etaBin); }
+    double ptMax(unsigned int etaBin) const { return bins_->ptMax(etaBin); }
+    const std::vector<double> ptBinEdges(unsigned int etaBin) const { return bins_->ptBinEdges(etaBin); }
+    const std::vector<double> ptBinEdgesInt(unsigned int etaBin) const { return bins_->ptBinEdgesInt(etaBin);}
     double ptSoftMin(unsigned int ptSoftBin) const { return ptSoftMin_.at(ptSoftBin); }
     double ptSoftMax(unsigned int ptSoftBin) const { return ptSoftMax_.at(ptSoftBin); }
     
@@ -44,6 +48,8 @@ namespace sampleTools {
     }
     unsigned int nPtBins(const TString &hltName, unsigned int etaBin) const;
     bool findPtBin(const TString &hltName, double pt, unsigned int etaBin, unsigned int &ptBin) const;
+    bool findHltMax(unsigned int etaBin, unsigned int ptBin, TString &hltName) const;
+    
     void printBinning() const { bins_->print(); }
 
     double hltTurnOn(const TString &hltName) const {
@@ -53,6 +59,11 @@ namespace sampleTools {
     double hltLumi(const TString &hltName) const {
       HltInfoIt it = hltInfos_.find(hltName);
       return it != hltInfos_.end() ? it->second->lumi() : 0.;
+    }
+    double hltLumi(unsigned int etaBin, unsigned int ptBin) const {
+      TString hltName;
+      findHltMax(etaBin,ptBin,hltName);
+      return hltLumi(hltName);
     }
     unsigned int hltMinPtBin(const TString &hltName, unsigned int etaBin) const {
       HltInfoIt it = hltInfos_.find(hltName);
@@ -241,6 +252,22 @@ namespace sampleTools {
       unsigned int max = hltMaxPtBin(hltName,etaBin);
       if( ptBin >= min && ptBin <= max ) {
 	inRange = true;
+      }
+    }
+
+    return inRange;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  bool BinningAdmin::findHltMax(unsigned int etaBin, unsigned int ptBin, TString &hltName) const {
+    bool inRange = false;
+    hltName = "none";
+    for(HltInfoIt hltIt = hltInfos_.begin(); hltIt != hltInfos_.end(); ++hltIt) {
+      if( ptBin >= hltIt->second->minPtBin(etaBin) && ptBin <= hltIt->second->maxPtBin(etaBin) ) {
+	hltName = hltIt->first;
+	inRange = true;
+	break;
       }
     }
 
