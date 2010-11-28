@@ -1,9 +1,8 @@
-// $Id: fitTailsFromAsym.C,v 1.6 2010/11/19 16:29:23 mschrode Exp $
+// $Id: fitTailsFromAsym.C,v 1.7 2010/11/28 13:59:30 mschrode Exp $
 
-#include <cassert>
 #include <cmath>
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <vector>
 
 #include "TCanvas.h"
@@ -15,8 +14,10 @@
 #include "TLegend.h"
 #include "TPaveText.h"
 
+#include "../sampleTools/BinningAdmin.h"
 #include "../util/utils.h"
 #include "../util/HistOps.h"
+#include "../util/FileOps.h"
 #include "../util/LabelFactory.h"
 #include "../util/StyleSettings.h"
 
@@ -24,38 +25,133 @@
 
 
 
+///////////////////////////////////////////////////////////////////////////
+//
+//  Type definitions
+//
+///////////////////////////////////////////////////////////////////////////
 
 
-TString gJetAlgo_ = "AK5 Calo-Jets";
-TString gDeltaPhiCut_ = "|#Delta#phi| > 2.7";
-TString gEtaMin_ = "0";
-TString gEtaMax_ = "1.3";
-TString gPPCutMin_ = "0";
-TString gPPCutMax_ = "0.1";
-TString gPPCutLabel_ = "p_{||} < 0.1";
-TString gUID_ = "uid";
-double gNSigCore_ = 2.;
-double gNSigTailStart_ = 3.;
-bool gFitGauss_ = true;
+// +++++ Class Parameters +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+class Parameters {
+ public:
+  Parameters(const sampleTools::BinningAdmin* admin, double nSigCore, double nSigTailStart, const TString &fileData, const TString &fileMC);
+  
+  const sampleTools::BinningAdmin* binningAdmin() const { return admin_; }
+  double nSigCore() const { return nSigCore_; };
+  double nSigTailStart() const { return nSigTailStart_; }
+  TString inFileNameData() const { return inFileNameData_; }
+  TString inFileNameMC() const { return inFileNameMC_; }
+  TString outFileNamePrefix() const { return outFileNamePrefix_; }
+  TString outFileNamePrefix(unsigned int etaBin) const { return outFileNamePrefix_+"Eta"+util::toTString(etaBin)+"_"; }
+  TString outFileNamePrefix(unsigned int etaBin, unsigned int ptBin) const { return outFileNamePrefix_+"Eta"+util::toTString(etaBin)+"_Pt"+util::toTString(ptBin)+"_"; }
+  TString labelJetAlgo() const { return labelJetAlgo_; }
+  TString labelDeltaPhiCut() const { return labelDeltaPhiCut_; }
+  TString labelPSoftCut() const { return labelPSoftCut_; }
+  int fillColor() const { return (labelJetAlgo().Contains("PF")) ? 38 : 5; }
+
+
+ private:
+  const sampleTools::BinningAdmin* admin_;
+  const double nSigCore_;
+  const double nSigTailStart_;
+  const TString inFileNameData_;
+  const TString inFileNameMC_;
+
+  TString outFileNamePrefix_;
+  TString labelJetAlgo_;
+  TString labelDeltaPhiCut_;
+  TString labelPSoftCut_;
+};
+
+
+// ------------------------------------------------------------------------------------
+Parameters::Parameters(const sampleTools::BinningAdmin* admin, double nSigCore, double nSigTailStart, const TString &fileData, const TString &fileMC)
+  : admin_(admin), nSigCore_(nSigCore), nSigTailStart_(nSigTailStart), inFileNameData_(fileData), inFileNameMC_(fileMC) {
+
+  // Prefix for output files
+  outFileNamePrefix_ = "Tails_";
+  if( inFileNameData_.Contains("Calo") && inFileNameMC_.Contains("Calo") ) {
+    outFileNamePrefix_ += "Calo_";
+    labelJetAlgo_ = "AK5 Calo-Jets";
+  } else if( inFileNameData_.Contains("PF") && inFileNameMC_.Contains("PF") ) {
+    outFileNamePrefix_ += "PF_";  
+    labelJetAlgo_ = "AK5 PF-Jets";
+  } else {
+    std::cerr << "WARNING in Parameters: unknown or inconsistent jet algorithms for data and MC" << std::endl;
+  }
+
+  labelDeltaPhiCut_ = "|#Delta#phi| > 2.7";
+  labelPSoftCut_ = "p_{||} < 0.1";
+}
 
 
 
-TPaveText* createLabel(double ptAveMin, double ptAveMax, double lumi = -1.) {
+// +++++ Class Label ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+class Label {
+public:
+  Label(const Parameters* par);
+  
+  TPaveText* info(unsigned int etaBin, unsigned int ptBin) const;
+  TPaveText* info(unsigned int etaBin) const;
+  TPaveText* eta(unsigned int etaBin) const;
+  TLegend* legend(const TH1* hData, const TH1* hMC, const TF1* tailData = 0, const TF1* tailMC = 0) const;
+  
+
+private:
+  const Parameters* par_;
+};
+
+
+// ------------------------------------------------------------------------------------
+Label::Label(const Parameters* par) : par_(par) {}
+
+
+// ------------------------------------------------------------------------------------
+TPaveText* Label::info(unsigned int etaBin, unsigned int ptBin) const {
+  double lumi = par_->binningAdmin()->hltLumi(etaBin,ptBin);
+  double min = par_->binningAdmin()->ptMin(etaBin,ptBin);
+  double max = par_->binningAdmin()->ptMax(etaBin,ptBin);
+
   TPaveText *txt = util::LabelFactory::createPaveText(3,-0.68);
-  if( lumi > 0. ) txt->AddText("L = "+util::toTString(lumi)+" pb^{-1},  "+gJetAlgo_+",");
-  else txt->AddText(gJetAlgo_+",");
-  txt->AddText(gDeltaPhiCut_+",  "+gPPCutLabel_+"#upoint#bar{p^{ave}_{T}}");
-  txt->AddText(util::toTString(ptAveMin)+" < p^{ave}_{T} < "+util::toTString(ptAveMax)+" GeV");
+  if( lumi > 0. ) txt->AddText("L = "+util::toTString(lumi)+" pb^{-1},  "+par_->labelJetAlgo()+",");
+  else txt->AddText(par_->labelJetAlgo()+",");
+  txt->AddText(par_->labelDeltaPhiCut()+",  "+par_->labelPSoftCut()+"#upoint#bar{p^{ave}_{T}}");
+  txt->AddText(util::toTString(min)+" < p^{ave}_{T} < "+util::toTString(max)+" GeV");
+
   return txt;
 }
 
-TPaveText* createLabelEta() {
+
+// ------------------------------------------------------------------------------------
+TPaveText* Label::info(unsigned int etaBin) const {
+  double min = par_->binningAdmin()->ptMin(etaBin);
+  double max = par_->binningAdmin()->ptMax(etaBin);
+
+  TPaveText *txt = util::LabelFactory::createPaveText(3,-0.68);
+  txt->AddText(par_->labelJetAlgo()+",");
+  txt->AddText(par_->labelDeltaPhiCut()+",  "+par_->labelPSoftCut()+"#upoint#bar{p^{ave}_{T}}");
+  txt->AddText(util::toTString(min)+" < p^{ave}_{T} < "+util::toTString(max)+" GeV");
+
+  return txt;
+}
+
+
+// ------------------------------------------------------------------------------------
+TPaveText* Label::eta(unsigned int etaBin) const {
+  double min = par_->binningAdmin()->etaMin(etaBin);
+  double max = par_->binningAdmin()->etaMax(etaBin);
+
   TPaveText *txt = util::LabelFactory::createPaveText(1,0.32);
-  txt->AddText(gEtaMin_+" < |#eta| < "+gEtaMax_);
+  txt->AddText(util::toTString(min)+" < |#eta| < "+util::toTString(max));
+
   return txt;
 }
 
-TLegend* createLegend(const TH1* hData, const TH1* hMC, const TF1* tailData = 0, const TF1* tailMC = 0) {
+
+// ------------------------------------------------------------------------------------
+TLegend* Label::legend(const TH1* hData, const TH1* hMC, const TF1* tailData, const TF1* tailMC) const {
   TLegend *leg = 0;
   if( tailData && tailMC ) {
     leg = util::LabelFactory::createLegendColWithOffset(4,0.3,1);
@@ -73,176 +169,122 @@ TLegend* createLegend(const TH1* hData, const TH1* hMC, const TF1* tailData = 0,
 
 
 
-// --------------------------------------------------
-class Sample {
+
+// +++++ Class AsymmetryBin +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+class AsymmetryBin {
 public:
-  //  enum SampleType { Data, MC };
+  AsymmetryBin(const Parameters* par, int type, unsigned int etaBin, unsigned int ptBin);
+  ~AsymmetryBin();
 
-  Sample(const TString &fileName, unsigned int etaBin, int type, const TString &sampleName, unsigned int startBin, unsigned int endBin, double lumi = -1.);
-  ~Sample();
-
-  TString name() const { return name_; }
-  unsigned int nBins() const { return hPtAsym_.size(); }
-  //  SampleType type() const { return type_; }
   int type() const { return type_; }
   
-  TH1 *hPtAve() const { return hist(hPtAve_); }
-  TH1 *hPtAsym(unsigned int i) const { return hist(i,hPtAsym_); }
-  TH1 *hPtAsymSmeared(unsigned int i) const { return hist(i,hPtAsymSmeared_); }
-  TH1 *hTailClean(unsigned int i) const { return hist(i,hTailsClean_); }
-  double tailCleanStart(unsigned int i) const;
-  TF1 *fTail(unsigned int i) const;
+  TH1 *hPtAsym() const { return hist(hPtAsym_); }
+  TH1 *hPtAsymSmeared() const { return hist(hPtAsymSmeared_); }
+  TH1 *hTailClean() const { return hist(hTailClean_); }
+  double tailCleanStart() const;
+  TF1 *fTail() const;
   
-  double widthAsym(unsigned int i) const { return widthAsym_.at(i); }
-  double widthAsymErr(unsigned int i) const { return widthAsymErr_.at(i); }  
-  double widthAsymSmeared(unsigned int i) const { return widthAsymSmeared_.at(i); }
-  double widthAsymErrSmeared(unsigned int i) const { return widthAsymErrSmeared_.at(i); }  
+  double widthAsym() const { return widthAsym_; }
+  double widthAsymErr() const { return widthAsymErr_; }  
+  double widthAsymSmeared() const { return widthAsymSmeared_; }
+  double widthAsymErrSmeared() const { return widthAsymErrSmeared_; }  
 
-  double nTotal(unsigned int i) const { return nTotal_.at(i); }
-  double nTail(unsigned int i) const { return nTail_.at(i); }
+  double nTotal() const { return nTotal_; }
+  double nTail() const { return nTail_; }
 
-  void smearAsymmetry(const Sample* dataSample);
+  void smearMCAsymmetry(const AsymmetryBin* dataAsymmetryBin);
 
 
 private:
-  //const SampleType type_;
+  const Parameters* par_;
   const int type_;
-  const TString name_;
 
-  TH1 *hPtAve_;
-  util::HistVec hPtJet_;
-  util::HistVec hPtAsym_;
-  util::HistVec hPtAsymSmeared_;
+  TH1* hPtAsym_;
+  TH1* hPtAsymSmeared_;
+  TH1* hTail_;
+  TH1* hTailClean_;
+  TF1* fTailFit_;
 
-  util::HistVec hTails_;
-  util::HistVec hTailsClean_;
-  std::vector<TF1*> fTailFits_;
-
-  std::vector<double> widthAsym_;
-  std::vector<double> widthAsymErr_;
-  std::vector<double> widthAsymSmeared_;
-  std::vector<double> widthAsymErrSmeared_;
-
-  std::vector<double> nTotal_;
-  std::vector<double> nTail_;
+  double widthAsym_;
+  double widthAsymErr_;
+  double widthAsymSmeared_;
+  double widthAsymErrSmeared_;
+  double nTotal_;
+  double nTail_;
 
   mutable unsigned int count_;
 
-  void fitWidth(const util::HistVec &h, std::vector<double> &width, std::vector<double> &widthErr) const;
-  void getTails(const util::HistVec &h, const Sample* dataSample = 0);
+  void fitWidth(const TH1* h, double &width, double &widthErr) const {
+    func::fitCoreWidth(h,par_->nSigCore(),width,widthErr);
+  }
+  void getTail(const TH1* h, const TF1* fGauss = 0, double tailStart = 0);
   TH1* hist(const TH1* h) const;
-  TH1* hist(unsigned int i, const util::HistVec &h) const;
   void setStyle(TH1 *h) const;
-  void smearAsymmetry(const std::vector<double> &scaling, const util::HistVec &hOrig, util::HistVec &hSmeared) const;
-  void smearAsymmetry(double scaling, const util::HistVec &hOrig, util::HistVec &hSmeared) const;
+  void smearAsymmetry(double scaling, const TH1* hOrig, TH1* &hSmeared) const;
 };
 
 
-// --------------------------------------------------
-Sample::Sample(const TString &fileName, unsigned int etaBin, int type, const TString &sampleName, unsigned int startBin, unsigned int endBin, double lumi)
-  : type_(type), name_(sampleName+"_"+util::toTString(type)) {
+// ------------------------------------------------------------------------------------
+AsymmetryBin::AsymmetryBin(const Parameters* par, int type, unsigned int etaBin, unsigned int ptBin)
+  : par_(par), type_(type) {
   count_ = 0;
 
+  hPtAsymSmeared_ = 0;
+  hTail_ = 0;
+  hTailClean_ = 0;
+  fTailFit_ = 0;
+
+
   // Read histograms from file
-  bool ioIsOk = true;
-  TFile file(fileName,"READ");
-  TString newName;
-
-  // Average pt
-  hPtAve_ = 0;
-  file.GetObject("hPtAve_Eta0",hPtAve_);
-  if( hPtAve_ ) {
-    hPtAve_->SetDirectory(0);
-    newName = name()+"_PtAve";
-    hPtAve_->SetName(newName);
-    util::HistOps::setAxisTitles(hPtAve_,"p^{ave}_{T}","GeV","events");
-    hPtAve_->SetTitle("");
-    if( lumi > 0. ) hPtAve_->Scale(lumi);
-    setStyle(hPtAve_);
+  TString fileName;
+  if( type_ == 0 ) fileName = par_->inFileNameData();
+  else if( type_ == 1 ) fileName = par_->inFileNameMC();
+  TString histName = "hPtAsym_Eta"+util::toTString(etaBin)+"_Pt"+util::toTString(ptBin);
+  TString newHistName = "AsymmetryBin";
+  if( type_ == 0 ) newHistName += "_Data_";
+  else if( type_ == 1 ) newHistName += "_MC_";
+  newHistName += histName;
+  hPtAsym_ = util::FileOps::readTH1(fileName,histName,newHistName);
+  if( hPtAsym_ ) {
+    hPtAsym_->GetXaxis()->SetRangeUser(-1.,1);
+    util::HistOps::setAxisTitles(hPtAsym_,"Asymmetry","","events",true);      
+    hPtAsym_->SetTitle("");
+    setStyle(hPtAsym_);
+    nTotal_ = hPtAsym_->GetEntries();
   } else {
-    ioIsOk = false;
-  }
-
-  // Pt asymmetry
-  bool binExists = true;
-  unsigned int ptBin = startBin;
-  //  std::cout << "Reading from file " << fileName << std::endl;
-  while( ioIsOk && binExists && (ptBin < endBin) ) {
-    TH1 *hPtAsym = 0;
-    file.GetObject("hPtAsym_Eta"+util::toTString(etaBin)+"_Pt"+util::toTString(ptBin),hPtAsym);
-    if( hPtAsym ) {
-      hPtAsym->SetDirectory(0);
-      newName = name()+"_PtAsym"+util::toTString(ptBin-startBin);
-      hPtAsym->SetName(newName);
-      util::HistOps::normHist(hPtAsym,"width");
-      hPtAsym->GetXaxis()->SetRangeUser(-0.5,0.5);
-      util::HistOps::setAxisTitles(hPtAsym,"Asymmetry","","events",true);      
-      hPtAsym->SetTitle("");
-      setStyle(hPtAsym);
-      hPtAsym_.push_back(hPtAsym);
-      nTotal_.push_back(hPtAsym->GetEntries());
-      ++ptBin;
-    } else {
-      binExists = false;
-    }
-  }
-
-  file.Close();  
-
-  if( !ioIsOk ) {
-    std::cerr << "ERROR reading histograms from file '" << fileName << "'\n";
+    std::cerr << "ERROR reading histogram '" << histName << "' from file '" << fileName << "'\n";
     exit(1);
   }
 
-
   // Fitting width of asymmetry
   fitWidth(hPtAsym_,widthAsym_,widthAsymErr_);
+  // Extract tails from measured asymmetry
+  getTail(hPtAsym_);
 
-  if( type_ == 0 ) {
-    // Extract tails from measured asymmetry
-    getTails(hPtAsym_);
-  } else {
-    // Smearing asymmetry
-    smearAsymmetry(0.1,hPtAsym_,hPtAsymSmeared_);
-    fitWidth(hPtAsymSmeared_,widthAsymSmeared_,widthAsymErrSmeared_);
 
-    // Extract tails from smeared asymmetry
-    getTails(hPtAsymSmeared_);
-  }
+  // Initialize smeared histograms
+  smearAsymmetry(0.1,hPtAsym_,hPtAsymSmeared_);
+  fitWidth(hPtAsymSmeared_,widthAsymSmeared_,widthAsymErrSmeared_);
+  getTail(hPtAsymSmeared_);
 }
 
 
-
-// --------------------------------------------------
-Sample::~Sample() {
-  //   delete hPtAve_;
-  //   for(util::HistIt it = hPtJet_.begin(); it != hPtJet_.end(); ++it) {
-  //     delete *it;
-  //   }
-  //   for(util::HistIt it = hPtAsym_.begin(); it != hPtAsym_.end(); ++it) {
-  //     delete *it;
-  //   }
-  //   for(util::HistIt it = hPtAsymSmeared_.begin(); it != hPtAsymSmeared_.end(); ++it) {
-  //     delete *it;
-  //   }
-  //   for(util::HistIt it = hTails_.begin(); it != hTails_.end(); ++it) {
-  //     delete *it;
-  //   }
-  //   for(util::HistIt it = hTailsClean_.begin(); it != hTailsClean_.end(); ++it) {
-  //     delete *it;
-  //   }
-  //   for(std::vector<TF1*>::iterator it = fTailFits_.begin(); it != fTailFits_.end(); ++it) {
-  //     delete *it;
-  //   }
+// ------------------------------------------------------------------------------------
+AsymmetryBin::~AsymmetryBin() {
+  delete hPtAsym_;
+  delete hPtAsymSmeared_;
+  delete fTailFit_;
+  delete hTail_;
+  delete hTailClean_;
 }
 
 
-// --------------------------------------------------
-double Sample::tailCleanStart(unsigned int i) const {
+// ------------------------------------------------------------------------------------
+double AsymmetryBin::tailCleanStart() const {
   double start = 1.;
-  for(int bin = hTailsClean_[i]->FindBin(0); bin <= hTailsClean_[i]->GetNbinsX(); ++bin) {
-    if( hTailsClean_[i]->GetBinContent(bin) > 0. ) {
-      start = hTailsClean_[i]->GetBinCenter(bin);
+  for(int bin = hTailClean_->FindBin(0); bin <= hTailClean_->GetNbinsX(); ++bin) {
+    if( hTailClean_->GetBinContent(bin) > 0. ) {
+      start = hTailClean_->GetBinCenter(bin);
       break;
     }
   }
@@ -250,8 +292,8 @@ double Sample::tailCleanStart(unsigned int i) const {
 }
 
 
-// --------------------------------------------------
-TH1* Sample::hist(const TH1* h) const {
+// ------------------------------------------------------------------------------------
+TH1* AsymmetryBin::hist(const TH1* h) const {
   ++count_;
   TString name = h->GetName();
   name += count_;
@@ -259,1084 +301,799 @@ TH1* Sample::hist(const TH1* h) const {
 }
 
 
-// --------------------------------------------------
-TH1* Sample::hist(unsigned int i, const util::HistVec &h) const {
-  assert( i < nBins() );
+// ------------------------------------------------------------------------------------
+TF1* AsymmetryBin::fTail() const {
   ++count_;
-  TString name = h[i]->GetName();
+  TString name = fTailFit_->GetName();
   name += count_;
-  return static_cast<TH1*>(h[i]->Clone(name));
+  return static_cast<TF1*>(fTailFit_->Clone(name));
 }
 
 
-// --------------------------------------------------
-TF1* Sample::fTail(unsigned int i) const {
-  assert( i < nBins() );
-  ++count_;
-  TString name = fTailFits_[i]->GetName();
-  name += count_;
-  return static_cast<TF1*>(fTailFits_[i]->Clone(name));
-}
+// ------------------------------------------------------------------------------------
+void AsymmetryBin::smearMCAsymmetry(const AsymmetryBin* dataAsymmetryBin) {
 
-
-// --------------------------------------------------
-void Sample::fitWidth(const util::HistVec &h, std::vector<double> &width, std::vector<double> &widthErr) const {
-  width.clear();
-  widthErr.clear();
-  for(util::HistItConst it = h.begin(); it != h.end(); ++it) {
-    double w = 0.;
-    double e = 10000.;
-    func::fitCoreWidth(*it,gNSigCore_,w,e);
-    width.push_back(w);
-    widthErr.push_back(e);
-  }
-}
-
-
-
-// --------------------------------------------------
-void Sample::smearAsymmetry(const Sample* dataSample) {
   // Width ratio data / MC
-  std::vector<double> scales(dataSample->nBins());
-  for(unsigned int i = 0; i < dataSample->nBins(); ++i) {
-    scales[i] = ( dataSample->widthAsym(i)/widthAsym(i) - 1. );
-  }
+  double scale = dataAsymmetryBin->widthAsym()/widthAsym() - 1.;
 
   // Smearing asymmetry
-  smearAsymmetry(scales,hPtAsym_,hPtAsymSmeared_);
+  smearAsymmetry(scale,hPtAsym_,hPtAsymSmeared_);
   fitWidth(hPtAsymSmeared_,widthAsymSmeared_,widthAsymErrSmeared_);
   
   // Extract tails from smeared asymmetry
-  getTails(hPtAsymSmeared_, dataSample);
+  getTail(hPtAsymSmeared_,dataAsymmetryBin->fTail(),dataAsymmetryBin->tailCleanStart());
 }
 
 
-
-// --------------------------------------------------
-void Sample::smearAsymmetry(double scaling, const util::HistVec &hOrig, util::HistVec &hSmeared) const {
-  std::vector<double> scales(hOrig.size(),scaling);
-  smearAsymmetry(scales,hOrig,hSmeared);
+// ------------------------------------------------------------------------------------
+void AsymmetryBin::smearAsymmetry(double scaling, const TH1* hOrig, TH1* &hSmeared) const {
+  if( hSmeared ) delete hSmeared;
+  func::smearHistogram(hOrig,hSmeared,nTotal(),widthAsym(),scaling);
+  setStyle(hSmeared);
 }
  
  
-// --------------------------------------------------
-void Sample::smearAsymmetry(const std::vector<double> &scaling, const util::HistVec &hOrig, util::HistVec &hSmeared) const {
-  for(util::HistIt it = hSmeared.begin(); it != hSmeared.end(); ++it) {
-    delete *it;
-  }
-  hSmeared.clear();
-  hSmeared = util::HistVec(hOrig.size());
+// ------------------------------------------------------------------------------------
+void AsymmetryBin::getTail(const TH1* h, const TF1* fGauss, double tailStart) {
+  double tmpResult = 0.;
 
-  for(unsigned int i = 0; i < hOrig.size(); ++i) {
-    func::smearHistogram(hOrig[i],hSmeared[i],nTotal(i),widthAsym(i),scaling[i]);
-    setStyle(hSmeared[i]);
-  }
-}
+  if( hTail_ ) delete hTail_;
+  if( hTailClean_ ) delete hTailClean_;
+  if( fTailFit_ ) delete fTailFit_;
 
-
-
-// --------------------------------------------------
-void Sample::getTails(const util::HistVec &h, const Sample* dataSample) {
-  for(util::HistIt it = hTails_.begin(); it != hTails_.end(); ++it) {
-    delete *it;
+  if( fGauss && tailStart ) {
+    tmpResult = func::getTailFromGauss(h,fGauss,tailStart,par_->nSigCore(),hTail_,hTailClean_,fTailFit_);
+  } else {
+    tmpResult = func::getTail(h,par_->nSigCore(),par_->nSigTailStart(),hTail_,hTailClean_,fTailFit_);
   }
-  hTails_.clear();
-  hTails_ = util::HistVec(nBins());
-  for(util::HistIt it = hTailsClean_.begin(); it != hTailsClean_.end(); ++it) {
-    delete *it;
+  if( tmpResult < 0 ) {
+    std::cerr << "ERROR in AsymmetryBin::getTail(): Fitting of tail did not work.\n";
+    nTail_ = 0;
+  } else {
+    nTail_ = tmpResult;
   }
-  hTailsClean_.clear();
-  hTailsClean_ = util::HistVec(nBins());
-  for(std::vector<TF1*>::iterator it = fTailFits_.begin(); it != fTailFits_.end(); ++it) {
-    delete *it;
-  }
-  fTailFits_.clear();
-  fTailFits_ = std::vector<TF1*>(nBins());
-  nTail_.clear();
-  nTail_ = std::vector<double>(nBins());
 
-  for(unsigned int i = 0; i < nBins(); ++i) {
-    double tmpResult = 0.;
-    if( gFitGauss_ ) {
-      if( dataSample ) {
-	tmpResult = func::getTailFromGauss(h[i],dataSample->fTail(i),dataSample->tailCleanStart(i),gNSigCore_,hTails_[i],hTailsClean_[i],fTailFits_[i]);
-      } else {
-	tmpResult = func::getTail(h[i],gNSigCore_,gNSigTailStart_,hTails_[i],hTailsClean_[i],fTailFits_[i]);
-      }
-    } else {
-      double w = widthAsym(i);
-      if( dataSample ) w = dataSample->widthAsym(i);
-      tmpResult = func::getTailCut(h[i],2.5*w,hTails_[i],hTailsClean_[i]);
-      TString name = h[i]->GetName();
-      name += "DummyGaussFit";
-      fTailFits_[i] = new TF1(name,"gaus");
-    }
-    if( tmpResult < 0 ) {
-      std::cerr << "ERROR in Sample::getTails(): Fitting of tail in bin " << i << " did not work.\n";
-      nTail_[i] = 0;
-    } else {
-      nTail_[i] = tmpResult;
-    }
-    if( type() == 1 ) {
-      fTailFits_[i]->SetLineStyle(2);
-    }
+  if( type() == 1 ) {
+    fTailFit_->SetLineStyle(2);
   }
 }
 
 
-
-// --------------------------------------------------
-void Sample::setStyle(TH1 *h) const {
-  //   if( type() == Data ) h->SetMarkerStyle(20);
-  //   else if( type() == MC ) h->SetFillColor(5);
-  
+// ------------------------------------------------------------------------------------
+void AsymmetryBin::setStyle(TH1 *h) const {
   h->SetLineWidth(1);
   if( type() == 0 ) {
     h->SetMarkerStyle(20);
   } else if( type() == 1 ) {
     h->SetMarkerStyle(1);
-    h->SetFillColor( (gJetAlgo_.Contains("PF") ? 38 : 5) );
+    h->SetFillColor(par_->fillColor());
   }
 }
 
 
 
 
-
-// --------------------------------------------------
-class SampleAdmin {
+// +++++ Class AsymmetryAdmin +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+class AsymmetryAdmin {
 public:
-  SampleAdmin(const TString &fileData, const TString &fileMC, std::vector<double> ptBinEdges, unsigned int etaBin, double lumi, unsigned int mcStartBin = 0, unsigned int mcEndBin = 0);
-  ~SampleAdmin();
+  AsymmetryAdmin(const Parameters* par, unsigned int etaBin, unsigned int ptBin);
+  ~AsymmetryAdmin();
 
-  TString name() const { return name_; }
-  TString outNamePrefix() const { return outNamePrefix_; }
-  unsigned int nPtBins() const { return ptBinEdges_.size()-1; }
-  double ptMin() const { return ptBinEdges_.front(); }
-  double ptMax() const { return ptBinEdges_.back(); }
-  double ptMin(unsigned int i) const { return ptBinEdges_.at(i); }
-  double ptMax(unsigned int i) const { return ptBinEdges_.at(i+1); }
-  std::vector<double> ptBinEdges() const { return ptBinEdges_; }
+  double widthAsymData() const { return data_->widthAsym(); }
+  double widthAsymErrData() const { return data_->widthAsymErr(); }  
+  double widthAsymMC() const { return mc_->widthAsym(); }
+  double widthAsymErrMC() const { return mc_->widthAsymErr(); }  
+  double widthSmearedAsymMC() const { return mc_->widthAsymSmeared(); }
+  double widthSmearedAsymErrMC() const { return mc_->widthAsymErrSmeared(); }  
+  double nTailData() const { return data_->nTail(); }
+  double nTailMC() const { return mc_->nTail(); }
+  double nTotalData() const { return data_->nTotal(); }
+  double nTotalMC() const { return mc_->nTotal(); }
 
-  double widthAsymData(unsigned int i) const { return data_->widthAsym(i); }
-  double widthAsymErrData(unsigned int i) const { return data_->widthAsymErr(i); }  
-  double widthAsymMC(unsigned int i) const { return mc_->widthAsym(i); }
-  double widthAsymErrMC(unsigned int i) const { return mc_->widthAsymErr(i); }  
-  double widthSmearedAsymMC(unsigned int i) const { return mc_->widthAsymSmeared(i); }
-  double widthSmearedAsymErrMC(unsigned int i) const { return mc_->widthAsymErrSmeared(i); }  
-  double nTailData(unsigned int i) const { return data_->nTail(i); }
-  double nTailMC(unsigned int i) const { return mc_->nTail(i); }
-  double nTotalData(unsigned int i) const { return data_->nTotal(i); }
-  double nTotalMC(unsigned int i) const { return mc_->nTotal(i); }
-
-  void plotSpectra() const;
   void plotAsymmetry() const;
   void plotSmearedAsymmetry() const;
   void plotTails() const;
   
 private:
-  const std::vector<double> ptBinEdges_;
-  const double lumi_;
+  const Parameters* par_;
+  const unsigned int etaBin_;
+  const unsigned int ptBin_;
 
-  Sample* data_;
-  Sample* mc_;
+  Label* label_;
+  AsymmetryBin* data_;
+  AsymmetryBin* mc_;
 
   TString name_;
-  TString outNamePrefix_;
-
-  void plot(const TString &name, TH1 *hData, TH1 *hMC, bool logy = false) const;
+  TString outFileNamePrefix_;
 };
 
-typedef std::vector<SampleAdmin*>::const_iterator AdminIt;
+typedef std::vector< std::vector<AsymmetryAdmin*> >::const_iterator AsymEtaPtIt;
+typedef std::vector<AsymmetryAdmin*>::const_iterator AsymPtIt;
 
 
-SampleAdmin::SampleAdmin(const TString &fileData, const TString &fileMC, std::vector<double> ptBinEdges, unsigned int etaBin, double lumi, unsigned int mcStartBin, unsigned int mcEndBin)
-  : ptBinEdges_(ptBinEdges), lumi_(lumi) {
+// ------------------------------------------------------------------------------------
+AsymmetryAdmin::AsymmetryAdmin(const Parameters* par, unsigned int etaBin, unsigned int ptBin)
+  : par_(par), etaBin_(etaBin), ptBin_(ptBin) {
 
-  name_= gUID_+"_Pt"+util::toTString(ptMin())+"-"+util::toTString(ptMax()); 
-  outNamePrefix_ = name()+"_";
-  std::cout << "Creating samples '" << outNamePrefix() << std::endl;;
+  outFileNamePrefix_ = par_->outFileNamePrefix(etaBin,ptBin);
+  std::cout << "Creating samples '" << outFileNamePrefix_ << "'" << std::endl;
   
   // Create samples holding histograms
-  TString tmpName = name()+"_"+util::toTString(ptMin())+"-"+util::toTString(ptMax());
-  data_ = new Sample(fileData,etaBin,0,tmpName,0,1000);
-  mc_ = new Sample(fileMC,etaBin,1,tmpName,mcStartBin,mcEndBin,lumi_);
-  mc_->smearAsymmetry(data_);
+  data_ = new AsymmetryBin(par_,0,etaBin,ptBin);
+  mc_ = new AsymmetryBin(par_,1,etaBin,ptBin);
+  mc_->smearMCAsymmetry(data_);
 
-  // Checks
-  assert( data_->nBins() == nPtBins() );
-  assert( mc_->nBins() == nPtBins() );
-  
-  //   std::cout << "\n  WIDTH OF PT-ASYMMETRY\n";
-  //   for(unsigned int i = 0; i < nPtBins(); ++i) {
-  //     std::cout << "    " << i << std::flush;
-  //     std::cout << " (" << ptMin(i) << " - " << ptMax(i) << "): " << std::flush;
-  //     std::cout << widthAsymData(i) << " +/- " << widthAsymErrData(i) << " (Data), " << widthAsymMC(i) << " +/- " << widthAsymErrMC(i) << " (MC)" << std::endl;
-  //   }  
+  label_ = new Label(par); 
 }
 
 
-SampleAdmin::~SampleAdmin() {
+// ------------------------------------------------------------------------------------
+AsymmetryAdmin::~AsymmetryAdmin() {
+  delete label_;
   delete data_;
   delete mc_;
 }
 
 
-void SampleAdmin::plotSpectra() const {
-  TH1 *hMC = mc_->hPtAve();
-  TH1 *hData = data_->hPtAve();
-  util::HistOps::setYRange(hData,2,8E-2);
+// ------------------------------------------------------------------------------------
+void AsymmetryAdmin::plotAsymmetry() const {
+  TH1 *hMC = mc_->hPtAsym();
+  TH1 *hData = data_->hPtAsym();
 
-  TString canName = name()+"PtAve";
+  // Log scale
+  util::HistOps::setYRange(hMC,3,3E-5);
+  util::HistOps::setYRange(hData,3,3E-5);
+  hMC->GetXaxis()->SetRangeUser(-1.,1.);
+
+  TString canName = outFileNamePrefix_+"PtAsym";
   TCanvas *can = new TCanvas(canName,canName,500,500);
   can->cd();
-  hData->Draw("PE1");
-  hMC->Draw("HISTEsame");
-  hData->Draw("PE1same");
-  createLabel(ptMin(),ptMax(),lumi_)->Draw("same");
-  createLabelEta()->Draw("same");
-  createLegend(hData,hMC)->Draw("same");
-  can->SetLogy();
-  can->SaveAs(outNamePrefix()+"PtAve.eps","eps");
-}
-
-
-void SampleAdmin::plotAsymmetry() const {
-  for(unsigned int i = 0; i < nPtBins(); ++i) {
-    TH1 *hMC = mc_->hPtAsym(i);
-    TH1 *hData = data_->hPtAsym(i);
-
-    // Log scale
-    util::HistOps::setYRange(hMC,3,3E-5);
-    util::HistOps::setYRange(hData,3,3E-5);
-    hMC->GetXaxis()->SetRangeUser(-1.,1.);
-
-    TString canName = name()+"PtAsym_"+util::toTString(i);
-    TCanvas *can = new TCanvas(canName,canName,500,500);
-    can->cd();
-    hMC->Draw("HISTE");
-    hData->Draw("PE1same");
-    createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
-    createLabelEta()->Draw("same");
-    createLegend(hData,hMC)->Draw("same");
-    can->SetLogy(1);
-    can->SaveAs(outNamePrefix()+"PtAsymLog_"+util::toTString(i)+".eps","eps");
-
-    // Linear scale
-    util::HistOps::setYRange(hMC,3);
-    hMC->GetXaxis()->SetRangeUser(-0.4,0.4);
-    can->cd();
-    hMC->Draw("HISTE");
-    hData->Draw("PE1same");
-    createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
-    createLabelEta()->Draw("same");
-    createLegend(hData,hMC)->Draw("same");
-    can->SetLogy(0);
-    can->SaveAs(outNamePrefix()+"PtAsym_"+util::toTString(i)+".eps","eps");
-
-    // Superimpose fit
-    TF1 *tailMC = mc_->fTail(i);
-    TF1 *tailData = data_->fTail(i);
-    can->cd();
-    hMC->Draw("HISTE");
-    hData->Draw("PE1same");
-    tailMC->Draw("same");
-    tailData->Draw("same");
-    createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
-    createLabelEta()->Draw("same");
-    createLegend(hData,hMC,tailData,tailMC)->Draw("same");
-    can->SetLogy(0);
-    can->SaveAs(outNamePrefix()+"PtAsymFit_"+util::toTString(i)+".eps","eps");
-
-    // Ratio data / MC
-    TH1 *hRatio = util::HistOps::createRatioPlot(hData,hMC);
-    TH1 *hRatioFrame = util::HistOps::createRatioFrame(hData,"Data / MC",0.,3.);
-    can->cd();
-    hRatioFrame->Draw();
-    hRatio->Draw("PE1same");
-    createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
-    createLabelEta()->Draw("same");
-    can->SetLogy(0);
-    can->SaveAs(outNamePrefix()+"PtAsymLogRatio_"+util::toTString(i)+".eps","eps");
-
-    hRatioFrame->GetXaxis()->SetRangeUser(-0.4,0.4);
-    can->cd();
-    hRatioFrame->Draw();
-    hRatio->Draw("PE1same");
-    createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
-    createLabelEta()->Draw("same");
-    can->SetLogy(0);
-    can->SaveAs(outNamePrefix()+"PtAsymRatio_"+util::toTString(i)+".eps","eps");
-
-    // Bottom ratio plot
-    can = util::HistOps::createRatioTopCanvas();
-    TPad *bRatioBottomPad = util::HistOps::createRatioBottomPad();
-    TH1 *bRatioTopFrame = util::HistOps::createRatioTopHist(hMC);
-    TH1 *bRatioBottomFrame = util::HistOps::createRatioBottomFrame(hMC,"Asymmetry","",0.61,1.39);
-    can->cd();
-    bRatioTopFrame->GetYaxis()->SetRangeUser(0.,9.5);
-    bRatioTopFrame->Draw("HISTE");
-    hData->Draw("PE1same");
-    createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
-    createLabelEta()->Draw("same");
-    createLegend(hData,hMC)->Draw("same");
-    bRatioBottomPad->Draw();
-    bRatioBottomPad->cd();
-    bRatioBottomFrame->GetXaxis()->SetRangeUser(-0.4,0.4);
-    bRatioBottomFrame->GetXaxis()->SetMoreLogLabels();
-    bRatioBottomFrame->Draw();
-    hRatio->Draw("PE1same");
-    can->SaveAs(outNamePrefix()+"PtAsymBottomRatio_"+util::toTString(i)+".eps","eps");
-  }
-}
-
-
-void SampleAdmin::plotSmearedAsymmetry() const {
-  for(unsigned int i = 0; i < nPtBins(); ++i) {
-    TString canName = name()+"PtAsymSmear_"+util::toTString(i);
-    TCanvas *can = new TCanvas(canName,canName,500,500);
-
-    TH1 *hMC = mc_->hPtAsymSmeared(i);
-    TH1 *hData = data_->hPtAsym(i);
-    TF1 *tailMC = mc_->fTail(i);
-    TF1 *tailData = data_->fTail(i);
-
-    // Linear scale    
-    util::HistOps::setYRange(hMC,3);
-    hMC->GetXaxis()->SetRangeUser(-0.4,0.4);
-    can->cd();
-    hMC->Draw("HISTE");
-    hData->Draw("PE1same");
-    createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
-    createLabelEta()->Draw("same");
-    createLegend(hData,hMC)->Draw("same");
-    can->SetLogy(0);
-    can->SaveAs(outNamePrefix()+"PtSmearAsym_"+util::toTString(i)+".eps","eps");
-
-    // Superimpose fit
-    can->cd();
-    hMC->Draw("HISTE");
-    hData->Draw("PE1same");
-    createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
-    createLabelEta()->Draw("same");
-    if( gFitGauss_ ) {
-      tailMC->Draw("same");
-      tailData->Draw("same");
-      createLegend(hData,hMC,tailData,tailMC)->Draw("same");
-    } else {
-      createLegend(hData,hMC)->Draw("same");
-    }
-    can->SaveAs(outNamePrefix()+"TailFitLinear_"+util::toTString(i)+".eps","eps");
-
-    // Log scale    
-    util::HistOps::setYRange(hMC,3,3E-5);
-    util::HistOps::setYRange(hData,3,3E-5);
-    hMC->GetXaxis()->SetRangeUser(-1.,1.);
-    can->cd();
-    hMC->Draw("HISTE");
-    hData->Draw("PE1same");
-    createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
-    createLabelEta()->Draw("same");
-    createLegend(hData,hMC)->Draw("same");
-    can->SetLogy(1);
-    can->SaveAs(outNamePrefix()+"PtSmearAsymLog_"+util::toTString(i)+".eps","eps");
-
-    // Superimpose fit
-    hMC->GetXaxis()->SetRangeUser(0.,1.);
-    can->cd();
-    hMC->Draw("HISTE");
-    hData->Draw("PE1same");
-    createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
-    createLabelEta()->Draw("same");
-    if( gFitGauss_ ) {
-      tailMC->Draw("same");
-      tailData->Draw("same");
-      createLegend(hData,hMC,tailData,tailMC)->Draw("same");
-    } else {
-      createLegend(hData,hMC)->Draw("same");
-    }
-    can->SetLogy(1);
-    can->SaveAs(outNamePrefix()+"TailFit_"+util::toTString(i)+".eps","eps");
-
-    // Ratio data / MC
-    TH1 *hRatio = util::HistOps::createRatioPlot(hData,hMC);
-    TH1 *hRatioFrame = util::HistOps::createRatioFrame(hData,"Data / MC",0.,3.);
-    can->cd();
-    hRatioFrame->Draw();
-    hRatio->Draw("PE1same");
-    createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
-    createLabelEta()->Draw("same");
-    can->SetLogy(0);
-    can->SaveAs(outNamePrefix()+"PtSmearAsymLogRatio_"+util::toTString(i)+".eps","eps");
-
-    // Ratio data / MC
-    hRatioFrame->GetXaxis()->SetRangeUser(-0.4,0.4);
-    can->cd();
-    hRatioFrame->Draw();
-    hRatio->Draw("PE1same");
-    createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
-    createLabelEta()->Draw("same");
-    can->SetLogy(0);
-    can->SaveAs(outNamePrefix()+"PtSmearAsymRatio_"+util::toTString(i)+".eps","eps");
-
-    // Bottom ratio plot
-    can = util::HistOps::createRatioTopCanvas();
-    TPad *bRatioBottomPad = util::HistOps::createRatioBottomPad();
-    TH1 *bRatioTopFrame = util::HistOps::createRatioTopHist(hMC);
-    TH1 *bRatioBottomFrame = util::HistOps::createRatioBottomFrame(hMC,"Asymmetry","",0.61,1.39);
-    can->cd();
-    bRatioTopFrame->GetXaxis()->SetRangeUser(-0.4,0.4);
-    bRatioTopFrame->GetYaxis()->SetRangeUser(0.,9.5);
-    bRatioTopFrame->Draw("HISTE");
-    hData->Draw("PE1same");
-    createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
-    createLabelEta()->Draw("same");
-    createLegend(hData,hMC)->Draw("same");
-    bRatioBottomPad->Draw();
-    bRatioBottomPad->cd();
-    bRatioBottomFrame->GetXaxis()->SetMoreLogLabels();
-    bRatioBottomFrame->GetXaxis()->SetRangeUser(-0.4,0.4);
-    bRatioBottomFrame->Draw();
-    hRatio->Draw("PE1same");
-    can->SaveAs(outNamePrefix()+"PtSmearAsymBottomRatio_"+util::toTString(i)+".eps","eps");
-
-  }
-}
-
-
-void SampleAdmin::plotTails() const {
-  for(unsigned int i = 0; i < nPtBins(); ++i) {
-    TH1 *hMC = mc_->hTailClean(i);
-    TH1 *hData = data_->hTailClean(i);
-    double min = 10.;
-    double max = 0.;
-    util::HistOps::findYRange(hData,min,max);
-    hMC->GetYaxis()->SetRangeUser(min,2.*max);
-    //util::HistOps::setYRange(hMC,5);
-    hMC->GetXaxis()->SetRangeUser(0.,1.);
-    TString canName = name()+"Tail_"+util::toTString(i);
-    TCanvas *can = new TCanvas(canName,canName,500,500);
-    can->cd();
-    hMC->Draw("HISTE");
-    hData->Draw("PE1same");
-    createLabel(ptMin(i),ptMax(i),lumi_)->Draw("same");
-    createLabelEta()->Draw("same");
-    createLegend(hData,hMC)->Draw("same");
-    can->SaveAs(outNamePrefix()+"Tail_"+util::toTString(i)+".eps","eps");
-  }
-}
-
-
-// void SampleAdmin::plot(const TString &name, TH1 *hData, TH1 *hMC, bool logy) const {
-//   TCanvas *can = new TCanvas(name,name,500,500);
-//   can->cd();
-//   hMC->Draw("HISTE");
-//   hData->Draw("PE1same");
-//   if( logy ) can->SetLogy();
-// }
-
-
-void plotDataMCDiff(TH1* hData, TH1* hMC, TPaveText* label1, TPaveText* label2) {
-  // Fit width
-  double min = hMC->GetXaxis()->GetBinLowEdge(1);
-  double max = hMC->GetXaxis()->GetBinUpEdge(hMC->GetNbinsX());
-  TF1 *sigmaMC = new TF1("SigmaMC","sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2])",min,max);
-  sigmaMC->SetParameter(0,1.);
-  sigmaMC->SetParameter(1,1.);
-  sigmaMC->SetParameter(2,0.01);
-  sigmaMC->SetLineWidth(1);
-  sigmaMC->SetLineColor(2);
-  sigmaMC->SetLineStyle(2);
-  TF1 *sigmaData = static_cast<TF1*>(sigmaMC->Clone("SigmaData"));
-  sigmaData->SetLineStyle(1);
-
-  hMC->Fit(sigmaMC,"I0QR");
-  hData->Fit(sigmaData,"I0QR");
-
-  TCanvas *canDataMC = new TCanvas("canDataMC","Width Asymmetry",500,500);
-  canDataMC->cd();
   hMC->Draw("HISTE");
-  sigmaMC->Draw("same");
   hData->Draw("PE1same");
-  sigmaData->Draw("same");  
-  //   labelAll->Draw("same");
-  //   labelEta->Draw("same");
-  TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,0.3,1);
-  leg->AddEntry(hData,"Data","P");
-  leg->AddEntry(sigmaData,"Fit Data","L");
-  leg->AddEntry(hMC,"MC","L");
-  leg->AddEntry(sigmaMC,"Fit MC","L");
-  leg->Draw("same");
-  label1->Draw("same");
-  label2->Draw("same");
-  canDataMC->SetLogx();
-  canDataMC->SaveAs(gUID_+"_WidthAsymFit.eps","eps");
+  label_->info(etaBin_,ptBin_)->Draw("same");
+  label_->eta(etaBin_)->Draw("same");
+  label_->legend(hData,hMC)->Draw("same");
+  can->SetLogy(1);
+  can->SaveAs(outFileNamePrefix_+"PtAsymLog.eps","eps");
 
-  // Parametrise ratio assuming miscalibration
+  // Linear scale
+  util::HistOps::setYRange(hMC,3);
+  hMC->GetXaxis()->SetRangeUser(-0.4,0.4);
+  can->cd();
+  hMC->Draw("HISTE");
+  hData->Draw("PE1same");
+  label_->info(etaBin_,ptBin_)->Draw("same");
+  label_->eta(etaBin_)->Draw("same");
+  label_->legend(hData,hMC)->Draw("same");
+  can->SetLogy(0);
+  can->SaveAs(outFileNamePrefix_+"PtAsym.eps","eps");
+  
+  // Superimpose fit
+  TF1 *tailMC = mc_->fTail();
+  TF1 *tailData = data_->fTail();
+  can->cd();
+  hMC->Draw("HISTE");
+  hData->Draw("PE1same");
+  tailMC->Draw("same");
+  tailData->Draw("same");
+  label_->info(etaBin_,ptBin_)->Draw("same");
+  label_->eta(etaBin_)->Draw("same");
+  label_->legend(hData,hMC,tailData,tailMC)->Draw("same");
+  can->SetLogy(0);
+  can->SaveAs(outFileNamePrefix_+"PtAsymFit.eps","eps");
+
+  // Ratio data / MC
   TH1 *hRatio = util::HistOps::createRatioPlot(hData,hMC);
-  TH1 *hRatioFrame = util::HistOps::createRatioFrame(hRatio,"#sigma(Asymmetry) Data / MC",0.8,2.);
-  TF1 *fRatio = new TF1("fRatio","sqrt( ([0]/x/x + [1]/x + [2]*[3])/([0]/x/x + [1]/x + [2]) )",min,max);
-  fRatio->FixParameter(0,pow(sigmaMC->GetParameter(0),2));
-  fRatio->FixParameter(1,pow(sigmaMC->GetParameter(1),2));
-  fRatio->FixParameter(2,pow(sigmaMC->GetParameter(2),2));
-  fRatio->SetParameter(3,1.);
-  fRatio->SetLineWidth(1);
-  fRatio->SetLineColor(2);
-  hRatio->Fit(fRatio,"I0QRB");
-
-  TCanvas *canRatio = new TCanvas("canRatio","Width Asymmetry Ratio",500,500);
-  canRatio->cd();
+  TH1 *hRatioFrame = util::HistOps::createRatioFrame(hData,"Data / MC",0.,3.);
+  can->cd();
   hRatioFrame->Draw();
   hRatio->Draw("PE1same");
-  fRatio->Draw("same");
-  label1->Draw("same");
-  label2->Draw("same");
-  canRatio->SetLogx();
-  canRatio->SaveAs(gUID_+"_WidthAsymRatioFit.eps","eps");
+  label_->info(etaBin_,ptBin_)->Draw("same");
+  label_->eta(etaBin_)->Draw("same");
+  can->SetLogy(0);
+  can->SaveAs(outFileNamePrefix_+"PtAsymLogRatio.eps","eps");
 
-  std::cout << std::endl;
-  std::cout << "\\toprule" << std::endl;
-  std::cout << "& $b_{0}$ & $b_{1}$ & $b_{2}$ \\\\" << std::endl;
-  std::cout << "\\midrule" << std::endl;
-  std::cout << "Data";
-  for(int i = 0; i < sigmaData->GetNpar(); ++i) {
-    std::cout << " & $" << sigmaData->GetParameter(i) << " \\pm " << sigmaData->GetParError(i) << "$";
-  }
-  std::cout << " \\\\" << std::endl;
-  std::cout << "MC";
-  for(int i = 0; i < sigmaMC->GetNpar(); ++i) {
-    std::cout << " & $" << sigmaMC->GetParameter(i) << " \\pm " << sigmaMC->GetParError(i) << "$";
-  }
-  std::cout << " \\\\" << std::endl;
-  std::cout << "\\bottomrule" << std::endl;
+  hRatioFrame->GetXaxis()->SetRangeUser(-0.4,0.4);
+  can->cd();
+  hRatioFrame->Draw();
+  hRatio->Draw("PE1same");
+  label_->info(etaBin_,ptBin_)->Draw("same");
+  label_->eta(etaBin_)->Draw("same");
+  can->SetLogy(0);
+  can->SaveAs(outFileNamePrefix_+"PtAsymRatio.eps","eps");
+
+  // Bottom ratio plot
+  delete can;
+  can = util::HistOps::createRatioTopCanvas();
+  TPad *bRatioBottomPad = util::HistOps::createRatioBottomPad();
+  TH1 *bRatioTopFrame = util::HistOps::createRatioTopHist(hMC);
+  TH1 *bRatioBottomFrame = util::HistOps::createRatioBottomFrame(hMC,"Asymmetry","",0.61,1.39);
+  can->cd();
+  bRatioTopFrame->GetXaxis()->SetRangeUser(-0.4,0.4);
+  bRatioTopFrame->GetYaxis()->SetRangeUser(0.,9.5);
+  bRatioTopFrame->Draw("HISTE");
+  hData->Draw("PE1same");
+  label_->info(etaBin_,ptBin_)->Draw("same");
+  label_->eta(etaBin_)->Draw("same");
+  label_->legend(hData,hMC)->Draw("same");
+  bRatioBottomPad->Draw();
+  bRatioBottomPad->cd();
+  bRatioBottomFrame->GetXaxis()->SetRangeUser(-0.4,0.4);
+  bRatioBottomFrame->GetXaxis()->SetMoreLogLabels();
+  bRatioBottomFrame->Draw();
+  hRatio->Draw("PE1same");
+  can->SaveAs(outFileNamePrefix_+"PtAsymBottomRatio.eps","eps");
+
+  delete can;
+}
+
+
+// ------------------------------------------------------------------------------------
+void AsymmetryAdmin::plotSmearedAsymmetry() const {
+  TString canName = outFileNamePrefix_+"PtAsymSmear";
+  TCanvas *can = new TCanvas(canName,canName,500,500);
+  
+  TH1 *hMC = mc_->hPtAsymSmeared();
+  TH1 *hData = data_->hPtAsym();
+  TF1 *tailMC = mc_->fTail();
+  TF1 *tailData = data_->fTail();
+
+  // Linear scale    
+  util::HistOps::setYRange(hMC,3);
+  hMC->GetXaxis()->SetRangeUser(-0.4,0.4);
+  can->cd();
+  hMC->Draw("HISTE");
+  hData->Draw("PE1same");
+  label_->info(etaBin_,ptBin_)->Draw("same");
+  label_->eta(etaBin_)->Draw("same");
+  label_->legend(hData,hMC)->Draw("same");
+  can->SetLogy(0);
+  can->SaveAs(outFileNamePrefix_+"PtSmearAsym.eps","eps");
+  
+  // Superimpose fit
+  can->cd();
+  hMC->Draw("HISTE");
+  hData->Draw("PE1same");
+  label_->info(etaBin_,ptBin_)->Draw("same");
+  label_->eta(etaBin_)->Draw("same");
+  tailMC->Draw("same");
+  tailData->Draw("same");
+  label_->legend(hData,hMC,tailData,tailMC)->Draw("same");
+  can->SaveAs(outFileNamePrefix_+"TailFitLinear.eps","eps");
+
+  // Log scale    
+  util::HistOps::setYRange(hMC,3,3E-5);
+  util::HistOps::setYRange(hData,3,3E-5);
+  hMC->GetXaxis()->SetRangeUser(-1.,1.);
+  can->cd();
+  hMC->Draw("HISTE");
+  hData->Draw("PE1same");
+  label_->info(etaBin_,ptBin_)->Draw("same");
+  label_->eta(etaBin_)->Draw("same");
+  label_->legend(hData,hMC)->Draw("same");
+  can->SetLogy(1);
+  can->SaveAs(outFileNamePrefix_+"PtSmearAsymLog.eps","eps");
+
+  // Superimpose fit
+  hMC->GetXaxis()->SetRangeUser(0.,1.);
+  can->cd();
+  hMC->Draw("HISTE");
+  hData->Draw("PE1same");
+  label_->info(etaBin_,ptBin_)->Draw("same");
+  label_->eta(etaBin_)->Draw("same");
+  tailMC->Draw("same");
+  tailData->Draw("same");
+  label_->legend(hData,hMC,tailData,tailMC)->Draw("same");
+  can->SetLogy(1);
+  can->SaveAs(outFileNamePrefix_+"TailFit.eps","eps");
+  
+  // Ratio data / MC
+  TH1 *hRatio = util::HistOps::createRatioPlot(hData,hMC);
+  TH1 *hRatioFrame = util::HistOps::createRatioFrame(hData,"Data / MC",0.,3.);
+  can->cd();
+  hRatioFrame->Draw();
+  hRatio->Draw("PE1same");
+  label_->info(etaBin_,ptBin_)->Draw("same");
+  label_->eta(etaBin_)->Draw("same");
+  can->SetLogy(0);
+  can->SaveAs(outFileNamePrefix_+"PtSmearAsymLogRatio.eps","eps");
+
+  // Ratio data / MC
+  hRatioFrame->GetXaxis()->SetRangeUser(-0.4,0.4);
+  can->cd();
+  hRatioFrame->Draw();
+  hRatio->Draw("PE1same");
+  label_->info(etaBin_,ptBin_)->Draw("same");
+  label_->eta(etaBin_)->Draw("same");
+  can->SetLogy(0);
+  can->SaveAs(outFileNamePrefix_+"PtSmearAsymRatio.eps","eps");
+
+  // Bottom ratio plot
+  delete can;
+  can = util::HistOps::createRatioTopCanvas();
+  TPad *bRatioBottomPad = util::HistOps::createRatioBottomPad();
+  TH1 *bRatioTopFrame = util::HistOps::createRatioTopHist(hMC);
+  TH1 *bRatioBottomFrame = util::HistOps::createRatioBottomFrame(hMC,"Asymmetry","",0.61,1.39);
+  can->cd();
+  bRatioTopFrame->GetXaxis()->SetRangeUser(-0.4,0.4);
+  bRatioTopFrame->GetYaxis()->SetRangeUser(0.,9.5);
+  bRatioTopFrame->Draw("HISTE");
+  hData->Draw("PE1same");
+  label_->info(etaBin_,ptBin_)->Draw("same");
+  label_->eta(etaBin_)->Draw("same");
+  label_->legend(hData,hMC)->Draw("same");
+  bRatioBottomPad->Draw();
+  bRatioBottomPad->cd();
+  bRatioBottomFrame->GetXaxis()->SetMoreLogLabels();
+  bRatioBottomFrame->GetXaxis()->SetRangeUser(-0.4,0.4);
+  bRatioBottomFrame->Draw();
+  hRatio->Draw("PE1same");
+  can->SaveAs(outFileNamePrefix_+"PtSmearAsymBottomRatio.eps","eps");
+
+  delete can;
+}
+
+
+// ------------------------------------------------------------------------------------
+void AsymmetryAdmin::plotTails() const {
+  TH1 *hMC = mc_->hTailClean();
+  TH1 *hData = data_->hTailClean();
+  double min = 10.;
+  double max = 0.;
+  util::HistOps::findYRange(hData,min,max);
+  hMC->GetYaxis()->SetRangeUser(min,2.*max);
+  //util::HistOps::setYRange(hMC,5);
+  hMC->GetXaxis()->SetRangeUser(0.,1.);
+  TString canName = outFileNamePrefix_+"Tail";
+  TCanvas *can = new TCanvas(canName,canName,500,500);
+  can->cd();
+  hMC->Draw("HISTE");
+  hData->Draw("PE1same");
+  label_->info(etaBin_,ptBin_)->Draw("same");
+  label_->eta(etaBin_)->Draw("same");
+  label_->legend(hData,hMC)->Draw("same");
+  can->SaveAs(outFileNamePrefix_+"Tail.eps","eps");
+
+  delete can;
 }
 
 
 
 
-void createSlides(const std::vector<SampleAdmin*> &admins) {
 
-  TString name = gUID_+"_Slides.tex";
+///////////////////////////////////////////////////////////////////////////
+//
+//  Global functions
+//
+///////////////////////////////////////////////////////////////////////////
+
+
+// ------------------------------------------------------------------------------------
+void createSlides(const Parameters* par, const std::vector< std::vector<AsymmetryAdmin*> > &admins) {
+
+  TString name = par->outFileNamePrefix()+"Slides.tex";
   std::ofstream oFile(name);
 
-  unsigned int nAdmins = admins.size();
+  TString info = "\\begin{small}\n  \\begin{itemize}\n";
+  info += "    \\item "+par->labelJetAlgo()+", "+par->labelDeltaPhiCut()+", "+par->labelPSoftCut()+"\n";
+  info += "    \\item Core range $"+util::toTString(par->nSigCore())+"\\sigma$, tail start $"+util::toTString(par->nSigTailStart())+"\\sigma$\n";
+  info += "  \\end{itemize}\n\\end{small}\n";
+  
+  // Loop over eta bins
+  for(unsigned int etaBin = 0; etaBin < admins.size(); ++etaBin) {
+    unsigned int nPtBins = admins[etaBin].size();
+    
+    TString etaRange = "$"+util::toTString(par->binningAdmin()->etaMin(etaBin))+" < |\\eta| < "+util::toTString(par->binningAdmin()->etaMax(etaBin))+"$";
 
-  // N pt bins
-  unsigned int nPtBins = 0;
-  for(AdminIt it = admins.begin(); it != admins.end(); ++it) {
-    nPtBins += (*it)->nPtBins();
-  }
-  // Eta range
-  TString etaRange = "$"+gEtaMin_+" < |\\eta| < "+gEtaMax_+"$";
-
-
-  // PtAve spectra
-  oFile << "% ----- PtAve Spectra ---------------------------" << std::endl;
-  unsigned int nSlides = nAdmins/3;
-  if( nAdmins%3 > 0 ) nSlides++;
-  for(unsigned int slide = 0; slide < nSlides; ++slide) {
-    oFile << "\n% --------------------------------------------------\n";
-    oFile << "\\begin{frame}\n";
-    oFile << "  \\frametitle{\\ptave Spectra "+etaRange+" (" << slide+1 << "/" << nSlides << ")}\n";
-    oFile << "  \\begin{columns}[T] \n";
-    for(int col = 0; col < 3; ++col) {
-      oFile << "    \\begin{column}{0.3333\\textwidth} \n";
-      oFile << "    \\centering\n";
-      unsigned int adminIdx = 3*slide + col;
-      if( adminIdx < nAdmins ) {
-	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "PtAve}\\\\ \n";
+    
+    oFile << "\n\n\n% ----- Pt Asymmetry ---------------------------" << std::endl;
+    unsigned int nSlides = nPtBins/3;
+    if( nPtBins%3 > 0 ) nSlides++;
+    unsigned int ptBin = 0;
+    for(unsigned int slide = 0; slide < nSlides; ++slide) {
+      oFile << "\n% --------------------------------------------------\n";
+      oFile << "\\begin{frame}\n";
+      oFile << "  \\frametitle{\\pt Asymmetry "+etaRange+" (" << slide+1 << "/" << nSlides << ")}\n";
+      oFile << "  \\begin{columns}[T] \n";
+      for(int col = 0; col < 3; ++col, ++ptBin) {
+	oFile << "    \\begin{column}{0.3333\\textwidth} \n";
+	oFile << "    \\centering\n";
+	if( ptBin < nPtBins ) {
+	  oFile << "      \\includegraphics[width=0.9\\textwidth]{" << par->outFileNamePrefix(etaBin,ptBin) << "PtAsym}\\\\ \n";
+	  oFile << "      \\includegraphics[width=0.9\\textwidth]{" << par->outFileNamePrefix(etaBin,ptBin) << "PtAsymRatio}\\\\ \n";
+	}
+	oFile << "  \\end{column} \n";
       }
-      oFile << "  \\end{column} \n";
+      oFile << "  \\end{columns} \n";
+      oFile << "\\end{frame} \n";
     }
-    oFile << "  \\end{columns} \n";
-    oFile << "\\end{frame} \n";
-  }
 
-
-  oFile << "\n\n\n% ----- Pt Asymmetry ---------------------------" << std::endl;
-  nSlides = nPtBins/3;
-  if( nPtBins%3 > 0 ) nSlides++;
-  unsigned int adminIdx = 0;
-  unsigned int ptBinIdx = 0;
-  for(unsigned int slide = 0; slide < nSlides; ++slide) {
-    oFile << "\n% --------------------------------------------------\n";
-    oFile << "\\begin{frame}\n";
-    oFile << "  \\frametitle{\\pt Asymmetry "+etaRange+" (" << slide+1 << "/" << nSlides << ")}\n";
-    oFile << "  \\begin{columns}[T] \n";
-    for(int col = 0; col < 3; ++col, ++ptBinIdx) {
-      oFile << "    \\begin{column}{0.3333\\textwidth} \n";
-      oFile << "    \\centering\n";
-      if( !(ptBinIdx < admins[adminIdx]->nPtBins()) ) {
-	ptBinIdx = 0;
-	adminIdx++;
+    oFile << "\n\n\n% ----- Pt Asymmetry Log ------------------------" << std::endl;
+    nSlides = nPtBins/3;
+    if( nPtBins%3 > 0 ) nSlides++;
+    ptBin = 0;
+    for(unsigned int slide = 0; slide < nSlides; ++slide) {
+      oFile << "\n% --------------------------------------------------\n";
+      oFile << "\\begin{frame}\n";
+      oFile << "  \\frametitle{\\pt Asymmetry Log "+etaRange+" (" << slide+1 << "/" << nSlides << ")}\n";
+      oFile << "  \\begin{columns}[T] \n";
+      for(int col = 0; col < 3; ++col, ++ptBin) {
+	oFile << "    \\begin{column}{0.3333\\textwidth} \n";
+	oFile << "    \\centering\n";
+	if( ptBin < nPtBins ) {
+	  oFile << "      \\includegraphics[width=0.9\\textwidth]{" << par->outFileNamePrefix(etaBin,ptBin) << "PtAsymLog}\\\\ \n";
+	  oFile << "      \\includegraphics[width=0.9\\textwidth]{" << par->outFileNamePrefix(etaBin,ptBin) << "PtAsymLogRatio}\\\\ \n";
+	}
+	oFile << "  \\end{column} \n";
       }
-      if( adminIdx < nAdmins ) {
-	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "PtAsym_" << ptBinIdx << "}\\\\ \n";
-	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "PtAsymRatio_" << ptBinIdx << "}\\\\ \n";
-      }
-      oFile << "  \\end{column} \n";
+      oFile << "  \\end{columns} \n";
+      oFile << "\\end{frame} \n";
     }
-    oFile << "  \\end{columns} \n";
-    oFile << "\\end{frame} \n";
-  }
 
-  oFile << "\n\n\n% ----- Pt Asymmetry Log ---------------------------" << std::endl;
-  nSlides = nPtBins/3;
-  if( nPtBins%3 > 0 ) nSlides++;
-  adminIdx = 0;
-  ptBinIdx = 0;
-  for(unsigned int slide = 0; slide < nSlides; ++slide) {
-    oFile << "\n% --------------------------------------------------\n";
-    oFile << "\\begin{frame}\n";
-    oFile << "  \\frametitle{\\pt Asymmetry "+etaRange+" (" << slide+1 << "/" << nSlides << ")}\n";
-    oFile << "  \\begin{columns}[T] \n";
-    for(int col = 0; col < 3; ++col, ++ptBinIdx) {
-      oFile << "    \\begin{column}{0.3333\\textwidth} \n";
-      oFile << "    \\centering\n";
-      if( !(ptBinIdx < admins[adminIdx]->nPtBins()) ) {
-	ptBinIdx = 0;
-	adminIdx++;
+    oFile << "\n\n\n% ----- Smeared Pt Asymmetry ---------------------------" << std::endl;
+    nSlides = nPtBins/3;
+    if( nPtBins%3 > 0 ) nSlides++;
+    ptBin = 0;
+    for(unsigned int slide = 0; slide < nSlides; ++slide) {
+      oFile << "\n% --------------------------------------------------\n";
+      oFile << "\\begin{frame}\n";
+      oFile << "  \\frametitle{Smeared \\pt Asymmetry "+etaRange+" (" << slide+1 << "/" << nSlides << ")}\n";
+      oFile << "  \\begin{columns}[T] \n";
+      for(int col = 0; col < 3; ++col, ++ptBin) {
+	oFile << "    \\begin{column}{0.3333\\textwidth} \n";
+	oFile << "    \\centering\n";
+	if( ptBin < nPtBins ) {
+	  oFile << "      \\includegraphics[width=0.9\\textwidth]{" << par->outFileNamePrefix(etaBin,ptBin) << "PtSmearAsym}\\\\ \n";
+	  oFile << "      \\includegraphics[width=0.9\\textwidth]{" << par->outFileNamePrefix(etaBin,ptBin) << "PtSmearAsymRatio}\\\\ \n";
+	}
+	oFile << "  \\end{column} \n";
       }
-      if( adminIdx < nAdmins ) {
-	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "PtAsymLog_" << ptBinIdx << "}\\\\ \n";
-	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "PtAsymLogRatio_" << ptBinIdx << "}\\\\ \n";
-      }
-      oFile << "  \\end{column} \n";
+      oFile << "  \\end{columns} \n";
+      oFile << "\\end{frame} \n";
     }
-    oFile << "  \\end{columns} \n";
-    oFile << "\\end{frame} \n";
-  }
 
-  oFile << "\n\n\n% ----- Pt Smeared Asymmetry ---------------------------" << std::endl;
-  nSlides = nPtBins/3;
-  if( nPtBins%3 > 0 ) nSlides++;
-  adminIdx = 0;
-  ptBinIdx = 0;
-  for(unsigned int slide = 0; slide < nSlides; ++slide) {
-    oFile << "\n% --------------------------------------------------\n";
-    oFile << "\\begin{frame}\n";
-    oFile << "  \\frametitle{Smeared \\pt Asymmetry "+etaRange+" (" << slide+1 << "/" << nSlides << ")}\n";
-    oFile << "  \\begin{columns}[T] \n";
-    for(int col = 0; col < 3; ++col, ++ptBinIdx) {
-      oFile << "    \\begin{column}{0.3333\\textwidth} \n";
-      oFile << "    \\centering\n";
-      if( !(ptBinIdx < admins[adminIdx]->nPtBins()) ) {
-	ptBinIdx = 0;
-	adminIdx++;
+    oFile << "\n\n\n% ----- Smeared Pt Asymmetry Log ------------------------" << std::endl;
+    nSlides = nPtBins/3;
+    if( nPtBins%3 > 0 ) nSlides++;
+    ptBin = 0;
+    for(unsigned int slide = 0; slide < nSlides; ++slide) {
+      oFile << "\n% --------------------------------------------------\n";
+      oFile << "\\begin{frame}\n";
+      oFile << "  \\frametitle{Smeared \\pt Asymmetry Log "+etaRange+" (" << slide+1 << "/" << nSlides << ")}\n";
+      oFile << "  \\begin{columns}[T] \n";
+      for(int col = 0; col < 3; ++col, ++ptBin) {
+	oFile << "    \\begin{column}{0.3333\\textwidth} \n";
+	oFile << "    \\centering\n";
+	if( ptBin < nPtBins ) {
+	  oFile << "      \\includegraphics[width=0.9\\textwidth]{" << par->outFileNamePrefix(etaBin,ptBin) << "PtSmearAsymLog}\\\\ \n";
+	  oFile << "      \\includegraphics[width=0.9\\textwidth]{" << par->outFileNamePrefix(etaBin,ptBin) << "PtSmearAsymLogRatio}\\\\ \n";
+	}
+	oFile << "  \\end{column} \n";
       }
-      if( adminIdx < nAdmins ) {
-	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "PtSmearAsym_" << ptBinIdx << "}\\\\ \n";
-	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "PtSmearAsymRatio_" << ptBinIdx << "}\\\\ \n";
-      }
-      oFile << "  \\end{column} \n";
+      oFile << "  \\end{columns} \n";
+      oFile << "\\end{frame} \n";
     }
-    oFile << "  \\end{columns} \n";
-    oFile << "\\end{frame} \n";
-  }
 
-  oFile << "\n\n\n% ----- Pt Smeared Asymmetry Ratio ---------------------------" << std::endl;
-  nSlides = nPtBins/3;
-  if( nPtBins%3 > 0 ) nSlides++;
-  adminIdx = 0;
-  ptBinIdx = 0;
-  for(unsigned int slide = 0; slide < nSlides; ++slide) {
-    oFile << "\n% --------------------------------------------------\n";
-    oFile << "\\begin{frame}\n";
-    oFile << "  \\frametitle{Smeared \\pt Asymmetry "+etaRange+" (" << slide+1 << "/" << nSlides << ")}\n";
-    oFile << "  \\begin{columns}[T] \n";
-    for(int col = 0; col < 3; ++col, ++ptBinIdx) {
-      oFile << "    \\begin{column}{0.3333\\textwidth} \n";
-      oFile << "    \\centering\n";
-      if( !(ptBinIdx < admins[adminIdx]->nPtBins()) ) {
-	ptBinIdx = 0;
-	adminIdx++;
+    oFile << "\n\n\n% ----- Tails ---------------------------" << std::endl;
+    nSlides = nPtBins/3;
+    if( nPtBins%3 > 0 ) nSlides++;
+    ptBin = 0;
+    for(unsigned int slide = 0; slide < nSlides; ++slide) {
+      oFile << "\n% --------------------------------------------------\n";
+      oFile << "\\begin{frame}\n";
+      oFile << "  \\frametitle{Tails "+etaRange+" (" << slide+1 << "/" << nSlides << ")}\n";
+      oFile << "  \\begin{columns}[T] \n";
+      for(int col = 0; col < 3; ++col, ++ptBin) {
+	oFile << "    \\begin{column}{0.3333\\textwidth} \n";
+	oFile << "    \\centering\n";
+	if( ptBin < nPtBins ) {
+	  oFile << "      \\includegraphics[width=\\textwidth]{" << par->outFileNamePrefix(etaBin,ptBin) << "TailFit}\\\\ \n";
+	  oFile << "      \\includegraphics[width=\\textwidth]{" << par->outFileNamePrefix(etaBin,ptBin) << "Tail}\\\\ \n";
+	}
+	oFile << "  \\end{column} \n";
       }
-      if( adminIdx < nAdmins ) {
-	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "PtSmearAsymLog_" << ptBinIdx << "}\\\\ \n";
-	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "PtSmearAsymLogRatio_" << ptBinIdx << "}\\\\ \n";
-      }
-      oFile << "  \\end{column} \n";
+      oFile << "  \\end{columns} \n";
+      oFile << "\\end{frame} \n";
     }
-    oFile << "  \\end{columns} \n";
-    oFile << "\\end{frame} \n";
-  }
-
-
-  oFile << "\n\n\n% ----- Tails ---------------------------" << std::endl;
-  nSlides = nPtBins/3;
-  if( nPtBins%3 > 0 ) nSlides++;
-  adminIdx = 0;
-  ptBinIdx = 0;
-  for(unsigned int slide = 0; slide < nSlides; ++slide) {
-    oFile << "\n% --------------------------------------------------\n";
-    oFile << "\\begin{frame}\n";
-    oFile << "  \\frametitle{Tails "+etaRange+" (" << slide+1 << "/" << nSlides << ")}\n";
-    oFile << "  \\begin{columns}[T] \n";
-    for(int col = 0; col < 3; ++col, ++ptBinIdx) {
-      oFile << "    \\begin{column}{0.3333\\textwidth} \n";
-      oFile << "    \\centering\n";
-      if( !(ptBinIdx < admins[adminIdx]->nPtBins()) ) {
-	ptBinIdx = 0;
-	adminIdx++;
-      }
-      if( adminIdx < nAdmins ) {
-	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "TailFit_" << ptBinIdx << "}\\\\ \n";
-	oFile << "      \\includegraphics[width=\\textwidth]{" << admins.at(adminIdx)->outNamePrefix() << "Tail_" << ptBinIdx << "}\\\\ \n";
-      }
-      oFile << "  \\end{column} \n";
-    }
-    oFile << "  \\end{columns} \n";
-    oFile << "\\end{frame} \n";
-  }
-
+  } // End of loop over eta bins
+  
   oFile.close();
 }
 
 
-TString numLabel(const TString &orig, double shift = 10.) {
-  double num = orig.Atof();
-  TString result = util::toTString(num*shift);
-  if( result == "0" ) result += "0";
-  return result;
-}
 
 
+
+///////////////////////////////////////////////////////////////////////////
+//
+//  Main function
+//
+///////////////////////////////////////////////////////////////////////////
+
+
+// ------------------------------------------------------------------------------------
 void fitTailsFromAsym() {
+  
+
+  // +++++ Set up parameters +++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  std::cout << "Setting parameters" << std::endl;
   gErrorIgnoreLevel = 1001;
   util::StyleSettings::presentation();
-
-  unsigned int etaBin = 0;
-  gPPCutMin_ = "10";
-  gPPCutMax_ = "10";
-  gJetAlgo_ = "Calo";
-  gDeltaPhiCut_ = "|#Delta#phi| > 2.7";
-  gNSigCore_ = 2.;
-  gNSigTailStart_ = 3.5;
-  gFitGauss_ = true;
-
-
-  if( etaBin == 0 ) {
-    gEtaMin_ = "0.0";
-    gEtaMax_ = "1.1";
-  } else if( etaBin == 1 ) {
-    gEtaMin_ = "1.1";
-    gEtaMax_ = "1.7";
-  } else if( etaBin == 2 ) {
-    gEtaMin_ = "1.7";
-    gEtaMax_ = "2.3";
-  } else if( etaBin == 3 ) {
-    gEtaMin_ = "2.3";
-    gEtaMax_ = "5.0";
-  }
-
-  TString inNamePrefix = "~/results/ResolutionFit/TailScaling/Tails_";
-  TString inNameSuffix = "default.root";
-  if( gPPCutMin_ == gPPCutMax_ ) {
-    gUID_ = "Tails_"+gJetAlgo_+"_Eta"+numLabel(gEtaMin_)+"-"+numLabel(gEtaMax_)+"_PSoft"+gPPCutMax_+"_NSigTail"+numLabel(util::toTString(gNSigTailStart_));
-    inNamePrefix += gJetAlgo_+"_";
-    inNameSuffix = "_Pp"+gPPCutMax_+"/jsResponse.root";
-
-    gJetAlgo_ = "AK5 "+gJetAlgo_+"-Jets";
-    //gPPCutLabel_ = "p_{||} < 0."+gPPCutMax_;
-    gPPCutLabel_ = "p_{T,3} < 0."+gPPCutMax_;
-  } else {
-    gUID_ = "Tails_"+gJetAlgo_+"_Eta"+numLabel(gEtaMin_)+"-"+numLabel(gEtaMax_)+"_Pp"+gPPCutMin_+"-"+gPPCutMax_;
-    inNamePrefix += gJetAlgo_+"_";
-    inNameSuffix = "_Pp"+gPPCutMin_+"-"+gPPCutMax_+"/jsResponse.root";
-
-    gJetAlgo_ = "AK5 "+gJetAlgo_+"-Jets";
-    gPPCutLabel_ = "0."+gPPCutMin_+" < p_{||} < 0."+gPPCutMax_;
-  }
-  
-  std::vector<SampleAdmin*> admins;
-
-  //   // HLT test
-  std::vector<double> ptBinEdges;
-  
-  //90 100 120 150 170 200 250 300 350 400 500 1000
-  //0  1   2   3   4   5   6   7   8   9   10  11
-
-
-
-  // HLT 50
-  ptBinEdges.clear();
-  ptBinEdges.push_back(90.);
-  ptBinEdges.push_back(100.);
-  ptBinEdges.push_back(120.);
-  admins.push_back(new SampleAdmin(inNamePrefix+"Data_Pt0090-0120"+inNameSuffix,inNamePrefix+"MC_Pt0090-1000"+inNameSuffix,ptBinEdges,etaBin,2.9,0,2));
-
-  // HLT 70
-  ptBinEdges.clear();
-  ptBinEdges.push_back(120.);
-  ptBinEdges.push_back(150.);
-  admins.push_back(new SampleAdmin(inNamePrefix+"Data_Pt0120-0150"+inNameSuffix,inNamePrefix+"MC_Pt0090-1000"+inNameSuffix,ptBinEdges,etaBin,7.3,2,3));
-  
-  // HLT 100
-  ptBinEdges.clear();
-  ptBinEdges.push_back(150.);
-  ptBinEdges.push_back(170.);
-  ptBinEdges.push_back(200.);
-  admins.push_back(new SampleAdmin(inNamePrefix+"Data_Pt0150-0200"+inNameSuffix,inNamePrefix+"MC_Pt0090-1000"+inNameSuffix,ptBinEdges,etaBin,14.9,3,5));
-  
-  // HLT 140
-  ptBinEdges.clear();
-  ptBinEdges.push_back(200.);
-  ptBinEdges.push_back(250.);
-  ptBinEdges.push_back(300.);
-  ptBinEdges.push_back(350.);
-  ptBinEdges.push_back(400.);
-  ptBinEdges.push_back(500.);
-  ptBinEdges.push_back(1000.);
-  admins.push_back(new SampleAdmin(inNamePrefix+"Data_Pt0200-1000"+inNameSuffix,inNamePrefix+"MC_Pt0090-1000"+inNameSuffix,ptBinEdges,etaBin,32.7,5,11));
-
-
-
-  // Concat pt bin edges
-  std::vector<double> binEdgesAll;
-  for(AdminIt it = admins.begin(); it != admins.end(); ++it) {
-    std::vector<double> bins = (*it)->ptBinEdges();
-    if( binEdgesAll.size() == 0 ) {
-      binEdgesAll = bins;
-    } else {
-      assert( binEdgesAll.back() == bins.front() );
-      binEdgesAll.insert(binEdgesAll.end(),bins.begin()+1,bins.end());
-    }
-  }
-  for(size_t i = 0; i < binEdgesAll.size()-1; ++i) {
-    std::cout << "Bin " << i << ": " << binEdgesAll[i] << " - " << binEdgesAll[i+1] << std::endl;
-  }
-
-  // Plot spectra and asymmetry distributions
-  for(AdminIt it = admins.begin(); it != admins.end(); ++it) {
-    (*it)->plotSpectra();
-    (*it)->plotAsymmetry();
-    (*it)->plotSmearedAsymmetry();
-    (*it)->plotTails();
-  }
-
+  sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("BinningAdmin.cfg");
+  Parameters* par = new Parameters(binAdm,2.,3.,"testCaloData.root","testCaloMC.root");
   // Global labels
-  TPaveText* labelAll = createLabel(binEdgesAll.front(),binEdgesAll.back());
-  TPaveText* labelEta = createLabelEta();
+  Label* label = new Label(par);
 
-  // Compare width of asymmetry
-  TH1 *hWidthAsymData = util::HistOps::createTH1D("hWidthAsymData",binEdgesAll,"p^{ave}_{T}","GeV","#sigma(Asymmetry)");
-  hWidthAsymData->GetXaxis()->SetMoreLogLabels();
-  TH1 *hWidthAsymMC = static_cast<TH1D*>(hWidthAsymData->Clone("hWidthAsymMC"));
-  hWidthAsymData->SetMarkerStyle(20);
-  int ptBin = 1;
-  for(AdminIt it = admins.begin(); it != admins.end(); ++it) {
-    for(unsigned int sBin = 0; sBin < (*it)->nPtBins(); ++sBin,++ptBin) {
-      hWidthAsymData->SetBinContent(ptBin,(*it)->widthAsymData(sBin));
-      hWidthAsymData->SetBinError(ptBin,(*it)->widthAsymErrData(sBin));
-      
-      hWidthAsymMC->SetBinContent(ptBin,(*it)->widthAsymMC(sBin));
-      hWidthAsymMC->SetBinError(ptBin,(*it)->widthAsymErrMC(sBin));
+
+
+  // +++++ Reading histograms and fitting asymmetry ++++++++++++++++++++++++++++++
+
+  std::cout << "Reading histograms and extracting tails" << std::endl;
+  std::vector< std::vector<AsymmetryAdmin*> > asymAdms;
+  for(unsigned int etaBin = 0; etaBin < 1; ++etaBin) {//binAdm->nEtaBins(); ++etaBin) {
+    std::vector<AsymmetryAdmin*> tmp;
+    for(unsigned int ptBin = 0; ptBin < 3; ++ptBin) {//binAdm->nPtBins(etaBin); ++ptBin) {
+      tmp.push_back(new AsymmetryAdmin(par,etaBin,ptBin));
+    }
+    asymAdms.push_back(tmp);
+  }
+
+
+
+
+  // +++++ Plot spectra and asymmetry distributions ++++++++++++++++++++++++++++++
+
+  std::cout << "Plotting asymmetry and tail distributions" << std::endl;
+  for(AsymEtaPtIt etaIt = asymAdms.begin(); etaIt != asymAdms.end(); ++etaIt) {
+    for(AsymPtIt ptIt = etaIt->begin(); ptIt != etaIt->end(); ++ptIt) {
+      (*ptIt)->plotAsymmetry();
+      (*ptIt)->plotSmearedAsymmetry();
+      (*ptIt)->plotTails();
     }
   }
-  TCanvas *canWA = new TCanvas("canWA","Width Asymmetry",500,500);
-  canWA->cd();
-  hWidthAsymMC->GetYaxis()->SetRangeUser(0.,0.4);
-  hWidthAsymMC->Draw("HISTE");
-  hWidthAsymData->Draw("PE1same");
-  labelAll->Draw("same");
-  labelEta->Draw("same");
-  TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,0.3,1);
-  leg->AddEntry(hWidthAsymData,"Data","P");
-  leg->AddEntry(hWidthAsymMC,"MC","L");
-  leg->Draw("same");
-  canWA->SetLogx();
-  canWA->SaveAs(gUID_+"_WidthAsym.eps","eps");
 
-  TH1 *hRatioWidthAsym = util::HistOps::createRatioPlot(hWidthAsymData,hWidthAsymMC);
-  TH1 *hRatioWidthAsymFrame = util::HistOps::createRatioFrame(hRatioWidthAsym,"#sigma(Asymmetry) Data / MC",0.8,1.5);
-  TCanvas *canWAR = new TCanvas("canWAR","Width Asymmetry Ratio",500,500);
-  canWAR->cd();
-  hRatioWidthAsymFrame->Draw();
-  hRatioWidthAsym->Draw("PE1same");
-  labelAll->Draw("same");
-  labelEta->Draw("same");
-  canWAR->SetLogx();
-  canWAR->SaveAs(gUID_+"_WidthAsymRatio.eps","eps");
 
-  // Fit asymmetry --> noise term...
-  plotDataMCDiff(hWidthAsymData,hWidthAsymMC,labelAll,labelEta);
+
+  
+  // +++++ Common plotting objects +++++++++++++++++++++++++++++++++++++++++++++++
+
+  TFile outFile(par->outFileNamePrefix()+".root","RECREATE");
   
 
 
-  // Compare width of smeared asymmetry
-  TH1 *hWidthSmearedAsymMC = static_cast<TH1D*>(hWidthAsymMC->Clone("hWidthSmearedAsymMC"));
-  hWidthAsymMC->SetLineStyle(2);
-  ptBin = 1;
-  for(AdminIt it = admins.begin(); it != admins.end(); ++it) {
-    for(unsigned int sBin = 0; sBin < (*it)->nPtBins(); ++sBin,++ptBin) {
-      hWidthSmearedAsymMC->SetBinContent(ptBin,(*it)->widthSmearedAsymMC(sBin));
-      hWidthSmearedAsymMC->SetBinError(ptBin,(*it)->widthSmearedAsymErrMC(sBin));
+
+  // +++++ Compare width of asymmetry ++++++++++++++++++++++++++++++++++++++++++++
+
+  std::cout << "Plotting comparison of width of asymmetry" << std::endl;
+  for(unsigned int etaBin = 0; etaBin < asymAdms.size(); ++etaBin) {
+    TString suffix = "_Eta"+util::toTString(etaBin);
+    TPaveText* labelInfo = label->info(etaBin);
+    TPaveText* labelEta = label->eta(etaBin);
+
+    // Width of asymmetry      
+    TH1 *hWidthData = util::HistOps::createTH1D("hWidthData"+suffix,binAdm->ptBinEdges(etaBin),
+						"p^{ave}_{T}","GeV","#sigma(Asymmetry)");
+    hWidthData->GetXaxis()->SetMoreLogLabels();
+    TH1 *hWidthMC = static_cast<TH1D*>(hWidthData->Clone("hWidthMC"+suffix));
+    hWidthData->SetMarkerStyle(20);
+
+    // Width of smeared asymmetry
+    TH1 *hWidthSmearedMC = static_cast<TH1D*>(hWidthMC->Clone("hWidthSmearedMC"+suffix));
+    hWidthMC->SetLineStyle(2);
+
+    // Fill width
+    int bin = 1;
+    for(AsymPtIt ptIt = asymAdms[etaBin].begin(); ptIt != asymAdms[etaBin].end(); ++ptIt, ++bin) {
+      hWidthData->SetBinContent(bin,(*ptIt)->widthAsymData());
+      hWidthData->SetBinError(bin,(*ptIt)->widthAsymErrData());
+      hWidthMC->SetBinContent(bin,(*ptIt)->widthAsymMC());
+      hWidthMC->SetBinError(bin,(*ptIt)->widthAsymErrMC());
+      hWidthSmearedMC->SetBinContent(bin,(*ptIt)->widthSmearedAsymMC());
+      hWidthSmearedMC->SetBinError(bin,(*ptIt)->widthSmearedAsymErrMC());
     }
-  }
-  TCanvas *canWSA = new TCanvas("canWSA","Width Smeared Asymmetry",500,500);
-  canWSA->cd();
-  hWidthSmearedAsymMC->GetYaxis()->SetRangeUser(0.,0.4);
-  hWidthSmearedAsymMC->Draw("HISTE");
-  hWidthAsymMC->Draw("HISTEsame");
-  hWidthAsymData->Draw("PE1same");
-  labelAll->Draw("same");
-  labelEta->Draw("same");
-  TLegend* leg2 = util::LabelFactory::createLegendColWithOffset(3,0.3,1);
-  leg2->AddEntry(hWidthAsymData,"Data","P");
-  leg2->AddEntry(hWidthAsymMC,"MC","L");
-  leg2->AddEntry(hWidthSmearedAsymMC,"MC (Smeared)","L");
-  leg2->Draw("same");
-  canWSA->SetLogx();
-  canWSA->SaveAs(gUID_+"_WidthSmearedAsym.eps","eps");
 
-  TH1 *hRatioWidthSmearAsym = util::HistOps::createRatioPlot(hWidthAsymData,hWidthSmearedAsymMC);
-  hRatioWidthSmearAsym->SetName("hRatioWidthSmearAsym");
-  TCanvas *canWSAR = new TCanvas("canWSAR","Width Smearerd Asymmetry Ratio",500,500);
-  canWSAR->cd();
-  hRatioWidthAsymFrame->Draw();
-  hRatioWidthAsym->SetMarkerStyle(24);
-  hRatioWidthAsym->Draw("PE1same");
-  hRatioWidthSmearAsym->Draw("PE1same");
-  labelAll->Draw("same");
-  labelEta->Draw("same");
-  TLegend* leg4 = util::LabelFactory::createLegendColWithOffset(2,0.3,1);
-  leg4->AddEntry(hRatioWidthAsym,"Regular MC","P");
-  leg4->AddEntry(hRatioWidthSmearAsym,"Smeared MC","P");
-  leg4->Draw("same");
-  canWSAR->SetLogx();
-  canWSAR->SaveAs(gUID_+"_WidthSmearedAsymRatio.eps","eps");
+    // Plot asymmetry width
+    TCanvas *can = new TCanvas("can","Width of Asymmetry",500,500);
+    can->cd();
+    hWidthMC->GetYaxis()->SetRangeUser(0.,0.4);
+    hWidthMC->Draw("HISTE");
+    hWidthData->Draw("PE1same");
+    labelInfo->Draw("same");
+    labelEta->Draw("same");
+    TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,0.3,1);
+    leg->AddEntry(hWidthData,"Data","P");
+    leg->AddEntry(hWidthMC,"MC","L");
+    leg->Draw("same");
+    can->SetLogx();
+    can->SaveAs(par->outFileNamePrefix(etaBin)+"WidthAsym.eps","eps");
+    delete leg;
 
+    TH1 *hRatioWidth = util::HistOps::createRatioPlot(hWidthData,hWidthMC);
+    TH1 *hRatioWidthFrame = util::HistOps::createRatioFrame(hRatioWidth,"#sigma(Asymmetry) Data / MC",0.8,1.5);
+    can->cd();
+    hRatioWidthFrame->Draw();
+    hRatioWidth->Draw("PE1same");
+    labelInfo->Draw("same");
+    labelEta->Draw("same");
+    can->SetLogx();
+    can->SaveAs(par->outFileNamePrefix(etaBin)+"WidthAsymRatio.eps","eps");
 
+    can->cd();
+    hWidthSmearedMC->GetYaxis()->SetRangeUser(0.,0.4);
+    hWidthSmearedMC->Draw("HISTE");
+    hWidthMC->Draw("HISTEsame");
+    hWidthData->Draw("PE1same");
+    labelInfo->Draw("same");
+    labelEta->Draw("same");
+    leg = util::LabelFactory::createLegendColWithOffset(3,0.3,1);
+    leg->AddEntry(hWidthData,"Data","P");
+    leg->AddEntry(hWidthMC,"MC","L");
+    leg->AddEntry(hWidthSmearedMC,"MC (Smeared)","L");
+    leg->Draw("same");
+    can->SetLogx();
+    can->SaveAs(par->outFileNamePrefix(etaBin)+"WidthSmearedAsym.eps","eps");
+    delete leg;
 
-  ///////////////////////////////////////////////////////////////
-  //   Number of tail events and scaling factors
-  ///////////////////////////////////////////////////////////////
-
-  // Different error modes
-  unsigned int nErrorModes = 2;
-  util::HistVec hNTailData(nErrorModes);
-  util::HistVec hNTailMC(nErrorModes);
-
-  for(unsigned int i = 0; i < nErrorModes; ++i) {
-    // Declare histograms of absolute number of tail events
-    hNTailData[i] = util::HistOps::createTH1D("hNTailData"+util::toTString(i),binEdgesAll,
-					      "p^{ave}_{T}","GeV","Number Tail Events");
-    hNTailData[i]->SetMarkerStyle(20+i);
-    util::HistOps::setStyleColor(hNTailData[i],i);
-    hNTailMC[i] = static_cast<TH1D*>(hNTailData[i]->Clone("hNTailMC"+util::toTString(i)));
-    hNTailMC[i]->SetFillColor(5);
-  }
-
-  // Fill histograms with absolute number (from data x-sec)
-  std::cout << "\n\nNUMBER OF TAILS EVENTS\n";
-  ptBin = 1;
-  for(AdminIt it = admins.begin(); it != admins.end(); ++it) {
-    for(unsigned int sBin = 0; sBin < (*it)->nPtBins(); ++sBin,++ptBin) {
-      const SampleAdmin *admin = *it;
-      double nTotal = admin->nTotalData(sBin);
-
-      // Uncertainty mode 0
-      hNTailData[0]->SetBinContent(ptBin,nTotal*admin->nTailData(sBin));
-      hNTailData[0]->SetBinError(ptBin,sqrt(hNTailData[0]->GetBinContent(ptBin)));
-      hNTailMC[0]->SetBinContent(ptBin,nTotal*admin->nTailMC(sBin));
-      hNTailMC[0]->SetBinError(ptBin,sqrt(hNTailMC[0]->GetBinContent(ptBin)));
+    TH1 *hRatioWidthSmear = util::HistOps::createRatioPlot(hWidthData,hWidthSmearedMC);
+    can->cd();
+    hRatioWidthFrame->Draw();
+    hRatioWidth->SetMarkerStyle(24);
+    hRatioWidth->Draw("PE1same");
+    hRatioWidthSmear->Draw("PE1same");
+    labelInfo->Draw("same");
+    labelEta->Draw("same");
+    leg = util::LabelFactory::createLegendColWithOffset(2,0.3,1);
+    leg->AddEntry(hRatioWidth,"Regular MC","P");
+    leg->AddEntry(hRatioWidthSmear,"Smeared MC","P");
+    leg->Draw("same");
+    can->SetLogx();
+    can->SaveAs(par->outFileNamePrefix(etaBin)+"WidthSmearedAsymRatio.eps","eps");
+    delete leg;
 
 
-      // Uncertainty mode 1
-      hNTailData[1]->SetBinContent(ptBin,nTotal*admin->nTailData(sBin));
-      hNTailData[1]->SetBinError(ptBin,0.);
-      hNTailMC[1]->SetBinContent(ptBin,nTotal*admin->nTailMC(sBin));
-      double sigMCStat = hNTailMC[1]->GetBinContent(ptBin)/sqrt(admin->nTotalMC(sBin)*admin->nTailMC(sBin)); 
-      double sigPred = sqrt(hNTailMC[1]->GetBinContent(ptBin));
-      hNTailMC[1]->SetBinError(ptBin,sqrt(sigMCStat*sigMCStat + sigPred*sigPred));
+    // Write selected histograms to file
+    outFile.WriteTObject(hRatioWidth);
+    outFile.WriteTObject(hRatioWidthSmear);
 
-      std::cout << ptBin << " (" << admin->ptMin(sBin) << " - " << admin->ptMax(sBin) << "): \t\t" << hNTailData[0]->GetBinContent(ptBin) << " +/- " << hNTailData[0]->GetBinError(ptBin) << " (" << hNTailData[1]->GetBinError(ptBin) << "),  \t" << hNTailMC[0]->GetBinContent(ptBin) << " +/- " << hNTailMC[0]->GetBinError(ptBin) << " (" << hNTailMC[1]->GetBinError(ptBin) << ")" << std::endl;
-    }
-  }
-  
-  // Plot numbers
-  TCanvas *canNTail = new TCanvas("canNTail","Number of tail events",500,500);
-  canNTail->cd();
-  hNTailMC[0]->GetYaxis()->SetRangeUser(0,500.);
-  hNTailMC[0]->GetXaxis()->SetMoreLogLabels();
-  hNTailMC[0]->Draw("HIST");
-  hNTailData[0]->Draw("PE1same");
-//   for(unsigned int i = 0; i < nErrorModes; ++i) {
-//     hNTailMC[i]->Draw("HISTsame");
-//     hNTailData[i]->Draw("PE1same");
-//   }
-  labelAll->Draw("same");
-  labelEta->Draw("same");
-  TLegend* leg3 = util::LabelFactory::createLegendColWithOffset(2,0.3,1);
-  leg3->AddEntry(hNTailData[0],"Data","P");
-  leg3->AddEntry(hNTailMC[0],"MC","F");
-  leg3->Draw("same");
-  canNTail->SetLogx();
-  canNTail->SaveAs(gUID_+"_NumTailEvts.eps","eps");
-
-  
-  util::HistVec hScalFac(nErrorModes);
-  for(unsigned int i = 0; i < nErrorModes; ++i) {
-    hScalFac[i] = util::HistOps::createRatioPlot(hNTailData[i],hNTailMC[i],"");
-  }
-  TH1 *hScalFacFrame = util::HistOps::createRatioFrame(hScalFac[0],"Tail Scaling Factor",2);
-  TCanvas *canScalFac = new TCanvas("canScalFac","Scaling factors",500,500);
-  canScalFac->cd();
-  if( gFitGauss_ ) hScalFacFrame->GetYaxis()->SetRangeUser(0.,8.);
-  else hScalFacFrame->GetYaxis()->SetRangeUser(0.,3.);
-  hScalFacFrame->GetXaxis()->SetMoreLogLabels();
-  hScalFacFrame->Draw();
-  for(unsigned int i = 0; i < 1; ++i) {
-    hScalFac[i]->Draw("PE1same");
-  }
-  labelAll->Draw("same");
-  labelEta->Draw("same");
-  canScalFac->SetLogx();
-  canScalFac->SaveAs(gUID_+"_ScalingFactors.eps","eps");
-
-
-  // Rebinned
-  std::vector<double> binEdgesAllTrend;
-  binEdgesAllTrend.push_back(binEdgesAll.front());
-  binEdgesAllTrend.push_back(binEdgesAll.at(3));
-  binEdgesAllTrend.push_back(binEdgesAll.at(6));
-  binEdgesAllTrend.push_back(binEdgesAll.back());
-  TH1* hScalFacTrend = util::HistOps::createTH1D("hScalFacTrend",binEdgesAllTrend,
-						 "p^{ave}_{T}","GeV","Tail Scaling Factor");
-  hScalFacTrend->SetMarkerStyle(20);
-  for(int bin = 1; bin <= hScalFacTrend->GetNbinsX(); ++bin) {
-    double left = hScalFacTrend->GetXaxis()->GetBinLowEdge(bin);
-    double right = hScalFacTrend->GetXaxis()->GetBinUpEdge(bin);
     
-    if( hScalFac[0]->Fit("pol0","0QR","",left,right) == 0 ) {
-      hScalFacTrend->SetBinContent(bin,hScalFac[0]->GetFunction("pol0")->GetParameter(0));
-      hScalFacTrend->SetBinError(bin,hScalFac[0]->GetFunction("pol0")->GetParError(0));
-    }
-  }
-  hScalFacFrame->GetYaxis()->SetRangeUser(0.,3.5);
-  hScalFacFrame->Draw();
-  for(unsigned int i = 0; i < 1; ++i) {
-    hScalFacTrend->Draw("PE1same");
-  }
-  labelAll->Draw("same");
-  labelEta->Draw("same");
-  canScalFac->SetLogx();
-  canScalFac->SaveAs(gUID_+"_ScalingFactorsTrend.eps","eps");
+    delete labelInfo;
+    delete labelEta;
+    delete can;
+  } // End of loop over eta bins
+
+  
+  
+  // +++++ Number of tail events and scaling factors +++++++++++++++++++++++++++++++++++
+
+  std::cout << "Plotting number of tail events" << std::endl;
+  for(unsigned int etaBin = 0; etaBin < asymAdms.size(); ++etaBin) {
+    TString suffix = "_Eta"+util::toTString(etaBin);
+    TPaveText* labelInfo = label->info(etaBin);
+    TPaveText* labelEta = label->eta(etaBin);
+
+    // Normal pt binning    
+    TH1 *hNTailData = util::HistOps::createTH1D("hNTailData"+suffix,binAdm->ptBinEdges(etaBin),
+						"p^{ave}_{T}","GeV","Number Tail Events");
+    hNTailData->GetXaxis()->SetMoreLogLabels();
+    hNTailData->SetMarkerStyle(20);
+    TH1* hNTailMC = static_cast<TH1D*>(hNTailData->Clone("hNTailMC"+suffix));
+    hNTailMC->SetFillColor(par->fillColor());
+
+    // Integrated pt binning
+    std::vector<double> ptBinEdgesInt = binAdm->ptBinEdgesInt(etaBin);
+    TH1 *hNTailIntData = util::HistOps::createTH1D("hNTailIntData"+suffix,ptBinEdgesInt,
+						   "p^{ave}_{T}","GeV","Number Tail Events");
+    hNTailIntData->GetXaxis()->SetMoreLogLabels();
+    hNTailIntData->SetMarkerStyle(20);
+    TH1* hNTailIntMC = static_cast<TH1D*>(hNTailIntData->Clone("hNTailIntMC"+suffix));
+    hNTailIntMC->SetFillColor(par->fillColor());
+
+    
+    // Fill number of events (from data x-sec)
+    std::cout << "\n\nNUMBER OF TAILS EVENTS\n";
+    int bin = 1;
+    int binInt = 1;
+    double nTailIntData = 0.;
+    double nTailIntMC = 0.;
+    for(AsymPtIt ptIt = asymAdms[etaBin].begin(); ptIt != asymAdms[etaBin].end(); ++ptIt, ++bin) {
+      double nTotal = (*ptIt)->nTotalData();
+      double nTailData = nTotal*(*ptIt)->nTailData();
+      double nTailMC = nTotal*(*ptIt)->nTailMC();
+      
+      hNTailData->SetBinContent(bin,nTailData);
+      hNTailData->SetBinError(bin,sqrt(nTailData));
+      hNTailMC->SetBinContent(bin,nTailMC);
+      hNTailMC->SetBinError(bin,sqrt(nTailMC));
+
+      nTailIntData += nTailData;
+      nTailIntMC += nTailMC;
+      if( hNTailMC->GetXaxis()->GetBinUpEdge(bin) == ptBinEdgesInt.at(binInt) ) {
+	hNTailIntData->SetBinContent(binInt,nTailIntData);
+	hNTailIntData->SetBinError(binInt,sqrt(nTailIntData));
+	hNTailIntMC->SetBinContent(binInt,nTailIntMC);
+	hNTailIntMC->SetBinError(binInt,sqrt(nTailIntMC));
+
+	binInt++;
+	nTailIntData = 0;
+	nTailIntMC = 0;
+      }
+
+      std::cout << bin-1 << ": \t" << hNTailData->GetBinContent(bin) << " +/- " << hNTailData->GetBinError(bin) << ",  \t" << hNTailMC->GetBinContent(bin) << " +/- " << hNTailMC->GetBinError(bin) << std::endl;
+    } // End of loop over pt bins
+
+
+    // Plot numbers
+    TCanvas *can = new TCanvas("can","Number of tail events",500,500);
+    can->cd();
+    hNTailMC->GetYaxis()->SetRangeUser(0,500.);
+    hNTailMC->Draw("HIST");
+    hNTailData->Draw("PE1same");
+    labelInfo->Draw("same");
+    labelEta->Draw("same");
+    TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,0.3,1);
+    leg->AddEntry(hNTailData,"Data","P");
+    leg->AddEntry(hNTailMC,"MC","F");
+    leg->Draw("same");
+    can->SetLogx();
+    can->SaveAs(par->outFileNamePrefix(etaBin)+"NumTailEvts.eps","eps");
+
+    can->cd();
+    hNTailIntMC->GetYaxis()->SetRangeUser(0,500.);
+    hNTailIntMC->Draw("HIST");
+    hNTailIntData->Draw("PE1same");
+    labelInfo->Draw("same");
+    labelEta->Draw("same");
+    leg->Draw("same");
+    can->SetLogx();
+    can->SaveAs(par->outFileNamePrefix(etaBin)+"NumTailEvtsInt.eps","eps");
+    delete leg;
+
+
+    // Scale factors
+    TH1* hScalFac = util::HistOps::createRatioPlot(hNTailData,hNTailMC,"");
+    TH1* hScalFacInt = util::HistOps::createRatioPlot(hNTailIntData,hNTailIntMC,"");
+    TH1 *hScalFacFrame = util::HistOps::createRatioFrame(hScalFac,"Tail Scaling Factor",2);
+
+    TCanvas *canScalFac = new TCanvas("canScalFac","Scaling factors",500,500);
+    canScalFac->cd();
+    hScalFacFrame->GetYaxis()->SetRangeUser(0.,5.);
+    hScalFacFrame->GetXaxis()->SetMoreLogLabels();
+    hScalFacFrame->Draw();
+    hScalFac->Draw("PE1same");
+    labelInfo->Draw("same");
+    labelEta->Draw("same");
+    canScalFac->SetLogx();
+    canScalFac->SaveAs(par->outFileNamePrefix(etaBin)+"ScalingFactors.eps","eps");
+
+    canScalFac->cd();
+    hScalFacFrame->Draw();
+    hScalFacInt->Draw("PE1same");
+    labelInfo->Draw("same");
+    labelEta->Draw("same");
+    canScalFac->SetLogx();
+    canScalFac->SaveAs(par->outFileNamePrefix(etaBin)+"ScalingFactorsInt.eps","eps");
+
+
+    // Writ to root file
+    outFile.WriteTObject(hScalFac);
+    outFile.WriteTObject(hScalFacInt);
+
+    
+    delete labelInfo;
+    delete labelEta;
+    delete canScalFac;
+    delete can;
+  } // End of loop over eta bins    
 
 
 
-  // Write selected histograms to file
-  TFile outFile((gUID_+".root"),"RECREATE");
-  outFile.WriteTObject(hRatioWidthAsymFrame);
-  outFile.WriteTObject(hRatioWidthAsym);
-  outFile.WriteTObject(hRatioWidthSmearAsym);
-  outFile.WriteTObject(hScalFacFrame);
-  outFile.WriteTObject(hScalFac[0]);
-  outFile.WriteTObject(hScalFacTrend);
+  // +++++ Write slides and clean up +++++++++++++++++++++++++++++++++++++++++++++++++
 
   outFile.Close();
+  createSlides(par,asymAdms);
 
-
-  createSlides(admins);
+  delete par;
+  delete binAdm;
 }
 
