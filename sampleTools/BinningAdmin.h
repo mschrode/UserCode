@@ -1,4 +1,4 @@
-// $Id: BinningAdmin.h,v 1.1 2010/11/26 22:42:18 mschrode Exp $
+// $Id: BinningAdmin.h,v 1.2 2010/11/27 23:56:12 mschrode Exp $
 
 #ifndef BINNING_ADMIN_H
 #define BINNING_ADMIN_H
@@ -194,7 +194,22 @@ namespace sampleTools {
     // PtSoft binning:
     ptSoftMax_ = parser.readDoubleVec("PtSoft max"); 
     ptSoftMin_ = parser.readDoubleVec("PtSoft min"); 
-    assert( ptSoftMin_.size() == ptSoftMax_.size() );
+    if( ptSoftMin_.size() != ptSoftMax_.size() ) {
+      if( ptSoftMin_.size() == 0 ) {
+	for(unsigned int i = 0; i < ptSoftMax_.size(); ++i) {
+	  ptSoftMin_.push_back(0.);
+	}
+      } else {
+	std::cerr << "\nERROR in BinningAdmin: 'ptSoftMin_.size() != ptSoftMax_.size()'\n";
+	for(unsigned int i = 0; i < ptSoftMin_.size(); ++i) {
+	  std::cout << "  ptSoftMin_[" << i << "] = " << ptSoftMin_[i] << std::endl;
+	}
+	for(unsigned int i = 0; i < ptSoftMax_.size(); ++i) {
+	  std::cout << "  ptSoftMax_[" << i << "] = " << ptSoftMax_[i] << std::endl;
+	}
+	exit(1);
+      }
+    }
   }
 
 
