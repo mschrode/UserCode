@@ -1,4 +1,4 @@
-// $Id: fitTailsFromAsym.C,v 1.7 2010/11/28 13:59:30 mschrode Exp $
+// $Id: fitTailsFromAsym.C,v 1.8 2010/11/28 22:47:25 mschrode Exp $
 
 #include <cmath>
 #include <fstream>
@@ -36,11 +36,12 @@
 
 class Parameters {
  public:
-  Parameters(const sampleTools::BinningAdmin* admin, double nSigCore, double nSigTailStart, const TString &fileData, const TString &fileMC);
+  Parameters(const sampleTools::BinningAdmin* admin, double nSigCore, double nSigTailStart, double pt3Cut, const TString &fileData, const TString &fileMC);
   
   const sampleTools::BinningAdmin* binningAdmin() const { return admin_; }
   double nSigCore() const { return nSigCore_; };
   double nSigTailStart() const { return nSigTailStart_; }
+  double pt3Cut() const { return pt3Cut_; }
   TString inFileNameData() const { return inFileNameData_; }
   TString inFileNameMC() const { return inFileNameMC_; }
   TString outFileNamePrefix() const { return outFileNamePrefix_; }
@@ -56,6 +57,7 @@ class Parameters {
   const sampleTools::BinningAdmin* admin_;
   const double nSigCore_;
   const double nSigTailStart_;
+  const double pt3Cut_;
   const TString inFileNameData_;
   const TString inFileNameMC_;
 
@@ -67,11 +69,11 @@ class Parameters {
 
 
 // ------------------------------------------------------------------------------------
-Parameters::Parameters(const sampleTools::BinningAdmin* admin, double nSigCore, double nSigTailStart, const TString &fileData, const TString &fileMC)
-  : admin_(admin), nSigCore_(nSigCore), nSigTailStart_(nSigTailStart), inFileNameData_(fileData), inFileNameMC_(fileMC) {
+Parameters::Parameters(const sampleTools::BinningAdmin* admin, double nSigCore, double nSigTailStart, double pt3Cut, const TString &fileData, const TString &fileMC)
+  : admin_(admin), nSigCore_(nSigCore), nSigTailStart_(nSigTailStart), pt3Cut_(pt3Cut), inFileNameData_(fileData), inFileNameMC_(fileMC) {
 
   // Prefix for output files
-  outFileNamePrefix_ = "Tails_";
+  outFileNamePrefix_ = "Tails_nSCore"+util::toTString(10.*nSigCore_)+"_nSTail"+util::toTString(10.*nSigTailStart_)+"_ptSoft"+util::toTString(100.*pt3Cut_)+"_";
   if( inFileNameData_.Contains("Calo") && inFileNameMC_.Contains("Calo") ) {
     outFileNamePrefix_ += "Calo_";
     labelJetAlgo_ = "AK5 Calo-Jets";
@@ -82,8 +84,9 @@ Parameters::Parameters(const sampleTools::BinningAdmin* admin, double nSigCore, 
     std::cerr << "WARNING in Parameters: unknown or inconsistent jet algorithms for data and MC" << std::endl;
   }
 
+  labelPSoftCut_ = "p_{||} < "+util::toTString(pt3Cut_)+"#upoint#bar{p^{ave}_{T}}";
+
   labelDeltaPhiCut_ = "|#Delta#phi| > 2.7";
-  labelPSoftCut_ = "p_{||} < 0.1";
 }
 
 
@@ -117,7 +120,7 @@ TPaveText* Label::info(unsigned int etaBin, unsigned int ptBin) const {
   TPaveText *txt = util::LabelFactory::createPaveText(3,-0.68);
   if( lumi > 0. ) txt->AddText("L = "+util::toTString(lumi)+" pb^{-1},  "+par_->labelJetAlgo()+",");
   else txt->AddText(par_->labelJetAlgo()+",");
-  txt->AddText(par_->labelDeltaPhiCut()+",  "+par_->labelPSoftCut()+"#upoint#bar{p^{ave}_{T}}");
+  txt->AddText(par_->labelDeltaPhiCut()+",  "+par_->labelPSoftCut());
   txt->AddText(util::toTString(min)+" < p^{ave}_{T} < "+util::toTString(max)+" GeV");
 
   return txt;
@@ -259,13 +262,27 @@ AsymmetryBin::AsymmetryBin(const Parameters* par, int type, unsigned int etaBin,
   // Fitting width of asymmetry
   fitWidth(hPtAsym_,widthAsym_,widthAsymErr_);
   // Extract tails from measured asymmetry
-  getTail(hPtAsym_);
+  //  getTail(hPtAsym_);
 
 
   // Initialize smeared histograms
-  smearAsymmetry(0.1,hPtAsym_,hPtAsymSmeared_);
-  fitWidth(hPtAsymSmeared_,widthAsymSmeared_,widthAsymErrSmeared_);
-  getTail(hPtAsymSmeared_);
+//   smearAsymmetry(0.1,hPtAsym_,hPtAsymSmeared_);
+//   fitWidth(hPtAsymSmeared_,widthAsymSmeared_,widthAsymErrSmeared_);
+//   getTail(hPtAsymSmeared_);
+
+
+  if( type_ == 0 ) {
+    // Extract tails from measured asymmetry
+    getTail(hPtAsym_);
+  } else {
+    // Smearing asymmetry
+    smearAsymmetry(0.1,hPtAsym_,hPtAsymSmeared_);
+    fitWidth(hPtAsymSmeared_,widthAsymSmeared_,widthAsymErrSmeared_);
+
+    // Extract tails from smeared asymmetry
+    getTail(hPtAsymSmeared_);
+  }
+
 }
 
 
@@ -821,7 +838,7 @@ void fitTailsFromAsym() {
   gErrorIgnoreLevel = 1001;
   util::StyleSettings::presentation();
   sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("BinningAdmin.cfg");
-  Parameters* par = new Parameters(binAdm,2.,3.,"testCaloData.root","testCaloMC.root");
+  Parameters* par = new Parameters(binAdm,2.,3.,0.3,"tails/Tails_Calo_Data_Pt3Cut_Eta0_PtSoft2.root","tails/Tails_Calo_MCFall10_Pt3Cut_Eta0_PtSoft2.root");
   // Global labels
   Label* label = new Label(par);
 
@@ -833,7 +850,7 @@ void fitTailsFromAsym() {
   std::vector< std::vector<AsymmetryAdmin*> > asymAdms;
   for(unsigned int etaBin = 0; etaBin < 1; ++etaBin) {//binAdm->nEtaBins(); ++etaBin) {
     std::vector<AsymmetryAdmin*> tmp;
-    for(unsigned int ptBin = 0; ptBin < 3; ++ptBin) {//binAdm->nPtBins(etaBin); ++ptBin) {
+    for(unsigned int ptBin = 0; ptBin < binAdm->nPtBins(etaBin); ++ptBin) {
       tmp.push_back(new AsymmetryAdmin(par,etaBin,ptBin));
     }
     asymAdms.push_back(tmp);
