@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: plotTailUncertainties.C,v 1.1 2010/11/29 09:20:47 mschrode Exp $
 
 #include <cmath>
 #include <iostream>
@@ -13,6 +13,7 @@
 #include "TLegend.h"
 #include "TPaveText.h"
 #include "TString.h"
+#include "TStyle.h"
 
 #include "../sampleTools/BinningAdmin.h"
 #include "../util/utils.h"
@@ -49,16 +50,16 @@ void plotTailUncertainties() {
   util::StyleSettings::presentationNoTitle();
   sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("BinningAdmin.cfg");
   
-  TString nomName = "Tails_nSCore20_nSTail30_ptSoft20_Calo_.root";
+  TString nomName = "results/Tails_nSCore20_nSTail30_ptSoft20_PF_.root";
 
 
   std::vector<Variation*> vars;
-//   vars.push_back(new Variation("Tails_nSCore20_nSTail25_ptSoft30_Calo_.root","TailStart25","Tail Start 2.5#sigma"));
-//   vars.push_back(new Variation("Tails_nSCore20_nSTail35_ptSoft30_Calo_.root","TailStart35","Tail Start 3.5#sigma"));
-//   vars.push_back(new Variation("Tails_nSCore15_nSTail30_ptSoft30_Calo_.root","TailStart35","Core 1.8#sigma"));
-//   vars.push_back(new Variation("Tails_nSCore25_nSTail30_ptSoft30_Calo_.root","TailStart35","Core 2.2#sigma"));
-  vars.push_back(new Variation("Tails_nSCore20_nSTail30_ptSoft10_Calo_.root","TailStart35","p_{T,3} < 0.2#bar{p^{ave}_{T}}"));
-  vars.push_back(new Variation("Tails_nSCore20_nSTail30_ptSoft30_Calo_.root","TailStart35","p_{T,3} < 0.3#bar{p^{ave}_{T}}"));
+  vars.push_back(new Variation("results/Tails_nSCore20_nSTail25_ptSoft20_PF_.root","TailStart25","Tail Start 2.5#sigma"));
+  vars.push_back(new Variation("results/Tails_nSCore20_nSTail35_ptSoft20_PF_.root","TailStart35","Tail Start 3.5#sigma"));
+  vars.push_back(new Variation("results/Tails_nSCore15_nSTail30_ptSoft20_PF_.root","TailStart35","Core 1.8#sigma"));
+  vars.push_back(new Variation("results/Tails_nSCore25_nSTail30_ptSoft20_PF_.root","TailStart35","Core 2.2#sigma"));
+  vars.push_back(new Variation("results/Tails_nSCore20_nSTail30_ptSoft10_PF_.root","TailStart35","p_{T,3} < 0.1#upoint#bar{p^{ave}_{T}}"));
+  vars.push_back(new Variation("results/Tails_nSCore20_nSTail30_ptSoft30_PF_.root","TailStart35","p_{T,3} < 0.3#upoint#bar{p^{ave}_{T}}"));
 
 
   TString outName = "Tails_";
@@ -80,8 +81,8 @@ void plotTailUncertainties() {
     std::vector<double> errHigh;
     for(int ptBin = 1; ptBin <= hScales[etaBin]->GetNbinsX(); ++ptBin) {
 
-      TH1* hNom = new TH1D("hNom",";Variation;Scaling Factor",vars.size()+1,-0.5,vars.size()+0.5);
-      hNom->SetNdivisions(5);
+      TH1* hNom = new TH1D("hNom",";;Scaling Factor",vars.size()+1,-0.5,vars.size()+0.5);
+      hNom->SetNdivisions(-1.*vars.size());
       TH1* hVars = static_cast<TH1D*>(hNom->Clone("hVars"));
       hVars->SetMarkerStyle(20);
       hNom->SetLineStyle(2);
@@ -92,16 +93,19 @@ void plotTailUncertainties() {
       hVars->SetBinError(1,hScales[etaBin]->GetBinError(ptBin));
       hNom->SetBinContent(1,hScales[etaBin]->GetBinContent(ptBin));
       hNom->SetBinError(1,0.);
+      hNom->GetXaxis()->SetBinLabel(1,"Nominal");
       for(unsigned int i = 0; i < vars.size(); ++i) {
 	double var = vars[i]->val(etaBin,ptBin-1);
 	hVars->SetBinContent(2+i,var);
 	hVars->SetBinError(2+i,vars[i]->err(etaBin,ptBin-1));
 	hNom->SetBinContent(2+i,hScales[etaBin]->GetBinContent(ptBin));
 	hNom->SetBinError(2+i,0.);
+	hNom->GetXaxis()->SetBinLabel(2+i,vars[i]->label());
 
 	if( var < minVar ) minVar = var;
 	if( var > maxVar ) maxVar = var;
       }
+      hNom->LabelsOption("v");
       errLow.push_back(minVar);
       errHigh.push_back(maxVar);
 
@@ -114,7 +118,8 @@ void plotTailUncertainties() {
       txt->AddText(jetAlgo);
       txt->AddText(util::toTString(binAdm->etaMin(etaBin))+" < |#eta| < "+util::toTString(binAdm->etaMax(etaBin)));
       txt->AddText(util::toTString(min)+" < p^{ave}_{T} < "+util::toTString(max)+" GeV");
-			    
+
+      gStyle->SetPadTickX(0);
       TCanvas *can = new TCanvas("can","Variation",500,500);
       can->cd();
       hNom->Draw("HIST");
@@ -125,6 +130,7 @@ void plotTailUncertainties() {
       delete hNom;
       delete hVars;
       delete can;
+      gStyle->SetPadTickX(1);
     } // End of loop over integrated pt bins
 
     // Plot nominal scaling factors + uncertainty band
@@ -143,22 +149,31 @@ void plotTailUncertainties() {
       errHigh.at(bin-1) = errHigh.at(bin-1)-fac.back();
     }
     TGraphAsymmErrors *band = new TGraphAsymmErrors(pt.size(),&(pt.front()),&(fac.front()),&(ptEl.front()),&(ptEr.front()),&(errLow.front()),&(errHigh.front()));
-    band->SetFillColor(38);
-    band->SetMarkerStyle(1);
+    band->SetFillColor(kGray);
+    band->SetLineColor(0);
+//     band->SetFillColor(1);
+//     band->SetFillStyle(3013);
     
     TPaveText *txt = util::LabelFactory::createPaveText(2,-0.5);
     txt->AddText(jetAlgo);
     txt->AddText(util::toTString(binAdm->etaMin(etaBin))+" < |#eta| < "+util::toTString(binAdm->etaMax(etaBin)));
 
+    hScales[etaBin]->UseCurrentStyle();
+    hScales[etaBin]->SetMarkerStyle(20);
     hScales[etaBin]->SetYTitle("Scaling Factor");
     hScales[etaBin]->GetYaxis()->SetRangeUser(0.5,2.);
     hScales[etaBin]->Draw();
     band->Draw("E2same");
     hScales[etaBin]->Draw("PE1same");
     txt->Draw("same");
+    TLegend* leg = util::LabelFactory::createLegendCol(2,0.4);
+    leg->AddEntry(hScales[etaBin],"Stat. uncert","L");
+    leg->AddEntry(band,"Syst. uncert","F");
+    leg->Draw("same");
     can->SetLogx();
     can->SaveAs(outName+"Variations_Eta"+util::toTString(etaBin)+".eps");
 
+    delete leg;
     delete txt;
     delete band;
     delete can;

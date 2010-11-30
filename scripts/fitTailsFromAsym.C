@@ -1,4 +1,4 @@
-// $Id: fitTailsFromAsym.C,v 1.8 2010/11/28 22:47:25 mschrode Exp $
+// $Id: fitTailsFromAsym.C,v 1.9 2010/11/29 09:20:21 mschrode Exp $
 
 #include <cmath>
 #include <fstream>
@@ -36,14 +36,14 @@
 
 class Parameters {
  public:
-  Parameters(const sampleTools::BinningAdmin* admin, double nSigCore, double nSigTailStart, double pt3Cut, const TString &fileData, const TString &fileMC);
+  Parameters(const sampleTools::BinningAdmin* admin, double nSigCore, double nSigTailStart, double pt3Cut, const TString &fileDataPre, const TString &fileDataSuf, const TString &fileMCPre, const TString &fileMCSuf);
   
   const sampleTools::BinningAdmin* binningAdmin() const { return admin_; }
   double nSigCore() const { return nSigCore_; };
   double nSigTailStart() const { return nSigTailStart_; }
   double pt3Cut() const { return pt3Cut_; }
-  TString inFileNameData() const { return inFileNameData_; }
-  TString inFileNameMC() const { return inFileNameMC_; }
+  TString inFileNameData(unsigned int etaBin) const { return inFileNameData_.at(etaBin); }
+  TString inFileNameMC(unsigned int etaBin) const { return inFileNameMC_.at(etaBin); }
   TString outFileNamePrefix() const { return outFileNamePrefix_; }
   TString outFileNamePrefix(unsigned int etaBin) const { return outFileNamePrefix_+"Eta"+util::toTString(etaBin)+"_"; }
   TString outFileNamePrefix(unsigned int etaBin, unsigned int ptBin) const { return outFileNamePrefix_+"Eta"+util::toTString(etaBin)+"_Pt"+util::toTString(ptBin)+"_"; }
@@ -58,9 +58,9 @@ class Parameters {
   const double nSigCore_;
   const double nSigTailStart_;
   const double pt3Cut_;
-  const TString inFileNameData_;
-  const TString inFileNameMC_;
 
+  std::vector<TString> inFileNameData_;
+  std::vector<TString> inFileNameMC_;
   TString outFileNamePrefix_;
   TString labelJetAlgo_;
   TString labelDeltaPhiCut_;
@@ -69,22 +69,27 @@ class Parameters {
 
 
 // ------------------------------------------------------------------------------------
-Parameters::Parameters(const sampleTools::BinningAdmin* admin, double nSigCore, double nSigTailStart, double pt3Cut, const TString &fileData, const TString &fileMC)
-  : admin_(admin), nSigCore_(nSigCore), nSigTailStart_(nSigTailStart), pt3Cut_(pt3Cut), inFileNameData_(fileData), inFileNameMC_(fileMC) {
+Parameters::Parameters(const sampleTools::BinningAdmin* admin, double nSigCore, double nSigTailStart, double pt3Cut, const TString &fileDataPre, const TString &fileDataSuf, const TString &fileMCPre, const TString &fileMCSuf)
+  : admin_(admin), nSigCore_(nSigCore), nSigTailStart_(nSigTailStart), pt3Cut_(pt3Cut) {
 
+  for(unsigned int etaBin = 0; etaBin < admin->nEtaBins(); ++etaBin) {
+    inFileNameData_.push_back(fileDataPre+"_Eta"+util::toTString(etaBin)+"_"+fileDataSuf);
+    inFileNameMC_.push_back(fileMCPre+"_Eta"+util::toTString(etaBin)+"_"+fileMCSuf);
+  }
+    
   // Prefix for output files
   outFileNamePrefix_ = "Tails_nSCore"+util::toTString(10.*nSigCore_)+"_nSTail"+util::toTString(10.*nSigTailStart_)+"_ptSoft"+util::toTString(100.*pt3Cut_)+"_";
-  if( inFileNameData_.Contains("Calo") && inFileNameMC_.Contains("Calo") ) {
+  if( inFileNameData_.at(0).Contains("Calo") && inFileNameMC_.at(0).Contains("Calo") ) {
     outFileNamePrefix_ += "Calo_";
     labelJetAlgo_ = "AK5 Calo-Jets";
-  } else if( inFileNameData_.Contains("PF") && inFileNameMC_.Contains("PF") ) {
+  } else if( inFileNameData_.at(0).Contains("PF") && inFileNameMC_.at(0).Contains("PF") ) {
     outFileNamePrefix_ += "PF_";  
     labelJetAlgo_ = "AK5 PF-Jets";
   } else {
     std::cerr << "WARNING in Parameters: unknown or inconsistent jet algorithms for data and MC" << std::endl;
   }
 
-  labelPSoftCut_ = "p_{||} < "+util::toTString(pt3Cut_)+"#upoint#bar{p^{ave}_{T}}";
+  labelPSoftCut_ = "p^{L2L3}_{T,3} < "+util::toTString(pt3Cut_)+"#upoint#bar{p^{ave}_{T}}";
 
   labelDeltaPhiCut_ = "|#Delta#phi| > 2.7";
 }
@@ -108,7 +113,7 @@ private:
 
 
 // ------------------------------------------------------------------------------------
-Label::Label(const Parameters* par) : par_(par) {}
+ Label::Label(const Parameters* par) : par_(par) {}
 
 
 // ------------------------------------------------------------------------------------
@@ -240,8 +245,8 @@ AsymmetryBin::AsymmetryBin(const Parameters* par, int type, unsigned int etaBin,
 
   // Read histograms from file
   TString fileName;
-  if( type_ == 0 ) fileName = par_->inFileNameData();
-  else if( type_ == 1 ) fileName = par_->inFileNameMC();
+  if( type_ == 0 ) fileName = par_->inFileNameData(etaBin);
+  else if( type_ == 1 ) fileName = par_->inFileNameMC(etaBin);
   TString histName = "hPtAsym_Eta"+util::toTString(etaBin)+"_Pt"+util::toTString(ptBin);
   TString newHistName = "AsymmetryBin";
   if( type_ == 0 ) newHistName += "_Data_";
@@ -692,7 +697,7 @@ void createSlides(const Parameters* par, const std::vector< std::vector<Asymmetr
   std::ofstream oFile(name);
 
   TString info = "\\begin{small}\n  \\begin{itemize}\n";
-  info += "    \\item "+par->labelJetAlgo()+", "+par->labelDeltaPhiCut()+", "+par->labelPSoftCut()+"\n";
+  info += "    \\item "+par->labelJetAlgo()+", "+par->labelDeltaPhiCut()+", "+par->labelPSoftCut()+", "+par->labelPSoftCut()+"\n";
   info += "    \\item Core range $"+util::toTString(par->nSigCore())+"\\sigma$, tail start $"+util::toTString(par->nSigTailStart())+"\\sigma$\n";
   info += "  \\end{itemize}\n\\end{small}\n";
   
@@ -711,6 +716,7 @@ void createSlides(const Parameters* par, const std::vector< std::vector<Asymmetr
       oFile << "\n% --------------------------------------------------\n";
       oFile << "\\begin{frame}\n";
       oFile << "  \\frametitle{\\pt Asymmetry "+etaRange+" (" << slide+1 << "/" << nSlides << ")}\n";
+      oFile << info;
       oFile << "  \\begin{columns}[T] \n";
       for(int col = 0; col < 3; ++col, ++ptBin) {
 	oFile << "    \\begin{column}{0.3333\\textwidth} \n";
@@ -733,6 +739,7 @@ void createSlides(const Parameters* par, const std::vector< std::vector<Asymmetr
       oFile << "\n% --------------------------------------------------\n";
       oFile << "\\begin{frame}\n";
       oFile << "  \\frametitle{\\pt Asymmetry Log "+etaRange+" (" << slide+1 << "/" << nSlides << ")}\n";
+      oFile << info;
       oFile << "  \\begin{columns}[T] \n";
       for(int col = 0; col < 3; ++col, ++ptBin) {
 	oFile << "    \\begin{column}{0.3333\\textwidth} \n";
@@ -755,6 +762,7 @@ void createSlides(const Parameters* par, const std::vector< std::vector<Asymmetr
       oFile << "\n% --------------------------------------------------\n";
       oFile << "\\begin{frame}\n";
       oFile << "  \\frametitle{Smeared \\pt Asymmetry "+etaRange+" (" << slide+1 << "/" << nSlides << ")}\n";
+      oFile << info;
       oFile << "  \\begin{columns}[T] \n";
       for(int col = 0; col < 3; ++col, ++ptBin) {
 	oFile << "    \\begin{column}{0.3333\\textwidth} \n";
@@ -777,6 +785,7 @@ void createSlides(const Parameters* par, const std::vector< std::vector<Asymmetr
       oFile << "\n% --------------------------------------------------\n";
       oFile << "\\begin{frame}\n";
       oFile << "  \\frametitle{Smeared \\pt Asymmetry Log "+etaRange+" (" << slide+1 << "/" << nSlides << ")}\n";
+      oFile << info;
       oFile << "  \\begin{columns}[T] \n";
       for(int col = 0; col < 3; ++col, ++ptBin) {
 	oFile << "    \\begin{column}{0.3333\\textwidth} \n";
@@ -799,6 +808,7 @@ void createSlides(const Parameters* par, const std::vector< std::vector<Asymmetr
       oFile << "\n% --------------------------------------------------\n";
       oFile << "\\begin{frame}\n";
       oFile << "  \\frametitle{Tails "+etaRange+" (" << slide+1 << "/" << nSlides << ")}\n";
+      oFile << info;
       oFile << "  \\begin{columns}[T] \n";
       for(int col = 0; col < 3; ++col, ++ptBin) {
 	oFile << "    \\begin{column}{0.3333\\textwidth} \n";
@@ -838,7 +848,7 @@ void fitTailsFromAsym() {
   gErrorIgnoreLevel = 1001;
   util::StyleSettings::presentation();
   sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("BinningAdmin.cfg");
-  Parameters* par = new Parameters(binAdm,2.,3.,0.3,"tails/Tails_Calo_Data_Pt3Cut_Eta0_PtSoft2.root","tails/Tails_Calo_MCFall10_Pt3Cut_Eta0_PtSoft2.root");
+  Parameters* par = new Parameters(binAdm,2.,3.,0.1,"tails/Tails_Calo_Data_Pt3Cut","PtSoft0.root","tails/Tails_Calo_MCFall10_Pt3Cut","PtSoft0.root");
   // Global labels
   Label* label = new Label(par);
 
@@ -848,7 +858,7 @@ void fitTailsFromAsym() {
 
   std::cout << "Reading histograms and extracting tails" << std::endl;
   std::vector< std::vector<AsymmetryAdmin*> > asymAdms;
-  for(unsigned int etaBin = 0; etaBin < 1; ++etaBin) {//binAdm->nEtaBins(); ++etaBin) {
+  for(unsigned int etaBin = 0; etaBin < binAdm->nEtaBins(); ++etaBin) {
     std::vector<AsymmetryAdmin*> tmp;
     for(unsigned int ptBin = 0; ptBin < binAdm->nPtBins(etaBin); ++ptBin) {
       tmp.push_back(new AsymmetryAdmin(par,etaBin,ptBin));
