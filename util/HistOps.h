@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.21 2010/11/16 10:00:52 mschrode Exp $
+// $Id: HistOps.h,v 1.22 2010/11/23 11:24:52 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.21 2010/11/16 10:00:52 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.22 2010/11/23 11:24:52 mschrode Exp $
   class HistOps
   {
   public:
@@ -188,6 +188,12 @@ namespace util
       if( norm ) h->Scale(1./norm);
     }
 
+
+    // -------------------------------------------------------------------------------------
+    static void getBinBorders(const TH1* h, double &min, double &max, int bin = -1) { 
+      min = h->GetXaxis()->GetBinLowEdge(( bin>0 ? bin : 1 ));
+      max = h->GetXaxis()->GetBinUpEdge(( bin>0 ? bin : h->GetNbinsX() ));
+    }
 
 
     // -------------------------------------------------------------------------------------
