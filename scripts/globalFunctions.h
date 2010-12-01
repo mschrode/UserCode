@@ -7,10 +7,13 @@
 
 namespace func {
   bool fitCoreWidth(const TH1* hist, double nSig, double &width, double &widthErr);
+  bool fitCoreWidth(const TH1* hist, double nSig, double &width, double &widthErr, double &rms, double &rmsErr);
   bool fitCoreWidth(const TH1* hist, double nSig, TF1* &gauss, double &width, double &widthErr);
+  bool fitCoreWidth(const TH1* hist, double nSig, TF1* &gauss, double &width, double &widthErr, double &rms, double &rmsErr);
   double gaussInt(double mean, double sigma, double min, double max);
   double getTail(const TH1* hAsym, double nSig, TH1* &hTail, TH1* &hTailClean, TF1* &gauss);
   double getTailCut(const TH1* hAsym, double cut, TH1* &hTail, TH1* &hTailClean);
+  double getTailFromGauss(const TH1* hAsym, const TF1* extGauss, double tailStart, double nSig, TH1* &hTail, TH1* &hTailClean, TF1* &gauss);
   void smearHistogram(const TH1* hOrig, TH1* &hSmeared, double nTotal, double width, double scaling);
 
 
@@ -23,8 +26,17 @@ namespace func {
 
   // --------------------------------------------------
   bool fitCoreWidth(const TH1* hist, double nSig, double &width, double &widthErr) {
+    double rms = 0.;
+    double rmsErr = 0.;
+    bool result = fitCoreWidth(hist,nSig,width,widthErr,rms,rmsErr);
+    return result;
+  }
+
+
+  // --------------------------------------------------
+  bool fitCoreWidth(const TH1* hist, double nSig, double &width, double &widthErr, double &rms, double &rmsErr) {
     TF1* dummy = 0;
-    bool result = fitCoreWidth(hist,nSig,dummy,width,widthErr);
+    bool result = fitCoreWidth(hist,nSig,dummy,width,widthErr,rms,rmsErr);
     delete dummy;
     return result;
   }
@@ -32,6 +44,15 @@ namespace func {
 
   // --------------------------------------------------
   bool fitCoreWidth(const TH1* hist, double nSig, TF1* &gauss, double &width, double &widthErr) {
+    double rms = 0.;
+    double rmsErr = 0.;
+    bool result = fitCoreWidth(hist,nSig,gauss,width,widthErr,rms,rmsErr);
+    return result;
+  }
+
+
+  // --------------------------------------------------
+  bool fitCoreWidth(const TH1* hist, double nSig, TF1* &gauss, double &width, double &widthErr, double &rms, double &rmsErr) {
     bool result  = false;
 
     TString name = hist->GetName();
@@ -41,9 +62,11 @@ namespace func {
     gauss->SetLineColor(kRed);
 
     TH1* h = static_cast<TH1*>(hist->Clone("func::fitCoreWidth::h"));
-
+   
     double mean = h->GetMean();
-    double sig = 1.8*h->GetRMS();
+    rms = h->GetRMS();
+    rmsErr = h->GetRMSError();
+    double sig = 1.8*rms;
     if( h->Fit(gauss,"0QIR","",mean-sig,mean+sig) == 0 ) {
       mean = gauss->GetParameter(1);
       sig = nSig*gauss->GetParameter(2);
@@ -72,12 +95,12 @@ namespace func {
     hTail = static_cast<TH1D*>(hAsym->Clone(name));
     hTail->SetLineColor(kBlue);
     hTail->SetMarkerColor(kBlue);
-  
+
     name = hAsym->GetName();
     name += "_TailsClean";
     hTailClean = static_cast<TH1D*>(hAsym->Clone(name));
     hTailClean->Reset();
-  
+
     double width = 0.;
     double widthErr = 1000.;
     if( fitCoreWidth(hAsym,nSigCore,gauss,width,widthErr) ) {
@@ -98,7 +121,7 @@ namespace func {
       }
       numTail = hTailClean->Integral("width");
     }
-  
+
     return numTail;
   }
 
