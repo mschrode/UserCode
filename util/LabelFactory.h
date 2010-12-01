@@ -1,4 +1,4 @@
-//  $Id: LabelFactory.h,v 1.12 2010/07/27 10:07:53 mschrode Exp $
+//  $Id: LabelFactory.h,v 1.13 2010/07/27 17:09:03 mschrode Exp $
 
 #ifndef LABEL_FACTORY_H
 #define LABEL_FACTORY_H
@@ -13,13 +13,16 @@
 #include "TString.h"
 #include "TStyle.h"
 
+#include "utils.h"
+
+
 namespace util {
 
   //!  Factory for TLegend and TPaveText objects
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: LabelFactory.h,v 1.12 2010/07/27 10:07:53 mschrode Exp $
+  //!  $Id: LabelFactory.h,v 1.13 2010/07/27 17:09:03 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class LabelFactory {
   public:
@@ -109,6 +112,40 @@ namespace util {
       txt->SetTextAlign(12);
       return txt;
     }
+
+
+
+    // -------------------------------------------------------------------------------------
+    static TString labelJetAlgo(const TString &fileName) {
+      TString algo = "default jets";
+      if( fileName.Contains("Calo") ) {
+	algo = "AK5 Calo-Jets";
+      } else if( fileName.Contains("Calo") ) {
+	algo = "AK5 PF-Jets";
+      } else {
+	std::cerr << "WARNING in LabelFactory::jetAlgo(): unknown jet algorithm in file '" << fileName << "'" << std::endl;
+      }
+
+      return algo;
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static TString labelJetAlgo(const TString &fileName1, const TString &fileName2) {
+      TString algo = labelJetAlgo(fileName1);
+      if( algo != labelJetAlgo(fileName2) ) {
+	std::cerr << "WARNING in LabelFactory::jetAlgo(): inconsistent jet algorithms in files '" << fileName1 << "' and '" << fileName2 << "'" << std::endl;
+	algo = "default jets";
+      }
+      return algo;
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static TString labelEta(double etaMin, double etaMax) {
+      return util::toTString(etaMin)+" < |#eta| < "+util::toTString(etaMax);
+    }
+
 
 
   private:
