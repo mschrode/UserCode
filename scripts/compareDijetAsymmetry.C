@@ -47,9 +47,16 @@ bool fitWidth(const util::HistVec &hists, double nSig, TH1* &hWidth, TH1* &hRMS)
 
 
 
-void setStyle(util::HistVec &hists) {
+void setStyle(util::HistVec &hists, bool isData) {
   for(util::HistIt it = hists.begin(); it != hists.end(); ++it) {
     (*it)->GetXaxis()->SetRangeUser(-1.,1.);
+    (*it)->SetTitle("");
+    (*it)->SetLineWidth(1);
+    if( isData ) {
+      (*it)->SetMarkerStyle(20);
+    } else {
+      (*it)->SetMarkerStyle(1);
+    }
   }
 }
 
@@ -61,9 +68,9 @@ void compareDijetAsymmetry(const TString &binCfg = "BinningAdmin.cfg") {
 
   util::StyleSettings::presentationNoTitle();
   sampleTools::BinningAdmin admin(binCfg);
-  const TString inData = "Tails_Calo_Data_Pt3Cut_Eta0_PtSoft1.root";
-  const TString inMC = "Tails_Calo_MCFall10_Pt3Cut_Eta0_PtSoft1.root";
-
+  TString inData = "Pt3Cut_Eta11/Tails_PF_Data_Pt3Cut_Eta0_PtSoft1.root";
+  TString inMC = "Pt3Cut_Eta11/Tails_PF_MCFall10_Pt3Cut_Eta0_PtSoft1.root";
+  TString outNamePrefix = "PtAsym_PF_Eta00-11_Pt3Corr02_";
   
 
   // Read asymmetry 
@@ -75,9 +82,10 @@ void compareDijetAsymmetry(const TString &binCfg = "BinningAdmin.cfg") {
     TString histName = "hPtAsym_Eta0_Pt"+util::toTString(ptBin);
     hAsymData.push_back(util::FileOps::readTH1(inData,histName,histName+"_Data"));
     hAsymMC.push_back(util::FileOps::readTH1(inMC,histName,histName+"_MC"));
+    hAsymMC.back()->SetFillColor( ( inMC.Contains("PF") ? 38 : 5 ) );
   }
-  setStyle(hAsymData);
-  setStyle(hAsymMC);
+  setStyle(hAsymData,true);
+  setStyle(hAsymMC,false);
 
 
   
@@ -120,9 +128,10 @@ void compareDijetAsymmetry(const TString &binCfg = "BinningAdmin.cfg") {
   // Plotting
   std::cout << "Creating labels" << std::endl;
 
-  TPaveText* label = util::LabelFactory::createPaveText(2,-0.5);
+  TPaveText* label = util::LabelFactory::createPaveText(3,-0.5);
   label->AddText(util::LabelFactory::labelJetAlgo(inData,inMC));
   label->AddText(util::LabelFactory::labelEta(admin.etaMin(0),admin.etaMax(0)));
+  label->AddText(util::LabelFactory::labelPt3Corr(0.2));
 
   std::vector<TLegend*> legWidth;
   TLegend* legWidthRatio = util::LabelFactory::createLegendCol(nSig.size()+1,0.6);
@@ -136,15 +145,34 @@ void compareDijetAsymmetry(const TString &binCfg = "BinningAdmin.cfg") {
     legWidthRatio->AddEntry(hWidthRatio[i],util::toTString(nSig[i])+" #sigma");
   }
 
-
-
   TLegend* legRMS = util::LabelFactory::createLegendCol(2,0.4);
   legRMS->AddEntry(hRMSData,"Data","P");
   legRMS->AddEntry(hRMSMC,"MC","L");
 
+  std::vector<TLegend*> legAsym;
+  for(unsigned int ptBin = 0; ptBin < admin.nPtBins(0); ++ptBin) {
+    legAsym.push_back(util::LabelFactory::createLegendCol(3,0.6));
+    util::LabelFactory::addExtraLegLine(legAsym[ptBin],util::toTString(admin.ptMin(0,ptBin))+" < p^{ave}_{T} < "+util::toTString(admin.ptMax(0,ptBin))+" GeV");
+    legAsym.back()->AddEntry(hAsymData[ptBin],"Data","P");
+    legAsym.back()->AddEntry(hAsymMC[ptBin],"MC","F");
+  }
 
 
   std::cout << "Plotting histograms" << std::endl;
+
+  for(unsigned int ptBin = 0; ptBin < admin.nPtBins(0); ++ptBin) {
+    TCanvas* can = new TCanvas("canAsym"+util::toTString(ptBin),"",500,500);
+    can->cd();
+    hAsymMC[ptBin]->GetYaxis()->SetRangeUser(3E-4,490.);
+    hAsymData[ptBin]->GetYaxis()->SetRangeUser(3E-4,490.);
+    util::HistOps::setAxisTitles(hAsymMC[ptBin],"Asymmetry","","events",true);
+    hAsymMC[ptBin]->Draw("HISTE");
+    hAsymData[ptBin]->Draw("PE1same");
+    label->Draw("same");
+    legAsym[ptBin]->Draw("same");
+    can->SetLogy();
+    can->SaveAs(outNamePrefix+"PtBin"+util::toTString(ptBin)+".eps","eps");
+  }
 
   for(unsigned int i = 0; i < nSig.size(); ++i) {
     TCanvas* canWidth = util::HistOps::createRatioTopCanvas();
@@ -152,7 +180,7 @@ void compareDijetAsymmetry(const TString &binCfg = "BinningAdmin.cfg") {
     TH1 *topFrameWidth = util::HistOps::createRatioTopHist(hWidthMC[i]);
     TH1 *bottomFrameWidth = util::HistOps::createRatioBottomFrame(hWidthMC[i],"p^{ave}_{T}","GeV",0.91,1.29);
     canWidth->cd();
-    topFrameWidth->GetYaxis()->SetRangeUser(0.,0.3);
+    topFrameWidth->GetYaxis()->SetRangeUser(0.,0.35);
     topFrameWidth->Draw("HISTE");
     hWidthData[i]->Draw("PE1same");
     label->Draw("same");
@@ -164,7 +192,7 @@ void compareDijetAsymmetry(const TString &binCfg = "BinningAdmin.cfg") {
     bottomFrameWidth->Draw();
     hWidthRatio[i]->Draw("PE1same");
     bottomPadWidth->SetLogx();
-    canWidth->SaveAs("AsymmetryWidth_nSig"+util::toTString(nSig[i])+".eps","eps");
+    canWidth->SaveAs(outNamePrefix+"Width_nSig"+util::toTString(nSig[i])+".eps","eps");
   }
 
   TCanvas* canNSig = new TCanvas("canNSig","",500,500);
@@ -180,7 +208,7 @@ void compareDijetAsymmetry(const TString &binCfg = "BinningAdmin.cfg") {
   label->Draw("same");
   legWidthRatio->Draw("same");
   canNSig->SetLogx();
-  canNSig->SaveAs("AsymmetryWidthRatios.eps","eps");
+  canNSig->SaveAs(outNamePrefix+"WidthRatios.eps","eps");
 
 
   TCanvas* canRMS = util::HistOps::createRatioTopCanvas();
@@ -188,7 +216,7 @@ void compareDijetAsymmetry(const TString &binCfg = "BinningAdmin.cfg") {
   TH1 *topFrameRMS = util::HistOps::createRatioTopHist(hRMSMC);
   TH1 *bottomFrameRMS = util::HistOps::createRatioBottomFrame(hRMSMC,"p^{ave}_{T}","GeV",0.91,1.29);
   canRMS->cd();
-  topFrameRMS->GetYaxis()->SetRangeUser(0.,0.3);
+  topFrameRMS->GetYaxis()->SetRangeUser(0.,0.35);
   topFrameRMS->Draw("HISTE");
   hRMSData->Draw("PE1same");
   label->Draw("same");
@@ -200,7 +228,7 @@ void compareDijetAsymmetry(const TString &binCfg = "BinningAdmin.cfg") {
   bottomFrameRMS->Draw();
   hRMSRatio->Draw("PE1same");
   bottomPadRMS->SetLogx();
-  canRMS->SaveAs("AsymmetryRMS.eps","eps");
+  canRMS->SaveAs(outNamePrefix+"RMS.eps","eps");
 }
 
 
