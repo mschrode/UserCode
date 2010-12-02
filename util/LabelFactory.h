@@ -1,4 +1,4 @@
-//  $Id: LabelFactory.h,v 1.13 2010/07/27 17:09:03 mschrode Exp $
+//  $Id: LabelFactory.h,v 1.14 2010/12/01 18:51:02 mschrode Exp $
 
 #ifndef LABEL_FACTORY_H
 #define LABEL_FACTORY_H
@@ -22,7 +22,7 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: LabelFactory.h,v 1.13 2010/07/27 17:09:03 mschrode Exp $
+  //!  $Id: LabelFactory.h,v 1.14 2010/12/01 18:51:02 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class LabelFactory {
   public:
@@ -120,7 +120,7 @@ namespace util {
       TString algo = "default jets";
       if( fileName.Contains("Calo") ) {
 	algo = "AK5 Calo-Jets";
-      } else if( fileName.Contains("Calo") ) {
+      } else if( fileName.Contains("PF") ) {
 	algo = "AK5 PF-Jets";
       } else {
 	std::cerr << "WARNING in LabelFactory::jetAlgo(): unknown jet algorithm in file '" << fileName << "'" << std::endl;
@@ -147,7 +147,13 @@ namespace util {
     }
 
 
-
+    // -------------------------------------------------------------------------------------
+    static TString labelPt3Corr(double pt3corr) {
+      return "p^{L2L3}_{T,3} < "+util::toTString(pt3corr)+" #upoint #bar{p^{ave}_{T}}";
+    }
+    
+    
+    
   private:
     static std::vector<TH1*> hDummies_;
 
