@@ -1,4 +1,4 @@
-// $Id: plotTailUncertainties.C,v 1.1 2010/11/29 09:20:47 mschrode Exp $
+// $Id: plotTailUncertainties.C,v 1.2 2010/11/30 14:34:52 mschrode Exp $
 
 #include <cmath>
 #include <iostream>
@@ -71,6 +71,8 @@ void plotTailUncertainties() {
     jetAlgo = "AK5 PF-Jets";
     outName += "PF_";
   }
+
+  TFile outFile(outName+".root","RECREATE");
 
   util::HistVec hScales = util::FileOps::readHistVec(nomName,"Ratio_hNTailIntData_Eta","hScaleFactorsInt_Eta");
 
@@ -173,9 +175,36 @@ void plotTailUncertainties() {
     can->SetLogx();
     can->SaveAs(outName+"Variations_Eta"+util::toTString(etaBin)+".eps");
 
+    // Sum up systematic and statistical errors
+    TH1* hUp = static_cast<TH1D*>(hScales[etaBin]->Clone("hScaleFactorsIntUp_Eta"+util::toTString(etaBin)));
+    hUp->SetMarkerStyle(1);
+    hUp->Reset();
+    TH1* hDown = static_cast<TH1D*>(hUp->Clone("hScaleFactorsIntDown_Eta"+util::toTString(etaBin)));
+    for(int bin = 1; bin <= hScales[etaBin]->GetNbinsX(); ++bin) {
+      double nom = hScales[etaBin]->GetBinContent(bin);
+      double stat = hScales[etaBin]->GetBinError(bin);
+      double eup = band->GetEYhigh()[bin-1];
+      double edo = band->GetEYlow()[bin-1];
+      hUp->SetBinContent(bin,nom+sqrt(stat*stat+eup*eup));
+      hDown->SetBinContent(bin,nom-sqrt(stat*stat+edo*edo));
+    }
+    can->cd();
+    hScales[etaBin]->Draw("P");
+    hUp->Draw("HISTsame");
+    hDown->Draw("HISTsame");    
+    can->SaveAs(outName+"SumErr_Eta"+util::toTString(etaBin)+".eps");
+
+    outFile.WriteTObject(hScales[etaBin]);
+    outFile.WriteTObject(hUp);
+    outFile.WriteTObject(hDown);
+
     delete leg;
     delete txt;
     delete band;
+    delete hUp;
+    delete hDown;
     delete can;
   } // End of loop over eta bins
+
+  outFile.Close();
 }
