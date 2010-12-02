@@ -1,4 +1,4 @@
-// $Id: CutVariation.cc,v 1.21 2010/09/04 11:57:53 mschrode Exp $
+// $Id: CutVariation.cc,v 1.22 2010/11/11 12:57:03 mschrode Exp $
 
 #include "CutVariation.h"
 #include "KalibriFileParser.h"
@@ -38,7 +38,7 @@ namespace resolutionFit {
 	    meanPtUncert_ = parser->meanPtGenUncert();
 	  } else if( par_->binPt() == BinPtAve ) {
 	    if( par_->fitMode() == FitModeMaxLikeFull ) {
-	      meanPt_ = parser->meanPdfPtTrue();
+	      meanPt_ = parser->meanPt();
 	      meanPtUncert_ = parser->meanPtAveUncert(); // TODO: User correct uncertainty
 	    } else if( par_->fitMode() == FitModeMaxLikeSimple ) {
 	      meanPt_ = parser->meanPtAve();

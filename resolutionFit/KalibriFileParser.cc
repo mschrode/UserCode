@@ -1,4 +1,4 @@
-// $Id: KalibriFileParser.cc,v 1.14 2010/09/14 11:34:58 mschrode Exp $
+// $Id: KalibriFileParser.cc,v 1.15 2010/11/11 12:57:03 mschrode Exp $
 
 #include "KalibriFileParser.h"
 
@@ -23,7 +23,7 @@ namespace resolutionFit {
   //!  - 2: a lot of information for debugging
   // --------------------------------------------
   KalibriFileParser::KalibriFileParser(const TString &fileName, unsigned int ptBin, int verbose, bool readFittedValues)
-    : binId_("_"+util::toTString(ptBin)), verbose_(verbose), readFittedValues_(readFittedValues) {
+    : binId_("_Eta0_Pt"+util::toTString(ptBin)), verbose_(verbose), readFittedValues_(readFittedValues) {
 
     // Histograms to be read from file
     hists_[("hPtGen"+binId_)] = 0;
@@ -45,8 +45,8 @@ namespace resolutionFit {
     hists_[("hPSJ"+binId_)] = 0;
     hists_[("hPSJRel"+binId_)] = 0;
     hists_[("hPSJGenRel"+binId_)] = 0;
-    hists_["hEta"] = 0;
-    hists_["hDeltaPhi12"] = 0;
+    hists_[("hEta"+binId_)] = 0;
+    hists_[("hDeltaPhi12"+binId_)] = 0;
     hists_[("hDeltaPtJet12"+binId_)] = 0;
 
 
@@ -88,7 +88,7 @@ namespace resolutionFit {
   TH1 *KalibriFileParser::hist(const TString &name, const TString &newName, bool abs) const {
 
     TString histName = name;
-    if( name != "hEta" && name != "hDeltaPhi12" ) histName += binId_;
+    histName += binId_;
 
     TH1 *h = 0;
     HistIt it = hists_.find(histName);
@@ -149,26 +149,22 @@ namespace resolutionFit {
       if( readFittedValues_ ) {
 	if( verbose_ == 2 ) std::cout << "  Getting fitted values... " << std::flush;
 	TH1 *h = 0;
-	file.GetObject("hAbsoluteParameters",h);
+	file.GetObject("hAbsoluteParameters"+binId_,h);
 	if( !h ) {
 	  std::cerr << "  ERROR: 'hAbsoluteParameters' not found." << std::endl;
 	  ioError = -2;
 	} else {
 	  if( verbose_ == 2 ) std::cout << "ok" << std::endl;
 	  h->SetDirectory(0);
-
-	  values_.push_back(h->GetBinContent(1+ptBin));
-	  statUncert_.push_back(h->GetBinError(1+ptBin));
-
-// 	  for(int i = 0; i < h->GetNbinsX(); i++) {
-// 	    values_.push_back(h->GetBinContent(1+i));
-// 	    statUncert_.push_back(h->GetBinError(1+i));
+	  for(int i = 0; i < h->GetNbinsX(); i++) {
+	    values_.push_back(h->GetBinContent(1+i));
+	    statUncert_.push_back(h->GetBinError(1+i));
 	    if( verbose_ == 2 ) {
-	      //	      std::cout << "  Value " << i << ": " << values_.back() << std::flush;
+	      std::cout << "  Value " << i << ": " << values_.back() << std::flush;
 	      std::cout << "  Value: " << values_.back() << std::flush;
 	      std::cout << " +/- " << statUncert_.back() << std::endl;
 	    }
-	    //	  }
+	  }
 	}
       }
 

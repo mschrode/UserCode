@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.22 2010/09/14 22:06:24 mschrode Exp $
+// $Id: Parameters.cc,v 1.23 2010/11/11 12:57:04 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -14,13 +14,19 @@
 namespace resolutionFit {
   Parameters::Parameters(double etaMin, double etaMax, double deltaPhi12, const TString &fileNameStdSel, const std::vector<double> &ptBinEdges, const TString &outNamePrefix, ResponseFunction::Type type, FitMode fitMode, BinPt binPt, int verbosity)
     : etaMin_(etaMin), etaMax_(etaMax), deltaPhi12_(deltaPhi12),
-      outNamePrefix_(outNamePrefix),
       styleMode_(gStyle->GetTitle()),
       fitMode_(fitMode),
       binPt_(binPt),
       verbosity_(verbosity),
       nameStdSel_(fileNameStdSel),
       isData_(false) {
+
+    // OutNamePrefix
+    TString strEtaMin = util::toTString(10.*etaMin);
+    TString strEtaMax = util::toTString(10.*etaMax);
+    while( strEtaMin.Length() < 2 ) strEtaMin = strEtaMin+"0";
+    while( strEtaMin.Length() < 2 ) strEtaMax = strEtaMax+"0";
+    outNamePrefix_ = outNamePrefix+"Eta"+strEtaMin+"-"+strEtaMax+"_";
 
     init(ptBinEdges, type);
     print();

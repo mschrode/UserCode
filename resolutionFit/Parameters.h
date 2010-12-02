@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.21 2010/09/14 22:06:24 mschrode Exp $
+// $Id: Parameters.h,v 1.22 2010/11/11 12:57:04 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -25,7 +25,7 @@ namespace resolutionFit {
   //!
   //! \author Matthias Schroeder
   //! \date 2010/05/15
-  //! $Id: Parameters.h,v 1.21 2010/09/14 22:06:24 mschrode Exp $
+  //! $Id: Parameters.h,v 1.22 2010/11/11 12:57:04 mschrode Exp $
   // --------------------------------------------
   class Parameters {
   public:
@@ -199,12 +199,12 @@ namespace resolutionFit {
     const double etaMin_;
     const double etaMax_;
     const double deltaPhi12_;
-    const TString outNamePrefix_;
     const FitMode fitMode_;
     const BinPt binPt_;
     const TString styleMode_;
     const int verbosity_;
 
+    TString outNamePrefix_;
     bool isData_;
     double lumi_;
 
