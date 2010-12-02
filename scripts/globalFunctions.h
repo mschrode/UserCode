@@ -11,7 +11,7 @@ namespace func {
   bool fitCoreWidth(const TH1* hist, double nSig, TF1* &gauss, double &width, double &widthErr);
   bool fitCoreWidth(const TH1* hist, double nSig, TF1* &gauss, double &width, double &widthErr, double &rms, double &rmsErr);
   double gaussInt(double mean, double sigma, double min, double max);
-  double getTail(const TH1* hAsym, double nSig, TH1* &hTail, TH1* &hTailClean, TF1* &gauss);
+  double getTail(const TH1* hAsym, double nSigCore, double nSigTailStart, TH1* &hTail, TH1* &hTailClean, TF1* &gauss);
   double getTailCut(const TH1* hAsym, double cut, TH1* &hTail, TH1* &hTailClean);
   double getTailFromGauss(const TH1* hAsym, const TF1* extGauss, double tailStart, double nSig, TH1* &hTail, TH1* &hTailClean, TF1* &gauss);
   void smearHistogram(const TH1* hOrig, TH1* &hSmeared, double nTotal, double width, double scaling);
@@ -209,28 +209,32 @@ namespace func {
     TString name = hOrig->GetName();
     name += "Smeared";
     hSmeared = static_cast<TH1D*>(hOrig->Clone(name));
-    hSmeared->Reset();
-
-    scaling += 1.;
-    if( scaling > 1. ) {
-      scaling = sqrt( scaling*scaling - 1. )*width;
-    } else {
-      std::cerr << "WARNING in func::smearHistogram(): scaling = " << scaling << std::endl;
-    }
-    for(int bin = 1; bin <= hOrig->GetNbinsX(); ++bin) {
-      double entries = hOrig->GetBinContent(bin);
-      if( entries ) {
-	double mean = hOrig->GetBinCenter(bin);
-	for(int i = 1; i <= hSmeared->GetNbinsX(); ++i) {
-	  double min = hSmeared->GetXaxis()->GetBinLowEdge(i);
-	  double max = hSmeared->GetXaxis()->GetBinUpEdge(i);
-	  double weight = gaussInt(mean,scaling,min,max)*entries;
-	  hSmeared->Fill(hSmeared->GetBinCenter(i),weight);
+    if( scaling > 0. ) {
+      hSmeared->Reset();
+      
+      scaling += 1.;
+      if( scaling > 1. ) {
+	scaling = sqrt( scaling*scaling - 1. )*width;
+      } else {
+	std::cerr << "WARNING in func::smearHistogram(): scaling = " << scaling << std::endl;
+      }
+      for(int bin = 1; bin <= hOrig->GetNbinsX(); ++bin) {
+	double entries = hOrig->GetBinContent(bin);
+	if( entries ) {
+	  double mean = hOrig->GetBinCenter(bin);
+	  for(int i = 1; i <= hSmeared->GetNbinsX(); ++i) {
+	    double min = hSmeared->GetXaxis()->GetBinLowEdge(i);
+	    double max = hSmeared->GetXaxis()->GetBinUpEdge(i);
+	    double weight = gaussInt(mean,scaling,min,max)*entries;
+	    hSmeared->Fill(hSmeared->GetBinCenter(i),weight);
+	  }
 	}
       }
-    }
-    for(int bin = 1; bin <= hSmeared->GetNbinsX(); ++bin) {
-      hSmeared->SetBinError(bin,sqrt(hSmeared->GetBinContent(bin)/nTotal));
+      for(int bin = 1; bin <= hSmeared->GetNbinsX(); ++bin) {
+	hSmeared->SetBinError(bin,sqrt(hSmeared->GetBinContent(bin)/nTotal));
+      }
+    } else {
+      std::cout << "func::smearHistogram(): smear factor = " << scaling << " for '" << hOrig->GetName() << "'" << std::endl;
     }
   }
 
