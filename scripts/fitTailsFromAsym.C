@@ -1,4 +1,4 @@
-// $Id: fitTailsFromAsym.C,v 1.9 2010/11/29 09:20:21 mschrode Exp $
+// $Id: fitTailsFromAsym.C,v 1.10 2010/11/30 14:34:52 mschrode Exp $
 
 #include <cmath>
 #include <fstream>
@@ -78,7 +78,7 @@ Parameters::Parameters(const sampleTools::BinningAdmin* admin, double nSigCore, 
   }
     
   // Prefix for output files
-  outFileNamePrefix_ = "Tails_nSCore"+util::toTString(10.*nSigCore_)+"_nSTail"+util::toTString(10.*nSigTailStart_)+"_ptSoft"+util::toTString(100.*pt3Cut_)+"_";
+  outFileNamePrefix_ = "Tails_";
   if( inFileNameData_.at(0).Contains("Calo") && inFileNameMC_.at(0).Contains("Calo") ) {
     outFileNamePrefix_ += "Calo_";
     labelJetAlgo_ = "AK5 Calo-Jets";
@@ -88,6 +88,7 @@ Parameters::Parameters(const sampleTools::BinningAdmin* admin, double nSigCore, 
   } else {
     std::cerr << "WARNING in Parameters: unknown or inconsistent jet algorithms for data and MC" << std::endl;
   }
+  outFileNamePrefix_ += "nSCore"+util::toTString(10.*nSigCore_)+"_nSTail"+util::toTString(10.*nSigTailStart_)+"_ptSoft"+util::toTString(100.*pt3Cut_)+"_";
 
   labelPSoftCut_ = "p^{L2L3}_{T,3} < "+util::toTString(pt3Cut_)+"#upoint#bar{p^{ave}_{T}}";
 
@@ -848,7 +849,7 @@ void fitTailsFromAsym() {
   gErrorIgnoreLevel = 1001;
   util::StyleSettings::presentation();
   sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("BinningAdmin.cfg");
-  Parameters* par = new Parameters(binAdm,2.,3.,0.1,"tails/Tails_Calo_Data_Pt3Cut","PtSoft0.root","tails/Tails_Calo_MCFall10_Pt3Cut","PtSoft0.root");
+  Parameters* par = new Parameters(binAdm,2.,3.,0.2,"tails/Tails_Calo_Data_Pt3Cut","PtSoft1.root","tails/Tails_Calo_MCFall10_Pt3Cut","PtSoft1.root");
   // Global labels
   Label* label = new Label(par);
 
