@@ -1,4 +1,4 @@
-// $Id: plotTailUncertainties.C,v 1.2 2010/11/30 14:34:52 mschrode Exp $
+// $Id: plotTailUncertainties.C,v 1.3 2010/12/02 20:16:21 mschrode Exp $
 
 #include <cmath>
 #include <iostream>
@@ -50,25 +50,23 @@ void plotTailUncertainties() {
   util::StyleSettings::presentationNoTitle();
   sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("BinningAdmin.cfg");
   
-  TString nomName = "results/Tails_nSCore20_nSTail30_ptSoft20_PF_.root";
+  TString nomName = "results/Tails_PF_nSCore20_nSTail30_ptSoft20_.root";
 
 
   std::vector<Variation*> vars;
-  vars.push_back(new Variation("results/Tails_nSCore20_nSTail25_ptSoft20_PF_.root","TailStart25","Tail Start 2.5#sigma"));
-  vars.push_back(new Variation("results/Tails_nSCore20_nSTail35_ptSoft20_PF_.root","TailStart35","Tail Start 3.5#sigma"));
-  vars.push_back(new Variation("results/Tails_nSCore15_nSTail30_ptSoft20_PF_.root","TailStart35","Core 1.8#sigma"));
-  vars.push_back(new Variation("results/Tails_nSCore25_nSTail30_ptSoft20_PF_.root","TailStart35","Core 2.2#sigma"));
-  vars.push_back(new Variation("results/Tails_nSCore20_nSTail30_ptSoft10_PF_.root","TailStart35","p_{T,3} < 0.1#upoint#bar{p^{ave}_{T}}"));
-  vars.push_back(new Variation("results/Tails_nSCore20_nSTail30_ptSoft30_PF_.root","TailStart35","p_{T,3} < 0.3#upoint#bar{p^{ave}_{T}}"));
+  vars.push_back(new Variation("results/Tails_PF_nSCore20_nSTail25_ptSoft20_.root","TailStart25","Tail Start 2.5#sigma"));
+  vars.push_back(new Variation("results/Tails_PF_nSCore20_nSTail35_ptSoft20_.root","TailStart35","Tail Start 3.5#sigma"));
+  vars.push_back(new Variation("results/Tails_PF_nSCore15_nSTail30_ptSoft20_.root","TailStart35","Core 1.5#sigma"));
+  vars.push_back(new Variation("results/Tails_PF_nSCore25_nSTail30_ptSoft20_.root","TailStart35","Core 2.5#sigma"));
+  vars.push_back(new Variation("results/Tails_PF_nSCore20_nSTail30_ptSoft10_.root","TailStart35","p_{T,3} < 0.1#upoint#bar{p^{ave}_{T}}"));
+  vars.push_back(new Variation("results/Tails_PF_nSCore20_nSTail30_ptSoft30_.root","TailStart35","p_{T,3} < 0.3#upoint#bar{p^{ave}_{T}}"));
 
 
   TString outName = "Tails_";
   TString jetAlgo;
   if( nomName.Contains("Calo") ) {
-    jetAlgo = "AK5 Calo-Jets";
     outName += "Calo_";
   } else if( nomName.Contains("PF") ) {
-    jetAlgo = "AK5 PF-Jets";
     outName += "PF_";
   }
 
@@ -84,7 +82,7 @@ void plotTailUncertainties() {
     for(int ptBin = 1; ptBin <= hScales[etaBin]->GetNbinsX(); ++ptBin) {
 
       TH1* hNom = new TH1D("hNom",";;Scaling Factor",vars.size()+1,-0.5,vars.size()+0.5);
-      hNom->SetNdivisions(-1.*vars.size());
+      hNom->SetNdivisions(-1*vars.size());
       TH1* hVars = static_cast<TH1D*>(hNom->Clone("hVars"));
       hVars->SetMarkerStyle(20);
       hNom->SetLineStyle(2);
@@ -117,7 +115,7 @@ void plotTailUncertainties() {
       double min = hScales[etaBin]->GetXaxis()->GetBinLowEdge(ptBin);
       double max = hScales[etaBin]->GetXaxis()->GetBinUpEdge(ptBin);
       TPaveText *txt = util::LabelFactory::createPaveText(3,-0.6);
-      txt->AddText(jetAlgo);
+      txt->AddText(util::LabelFactory::labelJetAlgo(nomName));
       txt->AddText(util::toTString(binAdm->etaMin(etaBin))+" < |#eta| < "+util::toTString(binAdm->etaMax(etaBin)));
       txt->AddText(util::toTString(min)+" < p^{ave}_{T} < "+util::toTString(max)+" GeV");
 
@@ -157,7 +155,7 @@ void plotTailUncertainties() {
 //     band->SetFillStyle(3013);
     
     TPaveText *txt = util::LabelFactory::createPaveText(2,-0.5);
-    txt->AddText(jetAlgo);
+    txt->AddText(util::LabelFactory::labelJetAlgo(nomName));
     txt->AddText(util::toTString(binAdm->etaMin(etaBin))+" < |#eta| < "+util::toTString(binAdm->etaMax(etaBin)));
 
     hScales[etaBin]->UseCurrentStyle();
