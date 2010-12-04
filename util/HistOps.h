@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.22 2010/11/23 11:24:52 mschrode Exp $
+// $Id: HistOps.h,v 1.23 2010/12/01 14:04:54 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.22 2010/11/23 11:24:52 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.23 2010/12/01 14:04:54 mschrode Exp $
   class HistOps
   {
   public:
@@ -466,6 +466,69 @@ namespace util
 	hSlices.push_back(h);
       }
     }
+
+
+    // --------------------------------------------------
+    static bool fitCoreWidth(const TH1* hist, double nSig, double &width, double &widthErr) {
+      double rms = 0.;
+      double rmsErr = 0.;
+      bool result = fitCoreWidth(hist,nSig,width,widthErr,rms,rmsErr);
+      return result;
+    }
+    
+    
+    // --------------------------------------------------
+    static bool fitCoreWidth(const TH1* hist, double nSig, double &width, double &widthErr, double &rms, double &rmsErr) {
+      TF1* dummy = 0;
+      bool result = fitCoreWidth(hist,nSig,dummy,width,widthErr,rms,rmsErr);
+      delete dummy;
+      return result;
+    }
+
+
+    // --------------------------------------------------
+    static bool fitCoreWidth(const TH1* hist, double nSig, TF1* &gauss, double &width, double &widthErr) {
+      double rms = 0.;
+      double rmsErr = 0.;
+      bool result = fitCoreWidth(hist,nSig,gauss,width,widthErr,rms,rmsErr);
+      return result;
+    }
+
+
+    // --------------------------------------------------
+    static bool fitCoreWidth(const TH1* hist, double nSig, TF1* &gauss, double &width, double &widthErr, double &rms, double &rmsErr) {
+      bool result  = false;
+      
+      TString name = hist->GetName();
+      name += "_GaussFit";
+      gauss = new TF1(name,"gaus",hist->GetXaxis()->GetBinLowEdge(1),hist->GetXaxis()->GetBinUpEdge(hist->GetNbinsX()));
+      gauss->SetLineWidth(1);
+      gauss->SetLineColor(kRed);
+      
+      TH1* h = static_cast<TH1*>(hist->Clone("util::HistOps::fitCoreWidth::h"));
+      
+      double mean = h->GetMean();
+      rms = h->GetRMS();
+      rmsErr = h->GetRMSError();
+      double sig = 1.8*rms;
+      if( h->Fit(gauss,"0QIR","",mean-sig,mean+sig) == 0 ) {
+	mean = gauss->GetParameter(1);
+	sig = nSig*gauss->GetParameter(2);
+	if( h->Fit(gauss,"0QIR","",mean-sig,mean+sig) == 0 ) {
+	  result = true;
+	  width = gauss->GetParameter(2);
+	  widthErr = gauss->GetParError(2);
+	}
+      } else {
+	std::cerr << "WARNING in util::HistOps::fitCoreWidth: No convergence when fitting width of '" << h->GetName() << "'\n";
+	width = 0.;
+	widthErr = 10000.;
+      }
+      delete h;
+      
+      return result;
+    }
+
 
     // -------------------------------------------------------------------------------------
     static bool equidistLogBins(std::vector<double>& binEdges, unsigned int nBins, double min, double max) {
