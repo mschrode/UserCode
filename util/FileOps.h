@@ -1,4 +1,4 @@
-// $Id: FileOps.h,v 1.3 2010/11/28 13:50:48 mschrode Exp $
+// $Id: FileOps.h,v 1.4 2010/11/28 21:52:15 mschrode Exp $
 
 #ifndef FileOps_h
 #define FileOps_h
@@ -8,6 +8,7 @@
 
 #include "TFile.h"
 #include "TH1.h"
+#include "TObject.h"
 #include "TString.h"
 
 #include "utils.h"
@@ -18,10 +19,28 @@ namespace util
   class FileOps
   {
   public:
+    static TH2* readTH2(const TString &fileName, const TString &hName, const TString &newHName = "");
     static TH1* readTH1(const TString &fileName, const TString &histName, const TString &newHistName = "");
     static util::HistVec readTH1(const std::vector<TString> &fileNames, const TString &histName, const TString &newHistName = "");
     static util::HistVec readHistVec(const TString &fileName, const TString &histName, const TString &newHistName = "");
   };
+
+
+  // -------------------------------------------------------------------------------------
+  TH2* FileOps::readTH2(const TString &fileName, const TString &hName, const TString &newHName) {
+    TFile file(fileName,"READ");
+    TH2* h = 0;
+    file.GetObject(hName,h);
+    if( h ) {
+      h->SetDirectory(0);
+      if( newHName.Length() ) h->SetName(newHName);
+    } else {
+      std::cerr << "ERROR in FileOps::readTH2: No TH2 with name '" << hName << "' in file '" << fileName << "'\n.";
+    }
+    file.Close();
+    
+    return h;
+  }
 
 
   //! Read TH1 histogram from file
