@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: fitMCTruth.C,v 1.1 2010/12/04 16:16:29 mschrode Exp $
 
 //!  Fit mean response and resolution from
 //!  Kalibri::ControlPlotsJetSmearing
@@ -162,6 +162,9 @@ void fitProfile(const TString &fileName, double nSigCore, TH1* &hMean, TH1* &hMe
 
 TF1* fitResolution(TH1* h, const TString &name, double min, double max) {
   TF1* fit = new TF1(name,"sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2])",min,max);
+  fit->SetParameter(0,1.);
+  fit->SetParameter(1,1.);
+  fit->SetParameter(2,0.01);
   fit->SetLineWidth(1);
   fit->SetLineColor(kRed);
   h->Fit(fit,"INR");
