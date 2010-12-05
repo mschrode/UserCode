@@ -212,6 +212,18 @@ void fill(std::vector<double> &ptData, std::vector<double> &ptDataErr,
 }
 
 
+TF1* fitResolution(TGraphErrors* g, const TString &name, double min, double max) {
+  TF1* fit = new TF1(name,"sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2])",min,max);
+  fit->FixParameter(0,0.);
+  fit->SetParameter(1,1.);
+  fit->SetParameter(2,0.01);
+  fit->SetLineWidth(1);
+  fit->SetLineColor(kRed);
+  g->Fit(fit,"BNR");
+
+  return fit;
+}
+
 
 void plotDataMCComparison() {
 
@@ -250,29 +262,48 @@ void plotDataMCComparison() {
 				       &(ptMCErr.front()),&(resMCErr.front()));
   gMC->SetMarkerStyle(21);
 
+  // Fit resolution
+  TF1* fitData = fitResolution(gData,"fitData",ptMin,ptMax);
+  TF1* fitMC = fitResolution(gMC,"fitData",ptMin,ptMax);
+  fitMC->SetLineStyle(2);
+  fitMC->SetLineColor(kBlack);
+
+
+  // Ratio
   TGraphErrors* gRatio = util::HistOps::createRatioGraph(gData,gMC);
   gRatio->SetMarkerColor(1);
   gRatio->SetLineColor(1);
 
-  TF1* fit1 = new TF1("fit1","pol0",ptMin,ptMax);
-  fit1->SetLineWidth(1);
-  fit1->SetLineColor(2);
-  fit1->SetLineStyle(2);
+  TF1* fitRatio = new TF1("fitRatio","sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2]) / sqrt([3]*[3]/x/x + [4]*[4]/x + [5]*[5])",ptMin,ptMax);
+  for(int i = 0; i < 3; ++i) {
+    fitRatio->SetParameter(i,fitData->GetParameter(i));
+    fitRatio->SetParError(i,fitData->GetParError(i));
+    fitRatio->SetParameter(3+i,fitMC->GetParameter(i));
+    fitRatio->SetParError(3+i,fitMC->GetParError(i));
+  }
+  fitRatio->SetLineWidth(1);
+  fitRatio->SetLineColor(kBlack);
 
-  TF1* fit2 = new TF1("fit2","[0] - exp(x/[1])",ptMin,ptMax);
-  fit2->SetParameter(0,1.2);
-  fit2->SetParameter(1,-100.);
-  fit2->SetLineWidth(1);
-  fit2->SetLineColor(2);
-  fit2->SetLineStyle(1);  
 
-  std::cout << "\nfit1: " << std::endl;
-  gRatio->Fit(fit1,"R0");
-  std::cout << "\n\nfit2: " << std::endl;
-  gRatio->Fit(fit2,"R0");
+  TF1* fitRatio1 = new TF1("fitRatio1","pol0",ptMin,ptMax);
+  fitRatio1->SetLineWidth(1);
+  fitRatio1->SetLineColor(2);
+  fitRatio1->SetLineStyle(2);
 
-  std::cout << "\nPar0 = " << fit2->GetParameter(0) << " (" << fit2->GetParameter(0)-fit2->GetParError(0) << ", " << fit2->GetParameter(0)+fit2->GetParError(0) << ")" << std::endl;
-  std::cout << "Par1 = " << fit2->GetParameter(1) << " (" << fit2->GetParameter(1)-fit2->GetParError(1) << ", " << fit2->GetParameter(1)+fit2->GetParError(1) << ")" << std::endl;
+  TF1* fitRatio2 = new TF1("fitRatio2","[0] - exp(x/[1])",ptMin,ptMax);
+  fitRatio2->SetParameter(0,1.2);
+  fitRatio2->SetParameter(1,-100.);
+  fitRatio2->SetLineWidth(1);
+  fitRatio2->SetLineColor(2);
+  fitRatio2->SetLineStyle(1);  
+
+  std::cout << "\nfitRatio1: " << std::endl;
+  gRatio->Fit(fitRatio1,"R0");
+  std::cout << "\n\nfitRatio2: " << std::endl;
+  gRatio->Fit(fitRatio2,"R0");
+
+  std::cout << "\nPar0 = " << fitRatio2->GetParameter(0) << " (" << fitRatio2->GetParameter(0)-fitRatio2->GetParError(0) << ", " << fitRatio2->GetParameter(0)+fitRatio2->GetParError(0) << ")" << std::endl;
+  std::cout << "Par1 = " << fitRatio2->GetParameter(1) << " (" << fitRatio2->GetParameter(1)-fitRatio2->GetParError(1) << ", " << fitRatio2->GetParameter(1)+fitRatio2->GetParError(1) << ")" << std::endl;
 
   
 
@@ -281,20 +312,23 @@ void plotDataMCComparison() {
   if( pf_ ) label->AddText("AK5 PF-Jets,  |#eta| < 1.1");
   else label->AddText("AK5 Calo-Jets,  |#eta| < 1.1");
 
-  TLegend* legRes = util::LabelFactory::createLegendColWithOffset(2,-0.8,1);
+  TLegend* legRes = util::LabelFactory::createLegendColWithOffset(4,-0.8,1);
   legRes->AddEntry(gData,"Measurement (Data)","P");
+  legRes->AddEntry(fitData,"Interpolation (Data)","L");  
   legRes->AddEntry(gMC,"Measurement (MC)","P");  
+  legRes->AddEntry(fitMC,"Interpolation (MC)","L");  
 
-  TLegend* legRatio = util::LabelFactory::createLegendColWithOffset(2,-0.7,1);
-  legRatio->AddEntry(fit1,"Fit: pol0","L");
-  legRatio->AddEntry(fit2,"Fit: [0]-exp(x/[1])","L");
+  TLegend* legRatio = util::LabelFactory::createLegendColWithOffset(3,-0.8,1);
+  legRatio->AddEntry(fitRatio,"Ratio of interpolations","L");
+  legRatio->AddEntry(fitRatio1,"Fit: pol0","L");
+  legRatio->AddEntry(fitRatio2,"Fit: [0]-exp(x/[1])","L");
 
 
 
   TCanvas* canRes = new TCanvas("canRes","Resolution",500,500);
   canRes->cd();
   TH1* hFrame = util::HistOps::createTH1D("hFrame",1000,ptMin,ptMax,"p^{ref}_{T}","GeV","#sigma / p^{ref}_{T}");
-  hFrame->GetYaxis()->SetRangeUser(1E-3,0.25);
+  hFrame->GetYaxis()->SetRangeUser(1E-3,0.29);
   hFrame->GetXaxis()->SetMoreLogLabels();
   hFrame->Draw();
   gMC->Draw("PE1same");
@@ -304,14 +338,26 @@ void plotDataMCComparison() {
   canRes->SetLogx();
   canRes->SaveAs(outNamePrefix+"Resolution.eps","eps");
 
+  canRes->cd();
+  hFrame->Draw();
+  gMC->Draw("PE1same");
+  gData->Draw("PE1same");
+  fitData->Draw("same");
+  fitMC->Draw("same");
+  label->Draw("same");
+  legRes->Draw("same");
+  canRes->SetLogx();
+  canRes->SaveAs(outNamePrefix+"ResolutionFit.eps","eps");
+
 
   TCanvas* canRatio = new TCanvas("canRatio","Ratio",500,500);
   canRatio->cd();
-  TH1* hRatioFrame = util::HistOps::createRatioFrame(hFrame,"#sigma/p^{ref}_{T}(Data)  /  #sigma/p^{ref}_{T}(MC)",0.9,1.45);
+  TH1* hRatioFrame = util::HistOps::createRatioFrame(hFrame,"#sigma/p^{ref}_{T}(Data)  /  #sigma/p^{ref}_{T}(MC)",0.9,1.55);
   hRatioFrame->GetXaxis()->SetMoreLogLabels();
   hRatioFrame->Draw();
-  fit1->Draw("same");
-  fit2->Draw("same");
+  fitRatio->Draw("Esame");
+  fitRatio1->Draw("same");
+  fitRatio2->Draw("same");
   gRatio->Draw("PE1same");
   label->Draw("same");
   legRatio->Draw("same");
