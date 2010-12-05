@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.23 2010/12/01 14:04:54 mschrode Exp $
+// $Id: HistOps.h,v 1.24 2010/12/04 16:18:20 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.23 2010/12/01 14:04:54 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.24 2010/12/04 16:18:20 mschrode Exp $
   class HistOps
   {
   public:
@@ -323,7 +323,7 @@ namespace util
       TString name = "Ratio_";
       name += h1->GetName();
       TH1D *hRatio = static_cast<TH1D*>(h1->Clone(name));
-      hRatio->SetMarkerStyle(20);
+      hRatio->SetMarkerStyle(h1->GetMarkerStyle());
       hRatio->SetMarkerColor(h1->GetLineColor());
       hRatio->SetYTitle(yTitle);
       hRatio->Divide(h2);
@@ -372,6 +372,32 @@ namespace util
       
       return gRatio;
     }
+
+
+    // -------------------------------------------------------------------------------------
+    static TGraphErrors *createRatioGraph(const TGraphErrors *g1, const TGraphErrors *g2) {
+      TGraphErrors *gRatio = new TGraphErrors(g1->GetN());
+      for(int i = 0; i < g1->GetN() && i < g2->GetN(); ++i) {
+	double denom = g2->GetY()[i];
+	double x = 0.5*(g1->GetX()[i]+g2->GetX()[i]); // Mean value of x1 and x2
+	double xe = sqrt(g1->GetEX()[i]*g1->GetEX()[i]+g2->GetEX()[i]*g2->GetEX()[i]); // Quadratic mean of x1e and x2e
+	if( denom != 0. ) {
+	  double y = g1->GetY()[i]/denom;
+	  double ye = sqrt(pow(g1->GetEY()[i]/denom,2.)+pow(g1->GetY()[i]*g1->GetEY()[i]/denom/denom,2.));
+	  gRatio->SetPoint(i,x,y);
+	  gRatio->SetPointError(i,xe,ye);
+	} else {
+	  gRatio->SetPoint(i,x,0.);
+	  gRatio->SetPointError(i,xe,0.);
+	}
+      }
+      gRatio->SetMarkerStyle(g1->GetMarkerStyle());
+      gRatio->SetMarkerColor(g1->GetMarkerColor());
+      gRatio->SetLineColor(g1->GetLineColor());
+      
+      return gRatio;
+    }
+
 
     // -------------------------------------------------------------------------------------
     static TH1D *createRatio(const TF1 *f1, const TF1 *f2, double xMin, double xMax, const TString &xTitle, const TString &yTitle) {
