@@ -8,7 +8,6 @@
 #include "TPaveText.h"
 #include "TString.h"
 
-#include "globalFunctions.h"
 #include "../sampleTools/BinningAdmin.h"
 #include "../util/utils.h"
 #include "../util/FileOps.h"
@@ -32,7 +31,7 @@ bool fitWidth(const util::HistVec &hists, double nSig, TH1* &hWidth, TH1* &hRMS)
       double widthErr = 0.;
       double rms = 0.;
       double rmsErr = 0.;
-      if( func::fitCoreWidth(*hIt,nSig,width,widthErr,rms,rmsErr) ) {
+      if( util::HistOps::fitCoreWidth(*hIt,nSig,width,widthErr,rms,rmsErr) ) {
 	hWidth->SetBinContent(bin,sqrt(2.)*width);
 	hWidth->SetBinError(bin,sqrt(2.)*widthErr);
 
@@ -61,16 +60,30 @@ void setStyle(util::HistVec &hists, bool isData) {
 }
 
 
-void compareDijetAsymmetry(const TString &binCfg = "BinningAdmin.cfg") {
+TF1* fitResolution(TH1* h, const TString &name) {
+  TF1* fit = new TF1(name,"sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2])",50.,1000.);
+  fit->FixParameter(0,0.);
+  fit->SetParameter(1,1.);
+  fit->SetParameter(2,0.01);
+  fit->SetLineWidth(1);
+  fit->SetLineColor(kRed);
+  h->Fit(fit,"BNI");
+
+  return fit;
+}
+
+
+
+void compareDijetAsymmetry(const TString &binCfg = "input/BinningAdmin.cfg") {
   
   // Prepare parameters
   std::cout << "Preparing parameters" << std::endl;
 
   util::StyleSettings::presentationNoTitle();
   sampleTools::BinningAdmin admin(binCfg);
-  TString inData = "Pt3Cut_Eta11/Tails_PF_Data_Pt3Cut_Eta0_PtSoft1.root";
-  TString inMC = "Pt3Cut_Eta11/Tails_PF_MCFall10_Pt3Cut_Eta0_PtSoft1.root";
-  TString outNamePrefix = "PtAsym_PF_Eta00-11_Pt3Corr02_";
+  TString inData = "~/results/ResolutionFit/TailScaling/Pt3Cut/Tails_Calo_Data_Pt3Cut_Eta0_PtSoft1.root";
+  TString inMC = "~/results/ResolutionFit/TailScaling/Pt3Cut/Tails_Calo_MCFall10_Pt3Cut_Eta0_PtSoft1.root";
+  TString outNamePrefix = "PtAsym_Calo_Eta0_Pt3Corr02_";
   
 
   // Read asymmetry 
@@ -193,6 +206,47 @@ void compareDijetAsymmetry(const TString &binCfg = "BinningAdmin.cfg") {
     hWidthRatio[i]->Draw("PE1same");
     bottomPadWidth->SetLogx();
     canWidth->SaveAs(outNamePrefix+"Width_nSig"+util::toTString(nSig[i])+".eps","eps");
+
+
+    TF1* fitWidthMC = fitResolution(hWidthMC[i],"fitWidthMC"+util::toTString(i));
+    fitWidthMC->SetLineStyle(2);
+    fitWidthMC->SetLineColor(kBlack);
+    TF1* fitWidthData = fitResolution(hWidthData[i],"fitWidthData"+util::toTString(i));
+    TF1* fitRatio = new TF1("fitRatio"+util::toTString(i),"sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2]) / sqrt([3]*[3]/x/x + [4]*[4]/x + [5]*[5])",50.,1000.);
+    for(int p = 0; p < 3; ++p) {
+      fitRatio->SetParameter(p,fitWidthData->GetParameter(p));
+      fitRatio->SetParError(p,fitWidthData->GetParError(p));
+      fitRatio->SetParameter(3+p,fitWidthMC->GetParameter(p));
+      fitRatio->SetParError(3+p,fitWidthMC->GetParError(p));
+    }
+    fitRatio->SetLineWidth(1);
+    fitRatio->SetLineColor(kBlack);
+
+
+    TCanvas* can = new TCanvas("can","Asymmetry",500,500);
+    can->cd();
+    hWidthMC[i]->GetYaxis()->SetRangeUser(0.,0.29);
+    hWidthMC[i]->GetYaxis()->SetMoreLogLabels();
+    hWidthMC[i]->Draw("HISTE");
+    fitWidthMC->Draw("same");
+    fitWidthData->Draw("same");
+    hWidthData[i]->Draw("PE1same");
+    label->Draw("same");
+    legRMS->Draw("same");
+    can->SetLogx();
+    can->SaveAs(outNamePrefix+"WidthFit_nSig"+util::toTString(nSig[i])+".eps","eps");
+
+    can->cd();
+    TH1* hFrame = util::HistOps::createRatioFrame(hWidthRatio[i],hWidthRatio[i]->GetXaxis()->GetTitle(),0.9,1.6);
+    hFrame->GetXaxis()->SetMoreLogLabels();
+    hFrame->Draw("HIST");
+    hWidthRatio[i]->Draw("PE1same");
+    fitRatio->Draw("same");
+    label->Draw("same");
+    can->SetLogx();
+    can->SaveAs(outNamePrefix+"WidthFitRatio_nSig"+util::toTString(nSig[i])+".eps","eps");
+    
+    delete can;
   }
 
   TCanvas* canNSig = new TCanvas("canNSig","",500,500);
