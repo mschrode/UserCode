@@ -1,4 +1,4 @@
-// $Id: fitMCTruth.C,v 1.1 2010/12/04 16:16:29 mschrode Exp $
+// $Id: fitMCTruth.C,v 1.2 2010/12/05 11:25:40 mschrode Exp $
 
 //!  Fit mean response and resolution from
 //!  Kalibri::ControlPlotsJetSmearing
@@ -23,6 +23,10 @@
 
 
 unsigned int gN_FILES = 0;
+unsigned int gCOLOR_GAUSS = kRed;
+unsigned int gMARKER_GAUSS = 20;
+unsigned int gCOLOR_RMS = kBlue;
+unsigned int gMARKER_RMS = 24;
 
 
 TH1* createTH1FromTH2(const TH2* h2, const TString &name, const TString &xTitle, const TString &xUnit, const TString &yTitle) {
@@ -45,13 +49,21 @@ void fitProfile(const TString &fileName, double nSigCore, TH1* &hMean, TH1* &hMe
   // Creating products
   std::cout << "  Creating result histograms" << std::endl;
   hMean = createTH1FromTH2(hRespVsPt,"hMean"+util::toTString(gN_FILES),"p^{gen}_{T}","GeV","Response Mean");
-  hMean->SetMarkerStyle(22);
+  hMean->SetMarkerStyle(gMARKER_RMS);
+  hMean->SetMarkerColor(gCOLOR_RMS);
+  hMean->SetLineColor(gCOLOR_RMS);
   hMeanGauss = createTH1FromTH2(hRespVsPt,"hMeanGauss"+util::toTString(gN_FILES),"p^{gen}_{T}","GeV","Response Gauss Mean");
-  hMeanGauss->SetMarkerStyle(20);
+  hMeanGauss->SetMarkerStyle(gMARKER_GAUSS);
+  hMeanGauss->SetMarkerColor(gCOLOR_GAUSS);
+  hMeanGauss->SetLineColor(gCOLOR_GAUSS);
   hRMS = createTH1FromTH2(hRespVsPt,"hRMS"+util::toTString(gN_FILES),"p^{gen}_{T}","GeV","Response Standard Deviation");
-  hRMS->SetMarkerStyle(22);
+  hRMS->SetMarkerStyle(gMARKER_RMS);
+  hRMS->SetMarkerColor(gCOLOR_RMS);
+  hRMS->SetLineColor(gCOLOR_RMS);
   hSigmaGauss = createTH1FromTH2(hRespVsPt,"hSigmaGauss"+util::toTString(gN_FILES),"p^{gen}_{T}","GeV","Response Gaussian Width");
-  hSigmaGauss->SetMarkerStyle(20);
+  hSigmaGauss->SetMarkerStyle(gMARKER_GAUSS);
+  hSigmaGauss->SetMarkerColor(gCOLOR_GAUSS);
+  hSigmaGauss->SetLineColor(gCOLOR_GAUSS);
 
 
   // Fill response distributions per pt bin
@@ -87,7 +99,7 @@ void fitProfile(const TString &fileName, double nSigCore, TH1* &hMean, TH1* &hMe
       fit = new TF1("fGauss"+util::toTString(gN_FILES)+"_Bin"+util::toTString(bin),"gaus");
     }
     fit->SetLineWidth(1);
-    fit->SetLineColor(kRed);    
+    fit->SetLineColor(gCOLOR_GAUSS);    
     fGauss.push_back(fit);
   }
 
@@ -161,13 +173,21 @@ void fitProfile(const TString &fileName, double nSigCore, TH1* &hMean, TH1* &hMe
 
 
 TF1* fitResolution(TH1* h, const TString &name, double min, double max) {
-  TF1* fit = new TF1(name,"sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2])",min,max);
-  fit->SetParameter(0,1.);
-  fit->SetParameter(1,1.);
-  fit->SetParameter(2,0.01);
+//   TF1* fit = new TF1(name,"sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2])",min,max);
+//   fit->SetParameter(0,4.);
+//   fit->SetParameter(1,1.);
+//   fit->SetParameter(2,0.01);
+
+  TF1* fit = new TF1(name,"sqrt(((TMath::Sign(1,[0])*sq([0]/x))+(sq([1])*(x^([3]-1))))+sq([2]))",min,max);
+  fit->SetParameter(0,-0.34);
+  fit->SetParameter(1,0.3);
+  fit->FixParameter(2,0.);
+  fit->SetParameter(3,0.47);
+
   fit->SetLineWidth(1);
   fit->SetLineColor(kRed);
-  h->Fit(fit,"INR");
+  h->Fit(fit,"BINR");
+
 
   return fit;
 }
@@ -177,17 +197,20 @@ TF1* fitResolution(TH1* h, const TString &name, double min, double max) {
 void fitMCTruth(const TString &fileName) {
   util::StyleSettings::presentationNoTitle();
 
-  TString outNamePrefix = "MCTruthResponse_F"+util::toTString(gN_FILES);
+  TString outNamePrefix = "MCTruthResponse_";
+  if( fileName.Contains("PF") ) outNamePrefix += "PF_";
+  else if( fileName.Contains("Calo") ) outNamePrefix += "Calo_";
+  outNamePrefix += "F"+util::toTString(gN_FILES);
 
   // Fit distributions
   TH1* hMean = 0;
   TH1* hMeanGauss = 0;
   TH1* hRMS = 0;
   TH1* hSigmaGauss = 0;
-  fitProfile(fileName,2.5,hMean,hMeanGauss,hRMS,hSigmaGauss,outNamePrefix);
+  fitProfile(fileName,2.,hMean,hMeanGauss,hRMS,hSigmaGauss,outNamePrefix);
 
   // Fit resolution
-  TF1* fit = fitResolution(hSigmaGauss,"Res_F"+util::toTString(gN_FILES),80.,2000.);
+  TF1* fit = fitResolution(hSigmaGauss,"Res_F"+util::toTString(gN_FILES),10.,2000.);
   
   // Plot response and resolution
   TLegend* legMean = util::LabelFactory::createLegendCol(2,0.7);
@@ -208,15 +231,27 @@ void fitMCTruth(const TString &fileName) {
   legRes->AddEntry(hRMS,"Standard Deviation","P");
   legRes->AddEntry(hSigmaGauss,"Gaussian Width","P");
 
-  can->cd();
-  hSigmaGauss->GetYaxis()->SetRangeUser(0.,0.33);
-  hSigmaGauss->GetYaxis()->SetTitle("Resolution");
-  hSigmaGauss->Draw("PE1");
-  hRMS->Draw("PE1same");
+  TCanvas* canRes = util::HistOps::createRatioTopCanvas();
+  TPad *bottomPadRes = util::HistOps::createRatioBottomPad();
+  TH1 *topFrameRes = util::HistOps::createRatioTopHist(hRMS);
+  TH1 *bottomFrameRes = util::HistOps::createRatioBottomFrame(hRMS,"p^{gen}_{T}","GeV",0.81,1.19);
+  canRes->cd();
+  topFrameRes->GetYaxis()->SetRangeUser(0.,0.43);
+  topFrameRes->GetYaxis()->SetTitle("Resolution");
+  topFrameRes->Draw("PE1");
+  hSigmaGauss->Draw("PE1same");
   fit->Draw("same");
   legRes->Draw("same");
-  can->SetLogx();
-  can->SaveAs(outNamePrefix+"_Resolution.eps","eps");
+  canRes->SetLogx();
+  bottomPadRes->Draw();
+  bottomPadRes->cd();
+  bottomFrameRes->GetXaxis()->SetMoreLogLabels();
+  bottomFrameRes->Draw();
+  TH1* hSigmaGaussRatio = static_cast<TH1D*>(hSigmaGauss->Clone("hSigmaGaussRatio"));
+  hSigmaGaussRatio->Divide(fit);
+  hSigmaGaussRatio->Draw("PE1same");
+  bottomPadRes->SetLogx();
+  canRes->SaveAs(outNamePrefix+"_Resolution.eps","eps");
   
   delete legMean;
   delete legRes;
