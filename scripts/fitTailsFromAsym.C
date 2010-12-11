@@ -1,4 +1,4 @@
-// $Id: fitTailsFromAsym.C,v 1.10 2010/11/30 14:34:52 mschrode Exp $
+// $Id: fitTailsFromAsym.C,v 1.11 2010/12/03 20:54:06 mschrode Exp $
 
 #include <cmath>
 #include <fstream>
@@ -224,7 +224,7 @@ private:
   mutable unsigned int count_;
 
   void fitWidth(const TH1* h, double &width, double &widthErr) const {
-    func::fitCoreWidth(h,par_->nSigCore(),width,widthErr);
+    util::HistOps::fitCoreWidth(h,par_->nSigCore(),width,widthErr);
   }
   void getTail(const TH1* h, const TF1* fGauss = 0, double tailStart = 0);
   TH1* hist(const TH1* h) const;
@@ -848,8 +848,10 @@ void fitTailsFromAsym() {
   std::cout << "Setting parameters" << std::endl;
   gErrorIgnoreLevel = 1001;
   util::StyleSettings::presentation();
-  sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("BinningAdmin.cfg");
-  Parameters* par = new Parameters(binAdm,2.,3.,0.2,"tails/Tails_Calo_Data_Pt3Cut","PtSoft1.root","tails/Tails_Calo_MCFall10_Pt3Cut","PtSoft1.root");
+
+  sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("input/BinningAdminTails.cfg");
+  Parameters* par = new Parameters(binAdm,2.,3.,0.2,"~/results/ResolutionFit/TailScaling/Pt3Cut/LeptonVeto/Tails_LeptonVeto_PF_Data","PtSoft1.root","~/results/ResolutionFit/TailScaling/Pt3Cut/LeptonVeto/Tails_LeptonVeto_PF_MCFall10","PtSoft1.root");
+
   // Global labels
   Label* label = new Label(par);
 
@@ -1102,6 +1104,12 @@ void fitTailsFromAsym() {
     canScalFac->SetLogx();
     canScalFac->SaveAs(par->outFileNamePrefix(etaBin)+"ScalingFactorsInt.eps","eps");
 
+    
+    std::cout << "\n\nREBINNED SCALING FACTORS" << std::endl;
+    for(int k = 1; k <= hScalFacInt->GetNbinsX(); ++k) {
+      std::cout << "  " << hScalFacInt->GetXaxis()->GetBinLowEdge(k) << " - " << hScalFacInt->GetXaxis()->GetBinUpEdge(k) << ": " << hScalFacInt->GetBinContent(k) << " +/- " << hScalFacInt->GetBinError(k) << std::endl;
+    }
+    
 
     // Writ to root file
     outFile.WriteTObject(hScalFac);
