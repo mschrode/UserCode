@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.24 2010/12/04 16:18:20 mschrode Exp $
+// $Id: HistOps.h,v 1.25 2010/12/05 11:32:20 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.24 2010/12/04 16:18:20 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.25 2010/12/05 11:32:20 mschrode Exp $
   class HistOps
   {
   public:
@@ -219,6 +219,35 @@ namespace util
 
 
     // -------------------------------------------------------------------------------------
+    static TGraphAsymmErrors* combineTGraphs(const TGraphAsymmErrors* g1, const TGraphAsymmErrors* g2) {
+      std::vector<double> x;
+      std::vector<double> xeh;
+      std::vector<double> xel;
+      std::vector<double> y;
+      std::vector<double> yeh;
+      std::vector<double> yel;
+      for(int i = 0; i < g1->GetN(); ++i) {
+	x.push_back(g1->GetX()[i]);
+	xeh.push_back(g1->GetEXhigh()[i]);
+	xel.push_back(g1->GetEXlow()[i]);
+	y.push_back(g1->GetY()[i]);
+	yeh.push_back(g1->GetEYhigh()[i]);
+	yel.push_back(g1->GetEYlow()[i]);
+      }
+      for(int i = 0; i < g2->GetN(); ++i) {
+	x.push_back(g2->GetX()[i]);
+	xeh.push_back(g2->GetEXhigh()[i]);
+	xel.push_back(g2->GetEXlow()[i]);
+	y.push_back(g2->GetY()[i]);
+	yeh.push_back(g2->GetEYhigh()[i]);
+	yel.push_back(g2->GetEYlow()[i]);
+      }
+      return new TGraphAsymmErrors(x.size(),&(x.front()),&(y.front()),&(xel.front()),&(xeh.front()),&(yel.front()),&(yeh.front()));
+    }
+
+
+
+    // -------------------------------------------------------------------------------------
     static TH1D *createRatioFrame(double xMin, double xMax, double yMin, double yMax, const TString &xTitle, const TString &yTitle) {
       ++nFrames_;
       TH1D *h = new TH1D("util::HistOps::hRatioFrame"+toTString(nFrames_),"",1000,xMin,xMax);
@@ -383,12 +412,41 @@ namespace util
 	double xe = sqrt(g1->GetEX()[i]*g1->GetEX()[i]+g2->GetEX()[i]*g2->GetEX()[i]); // Quadratic mean of x1e and x2e
 	if( denom != 0. ) {
 	  double y = g1->GetY()[i]/denom;
-	  double ye = sqrt(pow(g1->GetEY()[i]/denom,2.)+pow(g1->GetY()[i]*g1->GetEY()[i]/denom/denom,2.));
+	  double ye = sqrt(pow(g1->GetEY()[i]/denom,2.)+pow(g1->GetY()[i]*g2->GetEY()[i]/denom/denom,2.));
 	  gRatio->SetPoint(i,x,y);
 	  gRatio->SetPointError(i,xe,ye);
 	} else {
 	  gRatio->SetPoint(i,x,0.);
 	  gRatio->SetPointError(i,xe,0.);
+	}
+      }
+      gRatio->SetMarkerStyle(g1->GetMarkerStyle());
+      gRatio->SetMarkerColor(g1->GetMarkerColor());
+      gRatio->SetLineColor(g1->GetLineColor());
+      
+      return gRatio;
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static TGraphAsymmErrors *createRatioGraph(const TGraphAsymmErrors *g1, const TGraphAsymmErrors *g2) {
+      TGraphAsymmErrors *gRatio = new TGraphAsymmErrors(g1->GetN());
+      for(int i = 0; i < g1->GetN() && i < g2->GetN(); ++i) {
+	double denom = g2->GetY()[i];
+	double x = 0.5*(g1->GetX()[i]+g2->GetX()[i]); // Mean value of x1 and x2
+	double e1 = g1->GetEXhigh()[i];
+	double e2 = g2->GetEXhigh()[i];
+	double xe = sqrt( e1*e1 + e2*e2 ); // Quadratic mean of x1e and x2e
+	if( denom != 0. ) {
+	  double y = g1->GetY()[i]/denom;
+	  e1 = g1->GetEYhigh()[i];
+	  e2 = g2->GetEYhigh()[i];
+	  double ye = sqrt(pow(e1/denom,2.)+pow(g1->GetY()[i]*e2/denom/denom,2.));
+	  gRatio->SetPoint(i,x,y);
+	  gRatio->SetPointError(i,xe,xe,ye,ye);
+	} else {
+	  gRatio->SetPoint(i,x,0.);
+	  gRatio->SetPointError(i,xe,0.,0.);
 	}
       }
       gRatio->SetMarkerStyle(g1->GetMarkerStyle());
@@ -536,7 +594,7 @@ namespace util
       double mean = h->GetMean();
       rms = h->GetRMS();
       rmsErr = h->GetRMSError();
-      double sig = 1.8*rms;
+      double sig = 2.5*rms;
       if( h->Fit(gauss,"0QIR","",mean-sig,mean+sig) == 0 ) {
 	mean = gauss->GetParameter(1);
 	sig = nSig*gauss->GetParameter(2);

@@ -1,4 +1,4 @@
-// $Id: ConfigParser.h,v 1.1 2010/11/26 22:41:09 mschrode Exp $
+// $Id: ConfigParser.h,v 1.2 2010/11/27 23:57:52 mschrode Exp $
 
 #ifndef CONFIG_PARSER_H
 #define CONFIG_PARSER_H
@@ -15,13 +15,13 @@ namespace util {
   // -------------------------------------------------------------------------------------
   class ConfigParser {
   public:
-    static std::string getTag(const std::string &line, const std::string &delim, size_t &pos);
-    static bool noComment(const std::string &line);
-    static void trim(std::string &str);
-    static void trim(std::string &str, const std::string delims);
+    static inline std::string getTag(const std::string &line, const std::string &delim, size_t &pos);
+    static inline bool noComment(const std::string &line);
+    static inline void trim(std::string &str);
+    static inline void trim(std::string &str, const std::string delims);
 
 
-    ConfigParser(const std::string &name) {
+    inline ConfigParser(const std::string &name) {
       file_ = new std::ifstream(name.c_str());
       if( !file_->is_open() ) {
 	std::cerr << "ERROR(ConfigParser): error opening file '" << name << "'\n";
@@ -29,20 +29,20 @@ namespace util {
       }
     }
 
-    ~ConfigParser() {
+    inline ~ConfigParser() {
       file_->close();
       delete file_;
     }
 
-    std::string readString(const std::string &tag, const std::string &delim = ":") const;
-    std::vector<std::string> readStringVec(const std::string &tag, const std::string &delim = ":") const;
-    std::vector<double> readDoubleVec(const std::string &tag, const std::string &delim = ":") const;
+    inline std::string readString(const std::string &tag, const std::string &delim = ":") const;
+    inline std::vector<std::string> readStringVec(const std::string &tag, const std::string &delim = ":") const;
+    inline std::vector<double> readDoubleVec(const std::string &tag, const std::string &delim = ":") const;
 
 
   private:
     std::ifstream* file_;
 
-    double stringToDouble(const std::string &str) const;
+    inline double stringToDouble(const std::string &str) const;
   };
 
 
