@@ -1,4 +1,4 @@
-// $Id: fitMCTruth.C,v 1.2 2010/12/05 11:25:40 mschrode Exp $
+// $Id: fitMCTruth.C,v 1.3 2010/12/08 20:22:44 mschrode Exp $
 
 //!  Fit mean response and resolution from
 //!  Kalibri::ControlPlotsJetSmearing
@@ -194,23 +194,36 @@ TF1* fitResolution(TH1* h, const TString &name, double min, double max) {
 
 
 
-void fitMCTruth(const TString &fileName) {
+void fitMCTruth(const TString &fileName, double nSigCore, double minPt) {
   util::StyleSettings::presentationNoTitle();
 
   TString outNamePrefix = "MCTruthResponse_";
-  if( fileName.Contains("PF") ) outNamePrefix += "PF_";
-  else if( fileName.Contains("Calo") ) outNamePrefix += "Calo_";
-  outNamePrefix += "F"+util::toTString(gN_FILES);
+  if( fileName.Contains("PF") ) outNamePrefix += "PF";
+  else if( fileName.Contains("Calo") ) outNamePrefix += "Calo";
+
+  if( gN_FILES > 1 ) outNamePrefix += "_F"+util::toTString(gN_FILES);
+
+  if( fileName.Contains("Eta0") ) outNamePrefix += "_Eta0";
+  else if( fileName.Contains("Eta1") ) outNamePrefix += "_Eta1";
+  else if( fileName.Contains("Eta2") ) outNamePrefix += "_Eta2";
+  else if( fileName.Contains("Eta3") ) outNamePrefix += "_Eta3";
+
 
   // Fit distributions
   TH1* hMean = 0;
   TH1* hMeanGauss = 0;
   TH1* hRMS = 0;
   TH1* hSigmaGauss = 0;
-  fitProfile(fileName,2.,hMean,hMeanGauss,hRMS,hSigmaGauss,outNamePrefix);
+  fitProfile(fileName,nSigCore,hMean,hMeanGauss,hRMS,hSigmaGauss,outNamePrefix);
 
   // Fit resolution
-  TF1* fit = fitResolution(hSigmaGauss,"Res_F"+util::toTString(gN_FILES),10.,2000.);
+  TF1* fit = fitResolution(hSigmaGauss,"Res_F"+util::toTString(gN_FILES),minPt,2000.);
+
+  std::cout << std::endl;
+  std::cout << "nSigCore.push_back(" << nSigCore << ");" << std::endl;
+  for(int i = 0; i < fit->GetNpar(); ++i) {
+    std::cout << "par" << i << ".push_back(" << fit->GetParameter(i) << ");" << std::endl;
+  }
   
   // Plot response and resolution
   TLegend* legMean = util::LabelFactory::createLegendCol(2,0.7);
