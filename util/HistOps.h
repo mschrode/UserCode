@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.25 2010/12/05 11:32:20 mschrode Exp $
+// $Id: HistOps.h,v 1.26 2010/12/11 17:32:29 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.25 2010/12/05 11:32:20 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.26 2010/12/11 17:32:29 mschrode Exp $
   class HistOps
   {
   public:
@@ -249,8 +249,8 @@ namespace util
 
     // -------------------------------------------------------------------------------------
     static TH1D *createRatioFrame(double xMin, double xMax, double yMin, double yMax, const TString &xTitle, const TString &yTitle) {
-      ++nFrames_;
-      TH1D *h = new TH1D("util::HistOps::hRatioFrame"+toTString(nFrames_),"",1000,xMin,xMax);
+      ++COUNT_;
+      TH1D *h = new TH1D("util::HistOps::hRatioFrame"+toTString(COUNT_),"",1000,xMin,xMax);
       for(int xBin = 1; xBin <= h->GetNbinsX(); ++xBin) {
 	h->SetBinContent(xBin,1.);
       }
@@ -281,10 +281,10 @@ namespace util
 
     // -------------------------------------------------------------------------------------
     static TH1D *createRatioFrame(const TH1 *h, const TString &yTitle, double yMin, double yMax) {
-      ++nFrames_;
+      ++COUNT_;
       TString name = "Frame_";
       name += h->GetName();
-      name += nFrames_;
+      name += COUNT_;
       TH1D *hFrame = 0;
       bool hasConstBinWidth = true;
       for(int bin = 2; bin <= h->GetNbinsX(); ++bin) {
@@ -477,16 +477,16 @@ namespace util
 
     // -------------------------------------------------------------------------------------
     static TCanvas *createRatioTopCanvas() {
-      nFrames_++;      
-      TCanvas *topCan = new TCanvas("TopRatio"+toTString(nFrames_),"",500,500);
+      COUNT_++;      
+      TCanvas *topCan = new TCanvas("TopRatio"+toTString(COUNT_),"",500,500);
       topCan->SetBottomMargin(0.2 + 0.8*topCan->GetBottomMargin()-0.2*topCan->GetTopMargin());
       return topCan;
     }
 
     // -------------------------------------------------------------------------------------
     static TPad *createRatioBottomPad() {
-      nFrames_++;
-      TPad *ratioPad = new TPad("BottomPad"+toTString(nFrames_),"",0,0,1,1);
+      COUNT_++;
+      TPad *ratioPad = new TPad("BottomPad"+toTString(COUNT_),"",0,0,1,1);
       ratioPad->SetTopMargin(0.8 - 0.8*ratioPad->GetBottomMargin()+0.2*ratioPad->GetTopMargin());
       ratioPad->SetFillStyle(0);
       ratioPad->SetFrameFillColor(10);
@@ -503,8 +503,8 @@ namespace util
 
     // -------------------------------------------------------------------------------------
     static TH1 *createRatioTopFrame(double xMin, double xMax, double yMin, double yMax, const TString &yTitle) {
-      nFrames_++;
-      TH1D *h = new TH1D("util::HistOps::hRatioTopFrame"+toTString(nFrames_),"",1000,xMin,xMax);
+      COUNT_++;
+      TH1D *h = new TH1D("util::HistOps::hRatioTopFrame"+toTString(COUNT_),"",1000,xMin,xMax);
       setAxisTitles(h,"","",yTitle);
       h->GetYaxis()->SetRangeUser(yMin,yMax);
       h->GetXaxis()->SetLabelSize(0);
@@ -514,8 +514,8 @@ namespace util
 
     // -------------------------------------------------------------------------------------
     static TH1 *createRatioTopHist(const TH1 *h) {
-      nFrames_++;
-      TH1D *hFrame = static_cast<TH1D*>(h->Clone("util::HistOps::hRatioTopHist"+toTString(nFrames_)));
+      COUNT_++;
+      TH1D *hFrame = static_cast<TH1D*>(h->Clone("util::HistOps::hRatioTopHist"+toTString(COUNT_)));
       double min = 1.;
       double max = 0.;
       findYRange(h,min,max);
@@ -528,7 +528,7 @@ namespace util
 
     // -------------------------------------------------------------------------------------
     static TH1 *createRatioBottomFrame(const TH1 *h, const TString &xTitle, const TString &xUnit, double yMin = 0.81, double yMax = 1.19) {
-      nFrames_++;
+      COUNT_++;
       TH1D *hFrame = createRatioFrame(h,"",yMin,yMax);
       setAxisTitles(hFrame,xTitle,xUnit,"");
       hFrame->GetYaxis()->SetNdivisions(205);
@@ -536,8 +536,18 @@ namespace util
       return hFrame;
     }
 
+
     // -------------------------------------------------------------------------------------
     static void fillSlices(const TH2 *h2, std::vector<TH1*> &hSlices, const TString &namePrefix) {
+      std::vector<double> entries;
+      fillSlices(h2,hSlices,namePrefix,entries);
+      entries.clear();
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static void fillSlices(const TH2 *h2, std::vector<TH1*> &hSlices, const TString &namePrefix, std::vector<double> &entries) {
+      entries.clear();
       for(int xBin = 1; xBin <= h2->GetNbinsX(); ++xBin) {
 	TH1 *h = new TH1D(namePrefix+toTString(xBin-1),"",h2->GetNbinsY(),
 			  h2->GetYaxis()->GetXmin(),h2->GetYaxis()->GetXmax());
@@ -547,6 +557,7 @@ namespace util
 	  h->SetBinContent(yBin,h2->GetBinContent(h2->GetBin(xBin,yBin)));
 	  h->SetBinError(yBin,h2->GetBinError(h2->GetBin(xBin,yBin)));
 	}  
+	entries.push_back(h2->Integral(xBin,xBin,1,h2->GetNbinsY()));
 	hSlices.push_back(h);
       }
     }
@@ -640,7 +651,7 @@ namespace util
     // -------------------------------------------------------------------------------------
     static TH1D *getUncertaintyBand(const TF1 *mean, double relUncert, double xMin, double xMax, int color = -1, int fillStyle = -1) {
       TString name = mean->GetName();
-      name += toTString(nFrames_);
+      name += toTString(COUNT_);
       TH1D *hBand = new TH1D(name,"",1000,xMin,xMax);
       hBand->SetMarkerStyle(1);
       hBand->SetFillColor((color < 0) ? mean->GetLineColor()+1 : color);
@@ -659,7 +670,7 @@ namespace util
     // -------------------------------------------------------------------------------------
     static TH1D *getUncertaintyBand(const TH1 *mean, double relUncert, double xMin, double xMax, int color = -1, int fillStyle = -1) {
       TString name = mean->GetName();
-      name += toTString(nFrames_);
+      name += toTString(COUNT_);
       TH1D *hBand = new TH1D(name,"",1000,xMin,xMax);
       hBand->SetMarkerStyle(1);
       hBand->SetFillColor((color < 0) ? mean->GetLineColor()+1 : color);
@@ -675,10 +686,172 @@ namespace util
     }
 
 
+    // -------------------------------------------------------------------------------------
+    static TH1 *getUncertaintyBandSym(const TH1* hNominal, const TH1* hUp, const TH1* hDown, int color = -1, int fillStyle = -1) {
+      // Clone nominal hist
+      TString name = hNominal->GetName();
+      name += "Uncertainty";
+      name += toTString(COUNT_);
+      TH1 *hBand = static_cast<TH1*>(hNominal->Clone(name));
+
+      if( hUp->GetNbinsX() == hBand->GetNbinsX() && hDown->GetNbinsX() == hBand->GetNbinsX() ) {
+	// Set symmetrized entry and uncertainties
+	for(int bin = 1; bin <= hBand->GetNbinsX(); ++bin) {
+	  double y1 = hUp->GetBinContent(bin);
+	  double y2 = hDown->GetBinContent(bin);
+	  double e = 0.5*(y1-y2);
+	  double yn = e > 0 ? y2 + 0.5*e : y1 - 0.5*e;
+	  hBand->SetBinContent(bin,yn);
+	  hBand->SetBinError(bin,std::abs(e));
+	}
+	hBand->SetMarkerStyle(0);
+	hBand->SetFillColor((color < 0) ? hBand->GetLineColor()+50 : color);
+	if( fillStyle > 0 ) hBand->SetFillStyle(fillStyle);
+	hBand->SetMarkerColor(hBand->GetFillColor());
+      } else {
+	std::cerr << "WARNING in util::HistOps::getUncertaintyBand(): different binning of uncertainty and nominal histograms!" << std::endl;
+      }
+      
+      return hBand;
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static TGraphAsymmErrors *getUncertaintyBand(const TH1* hNominal, const TH1* hUp, const TH1* hDown, int color = -1, int fillStyle = -1) {
+      TGraphAsymmErrors* g = 0;
+      if( hUp->GetNbinsX() == hDown->GetNbinsX() ) {
+	std::vector<double> x;
+	std::vector<double> xe;
+	std::vector<double> y;
+	std::vector<double> yel;
+	std::vector<double> yeh;
+
+	// Set symmetrized entry and uncertainties
+	for(int bin = 1; bin <= hNominal->GetNbinsX(); ++bin) {
+	  x.push_back(hNominal->GetBinCenter(bin));
+	  xe.push_back(0.5*hNominal->GetBinWidth(bin));
+	  double nom = hNominal->GetBinContent(bin);
+	  double y1 = std::abs(hDown->GetBinContent(bin)-nom);
+	  double y2 = std::abs(hUp->GetBinContent(bin)-nom);
+	  y.push_back(nom);
+	  yel.push_back(y1);
+	  yeh.push_back(y2);
+	}
+	g = new TGraphAsymmErrors(x.size(),&(x.front()),&(y.front()),&(xe.front()),&(xe.front()),&(yel.front()),&(yeh.front()));
+	
+	g->SetMarkerStyle(0);
+	g->SetFillColor((color < 0) ? g->GetLineColor()+50 : color);
+	if( fillStyle > 0 ) g->SetFillStyle(fillStyle);
+	g->SetMarkerColor(g->GetFillColor());
+      } else {
+	std::cerr << "WARNING in util::HistOps::getUncertaintyBand(): different binning of uncertainty histograms!" << std::endl;
+      }
+      
+      return g;
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static TH1 *getUncertaintyBand(const TH1* hNominal, const std::vector<TH1*> &hUp, const std::vector<TH1*> &hDown, std::vector<TH1*> &hBands, int color = -1, int fillStyle = -1) {
+
+      // Total uncertainty band
+      TH1* hTotalUp = 0;
+      TH1* hTotalDown = 0;
+      getTotalUncertainty(hUp,hDown,hTotalUp,hTotalDown);
+      
+      // Individual uncertainty bands
+      for(unsigned int i = 0; i < hUp.size(); ++i) {
+	hBands.push_back(getUncertaintyBandSym(hNominal,hUp[i],hDown[i],color,fillStyle));
+      }
+
+      return getUncertaintyBandSym(hNominal,hTotalUp,hTotalDown,color,fillStyle);
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static TGraphAsymmErrors *getTotalUncertainty(const std::vector<TGraphAsymmErrors*> &uncerts, int color = -1, int fillStyle = -1) {
+      TGraphAsymmErrors* g = 0;
+      bool isSane = true;
+      for(unsigned int i = 1; i < uncerts.size(); ++i) {
+	if( uncerts[i]->GetN() != uncerts[0]->GetN() ) {
+	  std::cerr << "ERROR in util::HistOps::getTotalUncertainty(): different number of points in uncertatinties" << std::endl;
+	  isSane = false;
+	}
+      }
+      if( isSane ) {
+	std::vector<double> x;
+	std::vector<double> xel;
+	std::vector<double> xeh;
+	std::vector<double> y;
+	std::vector<double> yel;
+	std::vector<double> yeh;
+	for(int i = 0; i < uncerts[0]->GetN(); ++i) {
+	  double u2 = 0.;
+	  double d2 = 0.;
+	  for(unsigned int k = 0; k < uncerts.size(); ++k) {
+	    d2 += pow(uncerts[k]->GetEYlow()[i],2.);
+	    u2 += pow(uncerts[k]->GetEYhigh()[i],2.);
+	  }
+	  x.push_back(uncerts[0]->GetX()[i]);
+	  xel.push_back(uncerts[0]->GetEXlow()[i]);
+	  xeh.push_back(uncerts[0]->GetEXhigh()[i]);
+	  y.push_back(uncerts[0]->GetY()[i]);
+	  yel.push_back(sqrt(d2));
+	  yeh.push_back(sqrt(u2));
+	}
+	g = new TGraphAsymmErrors(x.size(),&(x.front()),&(y.front()),&(xel.front()),&(xeh.front()),&(yel.front()),&(yeh.front()));	
+	g->SetMarkerStyle(0);
+	g->SetFillColor((color < 0) ? g->GetLineColor()+50 : color);
+	if( fillStyle > 0 ) g->SetFillStyle(fillStyle);
+	g->SetMarkerColor(g->GetFillColor());
+      }
+
+      return g;
+    }
+
+
+
+    // -------------------------------------------------------------------------------------
+    static void getTotalUncertainty(const std::vector<TH1*> &hUp, const std::vector<TH1*> &hDown, TH1* &hTotalUp, TH1* &hTotalDown) {
+      if( hUp.size() == hDown.size() ) {
+	bool sameBinning = true;
+	for(unsigned int i = 0; i < hUp.size(); ++i) {
+	  if( hUp[i]->GetNbinsX() != hDown[i]->GetNbinsX() ) {
+	    sameBinning = false;
+	    break;
+	  }
+	}
+	if( sameBinning ) {
+	  // Create total uncertainties
+	  hTotalUp = static_cast<TH1*>(hUp.at(0)->Clone("util::HistOps::TotalUncertainty"+toTString(COUNT_)));
+	  hTotalDown = static_cast<TH1*>(hDown.at(0)->Clone("util::HistOps::TotalUncertainty"+toTString(COUNT_)));
+
+	  // Add up individual uncertainties in quadrature
+	  for(int bin = 1; bin <= hTotalUp->GetNbinsX(); ++bin) {
+	    double u2 = 0.;
+	    double d2 = 0.;
+	    for(unsigned int i = 0; i < hUp.size(); ++i) {
+	      u2 += pow(hUp[i]->GetBinContent(bin),2);
+	      d2 += pow(hDown[i]->GetBinContent(bin),2);
+	    }
+	    hTotalUp->SetBinContent(bin,sqrt(u2));
+	    hTotalDown->SetBinContent(bin,sqrt(d2));
+	  }
+	} else {
+	  std::cerr << "WARNING in util::HistOps::getTotalUncertainty(): different binning of of up and down variations." << std::endl;
+	  exit(1);
+	}
+      } else {
+	std::cerr << "WARNING in util::HistOps::getTotalUncertainty(): different number of up and down variations." << std::endl;
+	exit(1);
+      }
+    }
+
+
   private:
-    static unsigned int nFrames_;
+    static unsigned int COUNT_;
   };
 
-  unsigned int HistOps::nFrames_ = 0;
+  unsigned int HistOps::COUNT_ = 0;
 }
 #endif

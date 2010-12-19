@@ -1,4 +1,4 @@
-// $Id: FileOps.h,v 1.4 2010/11/28 21:52:15 mschrode Exp $
+// $Id: FileOps.h,v 1.5 2010/12/04 16:18:05 mschrode Exp $
 
 #ifndef FileOps_h
 #define FileOps_h
@@ -6,6 +6,7 @@
 #include <iostream>
 #include <vector>
 
+#include "TF1.h"
 #include "TFile.h"
 #include "TH1.h"
 #include "TObject.h"
@@ -19,6 +20,7 @@ namespace util
   class FileOps
   {
   public:
+    static TF1* readTF1(const TString &fileName, const TString &fName, const TString &newFName = "");
     static TH2* readTH2(const TString &fileName, const TString &hName, const TString &newHName = "");
     static TH1* readTH1(const TString &fileName, const TString &histName, const TString &newHistName = "");
     static util::HistVec readTH1(const std::vector<TString> &fileNames, const TString &histName, const TString &newHistName = "");
@@ -98,6 +100,23 @@ namespace util
     if( v.size() == 0 ) std::cerr << "WARNING in util::FileOps::readHistVec(): No histogram read!\n";
     
     return v;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  TF1* FileOps::readTF1(const TString &fileName, const TString &fName, const TString &newFName) {
+    TFile file(fileName,"READ");
+    TF1 *f = 0;
+    file.GetObject(fName,f);
+    if( f ) {
+      //f->SetDirectory(0);
+      if( newFName.Length() ) f->SetName(newFName);
+    } else {
+      std::cerr << "ERROR in FileOps::readTF1: TF1 with name '" << fName << "' does not exist in file '" << fileName << "'\n.";
+    }
+    file.Close();
+    
+    return f;
   }
 }
 #endif

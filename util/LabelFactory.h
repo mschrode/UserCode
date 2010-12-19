@@ -1,4 +1,4 @@
-//  $Id: LabelFactory.h,v 1.14 2010/12/01 18:51:02 mschrode Exp $
+//  $Id: LabelFactory.h,v 1.15 2010/12/02 20:16:41 mschrode Exp $
 
 #ifndef LABEL_FACTORY_H
 #define LABEL_FACTORY_H
@@ -22,7 +22,7 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: LabelFactory.h,v 1.14 2010/12/01 18:51:02 mschrode Exp $
+  //!  $Id: LabelFactory.h,v 1.15 2010/12/02 20:16:41 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class LabelFactory {
   public:
@@ -35,7 +35,15 @@ namespace util {
       return height;
     }
 
-    static double labelTopOffset() { return 0.06; }
+    static double labelTopOffset() { 
+      double offset = 0.03;
+      TString mode = "Presentation";
+      if( mode.CompareTo(gStyle->GetTitle()) == 0 ) {
+	offset = 0.06;
+      }
+      return offset;
+    }
+
     static double labelSideOffset() { return 0.04; }
       
 

@@ -1,4 +1,4 @@
-// $Id: StyleSettings.h,v 1.10 2010/09/14 11:32:16 mschrode Exp $
+// $Id: StyleSettings.h,v 1.11 2010/09/14 22:12:07 mschrode Exp $
 
 #ifndef STYLE_SETTINGS_H
 #define STYLE_SETTINGS_H
@@ -16,7 +16,7 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: StyleSettings.h,v 1.10 2010/09/14 11:32:16 mschrode Exp $
+  //!  $Id: StyleSettings.h,v 1.11 2010/09/14 22:12:07 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class StyleSettings {
   public:
@@ -25,8 +25,8 @@ namespace util {
     static Style style() {
       Style st = Screen;
       TString mode = gStyle->GetTitle();
-      if( mode = "Presentation" ) st = Presentation;
-      else if( mode = "Paper" ) st = Paper;
+      if( mode == "Presentation" ) st = Presentation;
+      else if( mode == "Paper" ) st = Paper;
       return st;
     }
     static void screen() { setStyle("Screen",true); }
@@ -101,8 +101,8 @@ namespace util {
 	}
       } else if( mode == "Paper" || mode == "CMS"  ) {
 	if( spaceForTitle ) {
-	  gStyle->SetPadTopMargin(0.10);
-	  gStyle->SetPadBottomMargin(0.14);
+	  gStyle->SetPadTopMargin(0.06);
+	  gStyle->SetPadBottomMargin(0.18);
 	  gStyle->SetPadLeftMargin(0.2);
 	  gStyle->SetPadRightMargin(0.04);
 	} else {
