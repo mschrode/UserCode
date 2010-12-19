@@ -1,4 +1,4 @@
-// $Id: fitMCTruth.C,v 1.3 2010/12/08 20:22:44 mschrode Exp $
+// $Id: fitMCTruth.C,v 1.4 2010/12/11 21:42:08 mschrode Exp $
 
 //!  Fit mean response and resolution from
 //!  Kalibri::ControlPlotsJetSmearing
@@ -195,18 +195,41 @@ TF1* fitResolution(TH1* h, const TString &name, double min, double max) {
 
 
 void fitMCTruth(const TString &fileName, double nSigCore, double minPt) {
-  util::StyleSettings::presentationNoTitle();
+  util::StyleSettings::paperNoTitle();
 
-  TString outNamePrefix = "MCTruthResponse_";
-  if( fileName.Contains("PF") ) outNamePrefix += "PF";
-  else if( fileName.Contains("Calo") ) outNamePrefix += "Calo";
+  TString jetAlgo;
+  if( fileName.Contains("PF") ) jetAlgo = "PF";
+  else if( fileName.Contains("Calo") ) jetAlgo = "Calo";
+  
+  TString outNamePrefix = "MCTruthResponse_"+jetAlgo;
 
   if( gN_FILES > 1 ) outNamePrefix += "_F"+util::toTString(gN_FILES);
 
-  if( fileName.Contains("Eta0") ) outNamePrefix += "_Eta0";
-  else if( fileName.Contains("Eta1") ) outNamePrefix += "_Eta1";
-  else if( fileName.Contains("Eta2") ) outNamePrefix += "_Eta2";
-  else if( fileName.Contains("Eta3") ) outNamePrefix += "_Eta3";
+  double etaMin = 0.;
+  double etaMax = 0.;
+  if( fileName.Contains("Eta0") ) {
+    outNamePrefix += "_Eta0";
+    etaMin = 0.;
+    etaMax = 1.1;
+  } else if( fileName.Contains("Eta1") ) {
+    outNamePrefix += "_Eta1";
+    etaMin = 1.1;
+    etaMax = 1.7;
+  } else if( fileName.Contains("Eta2") ) {
+    outNamePrefix += "_Eta2";
+    etaMin = 1.7;
+    etaMax = 2.3;
+  } else if( fileName.Contains("Eta3") ) {
+    outNamePrefix += "_Eta3";
+    etaMin = 2.3;
+    etaMax = 5.;
+  }
+
+  TString jetLabel = "Anti-k_{T} (d=0.5) ";
+  if( jetAlgo == "Calo" ) jetLabel += "Calo Jets";
+  else if( jetAlgo == "PF" ) jetLabel += "PF Jets";
+  jetLabel += ", "+util::toTString(etaMin)+" < |#eta| < "+util::toTString(etaMax);
+
 
 
   // Fit distributions
@@ -220,13 +243,19 @@ void fitMCTruth(const TString &fileName, double nSigCore, double minPt) {
   TF1* fit = fitResolution(hSigmaGauss,"Res_F"+util::toTString(gN_FILES),minPt,2000.);
 
   std::cout << std::endl;
-  std::cout << "nSigCore.push_back(" << nSigCore << ");" << std::endl;
+  std::cout << "par->setTrueGaussResPar(" << std::flush;
   for(int i = 0; i < fit->GetNpar(); ++i) {
-    std::cout << "par" << i << ".push_back(" << fit->GetParameter(i) << ");" << std::endl;
+    if( i > 0 ) std::cout << "," << std::flush;
+    std::cout << fit->GetParameter(i) << std::flush;
   }
+  std::cout << ");" << std::endl;
   
   // Plot response and resolution
-  TLegend* legMean = util::LabelFactory::createLegendCol(2,0.7);
+  TPaveText* label = util::LabelFactory::createPaveText(2);
+  label->AddText("CMS Simulation");
+  label->AddText(jetLabel);
+
+  TLegend* legMean = util::LabelFactory::createLegendColWithOffset(2,0.7,2);
   legMean->AddEntry(hMean,"Arithmetic Mean","P");
   legMean->AddEntry(hMeanGauss,"Gaussian Mean","P");
 
@@ -236,28 +265,34 @@ void fitMCTruth(const TString &fileName, double nSigCore, double minPt) {
   hFrame->Draw();
   hMean->Draw("PE1same");
   hMeanGauss->Draw("PE1same");
+  label->Draw("same");
   legMean->Draw("same");
   can->SetLogx();
   can->SaveAs(outNamePrefix+"_MeanResponse.eps","eps");
 
-  TLegend* legRes = util::LabelFactory::createLegendCol(2,0.7);
-  legRes->AddEntry(hRMS,"Standard Deviation","P");
-  legRes->AddEntry(hSigmaGauss,"Gaussian Width","P");
+  TLegend* legRes = util::LabelFactory::createLegendColWithOffset(3,0.75,2);
+  legRes->AddEntry(hRMS,"Arithmetic Mean","P");
+  legRes->AddEntry(hSigmaGauss,"Gaussian Mean","P");
+  legRes->AddEntry(fit,"Fit to Gaussian Mean","L");
 
   TCanvas* canRes = util::HistOps::createRatioTopCanvas();
   TPad *bottomPadRes = util::HistOps::createRatioBottomPad();
   TH1 *topFrameRes = util::HistOps::createRatioTopHist(hRMS);
-  TH1 *bottomFrameRes = util::HistOps::createRatioBottomFrame(hRMS,"p^{gen}_{T}","GeV",0.81,1.19);
+  TH1 *bottomFrameRes = util::HistOps::createRatioBottomFrame(hRMS,"p^{gen}_{T}","GeV",0.91,1.09);
   canRes->cd();
-  topFrameRes->GetYaxis()->SetRangeUser(0.,0.43);
+  topFrameRes->GetXaxis()->SetRange(topFrameRes->FindBin(minPt),topFrameRes->GetNbinsX());
+  hSigmaGauss->GetXaxis()->SetRange(hSigmaGauss->FindBin(minPt),hSigmaGauss->GetNbinsX());
+  topFrameRes->GetYaxis()->SetRangeUser(1E-3,0.43);
   topFrameRes->GetYaxis()->SetTitle("Resolution");
   topFrameRes->Draw("PE1");
   hSigmaGauss->Draw("PE1same");
   fit->Draw("same");
+  label->Draw("same");
   legRes->Draw("same");
   canRes->SetLogx();
   bottomPadRes->Draw();
   bottomPadRes->cd();
+  bottomFrameRes->GetXaxis()->SetRange(bottomFrameRes->FindBin(minPt),bottomFrameRes->GetNbinsX());
   bottomFrameRes->GetXaxis()->SetMoreLogLabels();
   bottomFrameRes->Draw();
   TH1* hSigmaGaussRatio = static_cast<TH1D*>(hSigmaGauss->Clone("hSigmaGaussRatio"));
@@ -266,6 +301,7 @@ void fitMCTruth(const TString &fileName, double nSigCore, double minPt) {
   bottomPadRes->SetLogx();
   canRes->SaveAs(outNamePrefix+"_Resolution.eps","eps");
   
+  delete label;
   delete legMean;
   delete legRes;
   delete can;

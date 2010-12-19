@@ -11,6 +11,7 @@
 #include "TPaveText.h"
 #include "TString.h"
 
+#include "../util/ConfigParser.h"
 #include "../util/FileOps.h"
 #include "../util/HistOps.h"
 #include "../util/StyleSettings.h"
@@ -257,6 +258,11 @@ TGraphAsymmErrors* SystematicUncertainty::gBandSmooth(const TF1* f) const {
 
 // ==============================================================================
 
+
+TGraphAsymmErrors* getPhotonJetRatio(const TString &fileName);
+TGraphAsymmErrors* getPhotonJetRatioSystematics(const TString &fileName, const TF1* fRatio);
+
+
 // ------------------------------------------------------------------------------
 void getResult(const TString &fileName, TGraphAsymmErrors* &gRes, TGraphAsymmErrors* &gExt, TF1* &fMCTruth, TF1* &fPLI, const TString &type) {
 
@@ -328,7 +334,6 @@ void getResult(const TString &fileName, TGraphAsymmErrors* &gRes, TGraphAsymmErr
 
 
 void plotResults() {
-  util::StyleSettings::paperNoTitle();
 
   const int etaBin = 0;
   const TString jetAlgo = "Calo";
@@ -337,6 +342,8 @@ void plotResults() {
   const double xMax = 1100.;
   const double yMin = 1E-3;
   const double yMax = 0.38;
+  const double lumi = 32.7;
+  const bool showTitle = true;
 
 
 
@@ -351,6 +358,13 @@ void plotResults() {
   TString nameExtrapolation = dir+"/VariationExtrapolation_"+nameSuffix;
   TString namePLIUp = dir+"/VariationPLIUp_"+nameSuffix;
   TString namePLIDown = dir+"/VariationPLIDown_"+nameSuffix;
+  TString nameJESUp = dir+"/VariationJESUp10_"+nameSuffix;
+  TString nameJESDown = dir+"/VariationJESDown10_"+nameSuffix;
+
+  TString namePhotonJet = "";
+  if( jetAlgo == "PF" ) {
+    dir+"/PhotonJetRatios_2010-12-17_PF_Eta"+util::toTString(etaBin)+".txt";
+  }
 
   double etaMin = 0.;
   double etaMax = 0.;
@@ -365,6 +379,19 @@ void plotResults() {
   if( jetAlgo == "Calo" ) jetLabel += "Calo Jets";
   else if( jetAlgo == "PF" ) jetLabel += "PF Jets";
   jetLabel += ", "+util::toTString(etaMin)+" < |#eta| < "+util::toTString(etaMax);
+
+  TString title = "";
+  if( showTitle ) {
+    util::StyleSettings::paper();
+    gStyle->SetTitleAlign(13);
+    gStyle->SetTitleFontSize(0.1);
+    gStyle->SetTitleX(0.7);
+    gStyle->SetTitleH(0.038);
+    title = "CMS preliminary";
+  } else {
+    util::StyleSettings::paperNoTitle();
+  }
+
 
   
 
@@ -394,11 +421,11 @@ void plotResults() {
   double labelStart = 0.75;
 
   TPaveText* labelMC = util::LabelFactory::createPaveText(2);
-  labelMC->AddText("CMS Simulation");
+  labelMC->AddText("CMS Simulation,  #sqrt{s} = 7 TeV, L = 32.7 pb^{-1}");
   labelMC->AddText(jetLabel);
 
   TPaveText* labelData = util::LabelFactory::createPaveText(2);
-  labelData->AddText("Data");
+  labelData->AddText("Data,  #sqrt{s} = 7 TeV, L = 32.7 pb^{-1}");
   labelData->AddText(jetLabel);
 
   TLegend* legMC = util::LabelFactory::createLegendColWithOffset(4,labelStart,2);
@@ -417,6 +444,7 @@ void plotResults() {
 
   // Plot closure
   TH1 *tFrame = util::HistOps::createRatioTopFrame(xMin,xMax,yMin,yMax,"#sigma / p^{ref}_{T}");
+  tFrame->SetTitle(title);
   tFrame->GetXaxis()->SetMoreLogLabels();
   TH1 *bFrame = util::HistOps::createRatioBottomFrame(tFrame,"p^{ref}_{T}","GeV",0.91,1.29);
   bFrame->GetXaxis()->SetMoreLogLabels();
@@ -505,6 +533,7 @@ void plotResults() {
   TCanvas* canDataMCRatio = new TCanvas("canDataMCRatio","Data MC Ratio",500,500);
   canDataMCRatio->cd();
   TH1* hFrameDataMCRatio = util::HistOps::createRatioFrame(xMin,xMax,0.61,1.89,bFrame->GetXaxis()->GetTitle(),"#sigma(Data) / #sigma(MC)");
+  hFrameDataMCRatio->SetTitle(title);
   hFrameDataMCRatio->GetYaxis()->SetMoreLogLabels();
   hFrameDataMCRatio->Draw();
   gDataMCRatio->Draw("PE1same");
@@ -516,12 +545,12 @@ void plotResults() {
 
 
 
-
   // +++++ Systematic uncertainties +++++++++++++++++++++++++++++++++++++++++++++
 
   std::cout << "Systematic uncertaintiy plots" << std::endl;
 
   std::vector<SystematicUncertainty*> uncerts;
+  uncerts.push_back(new SystematicUncertainty("JEC",nameMC,nameJESUp,nameJESDown,true,14));
   uncerts.push_back(new SystematicUncertainty("MC Closure",nameMC,46));
   uncerts.push_back(new SystematicUncertainty("Extrapolation",nameMC,nameExtrapolation,7));
   uncerts.push_back(new SystematicUncertainty("Particle Level Imbalance",nameMC,namePLIUp,namePLIDown,false,8));
@@ -543,6 +572,7 @@ void plotResults() {
   TCanvas* canRelSyst = new TCanvas("canRelSyst","Relative Systematic Uncertainties",500,500);
   canRelSyst->cd();
   TH1* hFrameRelSyst = new TH1D("hFrameRelSyst","",1000,xMin,xMax);
+  hFrameRelSyst->SetTitle(title);
   for(int bin = 1; bin <= hFrameRelSyst->GetNbinsX(); ++bin) {
     hFrameRelSyst->SetBinContent(bin,0.);
   }
@@ -614,4 +644,153 @@ void plotResults() {
   bFrameSym->Draw("same");
   gPad->SetLogx();
   tCanScaledMCTruth->SaveAs(outNamePrefix+"ClosureScaledMCTruth.eps","eps");
+
+
+
+
+  // +++++ Data / MC ratio combined Photon-Jet result +++++++++++++++++++++++++++
+
+  if( namePhotonJet != "" ) {
+    std::cout << "Creating combined dijet and photon+jet ratio plots" << std::endl;
+
+    double combinedXMin = 20.;
+
+    TGraphAsymmErrors* gPhotonJetRatio = getPhotonJetRatio(namePhotonJet);
+    gPhotonJetRatio->SetMarkerStyle(21);
+    gPhotonJetRatio->SetMarkerColor(kRed);
+    gPhotonJetRatio->SetLineColor(gPhotonJetRatio->GetMarkerColor());
+    TGraphAsymmErrors* gCombinedRatio = util::HistOps::combineTGraphs(gPhotonJetRatio,gDataMCRatio);
+    gCombinedRatio->SetMarkerStyle(20);
+    gCombinedRatio->SetMarkerColor(kBlue);
+    gCombinedRatio->SetLineColor(gCombinedRatio->GetMarkerColor());
+  
+    // Fit ratio to combined data points
+    TF1* fCombinedRatio = new TF1("fCombinedRatio","pol0",combinedXMin,xMax);
+    fCombinedRatio->SetLineWidth(1);
+    fCombinedRatio->SetLineColor(28);
+    gCombinedRatio->Fit(fCombinedRatio,"0");
+
+    // Systematic uncertainties in different regions
+    TGraphAsymmErrors* gPhotonJetRatioSyst = getPhotonJetRatioSystematics(namePhotonJet,fCombinedRatio);
+    gPhotonJetRatioSyst->SetFillColor(gPhotonJetRatio->GetMarkerColor());
+    gPhotonJetRatioSyst->SetLineColor(gPhotonJetRatioSyst->GetFillColor());
+    gPhotonJetRatioSyst->SetFillStyle(3005);
+
+    TGraphAsymmErrors* gDijetRatioSyst = total->gBandSmooth(fCombinedRatio);
+    gDijetRatioSyst->SetFillColor(gCombinedRatio->GetMarkerColor());
+    gDijetRatioSyst->SetLineColor(gDijetRatioSyst->GetFillColor());
+    gDijetRatioSyst->SetFillStyle(3004);
+
+    TLegend* legCombinedRatio = util::LabelFactory::createLegendColWithOffset(3,-0.6,1);
+    legCombinedRatio->AddEntry(gPhotonJetRatio,"#gamma + Jet Measurement","P");
+    legCombinedRatio->AddEntry(gCombinedRatio,"Dijet Measurement","P");
+    legCombinedRatio->AddEntry(fCombinedRatio,"Fit","L");
+  
+    TCanvas* canCombinedRatio = new TCanvas("canCombinedRatio","Combined Result",500,500);
+    canCombinedRatio->cd();
+    TH1* hFrameCombinedRatio = util::HistOps::createRatioFrame(combinedXMin,xMax,0.61,1.89,"p_{T} (GeV)","#sigma(Data) / #sigma(MC)");
+    hFrameCombinedRatio->SetTitle(title);
+    hFrameCombinedRatio->GetYaxis()->SetMoreLogLabels();
+    hFrameCombinedRatio->Draw();
+    gDijetRatioSyst->Draw("E3same");
+    gPhotonJetRatioSyst->Draw("E3same");
+    gCombinedRatio->Draw("PE1same");
+    gPhotonJetRatio->Draw("PE1same");
+    fCombinedRatio->Draw("same");
+    labelDataMC->Draw("same");
+    legCombinedRatio->Draw("same");
+    gPad->SetLogx();
+    canCombinedRatio->SaveAs(outNamePrefix+"CombinedPotonJetDijetRatio.eps","eps");
+
+
+    // Cite ratio with total uncertainties
+
+    // For now, average (unweighted) dijet uncertainty
+    // for all points beyon photon jet
+    double statErr = fCombinedRatio->GetParError(0);
+    double minPtPhotonJet = 20.;
+    double maxPtPhotonJet = gPhotonJetRatio->GetX()[gPhotonJetRatio->GetN()-1];
+    double maxPtDijets = gUncerts.front()->GetX()[gUncerts.front()->GetN()-1]+gUncerts.front()->GetEXhigh()[gUncerts.front()->GetN()-1];
+    double photonJetErrLow = sqrt( pow(statErr,2.) + pow(gPhotonJetRatioSyst->GetEYlow()[0],2.) );
+    double photonJetErrUp = sqrt( pow(statErr,2.) + pow(gPhotonJetRatioSyst->GetEYhigh()[0],2.) );
+    double dijetErrUp = 0;
+    double dijetErrLow = 0;
+    int nPoints = 0;
+    for(int i = 0; i < gDijetRatioSyst->GetN(); ++i) {
+      if( gDijetRatioSyst->GetX()[i] > maxPtPhotonJet ) {
+	nPoints++;
+	dijetErrUp += gDijetRatioSyst->GetEYhigh()[i];
+	dijetErrLow += gDijetRatioSyst->GetEYlow()[i];
+      }
+    }
+    dijetErrUp /= nPoints;
+    dijetErrLow /= nPoints;
+    dijetErrUp = sqrt( pow(dijetErrUp,2.) + pow(statErr,2.) );
+    dijetErrLow = sqrt( pow(dijetErrLow,2.) + pow(statErr,2.) );
+
+    std::cout << "\n\nCombined measurement (Eta " << etaBin << ")\n";
+    std::cout << "  Ratio data / MC                            \t:  " << fCombinedRatio->GetParameter(0) << std::endl;
+    std::cout << "  Statistical uncertainty                    \t:  " << statErr << std::endl;
+    std::cout << "  Systematic uncertainty (" << minPtPhotonJet << " - " << maxPtPhotonJet << ") \t:  +" << photonJetErrUp << " -" << photonJetErrLow << std::endl;
+    std::cout << "  Systematic uncertainty (" << maxPtPhotonJet << " - " << maxPtDijets << ") \t:  +" << dijetErrUp << " -" << dijetErrLow << std::endl;
+  } // End of combined photon-jet and dijet section
+}
+
+
+
+TGraphAsymmErrors* getPhotonJetRatio(const TString &fileName) {
+
+  // Read values from file
+  util::ConfigParser parser(fileName.Data());
+  std::vector<double> pt = parser.readDoubleVec("MeanPt",":");
+  std::vector<double> ptErr = parser.readDoubleVec("MeanError",":");
+  std::vector<double> ratio = parser.readDoubleVec("Ratio",":");
+  std::vector<double> ratioErr = parser.readDoubleVec("RatioError",":");
+
+  // Create TGraph
+  TGraphAsymmErrors* g = new TGraphAsymmErrors(pt.size(),&(pt.front()),&(ratio.front()),
+					       &(ptErr.front()),&(ptErr.front()),
+					       &(ratioErr.front()),&(ratioErr.front()));
+
+  return g;
+}
+
+
+
+TGraphAsymmErrors* getPhotonJetRatioSystematics(const TString &fileName, const TF1* fRatio) {
+
+  // Read pt from file
+  util::ConfigParser parser(fileName.Data());
+  std::vector<double> pt = parser.readDoubleVec("MeanPt",":");
+  std::vector<double> ptErr = parser.readDoubleVec("MeanError",":");
+
+  // Store ratio from TF1
+  std::vector<double> ratio;
+  for(unsigned int i = 0; i < pt.size(); ++i) {
+    ratio.push_back(fRatio->Eval(pt.at(i)));
+  }  
+
+  // Systematic uncertainties
+  std::vector<double> systUp = parser.readDoubleVec("SystUp",":");
+  std::vector<double> systDown = parser.readDoubleVec("SystDown",":");
+  // In case of constant systematic uncertainty
+  // fill up vectors
+  if( systUp.size() == 1 && systDown.size() == 1 ) {
+    for(unsigned int i = 1; i < pt.size(); ++i) {
+      systUp.push_back(systUp.front());
+      systDown.push_back(systDown.front());
+    }
+  }
+  // Compute absolute systematic uncertainty
+  for(unsigned int i = 0; i < pt.size(); ++i) {
+    systUp.at(i) = ratio.at(i)*systUp.at(i);
+    systDown.at(i) = ratio.at(i)*systDown.at(i);  
+  }
+
+  // Create TGraph
+  TGraphAsymmErrors* g = new TGraphAsymmErrors(pt.size(),&(pt.front()),&(ratio.front()),
+					       &(ptErr.front()),&(ptErr.front()),
+					       &(systDown.front()),&(systUp.front()));
+
+  return g;
 }
