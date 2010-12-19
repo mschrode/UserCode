@@ -1,0 +1,617 @@
+// $ Id: $
+
+#include <iostream>
+#include <vector>
+
+#include "TCanvas.h"
+#include "TGraphAsymmErrors.h"
+#include "TH1.h"
+#include "TLegend.h"
+#include "TPad.h"
+#include "TPaveText.h"
+#include "TString.h"
+
+#include "../util/FileOps.h"
+#include "../util/HistOps.h"
+#include "../util/StyleSettings.h"
+#include "../util/LabelFactory.h"
+
+
+
+
+// ==============================================================================
+
+// ------------------------------------------------------------------------------
+class SystematicUncertainty {
+public:
+  SystematicUncertainty(const TString &label, const TString &fileName, int color = -1, int fillStyle = -1);
+  SystematicUncertainty(const TString &label, const TString &fileNameNom, const TString &fileNameVar, int color = -1, int fillStyle = -1);
+  SystematicUncertainty(const TString &label, const TString &fileNameNom, const TString &fileNameVarUp, const TString &fileNameVarDown, bool symmetrize, int color = -1, int fillStyle = -1);
+  SystematicUncertainty(const TString &label, const std::vector<SystematicUncertainty*> uncerts, int color = -1, int fillStyle = -1);
+  
+  TString label() const { return label_; }
+
+  TGraphAsymmErrors* gRelBandSteps(double mean) const;
+  TGraphAsymmErrors* gRelBandSmooth(double mean) const;
+  TGraphAsymmErrors* gBandSmooth(const TF1* f) const;
+
+  unsigned int nPoints() const { return ptSmooth_.size(); }
+  double ptSmooth(unsigned int i) const { return ptSmooth_.at(i); }
+  double ptSmoothErrUp(unsigned int i) const { return ptSmoothErrUp_.at(i); }
+  double ptSmoothErrDown(unsigned int i) const { return ptSmoothErrDown_.at(i); }
+  double ptSteps(unsigned int i) const { return ptSteps_.at(i); }
+  double ptStepsErr(unsigned int i) const { return ptStepsErr_.at(i); }
+  double relUp(unsigned int i) const { return relErrUp_.at(i); }
+  double relDown(unsigned int i) const { return relErrDown_.at(i); }
+
+  
+ private:
+  const TString label_;
+
+  int color_;
+  int fillStyle_;
+
+  std::vector<double> ptSmooth_;
+  std::vector<double> ptSmoothErrUp_;
+  std::vector<double> ptSmoothErrDown_;
+  std::vector<double> ptSteps_;
+  std::vector<double> ptStepsErr_;
+  std::vector<double> relVal_;
+  std::vector<double> relErrUp_;
+  std::vector<double> relErrDown_;
+};
+
+
+//  Uncertainty from non-closure (50% of residual)
+// ------------------------------------------------------------------------------
+SystematicUncertainty::SystematicUncertainty(const TString &label, const TString &fileName, int color, int fillStyle) : label_(label) {
+  color >= 0 ? color_ = color : color_ = kGray;
+  fillStyle >= 0 ? fillStyle_ = fillStyle : fillStyle_ = 1001;  // Filled area
+
+  // Get pt binning, measurement and truth from file
+  TH1* hPtMean = util::FileOps::readTH1(fileName,"hPtMean");
+  TH1* hRes = util::FileOps::readTH1(fileName,"hResolution");
+  TF1* fMCTruth = util::FileOps::readTF1(fileName,"FittedResolution:trueRes");
+  for(int bin = 1; bin <= hPtMean->GetNbinsX(); ++bin) {
+    double x = hPtMean->GetBinContent(bin);
+    ptSmooth_.push_back(x);
+    ptSmoothErrDown_.push_back(x-hPtMean->GetXaxis()->GetBinLowEdge(bin));
+    ptSmoothErrUp_.push_back(hPtMean->GetXaxis()->GetBinUpEdge(bin)-x);
+    ptSteps_.push_back(hPtMean->GetBinCenter(bin));
+    ptStepsErr_.push_back(0.5*hPtMean->GetBinWidth(bin));
+    relVal_.push_back(0.);
+    // Uncertainty is 50 % of difference
+    double err = 0.5*std::abs(hRes->GetBinContent(bin)-fMCTruth->Eval(x))/hRes->GetBinContent(bin);
+    relErrUp_.push_back(err);
+    relErrDown_.push_back(err);
+  }
+  delete hPtMean;
+  delete hRes;
+  delete fMCTruth;
+}
+
+
+//  Uncertainty from one-sided variation (becomes symmetrized)
+// ------------------------------------------------------------------------------
+SystematicUncertainty::SystematicUncertainty(const TString &label, const TString &fileNameNom, const TString &fileNameVar, int color, int fillStyle) : label_(label) {
+
+  color >= 0 ? color_ = color : color_ = kGray;
+  fillStyle >= 0 ? fillStyle_ = fillStyle : fillStyle_ = 1001;  // Filled area
+
+  // Get pt binning, nominal and varied measurement
+  TH1* hPtMean = util::FileOps::readTH1(fileNameNom,"hPtMean");
+  TH1* hResNom = util::FileOps::readTH1(fileNameNom,"hResolution","hNominal");
+  TH1* hResVar = util::FileOps::readTH1(fileNameVar,"hResolution","hVar");
+  for(int bin = 1; bin <= hPtMean->GetNbinsX(); ++bin) {
+    double x = hPtMean->GetBinContent(bin);
+    ptSmooth_.push_back(x);
+    ptSmoothErrDown_.push_back(x-hPtMean->GetXaxis()->GetBinLowEdge(bin));
+    ptSmoothErrUp_.push_back(hPtMean->GetXaxis()->GetBinUpEdge(bin)-x);
+    ptSteps_.push_back(hPtMean->GetBinCenter(bin));
+    ptStepsErr_.push_back(0.5*hPtMean->GetBinWidth(bin));
+    relVal_.push_back(0.);
+    // Uncertainty is difference
+    double err = std::abs(hResNom->GetBinContent(bin)-hResVar->GetBinContent(bin))/hResNom->GetBinContent(bin);
+    relErrUp_.push_back(err);
+    relErrDown_.push_back(err);
+  }
+  delete hPtMean;
+  delete hResNom;
+  delete hResVar;
+}  
+  
+
+//  Uncertainty from two-sided variation (optionally symmetrized)
+// ------------------------------------------------------------------------------
+SystematicUncertainty::SystematicUncertainty(const TString &label, const TString &fileNameNom, const TString &fileNameVarUp, const TString &fileNameVarDown, bool symmetrize, int color, int fillStyle) : label_(label) {
+
+  color >= 0 ? color_ = color : color_ = kGray;
+  fillStyle >= 0 ? fillStyle_ = fillStyle : fillStyle_ = 1001;  // Filled area
+
+  // Get pt binning, nominal and varied measurement
+  TH1* hPtMean = util::FileOps::readTH1(fileNameNom,"hPtMean");
+  TH1* hResNom = util::FileOps::readTH1(fileNameNom,"hResolution","hNominal");
+  TH1* hResVarUp = util::FileOps::readTH1(fileNameVarUp,"hResolution","hVarUp");
+  TH1* hResVarDown = util::FileOps::readTH1(fileNameVarDown,"hResolution","hVarDown");
+  for(int bin = 1; bin <= hPtMean->GetNbinsX(); ++bin) {
+    double x = hPtMean->GetBinContent(bin);
+    ptSmooth_.push_back(x);
+    ptSmoothErrDown_.push_back(x-hPtMean->GetXaxis()->GetBinLowEdge(bin));
+    ptSmoothErrUp_.push_back(hPtMean->GetXaxis()->GetBinUpEdge(bin)-x);
+    ptSteps_.push_back(hPtMean->GetBinCenter(bin));
+    ptStepsErr_.push_back(0.5*hPtMean->GetBinWidth(bin));
+    relVal_.push_back(0.);
+    // Uncertainty is difference
+    double errUp = std::abs(hResNom->GetBinContent(bin)-hResVarUp->GetBinContent(bin))/hResNom->GetBinContent(bin);
+    double errDown = std::abs(hResNom->GetBinContent(bin)-hResVarDown->GetBinContent(bin))/hResNom->GetBinContent(bin);
+    if( symmetrize ) {
+      errUp = 0.5*(errUp+errDown);
+      errDown = errUp;
+    }
+    relErrUp_.push_back(errUp);
+    relErrDown_.push_back(errDown);
+  }
+  delete hPtMean;
+  delete hResNom;
+  delete hResVarUp;
+  delete hResVarDown;
+}
+
+
+
+//  Total uncertainty (quadratic sum)
+// ------------------------------------------------------------------------------
+SystematicUncertainty::SystematicUncertainty(const TString &label, const std::vector<SystematicUncertainty*> uncerts, int color, int fillStyle) : label_(label) {
+
+  color >= 0 ? color_ = color : color_ = kGray;
+  fillStyle >= 0 ? fillStyle_ = fillStyle : fillStyle_ = 1001;  // Filled area
+
+  for(unsigned int i = 0; i < uncerts.at(0)->nPoints(); ++i) {
+    ptSmooth_.push_back(uncerts.at(0)->ptSmooth(i));
+    ptSmoothErrUp_.push_back(uncerts.at(0)->ptSmoothErrUp(i));
+    ptSmoothErrDown_.push_back(uncerts.at(0)->ptSmoothErrDown(i));
+    ptSteps_.push_back(uncerts.at(0)->ptSteps(i));
+    ptStepsErr_.push_back(uncerts.at(0)->ptStepsErr(i));
+    // Quadratic sum of uncertainties
+    double relErrUp = 0;
+    double relErrDown = 0;
+    for(unsigned int k = 0; k < uncerts.size(); ++k) {
+      relErrUp += pow(uncerts.at(k)->relUp(i),2.);
+      relErrDown += pow(uncerts.at(k)->relDown(i),2.);
+    }
+    relVal_.push_back(0.);
+    relErrUp_.push_back(sqrt(relErrUp));
+    relErrDown_.push_back(sqrt(relErrDown));
+  }
+}
+
+
+
+//  Band of relative systematic uncertainty (pt steps)
+// ------------------------------------------------------------------------------
+TGraphAsymmErrors* SystematicUncertainty::gRelBandSteps(double mean) const {
+
+  std::vector<double> y;
+  for(unsigned int i = 0; i < relVal_.size(); ++i) {
+    y.push_back(relVal_.at(i)+mean);
+  }
+  TGraphAsymmErrors* g = new TGraphAsymmErrors(ptSteps_.size(),
+					       &(ptSteps_.front()),&(y.front()),
+					       &(ptStepsErr_.front()),&(ptStepsErr_.front()),
+					       &(relErrDown_.front()),&(relErrUp_.front()));
+  g->SetFillColor(color_);
+  g->SetFillStyle(fillStyle_);
+  g->SetLineColor(0);
+  
+  return g;  
+}
+
+
+//  Band of relative systematic uncertainty (smooth)
+// ------------------------------------------------------------------------------
+TGraphAsymmErrors* SystematicUncertainty::gRelBandSmooth(double mean) const {
+
+  std::vector<double> y;
+  for(unsigned int i = 0; i < relVal_.size(); ++i) {
+    y.push_back(relVal_.at(i)+mean);
+  }
+  TGraphAsymmErrors* g = new TGraphAsymmErrors(ptSmooth_.size(),
+					       &(ptSmooth_.front()),&(y.front()),
+					       &(ptSmoothErrDown_.front()),&(ptSmoothErrUp_.front()),
+					       &(relErrDown_.front()),&(relErrUp_.front()));
+  g->SetFillColor(color_);
+  g->SetFillStyle(fillStyle_);
+  g->SetLineColor(0);
+  
+  return g;  
+}
+
+
+//  Band of systematic uncertainty around given function
+// ------------------------------------------------------------------------------
+TGraphAsymmErrors* SystematicUncertainty::gBandSmooth(const TF1* f) const {
+  std::vector<double> y;
+  std::vector<double> yeu;
+  std::vector<double> yed;
+  for(unsigned int i = 0; i < ptSmooth_.size(); ++i) {
+    double val = f->Eval(ptSmooth_.at(i));
+    y.push_back(val);
+    yeu.push_back(val*relErrUp_.at(i));
+    yed.push_back(val*relErrDown_.at(i));
+  }
+
+  TGraphAsymmErrors* g = new TGraphAsymmErrors(ptSmooth_.size(),
+					       &(ptSmooth_.front()),&(y.front()),
+					       &(ptSmoothErrDown_.front()),&(ptSmoothErrUp_.front()),
+					       &(yed.front()),&(yeu.front()));
+  g->SetFillColor(color_);
+  g->SetFillStyle(fillStyle_);
+  g->SetLineColor(0);
+  
+  return g;  
+}
+
+
+
+
+
+// ==============================================================================
+
+// ------------------------------------------------------------------------------
+void getResult(const TString &fileName, TGraphAsymmErrors* &gRes, TGraphAsymmErrors* &gExt, TF1* &fMCTruth, TF1* &fPLI, const TString &type) {
+
+  TH1* hPtMean = util::FileOps::readTH1(fileName,"hPtMean");
+  TH1* hRes = util::FileOps::readTH1(fileName,"hResolution");
+  TH1* hExt = util::FileOps::readTH1(fileName,"hExtrapolationResult");
+
+  std::vector<double> pt;
+  std::vector<double> ptErr;
+  std::vector<double> res;
+  std::vector<double> resErr;
+  std::vector<double> ext;
+  std::vector<double> extErr;
+  for(int bin = 1; bin <= hPtMean->GetNbinsX(); ++bin) {
+    pt.push_back(hPtMean->GetBinContent(bin));
+    ptErr.push_back(hPtMean->GetBinError(bin));
+    res.push_back(hRes->GetBinContent(bin));
+    resErr.push_back(hRes->GetBinError(bin));
+    ext.push_back(hExt->GetBinContent(bin));
+    extErr.push_back(hExt->GetBinError(bin));
+  }
+  gRes = new TGraphAsymmErrors(pt.size(),&(pt.front()),&(res.front()),&(ptErr.front()),&(ptErr.front()),&(resErr.front()),&(resErr.front()));
+  gExt = new TGraphAsymmErrors(pt.size(),&(pt.front()),&(ext.front()),&(ptErr.front()),&(ptErr.front()),&(extErr.front()),&(extErr.front()));
+
+  if( type == "mc" ) {
+    gRes->SetMarkerStyle(25);
+    gRes->SetMarkerColor(kBlue);
+    gRes->SetLineColor(kBlue);
+    gExt->SetMarkerStyle(26);
+    gExt->SetMarkerColor(kBlue);
+    gExt->SetLineColor(kBlue);
+  } else if( type == "data" ) {
+    gRes->SetMarkerStyle(20);
+    gRes->SetMarkerColor(kBlack);
+    gRes->SetLineColor(kBlack);
+    gExt->SetMarkerStyle(23);
+    gExt->SetMarkerColor(kBlack);
+    gExt->SetLineColor(kBlack);
+  }
+
+  fMCTruth = util::FileOps::readTF1(fileName,"FittedResolution:trueRes");
+  TString name = fMCTruth->GetName();
+  fMCTruth->SetName(name+"_"+type);
+  fMCTruth->SetLineWidth(1);
+  fMCTruth->SetLineColor(kRed);
+  
+  fPLI = util::FileOps::readTF1(fileName,"FittedResolution:ptGenAsym");
+  name = fPLI->GetName();
+  fPLI->SetName(name+"_"+type);
+  fPLI->SetLineWidth(1);
+  fPLI->SetLineStyle(2);
+
+  delete hPtMean;
+  delete hRes;
+  delete hExt;
+}
+
+
+// ------------------------------------------------------------------------------
+void getResult(const TString &fileName, TGraphAsymmErrors* &gRes, TGraphAsymmErrors* &gExt, const TString &type) {
+  TF1* fMCTruth = 0;
+  TF1* fPLI = 0;
+  getResult(fileName,gRes,gExt,fMCTruth,fPLI,type);
+  delete fMCTruth;
+  delete fPLI;
+}
+
+
+
+
+void plotResults() {
+  util::StyleSettings::paperNoTitle();
+
+  const int etaBin = 0;
+  const TString jetAlgo = "Calo";
+  const TString dir = "results";
+  const double xMin = 40.;
+  const double xMax = 1100.;
+  const double yMin = 1E-3;
+  const double yMax = 0.38;
+
+
+
+  // +++++ Parameters +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  std::cout << "Setting up parameters" << std::endl;
+ 
+  TString nameSuffix = jetAlgo+"_Eta"+util::toTString(etaBin)+"_.root";
+
+  TString nameData = dir+"/Data_"+nameSuffix;
+  TString nameMC = dir+"/Closure_"+nameSuffix;
+  TString nameExtrapolation = dir+"/VariationExtrapolation_"+nameSuffix;
+  TString namePLIUp = dir+"/VariationPLIUp_"+nameSuffix;
+  TString namePLIDown = dir+"/VariationPLIDown_"+nameSuffix;
+
+  double etaMin = 0.;
+  double etaMax = 0.;
+  if( etaBin == 0 ) {
+    etaMin = 0.;
+    etaMax = 1.1;
+  }
+
+  TString outNamePrefix = "ResFit_"+jetAlgo+"_Eta"+util::toTString(etaBin)+"_";
+
+  TString jetLabel = "Anti-k_{T} (d=0.5) ";
+  if( jetAlgo == "Calo" ) jetLabel += "Calo Jets";
+  else if( jetAlgo == "PF" ) jetLabel += "PF Jets";
+  jetLabel += ", "+util::toTString(etaMin)+" < |#eta| < "+util::toTString(etaMax);
+
+  
+
+
+  // +++++ Closure and Data / MC comparison +++++++++++++++++++++++++++++++++++++
+
+  std::cout << "Creating closure and data / MC comparison plots" << std::endl;
+
+  // Get fitted resolutions
+  TGraphAsymmErrors* gMC = 0;
+  TGraphAsymmErrors* gMCExt = 0;
+  TF1* fMCTruth = 0;
+  TF1* fPLI = 0;
+  getResult(nameMC,gMC,gMCExt,fMCTruth,fPLI,"mc"); 
+  fMCTruth->SetRange(xMin,xMax);
+  fPLI->SetRange(xMin,xMax);
+  TGraphAsymmErrors* gMCRatio = util::HistOps::createRatioGraph(gMC,fMCTruth);
+
+  TGraphAsymmErrors* gData = 0;
+  TGraphAsymmErrors* gDataExt = 0;
+  getResult(nameData,gData,gDataExt,"data");
+  TGraphAsymmErrors* gDataRatio = util::HistOps::createRatioGraph(gData,fMCTruth);
+
+
+  // Create labels
+  
+  double labelStart = 0.75;
+
+  TPaveText* labelMC = util::LabelFactory::createPaveText(2);
+  labelMC->AddText("CMS Simulation");
+  labelMC->AddText(jetLabel);
+
+  TPaveText* labelData = util::LabelFactory::createPaveText(2);
+  labelData->AddText("Data");
+  labelData->AddText(jetLabel);
+
+  TLegend* legMC = util::LabelFactory::createLegendColWithOffset(4,labelStart,2);
+  legMC->AddEntry(gMCExt,"Resolution (Extrapolated)","P");
+  legMC->AddEntry(fPLI,"Particle Level Imbalance","L");
+  legMC->AddEntry(gMC,"Resolution (Corrected)","P");
+  legMC->AddEntry(fMCTruth,"Resolution (MC Truth)","L");
+
+  TLegend* legData = util::LabelFactory::createLegendColWithOffset(4,labelStart,2);
+  legData->AddEntry(gDataExt,"Resolution (Extrapolated)","P");
+  legData->AddEntry(fPLI,"Particle Level Imbalance","L");
+  legData->AddEntry(gData,"Resolution (Corrected)","P");
+  legData->AddEntry(fMCTruth,"Resolution (MC Truth)","L");
+
+
+
+  // Plot closure
+  TH1 *tFrame = util::HistOps::createRatioTopFrame(xMin,xMax,yMin,yMax,"#sigma / p^{ref}_{T}");
+  tFrame->GetXaxis()->SetMoreLogLabels();
+  TH1 *bFrame = util::HistOps::createRatioBottomFrame(tFrame,"p^{ref}_{T}","GeV",0.91,1.29);
+  bFrame->GetXaxis()->SetMoreLogLabels();
+
+  TCanvas *tCanMC = util::HistOps::createRatioTopCanvas();
+  TPad *bPadMC = util::HistOps::createRatioBottomPad();
+  tCanMC->cd();
+  tFrame->Draw();
+  fMCTruth->Draw("same");
+  fPLI->Draw("same");
+  gMCExt->Draw("PE1same");
+  gMC->Draw("PE1same");
+  labelMC->Draw("same");
+  legMC->Draw("same");
+  gPad->SetLogx();
+  bPadMC->Draw();
+  bPadMC->cd();
+  bFrame->Draw();
+  gMCRatio->Draw("PE1same");
+  gPad->SetLogx();
+  tCanMC->SaveAs(outNamePrefix+"ClosureMC.eps","eps");
+
+  TCanvas *tCanData = util::HistOps::createRatioTopCanvas();
+  TPad *bPadData = util::HistOps::createRatioBottomPad();
+  tCanData->Clear();
+  tCanData->cd();
+  tFrame->Draw();
+  fMCTruth->Draw("same");
+  fPLI->Draw("same");
+  gDataExt->Draw("PE1same");
+  gData->Draw("PE1same");
+  labelData->Draw("same");
+  legData->Draw("same");
+  gPad->SetLogx();
+  bPadData->Draw();
+  bPadData->cd();
+  bFrame->Draw();
+  gDataRatio->Draw("PE1same");
+  gPad->SetLogx();
+  tCanData->SaveAs(outNamePrefix+"ClosureData.eps","eps");
+
+
+
+
+  // +++++ Data / MC ratios +++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  std::cout << "Creating data - MC ratio plots" << std::endl;
+
+  TGraphAsymmErrors* gDataMCRatio = util::HistOps::createRatioGraph(gData,gMC);
+  
+  TF1* fDataMCRatio = new TF1("fDataMCRatio","pol0",xMin,xMax);
+  fDataMCRatio->SetLineWidth(1);
+  fDataMCRatio->SetLineColor(28);
+  gDataMCRatio->Fit(fDataMCRatio,"0");
+
+  labelStart = -0.5;
+
+  TPaveText* labelDataMC = util::LabelFactory::createPaveText(1);
+  labelDataMC->AddText(jetLabel);
+
+  TLegend* legDataMC = util::LabelFactory::createLegendColWithOffset(2,labelStart,1);
+  legDataMC->AddEntry(gData,"Resolution (Data)","P");
+  legDataMC->AddEntry(gMC,"Resolution (MC)","P");
+
+  TLegend* legDataMCRatio = util::LabelFactory::createLegendColWithOffset(2,labelStart,1);
+  legDataMCRatio->AddEntry(gDataMCRatio,"Measurement","P");
+  legDataMCRatio->AddEntry(fDataMCRatio,"Fit","L");
+
+  TCanvas* tCanDataMC = util::HistOps::createRatioTopCanvas();
+  TPad* bPadDataMC = util::HistOps::createRatioBottomPad();
+  tCanDataMC->Clear();
+  tCanDataMC->cd();
+  tFrame->Draw();
+  gMC->Draw("PE1same");
+  gData->Draw("PE1same");
+  labelDataMC->Draw("same");
+  legDataMC->Draw("same");
+  gPad->SetLogx();
+  bPadDataMC->Draw();
+  bPadDataMC->cd();
+  bFrame->Draw();
+  gDataMCRatio->Draw("PE1same");
+  gPad->SetLogx();
+  tCanDataMC->SaveAs(outNamePrefix+"DataMC.eps","eps");
+
+  TCanvas* canDataMCRatio = new TCanvas("canDataMCRatio","Data MC Ratio",500,500);
+  canDataMCRatio->cd();
+  TH1* hFrameDataMCRatio = util::HistOps::createRatioFrame(xMin,xMax,0.61,1.89,bFrame->GetXaxis()->GetTitle(),"#sigma(Data) / #sigma(MC)");
+  hFrameDataMCRatio->GetYaxis()->SetMoreLogLabels();
+  hFrameDataMCRatio->Draw();
+  gDataMCRatio->Draw("PE1same");
+  fDataMCRatio->Draw("same");
+  labelDataMC->Draw("same");
+  legDataMCRatio->Draw("same");
+  gPad->SetLogx();
+  canDataMCRatio->SaveAs(outNamePrefix+"DataMCRatio.eps","eps");
+
+
+
+
+  // +++++ Systematic uncertainties +++++++++++++++++++++++++++++++++++++++++++++
+
+  std::cout << "Systematic uncertaintiy plots" << std::endl;
+
+  std::vector<SystematicUncertainty*> uncerts;
+  uncerts.push_back(new SystematicUncertainty("MC Closure",nameMC,46));
+  uncerts.push_back(new SystematicUncertainty("Extrapolation",nameMC,nameExtrapolation,7));
+  uncerts.push_back(new SystematicUncertainty("Particle Level Imbalance",nameMC,namePLIUp,namePLIDown,false,8));
+  
+  SystematicUncertainty* total = new SystematicUncertainty("Total",uncerts,38);
+
+
+  // Relative systematic uncertainties
+
+  std::vector<TGraphAsymmErrors*> gUncerts;
+  TLegend* legRelSyst = util::LabelFactory::createLegendColWithOffset(uncerts.size()+1,-0.7,2);
+  gUncerts.push_back(total->gRelBandSteps(0.));
+  for(unsigned int i = 0; i < uncerts.size(); ++i) {
+    gUncerts.push_back(uncerts.at(i)->gRelBandSteps(0.));
+    legRelSyst->AddEntry(gUncerts.back(),uncerts.at(i)->label(),"F");
+  }
+  legRelSyst->AddEntry(gUncerts.front(),"Total","F");
+
+  TCanvas* canRelSyst = new TCanvas("canRelSyst","Relative Systematic Uncertainties",500,500);
+  canRelSyst->cd();
+  TH1* hFrameRelSyst = new TH1D("hFrameRelSyst","",1000,xMin,xMax);
+  for(int bin = 1; bin <= hFrameRelSyst->GetNbinsX(); ++bin) {
+    hFrameRelSyst->SetBinContent(bin,0.);
+  }
+  hFrameRelSyst->SetLineStyle(2);
+  hFrameRelSyst->GetYaxis()->SetRangeUser(-0.39,0.89);
+  hFrameRelSyst->GetXaxis()->SetTitle(bFrame->GetXaxis()->GetTitle());
+  hFrameRelSyst->GetYaxis()->SetTitle("Relative Uncertainty");
+  hFrameRelSyst->GetYaxis()->SetMoreLogLabels();
+  hFrameRelSyst->Draw();
+  for(unsigned int i = 0; i < gUncerts.size(); ++i) {
+    gUncerts.at(i)->Draw("E2same");
+  }
+  hFrameRelSyst->Draw("same");
+  labelMC->Draw("same");
+  legRelSyst->Draw("same");
+  gPad->SetLogx();
+  canRelSyst->SaveAs(outNamePrefix+"RelativeSystematicUncertainties.eps","eps");
+
+
+  
+
+  // +++++ Scaled MC truth ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  std::cout << "Scaled MC truth plots" << std::endl;
+
+  // Multiply formula of MCTruth by fitted ratio data / MC
+  TString formulaMCTruth = fMCTruth->GetExpFormula();
+  formulaMCTruth = "("+formulaMCTruth+")*["+util::toTString(fMCTruth->GetNpar())+"]";
+  TF1* fScaledMCTruth = new TF1("fScaledMCTruth",formulaMCTruth,xMin,xMax);
+  for(int i = 0; i < fMCTruth->GetNpar(); ++i) {
+    fScaledMCTruth->SetParameter(i,fMCTruth->GetParameter(i));
+    fScaledMCTruth->SetParError(i,fMCTruth->GetParError(i));
+  }
+  fScaledMCTruth->SetParameter(fMCTruth->GetNpar(),fDataMCRatio->GetParameter(0));
+  fScaledMCTruth->SetParError(fMCTruth->GetNpar(),fDataMCRatio->GetParError(0));
+  fScaledMCTruth->SetLineWidth(1);
+  fScaledMCTruth->SetLineColor(kRed);
+  //fScaledMCTruth->SetLineStyle(2);
+
+  TGraphAsymmErrors* gScaledMCTruthBand = total->gBandSmooth(fScaledMCTruth);
+  TGraphAsymmErrors* gScaledMCTruthRelBand = total->gRelBandSmooth(1.);
+  TGraphAsymmErrors* gScaledMCTruthDataRatio = util::HistOps::createRatioGraph(gData,fScaledMCTruth);
+
+
+  TLegend* legScaledMCTruth = util::LabelFactory::createLegendColWithOffset(3,0.7,1);
+  legScaledMCTruth->AddEntry(gData,"Data","P");
+  legScaledMCTruth->AddEntry(fScaledMCTruth,"Scaled MC Truth","L");
+  legScaledMCTruth->AddEntry(gScaledMCTruthBand,"Systematic Uncertainty","F");
+
+  TH1 *bFrameSym = util::HistOps::createRatioBottomFrame(tFrame,"p^{ref}_{T}","GeV",0.71,1.29);
+  bFrameSym->GetXaxis()->SetMoreLogLabels();
+
+  TCanvas *tCanScaledMCTruth = util::HistOps::createRatioTopCanvas();
+  TPad *bPadScaledMCTruth = util::HistOps::createRatioBottomPad();
+  tCanScaledMCTruth->Clear();
+  tCanScaledMCTruth->cd();
+  tFrame->Draw();
+  gScaledMCTruthBand->Draw("E3same");
+  fScaledMCTruth->Draw("same");
+  gData->Draw("PE1same");
+  labelDataMC->Draw("same");
+  legScaledMCTruth->Draw("same");
+  gPad->SetLogx();
+  bPadScaledMCTruth->Draw();
+  bPadScaledMCTruth->cd();
+  bFrameSym->Draw();
+  gScaledMCTruthRelBand->Draw("E3same");
+  gScaledMCTruthDataRatio->Draw("PE1same");
+  bFrameSym->Draw("same");
+  gPad->SetLogx();
+  tCanScaledMCTruth->SaveAs(outNamePrefix+"ClosureScaledMCTruth.eps","eps");
+}
