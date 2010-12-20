@@ -331,8 +331,32 @@ void getResult(const TString &fileName, TGraphAsymmErrors* &gRes, TGraphAsymmErr
 }
 
 
+// ------------------------------------------------------------------------------
+TGraphAsymmErrors* getBiasCorrectedMeasurement(const TGraphAsymmErrors* gMeas, const TString &fileNameMC) {
+  TH1* hRes = util::FileOps::readTH1(fileNameMC,"hResolution");
+  TF1* fMCTruth = util::FileOps::readTF1(fileNameMC,"FittedResolution:trueRes");
+
+  TGraphAsymmErrors *g = static_cast<TGraphAsymmErrors*>(gMeas->Clone());
+  int bin = 1;
+  for(int i = 0; i < g->GetN(); ++i, ++bin) {
+    double x = 0.;
+    double y = 0.;
+    g->GetPoint(i,x,y);
+    if( hRes->GetBinContent(bin) > 0. ) {
+      double c = fMCTruth->Eval(x) / hRes->GetBinContent(bin);
+      g->SetPoint(i,x,c*y);
+    }
+  }
+
+  delete hRes;
+  delete fMCTruth;
+
+  return g;
+}
 
 
+
+// ------------------------------------------------------------------------------
 void plotResults() {
 
   const int etaBin = 0;
@@ -343,7 +367,7 @@ void plotResults() {
   const double yMin = 1E-3;
   const double yMax = 0.38;
   const double lumi = 32.7;
-  const bool showTitle = true;
+  const bool showTitle = false;
 
 
 
@@ -363,7 +387,7 @@ void plotResults() {
 
   TString namePhotonJet = "";
   if( jetAlgo == "PF" ) {
-    dir+"/PhotonJetRatios_2010-12-17_PF_Eta"+util::toTString(etaBin)+".txt";
+    namePhotonJet = dir+"/PhotonJetRatios_2010-12-17_PF_Eta"+util::toTString(etaBin)+".txt";
   }
 
   double etaMin = 0.;
@@ -421,11 +445,11 @@ void plotResults() {
   double labelStart = 0.75;
 
   TPaveText* labelMC = util::LabelFactory::createPaveText(2);
-  labelMC->AddText("CMS Simulation,  #sqrt{s} = 7 TeV, L = 32.7 pb^{-1}");
+  labelMC->AddText("CMS Simulation,  #sqrt{s} = 7 TeV, L = "+util::toTString(lumi)+" pb^{-1}");
   labelMC->AddText(jetLabel);
 
   TPaveText* labelData = util::LabelFactory::createPaveText(2);
-  labelData->AddText("Data,  #sqrt{s} = 7 TeV, L = 32.7 pb^{-1}");
+  labelData->AddText("Data,  #sqrt{s} = 7 TeV, L = "+util::toTString(lumi)+" pb^{-1}");
   labelData->AddText(jetLabel);
 
   TLegend* legMC = util::LabelFactory::createLegendColWithOffset(4,labelStart,2);
@@ -549,9 +573,10 @@ void plotResults() {
 
   std::cout << "Systematic uncertaintiy plots" << std::endl;
 
+  TString labelUncertBias = "MC Closure";
   std::vector<SystematicUncertainty*> uncerts;
   uncerts.push_back(new SystematicUncertainty("JEC",nameMC,nameJESUp,nameJESDown,true,14));
-  uncerts.push_back(new SystematicUncertainty("MC Closure",nameMC,46));
+  uncerts.push_back(new SystematicUncertainty(labelUncertBias,nameMC,46));
   uncerts.push_back(new SystematicUncertainty("Extrapolation",nameMC,nameExtrapolation,7));
   uncerts.push_back(new SystematicUncertainty("Particle Level Imbalance",nameMC,namePLIUp,namePLIDown,false,8));
   
@@ -610,15 +635,16 @@ void plotResults() {
   fScaledMCTruth->SetParError(fMCTruth->GetNpar(),fDataMCRatio->GetParError(0));
   fScaledMCTruth->SetLineWidth(1);
   fScaledMCTruth->SetLineColor(kRed);
-  //fScaledMCTruth->SetLineStyle(2);
+  fMCTruth->SetLineStyle(2);
 
   TGraphAsymmErrors* gScaledMCTruthBand = total->gBandSmooth(fScaledMCTruth);
   TGraphAsymmErrors* gScaledMCTruthRelBand = total->gRelBandSmooth(1.);
   TGraphAsymmErrors* gScaledMCTruthDataRatio = util::HistOps::createRatioGraph(gData,fScaledMCTruth);
 
 
-  TLegend* legScaledMCTruth = util::LabelFactory::createLegendColWithOffset(3,0.7,1);
+  TLegend* legScaledMCTruth = util::LabelFactory::createLegendColWithOffset(4,0.7,1);
   legScaledMCTruth->AddEntry(gData,"Data","P");
+  legScaledMCTruth->AddEntry(fMCTruth,"MC Truth","L");
   legScaledMCTruth->AddEntry(fScaledMCTruth,"Scaled MC Truth","L");
   legScaledMCTruth->AddEntry(gScaledMCTruthBand,"Systematic Uncertainty","F");
 
@@ -631,6 +657,7 @@ void plotResults() {
   tCanScaledMCTruth->cd();
   tFrame->Draw();
   gScaledMCTruthBand->Draw("E3same");
+  fMCTruth->Draw("same");
   fScaledMCTruth->Draw("same");
   gData->Draw("PE1same");
   labelDataMC->Draw("same");
@@ -644,6 +671,56 @@ void plotResults() {
   bFrameSym->Draw("same");
   gPad->SetLogx();
   tCanScaledMCTruth->SaveAs(outNamePrefix+"ClosureScaledMCTruth.eps","eps");
+
+
+
+
+  // +++++ Scaled MC truth and bias corrected data ++++++++++++++++++++++++++++++
+
+  std::cout << "Scaled MC truth plots (bias corrected measurement)" << std::endl;
+
+  // Systematic uncertainty w/o residual bias
+  std::vector<SystematicUncertainty*> uncertsBiasCorr;
+  for(unsigned int i = 0; i < uncerts.size(); ++i) {
+    if( uncerts.at(i)->label() != labelUncertBias ) {
+      std::cout << "Adding uncert " << uncerts.at(i)->label() << std::endl;
+      uncertsBiasCorr.push_back(uncerts.at(i));
+    }
+  }
+  SystematicUncertainty* totalBiasCorr = new SystematicUncertainty("Total",uncertsBiasCorr,38);
+
+  TGraphAsymmErrors* gDataBiasCorr = getBiasCorrectedMeasurement(gData,nameMC);
+  TGraphAsymmErrors* gScaledMCTruthBandBiasCorr = totalBiasCorr->gBandSmooth(fScaledMCTruth);
+  TGraphAsymmErrors* gScaledMCTruthRelBandBiasCorr = totalBiasCorr->gRelBandSmooth(1.);
+  TGraphAsymmErrors* gScaledMCTruthDataBiasCorrRatio = util::HistOps::createRatioGraph(gDataBiasCorr,fScaledMCTruth);
+
+
+  TLegend* legScaledMCTruthBiasCorr = util::LabelFactory::createLegendColWithOffset(4,0.7,1);
+  legScaledMCTruthBiasCorr->AddEntry(gDataBiasCorr,"Bias Corrected Data","P");
+  legScaledMCTruthBiasCorr->AddEntry(fMCTruth,"MC Truth","L");
+  legScaledMCTruthBiasCorr->AddEntry(fScaledMCTruth,"Scaled MC Truth","L");
+  legScaledMCTruthBiasCorr->AddEntry(gScaledMCTruthBandBiasCorr,"Systematic Uncertainty","F");
+
+  TCanvas *tCanScaledMCTruthBiasCorr = util::HistOps::createRatioTopCanvas();
+  TPad *bPadScaledMCTruthBiasCorr = util::HistOps::createRatioBottomPad();
+  tCanScaledMCTruthBiasCorr->Clear();
+  tCanScaledMCTruthBiasCorr->cd();
+  tFrame->Draw();
+  gScaledMCTruthBandBiasCorr->Draw("E3same");
+  fMCTruth->Draw("same");
+  fScaledMCTruth->Draw("same");
+  gDataBiasCorr->Draw("PE1same");
+  labelDataMC->Draw("same");
+  legScaledMCTruthBiasCorr->Draw("same");
+  gPad->SetLogx();
+  bPadScaledMCTruthBiasCorr->Draw();
+  bPadScaledMCTruthBiasCorr->cd();
+  bFrameSym->Draw();
+  gScaledMCTruthRelBandBiasCorr->Draw("E3same");
+  gScaledMCTruthDataBiasCorrRatio->Draw("PE1same");
+  bFrameSym->Draw("same");
+  gPad->SetLogx();
+  tCanScaledMCTruthBiasCorr->SaveAs(outNamePrefix+"ClosureScaledMCTruthBiasCorr.eps","eps");
 
 
 
@@ -672,14 +749,14 @@ void plotResults() {
 
     // Systematic uncertainties in different regions
     TGraphAsymmErrors* gPhotonJetRatioSyst = getPhotonJetRatioSystematics(namePhotonJet,fCombinedRatio);
-    gPhotonJetRatioSyst->SetFillColor(gPhotonJetRatio->GetMarkerColor());
+    gPhotonJetRatioSyst->SetFillColor(46);//gPhotonJetRatio->GetMarkerColor());
     gPhotonJetRatioSyst->SetLineColor(gPhotonJetRatioSyst->GetFillColor());
-    gPhotonJetRatioSyst->SetFillStyle(3005);
+    //gPhotonJetRatioSyst->SetFillStyle(3005);
 
     TGraphAsymmErrors* gDijetRatioSyst = total->gBandSmooth(fCombinedRatio);
-    gDijetRatioSyst->SetFillColor(gCombinedRatio->GetMarkerColor());
+    gDijetRatioSyst->SetFillColor(38);//gCombinedRatio->GetMarkerColor());
     gDijetRatioSyst->SetLineColor(gDijetRatioSyst->GetFillColor());
-    gDijetRatioSyst->SetFillStyle(3004);
+    //gDijetRatioSyst->SetFillStyle(3004);
 
     TLegend* legCombinedRatio = util::LabelFactory::createLegendColWithOffset(3,-0.6,1);
     legCombinedRatio->AddEntry(gPhotonJetRatio,"#gamma + Jet Measurement","P");
