@@ -51,7 +51,6 @@ void plotDijetTrend() {
   const TString jetAlgo = "PF";
   const TString ptBinVar = "p^{ave}_{T}";
   const double lumi = 32.7;
-  const double plotData = true;
 
   // Extrapolation
   const double fitMin = 0.;
@@ -106,7 +105,6 @@ void plotDijetTrend() {
   if( hasMCTruthPoint ) outName += "_Closure";
 
   TFile outFile(outName+".root","RECREATE");
-  
 
 
 
@@ -169,13 +167,9 @@ void plotDijetTrend() {
     hRelDiff->SetYTitle("(f_{Tail}(Data) - f_{Tail}(MC)) / f_{Tail}(MC)");
     hRelDiff->GetYaxis()->SetRangeUser(-0.69,0.99);
 
-    TH1* hChi2AbsDiff = new TH1D("hChi2AbsDiff","",binAdm->nPtBins(etaBin),&((binAdm->ptBinEdges(etaBin)).front()));
-    hChi2AbsDiff->SetXTitle(ptBinVar+" (GeV)");
-    hChi2AbsDiff->SetYTitle("#chi^{2} / ndof");
-    hChi2AbsDiff->SetMarkerStyle(20);
-    TH1* hChi2RelDiff = static_cast<TH1*>(hChi2AbsDiff->Clone("hChi2RelDiff"));
-    hChi2RelDiff->SetMarkerStyle(24);
-    TH1* hChi2Closure = static_cast<TH1*>(hChi2AbsDiff->Clone("hChi2Closure"));
+    TH1* hChi2Closure = new TH1D("hChi2AbsDiff","",binAdm->nPtBins(etaBin),&((binAdm->ptBinEdges(etaBin)).front()));
+    hChi2Closure->SetXTitle(ptBinVar+" (GeV)");
+    hChi2Closure->SetYTitle("#chi^{2} / ndof");
     hChi2Closure->SetMarkerStyle(25);
     hChi2Closure->SetMarkerColor(kBlue);
     hChi2Closure->SetLineColor(kBlue);
@@ -188,9 +182,20 @@ void plotDijetTrend() {
     hClosure->SetMarkerColor(kRed);
     hClosure->SetLineColor(kRed);
 
+    TH1* hMCTruth = new TH1D("hBiasedMCTruthResponse","",binAdm->nPtBins(etaBin),&((binAdm->ptBinEdges(etaBin)).front()));
+    hMCTruth->SetXTitle(ptBinVar+" (GeV)");
+    hMCTruth->SetYTitle("Biased MCTruth");
+
+    TH1* hExtra = new TH1D("hExtrapolatedAsymmetry","",binAdm->nPtBins(etaBin),&((binAdm->ptBinEdges(etaBin)).front()));
+    hExtra->SetXTitle(ptBinVar+" (GeV)");
+    hExtra->SetYTitle("Extrapolated Asymmetry");
+
 
     // Loop over pt bins and create trend and ratio plots
     for(unsigned int ptBin = 0; ptBin < binAdm->nPtBins(etaBin); ++ptBin) {
+      
+
+      // +++++++++ Number of tail events +++++++++++++++++++++++++++++++++
 
       // Number of tail events from asymmetry for different pt3 cuts
       std::vector<double> pt3;
@@ -221,6 +226,8 @@ void plotDijetTrend() {
       gData->SetMarkerStyle(20);
 
 
+      // +++++++++ Extrapolation +++++++++++++++++++++++++++++++++
+
        // Extrapolation
 //          TF1* fitMC = new TF1("fitMC","pol1",fitMin,fitMax);
 //          gMC->Fit(fitMC,"0QR");
@@ -228,13 +235,13 @@ void plotDijetTrend() {
 //          fitMC->SetLineColor(gMC->GetLineColor());
   
 //          TF1* fitMC = new TF1("fitMC","sqrt( sq([0]) + sq([1]*x) )",fitMin,fitMax);
-      TF1* fitMC = new TF1("fitMC","[0] + [1]*sq(x) + sq([2])*x",fitMin,fitMax);
-          fitMC->SetParameter(0,0.005);
-          fitMC->SetParameter(1,0.05);
-          fitMC->SetParameter(2,0.);
-          gMC->Fit(fitMC,"0QR");
-          fitMC->SetLineWidth(1);
-          fitMC->SetLineColor(gMC->GetLineColor());
+      TF1* fitMC = new TF1("fitMC","[0] + sq([1])*x + [2]*sq(x)",fitMin,fitMax);
+      fitMC->SetParameter(0,0.005);
+      fitMC->SetParameter(1,0.);
+      fitMC->SetParameter(2,0.05);
+      gMC->Fit(fitMC,"0QR");
+      fitMC->SetLineWidth(1);
+      fitMC->SetLineColor(gMC->GetLineColor());
 
 //       TF1* fitMC = new TF1("fitMC","pol2",fitMin,fitMax);
 //       gMC->Fit(fitMC,"0QR");
@@ -248,7 +255,8 @@ void plotDijetTrend() {
       fitMCDraw->SetLineStyle(2);
 
 
-      // Number of tail events from MC truth
+
+      // +++++ Number of tail events from MC truth +++++++++++++++++++++++++++++++
       TGraphAsymmErrors* gMCTruth = 0;
       TGraphAsymmErrors* gMCTruthBias = 0;
       if( hasMCTruthPoint ) {
@@ -272,7 +280,6 @@ void plotDijetTrend() {
 	// Bias corrected MC truth
 	gMCTruthBias = static_cast<TGraphAsymmErrors*>(gMCTruth->Clone());
 	gMCTruthBias->SetPoint(0,0.,hNumMCTruthBias->GetBinContent(1+ptBin));
-	//	gMCTruthBias->SetPoint(0,0.,hNumMCTruth->GetBinContent(1+ptBin));
 	gMCTruthBias->SetPointError(0,0.,0.,hNumMCTruthBias->GetBinError(1+ptBin),
 				    hNumMCTruthBias->GetBinError(1+ptBin));
 	gMCTruthBias->SetMarkerStyle(hClosure->GetMarkerStyle());
@@ -284,8 +291,11 @@ void plotDijetTrend() {
 	double fTrue = hNumMCTruthBias->GetBinContent(1+ptBin);
 	double fTrueErr = hNumMCTruthBias->GetBinError(1+ptBin);
 
-// 	std::cout << "\n\nfExtra = " << fExtra << " +/- " << fExtraErr << std::endl;
-// 	std::cout << "fTrue = " << fTrue << " +/- " << fTrueErr << std::endl;
+	hExtra->SetBinContent(1+ptBin,fExtra);
+	hExtra->SetBinError(1+ptBin,fExtraErr);
+	hMCTruth->SetBinContent(1+ptBin,fTrue);
+	hMCTruth->SetBinError(1+ptBin,fTrueErr);
+
 	if( fTrue > 0. ) {
 	  hClosure->SetBinContent(1+ptBin,fExtra/fTrue - 1.);
 	  hClosure->SetBinError(1+ptBin,sqrt(pow(fExtraErr/fTrue,2)+pow(fExtra*fTrueErr/fTrue/fTrue,2)));
@@ -293,7 +303,55 @@ void plotDijetTrend() {
       }
 
 
-      // Plots
+      
+      // +++++++++ Data / MC difference +++++++++++++++++++++++++++++++++
+    
+      // Absolute and relative difference
+      TH1* hDiff = new TH1D("hDiff",";#delta_{i} = f^{Data}_{Asym,i} - f^{MC}_{Asym}(p_{T,3})",1000,-fitMC->Eval(fitMax),fitMC->Eval(fitMax));
+      TGraphAsymmErrors* gDiff = static_cast<TGraphAsymmErrors*>(gData->Clone());
+      TGraphAsymmErrors* gRelDiff = static_cast<TGraphAsymmErrors*>(gData->Clone());
+      for(int i = 0; i < gData->GetN(); ++i) {
+	double x = gMC->GetX()[i];
+	double ydata = gData->GetY()[i];
+	double yedata = gData->GetEYhigh()[i];
+	double ymc = fitMC->Eval(x);
+	double yemc = 0.;	// Replace by fit error!
+	
+	// Absolute difference (data - MC fit)
+	double y = ydata - ymc;
+	double ye = sqrt(pow(yedata,2.) + pow(yemc,2.));
+	gDiff->SetPoint(i,x,y);
+	//gDiff->SetPointError(i,0.,0.,ye,ye);
+	gDiff->SetPointError(i,0.,0.,0.,0.);
+	hDiff->Fill(y);
+	
+	// Relative difference (data - MC)/MC
+	y = (ydata - ymc)/ymc;
+	ye = sqrt(pow(yedata/ymc,2.) + pow(ydata*yemc/ymc/ymc,2.));
+	gRelDiff->SetPoint(i,x,y);
+	gRelDiff->SetPointError(i,0.,0.,ye,ye);
+      }
+      gDiff->SetMarkerStyle(20);
+      gRelDiff->SetMarkerStyle(20);    
+
+      
+      // Average absolute difference and spread
+      double delta = hDiff->GetMean();
+      double deltaErr = hDiff->GetRMS();
+      hAbsDiff->SetBinContent(1+ptBin,delta);
+      hAbsDiff->SetBinError(1+ptBin,deltaErr);
+      delete hDiff;
+
+      TF1* fitData = static_cast<TF1*>(fitMC->Clone("fitData"));
+      fitData->SetParameter(0,fitData->GetParameter(0)+delta);      
+      fitData->SetLineStyle(2);
+
+
+      
+
+
+      // +++++++++ Plots +++++++++++++++++++++++++++++++++
+
       TString ptBinLabel = util::toTString(binAdm->ptMin(etaBin,ptBin))+" < "+ptBinVar+" < "+util::toTString(binAdm->ptMax(etaBin,ptBin))+" GeV";
 
       TPaveText* labelMCBin = util::LabelFactory::createPaveText(3);
@@ -306,10 +364,9 @@ void plotDijetTrend() {
       labelDataBin->AddText(jetLabel);
       labelDataBin->AddText(etaBinLabel+",  "+ptBinLabel);
 
-
       TLegend* legMC = 0;
       if( hasMCTruthPoint ) {
-	legMC = util::LabelFactory::createLegendColWithOffset(4,-0.6,3);
+	legMC = util::LabelFactory::createLegendColWithOffset(4,-0.8,3);
 	legMC->AddEntry(gMCTruth,"MC Truth Response","P");
 	legMC->AddEntry(gMCTruthBias,"MC Truth Response (Biased)","P");
 	legMC->AddEntry(gMC,"MC Asymmetry","P");
@@ -322,7 +379,7 @@ void plotDijetTrend() {
 
       TLegend* legData = 0;
       if( hasMCTruthPoint ) {
-	legData = util::LabelFactory::createLegendColWithOffset(4,-0.6,3);
+	legData = util::LabelFactory::createLegendColWithOffset(4,-0.8,3);
 	legData->AddEntry(gMCTruthBias,"MC Truth Response (Biased)","P");
 	legData->AddEntry(gMC,"MC Asymmetry","P");
 	legData->AddEntry(fitMC,"Fit","L");
@@ -336,14 +393,14 @@ void plotDijetTrend() {
 
       TLegend* legData2 = 0;
       if( hasMCTruthPoint ) {
-	legData2 = util::LabelFactory::createLegendColWithOffset(5,-0.6,3);
+	legData2 = util::LabelFactory::createLegendColWithOffset(5,-0.8,3);
 	legData2->AddEntry(gMCTruthBias,"MC Truth Response (Biased)","P");
 	legData2->AddEntry(gMC,"MC Asymmetry","P");
 	legData2->AddEntry(fitMC,"Fit to MC Asymmetry","L");
 	legData2->AddEntry(gData,"Data Asymmetry","P");
 	legData2->AddEntry(fitData,"Shifted Fit","L");
       } else {
-	legData2 = util::LabelFactory::createLegendColWithOffset(5,-0.6,3);
+	legData2 = util::LabelFactory::createLegendColWithOffset(4,-0.6,3);
 	legData2->AddEntry(gMC,"MC Asymmetry","P");
 	legData2->AddEntry(fitMC,"Fit to MC Asymmetry","L");
 	legData2->AddEntry(gData,"Data Asymmetry","P");
@@ -353,8 +410,8 @@ void plotDijetTrend() {
       // Extrapolation MC Closure
       TCanvas* can = new TCanvas("can","Number of events",500,500);
       can->cd();
-      TH1* hFrame = new TH1D("hFrame",";p_{T,3} Threshold;f_{Tail}",1000,0.,0.44);
-      hFrame->GetYaxis()->SetRangeUser(0.,2.*gMC->GetY()[gMC->GetN()-1]);
+      TH1* hFrame = new TH1D("hFrame",";p_{T,3} Threshold;f_{Asym}",1000,0.,0.44);
+      hFrame->GetYaxis()->SetRangeUser(0.,2.3*gMC->GetY()[gMC->GetN()-1]);
       hFrame->Draw();
       gMC->Draw("PE1same");
       fitMC->Draw("same");
@@ -386,198 +443,109 @@ void plotDijetTrend() {
       fitData->Draw("same");
       gData->Draw("PE1same");
       labelDataBin->Draw("same");
-      legData->Draw("same");
+      legData2->Draw("same");
       can->SaveAs(outNamePrefix+"PtBin"+util::toTString(ptBin)+"_Extrapolation2.eps","eps");
 
 
+      // Absolute difference (Delta)
+      TH1* hDelta = new TH1D("hDelta",";p_{T,3} Threshold;#delta_{i} = f^{Data}_{Asym,i} - f^{MC}_{Asym}(p_{T,3})",1000,0.,hFrame->GetXaxis()->GetBinUpEdge(hFrame->GetNbinsX()));
+      hDelta->SetLineColor(kBlack);
+      TH1* hDeltaErr = static_cast<TH1D*>(hDelta->Clone("hDeltaErr"));
+      for(int i = 1; i < hDelta->GetNbinsX(); ++i) {
+	hDelta->SetBinContent(i,delta);
+	hDeltaErr->SetBinContent(i,delta);
+	hDeltaErr->SetBinError(i,deltaErr);
+      }
+      hDeltaErr->SetFillColor(40);
+      hDeltaErr->SetLineColor(hDeltaErr->GetFillColor());
+      hDeltaErr->SetFillStyle(1001);
+      hDeltaErr->GetYaxis()->SetRangeUser(-0.023,0.033);
+     
+      TLegend* legDelta = util::LabelFactory::createLegendColWithOffset(2,-0.6,3);
+      legDelta->AddEntry(hDelta,"#Delta = <#delta_{i}>","L");
+      legDelta->AddEntry(hDeltaErr,"#sigma(#delta_{i})","F");
+
+      can->cd();
+      hDeltaErr->Draw("E3");
+      hDelta->Draw("same");
+      gDiff->Draw("Psame");
+      labelDataBin->Draw("same");
+      legDelta->Draw("same");
+      can->SaveAs(outNamePrefix+"PtBin"+util::toTString(ptBin)+"_Delta.eps","eps");
+
+
+      delete hDelta;
+      delete hDeltaErr;
+      delete hFrame;
       delete legMC;
       delete legData;
       delete legData2;
-
-
-
-
-      // +++++++++ Data / MC difference +++++++++++++++++++++++++++++++++
-    
-      if( !hasMCTruthPoint ) {
-
-	// Absolute and relative difference
-	TGraphAsymmErrors* gDiff = static_cast<TGraphAsymmErrors*>(gData->Clone());
-	TGraphAsymmErrors* gRelDiff = static_cast<TGraphAsymmErrors*>(gData->Clone());
-	for(int i = 0; i < gData->GetN(); ++i) {
-	  double x = gMC->GetX()[i];
-	  double ydata = gData->GetY()[i];
-	  double yedata = gData->GetEYhigh()[i];
-// 	  double ymc = gMC->GetY()[i];
-// 	  double yemc = gMC->GetEYhigh()[i];
-	  double ymc = fitMC->Eval(x);
-	  double yemc = 0.;	// Replace by fit error!
-
-	  // Absolute difference (data - MC fit)
-	  double y = ydata - ymc;
-	  double ye = sqrt(pow(yedata,2.) + pow(yemc,2.));
-	  gDiff->SetPoint(i,x,y);
-	  gDiff->SetPointError(i,0.,0.,ye,ye);
-
-	  // Relative difference (data - MC)/MC
-	  y = (ydata - ymc)/ymc;
-	  ye = sqrt(pow(yedata/ymc,2.) + pow(ydata*yemc/ymc/ymc,2.));
-	  gRelDiff->SetPoint(i,x,y);
-	  gRelDiff->SetPointError(i,0.,0.,ye,ye);
-	}
-	gDiff->SetMarkerStyle(20);
-	gRelDiff->SetMarkerStyle(20);    
-
-
-	// Fit absolute difference
-	TF1* fitAbsDiff = new TF1("fitAbsDiff","pol0",fitMin,fitMax); // Omit lowest point for fit
-	gDiff->Fit(fitAbsDiff,"0QR");
-	fitAbsDiff->SetLineWidth(1);
-	fitAbsDiff->SetLineColor(kRed);
-      
-	TF1* fitAbsDiffDraw = static_cast<TF1*>(fitAbsDiff->Clone("fitMCDraw"));
-	fitAbsDiffDraw->SetRange(0.,fitMax);
-	fitAbsDiffDraw->SetLineStyle(2);
-
-	hAbsDiff->SetBinContent(1+ptBin,fitAbsDiff->GetParameter(0));
-	hAbsDiff->SetBinError(1+ptBin,fitAbsDiff->GetParError(0));
-	hChi2AbsDiff->SetBinContent(1+ptBin,fitAbsDiff->GetChisquare()/fitAbsDiff->GetNDF());
-
-
-	// Fit relative difference
-	TF1* fitRelDiff = new TF1("fitRelDiff","pol0",fitMin,fitMax); // Omit lowest point for fit
-	gRelDiff->Fit(fitRelDiff,"0QR");
-	fitRelDiff->SetLineWidth(1);
-	fitRelDiff->SetLineColor(kRed);
-
-	TF1* fitRelDiffDraw = static_cast<TF1*>(fitRelDiff->Clone("fitMCDraw"));
-	fitRelDiffDraw->SetRange(0.,fitMax);
-	fitRelDiffDraw->SetLineStyle(2);
-
-	hRelDiff->SetBinContent(1+ptBin,fitRelDiff->GetParameter(0));
-	hRelDiff->SetBinError(1+ptBin,fitRelDiff->GetParError(0));
-	hChi2RelDiff->SetBinContent(1+ptBin,fitRelDiff->GetChisquare()/fitRelDiff->GetNDF());
-
-
-	// Plots
-	TH1* hFrameDiff = static_cast<TH1*>(hFrame->Clone("hFrameDiff"));
-	for(int bin = 1; bin <= hFrameDiff->GetNbinsX(); ++bin) {
-	  hFrameDiff->SetBinContent(bin,0);
-	}
-	hFrameDiff->SetLineStyle(2);
-
-	// Absolute difference
-	can->cd();
-	hFrameDiff->GetYaxis()->SetTitle("f_{Tail}(Data) - f_{Tail}(MC)");
-	hFrameDiff->GetYaxis()->SetRangeUser(-0.024,0.029);
-	hFrameDiff->Draw();
-	gDiff->Draw("PE1same");
-	fitAbsDiffDraw->Draw("same");
-	fitAbsDiff->Draw("same");
-	labelDataBin->Draw("same");
-	can->SaveAs(outNamePrefix+"PtBin"+util::toTString(ptBin)+"_Diff.eps","eps");
-
-	can->cd();
-	hFrameDiff->GetYaxis()->SetTitle("(f_{Tail}(Data) - f_{Tail}(MC)) / f_{Tail}(MC)");
-	hFrameDiff->GetYaxis()->SetRangeUser(-0.79,0.99);
-	hFrameDiff->Draw();
-	gRelDiff->Draw("PE1same");
-	fitRelDiffDraw->Draw("same");
-	fitRelDiff->Draw("same");
-	labelDataBin->Draw("same");
-	can->SaveAs(outNamePrefix+"PtBin"+util::toTString(ptBin)+"_RelDiff.eps","eps");
-
-	delete hFrameDiff;
-      }
-
-      delete hFrame;
       delete can;
     } // end of loop over pt bins
 
 
   
-    // Summary plots
+
+    // +++++ Summary plots for all pt bins ++++++++++++++++++++++++++++++++++++++++++++
+
     TCanvas* can = new TCanvas("can","Summary",500,500);
 
-    if( !hasMCTruthPoint ) {
+    TH1* hAbsDiffFrame = new TH1D("hAbsDiffFrame_Eta"+util::toTString(etaBin),"",1000,binAdm->ptMin(etaBin),binAdm->ptMax(etaBin));
+    for(int i = 1; i < hAbsDiffFrame->GetNbinsX(); ++i) {
+      hAbsDiffFrame->SetBinContent(i,0.);
+    }
+    hAbsDiffFrame->SetLineStyle(2);
+    hAbsDiffFrame->GetXaxis()->SetMoreLogLabels();
+    hAbsDiffFrame->SetXTitle(ptBinVar+" (GeV)");
+    hAbsDiffFrame->SetYTitle("f_{Tail}(Data) - f_{Tail}(MC)");
+    hAbsDiffFrame->GetYaxis()->SetRangeUser(-0.019,0.039);
 
-      TH1* hAbsDiffFrame = new TH1D("hAbsDiffFrame_Eta"+util::toTString(etaBin),"",1000,binAdm->ptMin(etaBin),binAdm->ptMax(etaBin));
-      for(int i = 1; i < hAbsDiffFrame->GetNbinsX(); ++i) {
-	hAbsDiffFrame->SetBinContent(i,0.);
-      }
-      hAbsDiffFrame->SetLineStyle(2);
-      hAbsDiffFrame->GetXaxis()->SetMoreLogLabels();
-      hAbsDiffFrame->SetXTitle(ptBinVar+" (GeV)");
-      hAbsDiffFrame->SetYTitle("f_{Tail}(Data) - f_{Tail}(MC)");
-      hAbsDiffFrame->GetYaxis()->SetRangeUser(-0.019,0.039);
+    can->cd();
+    hAbsDiffFrame->Draw();
+    hAbsDiff->Draw("PE1same");
+    labelData->Draw("same");
+    can->SetLogx();
+    can->SaveAs(outNamePrefix+"AbsDiff.eps","eps");
+
+
+    TH1* hRelDiffFrame = static_cast<TH1*>(hAbsDiffFrame->Clone("hRelDiffFrame_Eta"+util::toTString(etaBin)));
+    hRelDiffFrame->SetYTitle("(f_{Tail}(Data) - f_{Tail}(MC)) / f_{Tail}(MC)");
+    hRelDiffFrame->GetYaxis()->SetRangeUser(-0.69,0.99);
+
+    can->cd();
+    hRelDiffFrame->Draw();
+    hRelDiff->Draw("PE1same");
+    labelData->Draw("same");
+    can->SetLogx();
+    can->SaveAs(outNamePrefix+"RelDiff.eps","eps");
+
+    // Rebinned differences
+    if( nCombBins.size() ) {
+      TH1* hRelDiffComb = util::HistOps::combineBins(hRelDiff,nCombBins,startBinComb);
+      TH1* hAbsDiffComb = util::HistOps::combineBins(hAbsDiff,nCombBins,startBinComb);
 
       can->cd();
       hAbsDiffFrame->Draw();
-      hAbsDiff->Draw("PE1same");
+      hAbsDiffComb->Draw("PE1same");
       labelData->Draw("same");
       can->SetLogx();
-      can->SaveAs(outNamePrefix+"AbsDiff.eps","eps");
-
-
-      TH1* hRelDiffFrame = static_cast<TH1*>(hAbsDiffFrame->Clone("hRelDiffFrame_Eta"+util::toTString(etaBin)));
-      hRelDiffFrame->SetYTitle("(f_{Tail}(Data) - f_{Tail}(MC)) / f_{Tail}(MC)");
-      hRelDiffFrame->GetYaxis()->SetRangeUser(-0.69,0.99);
-
+      can->SaveAs(outNamePrefix+"AbsDiffComb.eps","eps");
+    
       can->cd();
       hRelDiffFrame->Draw();
-      hRelDiff->Draw("PE1same");
+      hRelDiffComb->Draw("PE1same");
       labelData->Draw("same");
       can->SetLogx();
-      can->SaveAs(outNamePrefix+"RelDiff.eps","eps");
+      can->SaveAs(outNamePrefix+"RelDiffComb.eps","eps");
 
+      delete hAbsDiffComb;
+      delete hRelDiffComb;
+    }
 
-      TLegend* legChi2 = util::LabelFactory::createLegendColWithOffset(2,-0.6,2);
-      legChi2->AddEntry(hChi2AbsDiff,"Absolute Difference","P");
-      legChi2->AddEntry(hChi2RelDiff,"Relative Difference","P");
+    delete hAbsDiffFrame;
+    delete hRelDiffFrame;
 
-      can->cd();
-      hChi2RelDiff->Draw("PE1");
-      hChi2AbsDiff->Draw("PE1same");
-      labelData->Draw("same");
-      legChi2->Draw("same");
-      can->SetLogx();
-      can->SaveAs(outNamePrefix+"Chi2.eps","eps");
-
-
-      // Rebinned differences
-      if( nCombBins.size() ) {
-	TH1* hRelDiffComb = util::HistOps::combineBins(hRelDiff,nCombBins,startBinComb);
-	TH1* hAbsDiffComb = util::HistOps::combineBins(hAbsDiff,nCombBins,startBinComb);
-
-	can->cd();
-	hAbsDiffFrame->Draw();
-	hAbsDiffComb->Draw("PE1same");
-	labelData->Draw("same");
-	can->SetLogx();
-	can->SaveAs(outNamePrefix+"AbsDiffComb.eps","eps");
-    
-	can->cd();
-	hRelDiffFrame->Draw();
-	hRelDiffComb->Draw("PE1same");
-	labelData->Draw("same");
-	can->SetLogx();
-	can->SaveAs(outNamePrefix+"RelDiffComb.eps","eps");
-
-	outFile.WriteTObject(hRelDiffFrame);
-	outFile.WriteTObject(hRelDiff);
-	outFile.WriteTObject(hRelDiffComb);
-	outFile.WriteTObject(hAbsDiffFrame);
-	outFile.WriteTObject(hAbsDiff);
-	outFile.WriteTObject(hAbsDiffComb);
-
-	delete hAbsDiffComb;
-	delete hRelDiffComb;
-      }
-
-      delete hAbsDiffFrame;
-      delete hRelDiffFrame;
-
-    } else {
+    if( hasMCTruthPoint )  {
     
       TH1* hClosureFrame = new TH1D("hClosureFrame","",1000,binAdm->ptMin(etaBin),binAdm->ptMax(etaBin));
       for(int i = 1; i < hClosureFrame->GetNbinsX(); ++i) {
@@ -586,7 +554,7 @@ void plotDijetTrend() {
       hClosureFrame->SetLineStyle(2);
       hClosureFrame->GetXaxis()->SetMoreLogLabels();
       hClosureFrame->SetXTitle(ptBinVar+" (GeV)");
-      hClosureFrame->SetYTitle("(f_{Tail}(Asym) - f_{Tail}(MCTruth)) / f_{Tail}(MCTruth)");
+      hClosureFrame->SetYTitle("( f^{MC}_{Asym}(0) - f^{MCTruth}_{Resp} ) / f^{MCTruth}_{Resp}");
       hClosureFrame->GetYaxis()->SetRangeUser(-0.99,0.39);
 
       can->cd();
@@ -620,10 +588,18 @@ void plotDijetTrend() {
 
     }
 
+    
+    // +++++ Write output to ROOT-file for exchange ++++++++++++++++++++++++++++++++++
+    
+    outFile.WriteTObject(hAbsDiff);
+    outFile.WriteTObject(hExtra);
+    outFile.WriteTObject(hMCTruth);
+    
+    
+    delete hExtra;
+    delete hMCTruth;
     delete hAbsDiff;
     delete hRelDiff;
-    delete hChi2AbsDiff;
-    delete hChi2RelDiff;
     delete hClosure;
     delete hChi2Closure;
     delete can;
@@ -779,4 +755,66 @@ void getNTailMCTruth(const TString &fileName, const TString &outNamePrefix, doub
   can->SaveAs(outNamePrefix+"_MCTruthNumEvts.eps","eps");
     
   delete can;
+}
+
+
+
+//  Combine variations and plot final result
+// ----------------------------------------------------------------
+void makeFinalPlots(const TString &fileNominal) {
+  
+
+  TH1* hDelta = util::FileOps::readTH1(fileNominal,"hAbsDiff_Eta0","hDeltaNominal");
+  TH1* hExtra = util::FileOps::readTH1(fileNominal,"hExtrapolatedAsymmetry","hExtrapolatedAsymmetryNominal");
+  TH1* hBiasedTruth = util::FileOps::readTH1(fileNominal,"hBiasedMCTruthResponse","hBiasedMCTruthResponseNominal");
+
+  // Nominal scaling factors
+  TH1* hScale = static_cast<TH1*>(hDelta->Clone("hScale"));
+  hScale->Reset();
+  
+  // Variations
+  TH1* hScaleSpreadDelta = static_cast<TH1*>(hScale->Clone("hScaleSpreadDelta"));
+  TH1* hScaleNonClosure = static_cast<TH1*>(hScale->Clone("hScaleNonClosure"));
+
+  for(int ptBin = 1; ptBin <= hScale->GetNbinsX(); ++ptBin) {
+
+    double fExtra = hExtra->GetBinContent(ptBin);
+    double fTruth = hBiasedTruth->GetBinContent(ptBin);
+    double delta = hDelta->GetBinContent(ptBin);
+    double deltaErr = hDelta->GetBinError(ptBin);
+    double nonClosure = std::abs(fExtra-fTruth);
+
+    // Nominal scale
+    double scale = (fExtra + delta)/fExtra;
+    hScale->SetBinContent(ptBin,scale);
+    hScaleSpreadDelta->SetBinContent(ptBin,scale);
+    hScaleNonClosure->SetBinContent(ptBin,scale);
+       
+    // Variations
+    double scaleVarDelta = std::abs((fExtra + delta + deltaErr)/fExtra);
+    hScaleSpreadDelta->SetBinError(ptBin,std::abs(scale-0.5*(scaleVarDelta)));
+
+    double scaleVarClosure = std::abs((fExtra + nonClosure + delta)/fExtra);
+    hScaleNonClosure->SetBinError(ptBin,std::abs(scale-0.5*(scaleVarClosure)));
+  }
+
+  hScale->SetMarkerStyle(20);
+  hScaleSpreadDelta->SetFillStyle(1001);
+  hScaleSpreadDelta->SetFillColor(8);
+  hScaleNonClosure->SetFillStyle(1001);
+  hScaleNonClosure->SetFillColor(40);
+
+
+  // Plot
+
+  TH1* hFrame = util::HistOps::createRatioFrame(hScale,"Tail Scaling Factors");
+
+  TCanvas* can = new TCanvas("can","Tail Scaling Factors",500,500);
+  can->cd();
+  hFrame->Draw();
+  //hScaleNonClosure->Draw("HISTEsame");
+  hScaleSpreadDelta->Draw("HISTEsame");
+  hScale->Draw("Psame");
+  //  can->SaveAs();
+  
 }
