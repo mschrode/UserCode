@@ -51,6 +51,8 @@ void plotDijetTrend() {
   const TString jetAlgo = "PF";
   const TString ptBinVar = "p^{ave}_{T}";
   const double lumi = 32.7;
+  const unsigned int dataStartBin = 2;
+  const bool rebin = false;
 
   // Extrapolation
   const double fitMin = 0.;
@@ -141,24 +143,60 @@ void plotDijetTrend() {
       nCombBins.push_back(6);
       nCombBins.push_back(5);
     }
+    unsigned int nPtBins = binAdm->nPtBins(etaBin);
+    std::vector<double> ptBinEdges = binAdm->ptBinEdges(etaBin);
+    if( rebin ) {
+      int idxFineBin = 0;
+      ptBinEdges.clear();
+      ptBinEdges.push_back((binAdm->ptBinEdges(etaBin)).at(idxFineBin));
+      for(unsigned int i = 0; i < nCombBins.size(); ++i) {
+	idxFineBin += nCombBins.at(i);
+	ptBinEdges.push_back((binAdm->ptBinEdges(etaBin)).at(idxFineBin));
+      }
+      nPtBins = ptBinEdges.size()-1;
+      std::cout << "Done defining broader bins" << std::endl;
+    }
+      
+
 
     // Get number of events from asymmetry from file
-    std::vector<TH1*> hNumMC;
-    std::vector<TH1*> hNumData;
+    std::vector<TH1*> hNumMCFineBins;
+    std::vector<TH1*> hNumDataFineBins;
     for(unsigned int i = 0; i < names.size(); ++i) {
-      hNumData.push_back(util::FileOps::readTH1(names[i],"hNTailData_Eta"+util::toTString(etaBin),"hNTailIntData_Eta"+util::toTString(etaBin)+"_File"+util::toTString(i)));
-      hNumMC.push_back(util::FileOps::readTH1(names[i],"hNTailMC_Eta"+util::toTString(etaBin),"hNTailIntMC_Eta"+util::toTString(etaBin)+"_File"+util::toTString(i)));
+      hNumDataFineBins.push_back(util::FileOps::readTH1(names[i],"hNTailData_Eta"+util::toTString(etaBin),"hNTailIntData_Eta"+util::toTString(etaBin)+"_File"+util::toTString(i)));
+      hNumMCFineBins.push_back(util::FileOps::readTH1(names[i],"hNTailMC_Eta"+util::toTString(etaBin),"hNTailIntMC_Eta"+util::toTString(etaBin)+"_File"+util::toTString(i)));
     }
 
     // Get number of events from MC truth
-    TH1* hNumMCTruth = 0;
-    TH1* hNumMCTruthBias = 0;  
+    TH1* hNumMCTruthFineBins = 0;
+    TH1* hNumMCTruthBiasFineBins = 0;  
     if( hasMCTruthPoint ) 
-      getNTailMCTruth(nameMCTruthPoins,outName,mcTruthScaling,nSigCore,nSigTailStart,nSigTailEnd,hNumMCTruth,hNumMCTruthBias);
+      getNTailMCTruth(nameMCTruthPoins,outName,mcTruthScaling,nSigCore,nSigTailStart,nSigTailEnd,hNumMCTruthFineBins,hNumMCTruthBiasFineBins);
 
+    // Rebin
+    std::vector<TH1*> hNumMC;
+    std::vector<TH1*> hNumData;
+    TH1* hNumMCTruth = 0;
+    TH1* hNumMCTruthBias = 0;
+    if( rebin ) {
+      for(unsigned int i = 0; i < hNumMCFineBins.size(); ++i) {
+	hNumMC.push_back(util::HistOps::combineBins(hNumMCFineBins.at(i),nCombBins,1));
+	hNumData.push_back(util::HistOps::combineBins(hNumDataFineBins.at(i),nCombBins,1));
+      }
+      if( hasMCTruthPoint ) {
+	hNumMCTruth = util::HistOps::combineBins(hNumMCTruthFineBins,nCombBins,1);    
+	hNumMCTruthBias = util::HistOps::combineBins(hNumMCTruthBiasFineBins,nCombBins,1);    
+      }
+      std::cout << "Done rebinning" << std::endl;
+    } else {
+      hNumMC = hNumMCFineBins;
+      hNumData = hNumDataFineBins;
+      hNumMCTruth = hNumMCTruthFineBins;
+      hNumMCTruthBias = hNumMCTruthBiasFineBins;
+    }
 
     // Pt summary plots
-    TH1* hAbsDiff = new TH1D("hAbsDiff_Eta"+util::toTString(etaBin),"",binAdm->nPtBins(etaBin),&((binAdm->ptBinEdges(etaBin)).front()));
+    TH1* hAbsDiff = new TH1D("hAbsDiff_Eta"+util::toTString(etaBin),"",nPtBins,&(ptBinEdges.front()));
     hAbsDiff->SetXTitle(ptBinVar+" (GeV)");
     hAbsDiff->SetYTitle("f_{Tail}(Data) - f_{Tail}(MC)");
     hAbsDiff->GetYaxis()->SetRangeUser(-0.029,0.049);
@@ -167,14 +205,14 @@ void plotDijetTrend() {
     hRelDiff->SetYTitle("(f_{Tail}(Data) - f_{Tail}(MC)) / f_{Tail}(MC)");
     hRelDiff->GetYaxis()->SetRangeUser(-0.69,0.99);
 
-    TH1* hChi2Closure = new TH1D("hChi2AbsDiff","",binAdm->nPtBins(etaBin),&((binAdm->ptBinEdges(etaBin)).front()));
+    TH1* hChi2Closure = new TH1D("hChi2AbsDiff","",nPtBins,&(ptBinEdges.front()));
     hChi2Closure->SetXTitle(ptBinVar+" (GeV)");
     hChi2Closure->SetYTitle("#chi^{2} / ndof");
     hChi2Closure->SetMarkerStyle(25);
     hChi2Closure->SetMarkerColor(kBlue);
     hChi2Closure->SetLineColor(kBlue);
 
-    TH1* hClosure = new TH1D("hClosure","",binAdm->nPtBins(etaBin),&((binAdm->ptBinEdges(etaBin)).front()));
+    TH1* hClosure = new TH1D("hClosure","",nPtBins,&(ptBinEdges.front()));
     hClosure->SetXTitle(ptBinVar+" (GeV)");
     hClosure->SetYTitle("(f_{Tail}(Asym) - f_{Tail}(MCTruth)) / f_{Tail}(MCTruth)");
     hClosure->GetYaxis()->SetRangeUser(-0.029,0.049);
@@ -182,17 +220,17 @@ void plotDijetTrend() {
     hClosure->SetMarkerColor(kRed);
     hClosure->SetLineColor(kRed);
 
-    TH1* hMCTruth = new TH1D("hBiasedMCTruthResponse","",binAdm->nPtBins(etaBin),&((binAdm->ptBinEdges(etaBin)).front()));
+    TH1* hMCTruth = new TH1D("hBiasedMCTruthResponse","",nPtBins,&(ptBinEdges.front()));
     hMCTruth->SetXTitle(ptBinVar+" (GeV)");
     hMCTruth->SetYTitle("Biased MCTruth");
 
-    TH1* hExtra = new TH1D("hExtrapolatedAsymmetry","",binAdm->nPtBins(etaBin),&((binAdm->ptBinEdges(etaBin)).front()));
+    TH1* hExtra = new TH1D("hExtrapolatedAsymmetry","",nPtBins,&(ptBinEdges.front()));
     hExtra->SetXTitle(ptBinVar+" (GeV)");
     hExtra->SetYTitle("Extrapolated Asymmetry");
 
 
     // Loop over pt bins and create trend and ratio plots
-    for(unsigned int ptBin = 0; ptBin < binAdm->nPtBins(etaBin); ++ptBin) {
+    for(unsigned int ptBin = 0; ptBin < nPtBins; ++ptBin) {
       
 
       // +++++++++ Number of tail events +++++++++++++++++++++++++++++++++
@@ -202,15 +240,11 @@ void plotDijetTrend() {
       std::vector<double> pt3E;
       std::vector<double> nMC;
       std::vector<double> nMCE;
-      std::vector<double> nData;
-      std::vector<double> nDataE;
       for(unsigned int i = 0; i < binAdm->nPtSoftBins(); ++i) {
 	pt3.push_back(pt3Cuts[i]);
 	pt3E.push_back(0.);
 	nMC.push_back(hNumMC[i]->GetBinContent(ptBin+1));
 	nMCE.push_back(hNumMC[i]->GetBinError(ptBin+1));
-	nData.push_back(hNumData[i]->GetBinContent(ptBin+1));
-	nDataE.push_back(hNumData[i]->GetBinError(ptBin+1));
       }
    
       TGraphAsymmErrors* gMC = new TGraphAsymmErrors(pt3.size(),&(pt3.front()),&(nMC.front()),
@@ -219,6 +253,17 @@ void plotDijetTrend() {
       gMC->SetMarkerStyle(25);
       gMC->SetMarkerColor(kBlue);
       gMC->SetLineColor(kBlue);
+
+      pt3.clear();
+      pt3E.clear();
+      std::vector<double> nData;
+      std::vector<double> nDataE;
+      for(unsigned int i = dataStartBin; i < binAdm->nPtSoftBins(); ++i) {
+	pt3.push_back(pt3Cuts[i]);
+	pt3E.push_back(0.);
+	nData.push_back(hNumData[i]->GetBinContent(ptBin+1));
+	nDataE.push_back(hNumData[i]->GetBinError(ptBin+1));
+      }
 
       TGraphAsymmErrors* gData = new TGraphAsymmErrors(pt3.size(),&(pt3.front()),&(nData.front()),
 						       &(pt3E.front()),&(pt3E.front()),
@@ -311,7 +356,8 @@ void plotDijetTrend() {
       TGraphAsymmErrors* gDiff = static_cast<TGraphAsymmErrors*>(gData->Clone());
       TGraphAsymmErrors* gRelDiff = static_cast<TGraphAsymmErrors*>(gData->Clone());
       for(int i = 0; i < gData->GetN(); ++i) {
-	double x = gMC->GetX()[i];
+	int mcBin = dataStartBin+i;
+	double x = gMC->GetX()[mcBin];
 	double ydata = gData->GetY()[i];
 	double yedata = gData->GetEYhigh()[i];
 	double ymc = fitMC->Eval(x);
@@ -352,7 +398,7 @@ void plotDijetTrend() {
 
       // +++++++++ Plots +++++++++++++++++++++++++++++++++
 
-      TString ptBinLabel = util::toTString(binAdm->ptMin(etaBin,ptBin))+" < "+ptBinVar+" < "+util::toTString(binAdm->ptMax(etaBin,ptBin))+" GeV";
+      TString ptBinLabel = util::toTString(ptBinEdges.at(ptBin))+" < "+ptBinVar+" < "+util::toTString(ptBinEdges.at(ptBin+1))+" GeV";
 
       TPaveText* labelMCBin = util::LabelFactory::createPaveText(3);
       labelMCBin->AddText("CMS Simulation,  #sqrt{s} = 7 TeV");
@@ -366,9 +412,9 @@ void plotDijetTrend() {
 
       TLegend* legMC = 0;
       if( hasMCTruthPoint ) {
-	legMC = util::LabelFactory::createLegendColWithOffset(4,-0.8,3);
+	legMC = util::LabelFactory::createLegendColWithOffset(3,-0.8,3);
 	legMC->AddEntry(gMCTruth,"MC Truth Response","P");
-	legMC->AddEntry(gMCTruthBias,"MC Truth Response (Biased)","P");
+ 	legMC->AddEntry(gMCTruthBias,"MC Truth Response (Biased)","P");
 	legMC->AddEntry(gMC,"MC Asymmetry","P");
 	legMC->AddEntry(fitMC,"Fit","L");
       } else {
@@ -416,8 +462,8 @@ void plotDijetTrend() {
       gMC->Draw("PE1same");
       fitMC->Draw("same");
       if( hasMCTruthPoint ) {
-	gMCTruth->Draw("PE1same");
-	gMCTruthBias->Draw("PE1same");
+ 	gMCTruth->Draw("PE1same");
+ 	gMCTruthBias->Draw("PE1same");
       }
       labelMCBin->Draw("same");
       legMC->Draw("same");
@@ -489,8 +535,8 @@ void plotDijetTrend() {
     // +++++ Summary plots for all pt bins ++++++++++++++++++++++++++++++++++++++++++++
 
     TCanvas* can = new TCanvas("can","Summary",500,500);
-
-    TH1* hAbsDiffFrame = new TH1D("hAbsDiffFrame_Eta"+util::toTString(etaBin),"",1000,binAdm->ptMin(etaBin),binAdm->ptMax(etaBin));
+			   
+    TH1* hAbsDiffFrame = new TH1D("hAbsDiffFrame_Eta"+util::toTString(etaBin),"",1000,ptBinEdges.front(),ptBinEdges.back());
     for(int i = 1; i < hAbsDiffFrame->GetNbinsX(); ++i) {
       hAbsDiffFrame->SetBinContent(i,0.);
     }
@@ -520,7 +566,7 @@ void plotDijetTrend() {
     can->SaveAs(outNamePrefix+"RelDiff.eps","eps");
 
     // Rebinned differences
-    if( nCombBins.size() ) {
+    if( nCombBins.size() && !rebin ) {
       TH1* hRelDiffComb = util::HistOps::combineBins(hRelDiff,nCombBins,startBinComb);
       TH1* hAbsDiffComb = util::HistOps::combineBins(hAbsDiff,nCombBins,startBinComb);
 
@@ -547,7 +593,7 @@ void plotDijetTrend() {
 
     if( hasMCTruthPoint )  {
     
-      TH1* hClosureFrame = new TH1D("hClosureFrame","",1000,binAdm->ptMin(etaBin),binAdm->ptMax(etaBin));
+      TH1* hClosureFrame = new TH1D("hClosureFrame","",1000,ptBinEdges.front(),ptBinEdges.back());
       for(int i = 1; i < hClosureFrame->GetNbinsX(); ++i) {
 	hClosureFrame->SetBinContent(i,0.);
       }
@@ -571,7 +617,7 @@ void plotDijetTrend() {
       can->SetLogx();
       can->SaveAs(outNamePrefix+"Chi2Closure.eps","eps");
 
-      if( nCombBins.size() ) {
+      if( nCombBins.size() && !rebin ) {
 	TH1* hClosureComb = util::HistOps::combineBins(hClosure,nCombBins,startBinComb);
 
 	can->cd();
@@ -719,6 +765,7 @@ void getNTailMCTruth(const TString &fileName, const TString &outNamePrefix, doub
 
     TCanvas* can = new TCanvas("can","Symmetrized MC truth response "+util::toTString(i),500,500);
     can->cd();
+    hMC->GetYaxis()->SetRangeUser(3E-4,59.);
     hMC->SetTitle(util::toTString(hSymRespVsPtGen->GetXaxis()->GetBinLowEdge(1+i))+" < p^{gen}_{T} < "+util::toTString(hSymRespVsPtGen->GetXaxis()->GetBinUpEdge(1+i)));
     hMC->Draw("PE1");
     gaussBiasCorr->Draw("same");
@@ -787,18 +834,29 @@ void makeFinalPlots(const TString &fileNominal) {
     // Nominal scale
     double scale = (fExtra + delta)/fExtra;
     hScale->SetBinContent(ptBin,scale);
+    std::cout << scale << std::endl;
     hScaleSpreadDelta->SetBinContent(ptBin,scale);
     hScaleNonClosure->SetBinContent(ptBin,scale);
        
     // Variations
-    double scaleVarDelta = std::abs((fExtra + delta + deltaErr)/fExtra);
-    hScaleSpreadDelta->SetBinError(ptBin,std::abs(scale-0.5*(scaleVarDelta)));
+    double err2 = 0;
 
-    double scaleVarClosure = std::abs((fExtra + nonClosure + delta)/fExtra);
-    hScaleNonClosure->SetBinError(ptBin,std::abs(scale-0.5*(scaleVarClosure)));
+    double scaleVarDelta = std::abs((fExtra + delta + deltaErr)/fExtra);
+    double scaleVarDeltaErr = std::abs(scale-0.5*(scaleVarDelta));
+    err2 += pow(scaleVarDeltaErr,2.);
+    hScaleSpreadDelta->SetBinError(ptBin,scaleVarDeltaErr);
+
+    double scaleVarClosure = std::abs((fExtra + nonClosure + delta)/(fExtra + nonClosure));
+    double scaleVarClosureErr = std::abs(scale-0.5*(scaleVarClosure));
+    err2 += pow(scaleVarClosureErr,2.);
+    hScaleNonClosure->SetBinError(ptBin,scaleVarClosureErr);
+
+    hScale->SetBinError(ptBin,sqrt(err2));
   }
 
   hScale->SetMarkerStyle(20);
+  hScale->SetMarkerColor(kBlack);
+  hScaleSpreadDelta->SetMarkerStyle(20);
   hScaleSpreadDelta->SetFillStyle(1001);
   hScaleSpreadDelta->SetFillColor(8);
   hScaleNonClosure->SetFillStyle(1001);
@@ -807,14 +865,26 @@ void makeFinalPlots(const TString &fileNominal) {
 
   // Plot
 
-  TH1* hFrame = util::HistOps::createRatioFrame(hScale,"Tail Scaling Factors");
-
   TCanvas* can = new TCanvas("can","Tail Scaling Factors",500,500);
   can->cd();
-  hFrame->Draw();
-  //hScaleNonClosure->Draw("HISTEsame");
-  hScaleSpreadDelta->Draw("HISTEsame");
-  hScale->Draw("Psame");
+  //hFrame->Draw();
+  hScale->GetYaxis()->SetRangeUser(0.,2.4);
+//   hScaleSpreadDelta->Draw("E3");
+//   hScaleSpreadDelta->Draw("Psame");
+  //hScaleNonClosure->Draw("PE1same");
+  hScale->Draw("PE1");
   //  can->SaveAs();
+
+
+  // Rebin (has do be done properly, this method is crap..)
+  std::vector<int> nCombBins;
+  nCombBins.push_back(5);
+  nCombBins.push_back(6);
+  nCombBins.push_back(5);
+
+  TH1* hScaleComb = util::HistOps::combineBins(hScale,nCombBins,1);
+  TCanvas* can2 = new TCanvas("can2","Tail Scaling Factors",500,500);
+  can2->cd();
+  hScaleComb->Draw("PE1");
   
 }
