@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.2 2010/12/27 16:45:29 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.3 2010/12/27 18:32:14 mschrode Exp $
 
 #include <vector>
 
@@ -91,6 +91,11 @@ public:
 
 
   unsigned int nPt3Bins() const { return pt3Bins_.size(); }
+  unsigned int etaBin() const { return etaBin_; }
+  unsigned int ptBin() const { return ptBin_; }
+
+  double deltaExtra() const { return deltaEx_; }
+  double deltaExtraErr() const { return deltaExErr_; }
   
   void plotAsymmetryDistributions(const TString &outNameId) const;
   void plotExtrapolation(const TString &outNameId) const;
@@ -115,6 +120,8 @@ private:
   TGraphAsymmErrors* gFTailData_;
   TF1* fExMC_;
   TF1* fExData_;
+  double deltaEx_;
+  double deltaExErr_;
 
   std::vector<Pt3Bin*> pt3Bins_;
 
@@ -198,6 +205,57 @@ void getTailScalingFactors() {
     (*it)->extrapolate(minPt3Data);  
     (*it)->plotExtrapolation(id);  
   }
+
+
+
+  // +++++ Scaling factors ++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  std::cout << "Creating scaling factor plots" << std::endl;
+
+  for(unsigned int etaBin = 0; etaBin < nEtaBins; ++etaBin) {
+    std::vector<double> pt;
+    std::vector<double> pte;
+    std::vector<double> delta;
+    std::vector<double> deltae;
+
+    for(std::vector<EtaPtBin*>::const_iterator it = etaPtBins.begin();
+	it != etaPtBins.end(); ++it) {
+      if( (*it)->etaBin() == etaBin ) {
+	pt.push_back(0.5*(binAdm->ptMin(etaBin,(*it)->ptBin())+binAdm->ptMax(etaBin,(*it)->ptBin())));
+	pte.push_back(0.);
+	delta.push_back((*it)->deltaExtra());
+	deltae.push_back((*it)->deltaExtraErr());
+      }
+    }
+    TGraphAsymmErrors* gDelta = new TGraphAsymmErrors(pt.size(),&(pt.front()),&(delta.front()),
+						      &(pte.front()),&(pte.front()),
+						      &(deltae.front()),&(deltae.front()));
+    gDelta->SetMarkerStyle(20);
+
+
+    // Plots
+    TCanvas* can = new TCanvas("can","",500,500);
+
+    TH1* hDelta = new TH1D("hDelta",
+			   ";p^{ave}_{T} (GeV);#delta = f^{Data}_{Asym}(0) - f^{MC}_{Asym}(0)",
+			   1000,binAdm->ptMin(etaBin),binAdm->ptMax(etaBin));
+    hDelta->SetLineColor(kBlack);
+    hDelta->SetLineStyle(2);
+    for(int i = 1; i < hDelta->GetNbinsX(); ++i) {
+      hDelta->SetBinContent(i,0.);
+    }
+    hDelta->GetYaxis()->SetRangeUser(-0.0045,0.013);
+    hDelta->GetXaxis()->SetMoreLogLabels();
+    can->cd();
+    hDelta->Draw();
+    gDelta->Draw("PE1same");
+    can->SetLogx();
+    can->SaveAs(id+"_EtaBin"+util::toTString(etaBin)+"_Delta.eps","eps");
+
+    delete gDelta;
+    delete hDelta;
+    delete can;
+  }
 }
 
 
@@ -233,6 +291,9 @@ EtaPtBin::EtaPtBin(unsigned int etaBin, unsigned int ptBin, double nSigCore, dou
 
   fExData_ = static_cast<TF1*>(fExMC_->Clone("fExData"+binId()));
   fExData_->SetLineStyle(2);
+
+  deltaEx_ = 0.;
+  deltaExErr_ = 0.;
 }
 
 
@@ -372,6 +433,12 @@ void EtaPtBin::extrapolate(double minPt3Data) {
   fExData_->FixParameter(1,fExMC_->GetParameter(1));
   fExData_->FixParameter(2,fExMC_->GetParameter(2));
   gFTailData_->Fit(fExData_,"0QRB");
+
+
+  // Set delta: absolute difference of extrapolated values
+  deltaEx_ = fExData_->GetParameter(0)-fExMC_->GetParameter(0);
+  // Uncertainty from fitted parameters (no fluctuations with fixed window)
+  deltaExErr_ = sqrt( pow(fExData_->GetParError(0),2.) + pow(fExMC_->GetParError(0),2.) );
 }
 
 
