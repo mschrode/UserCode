@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.23 2010/11/11 12:57:04 mschrode Exp $
+// $Id: Parameters.cc,v 1.24 2010/12/02 14:32:16 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -22,11 +22,13 @@ namespace resolutionFit {
       isData_(false) {
 
     // OutNamePrefix
+    systExtra_ = "none";
+    scalePli_ = 1.;
     TString strEtaMin = util::toTString(10.*etaMin);
     TString strEtaMax = util::toTString(10.*etaMax);
     while( strEtaMin.Length() < 2 ) strEtaMin = strEtaMin+"0";
     while( strEtaMin.Length() < 2 ) strEtaMax = strEtaMax+"0";
-    outNamePrefix_ = outNamePrefix+"Eta"+strEtaMin+"-"+strEtaMax+"_";
+    outNamePrefix_ = outNamePrefix;//+"Eta"+strEtaMin+"-"+strEtaMax+"_";
 
     init(ptBinEdges, type);
     print();
@@ -43,7 +45,7 @@ namespace resolutionFit {
     nameMCStat_ = "";
     nameMCClosure_ = "";
 
-    trueResPar_ = std::vector<double>(3,0.);
+    trueResPar_ = std::vector<double>(4,0.);
     rand_ = new TRandom3(0);
     
     fitExtrapolatedSigma_ = false;
@@ -255,8 +257,8 @@ namespace resolutionFit {
   TString Parameters::labelPt3Cut(int pt3Bin) const {
     TString label;
     if( pt3Bins() ) label += util::toTString(pt3Min(pt3Bin))+" < ";
-    if( pt3Var() == Pt3Rel ) label += "p^{rel}_{T,3}";
-    else if( pt3Var() == Pt3Abs ) label += "p_{T,3}";
+    if( pt3Var() == Pt3Rel ) label += "p_{||,3}";
+    else if( pt3Var() == Pt3Abs ) label += "p_{||,3}";
     else if( pt3Var() == Pp3Rel ) label = "p_{||,3}";
     label += " < "+util::toTString(pt3Max(pt3Bin));
     if( pt3Var() == Pt3Abs ) label += " GeV";
@@ -266,7 +268,7 @@ namespace resolutionFit {
 
   
   TString Parameters::labelPtSoftCut() const {
-    TString label = (fitMode()==FitModeMaxLikeFull) ? "p_{||,Soft} < 0.015 <p^{true}_{T}>" : "p_{||,Soft} < 0.015 <p^{ave}_{T}>";
+    TString label = (fitMode()==FitModeMaxLikeFull) ? "p_{T,Soft} < 0.05 <p^{true}_{T}>" : "p_{T,Soft} < 0.05 <p^{ave}_{T}>";
     return label;
   }
 
@@ -331,5 +333,16 @@ namespace resolutionFit {
     std::cout << "Setup:\n";
     std::cout << "  FitMode : " << (fitMode()==FitModeMaxLikeSimple ? "FitModeMaxLikeSimple" : "FitModeMaxLikeFull") << std::endl;
     std::cout << "  BinPt   : " << (binPt()==BinPtGen ? "PtGen" : "PtAve") << std::endl;
+  }
+
+
+  void Parameters::setSystExtrapolation(const TString &extra) {
+    systExtra_ = extra;
+    if( systExtra_ == "low") std::cout << "Systematic variation: extrapolation low" << std::endl;
+    else if( systExtra_ == "high") std::cout << "Systematic variation: extrapolation high" << std::endl;
+    else {
+      std::cout << "ERROR: wrong systamatic variation '" << extra << "'" << std::endl;
+      exit(1);
+    }
   }
 }

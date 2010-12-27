@@ -1,4 +1,4 @@
-// $Id: FileOps.h,v 1.5 2010/12/04 16:18:05 mschrode Exp $
+// $Id: FileOps.h,v 1.6 2010/12/19 22:41:03 mschrode Exp $
 
 #ifndef FileOps_h
 #define FileOps_h
@@ -25,6 +25,7 @@ namespace util
     static TH1* readTH1(const TString &fileName, const TString &histName, const TString &newHistName = "");
     static util::HistVec readTH1(const std::vector<TString> &fileNames, const TString &histName, const TString &newHistName = "");
     static util::HistVec readHistVec(const TString &fileName, const TString &histName, const TString &newHistName = "");
+    static std::vector<TF1*> readTF1Vec(const TString &fileName, const TString &fName, const TString &newFName = "");
   };
 
 
@@ -117,6 +118,32 @@ namespace util
     file.Close();
     
     return f;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  std::vector<TF1*> FileOps::readTF1Vec(const TString &fileName, const TString &fName, const TString &newFName) {
+    std::vector<TF1*> v;
+    TFile file(fileName,"READ");
+    bool binExists = true;
+    unsigned int bin = 0;
+    while( binExists ) {
+      TF1* f = 0;
+      file.GetObject(fName+util::toTString(bin),f);
+      if( f ) {
+	//f->SetDirectory(0);
+	if( newFName.Length() ) f->SetName(newFName+util::toTString(bin));
+	v.push_back(f);
+	++bin;
+      } else {
+	binExists = false;
+      }
+    }
+    file.Close();
+    
+    if( v.size() == 0 ) std::cerr << "WARNING in util::FileOps::readTF1Vec(): No TF1 read!\n";
+    
+    return v;
   }
 }
 #endif

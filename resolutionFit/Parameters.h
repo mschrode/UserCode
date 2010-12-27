@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.22 2010/11/11 12:57:04 mschrode Exp $
+// $Id: Parameters.h,v 1.23 2010/12/02 14:32:16 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -25,7 +25,7 @@ namespace resolutionFit {
   //!
   //! \author Matthias Schroeder
   //! \date 2010/05/15
-  //! $Id: Parameters.h,v 1.22 2010/11/11 12:57:04 mschrode Exp $
+  //! $Id: Parameters.h,v 1.23 2010/12/02 14:32:16 mschrode Exp $
   // --------------------------------------------
   class Parameters {
   public:
@@ -35,6 +35,7 @@ namespace resolutionFit {
 	: ptBinIdx_(ptBinIdx), par_(par) {};
       ~PtBinParameters() {};
 
+      bool isData() const { return par_->isData(); }
       FitMode fitMode() const { return par_->fitMode(); }
       ResponseFunction::Type respFuncType() const { return par_->respFuncType(); }
       int nFittedPars() const { return par_->nFittedPars(); }
@@ -74,6 +75,9 @@ namespace resolutionFit {
       TString fileNameSystUncertUp(int k) const { return par_->fileNameSystUncertUp(k); }
 
       int verbosity() const { return par_->verbosity(); }
+
+      TString systExtrapolation() const { return par_->systExtrapolation(); }
+
       
     private:
       const int ptBinIdx_;
@@ -151,7 +155,7 @@ namespace resolutionFit {
 
     double trueGaussResPar(int i) const { return trueResPar_.at(i); }
     double trueGaussSigma(double pt) const { 
-      return sqrt( trueResPar_[0]*trueResPar_[0]/pt/pt + trueResPar_[1]*trueResPar_[1]/pt + trueResPar_[2]*trueResPar_[2] ); 
+      return 0.;//sqrt( trueResPar_[0]*trueResPar_[0]/pt/pt + trueResPar_[1]*trueResPar_[1]/pt + trueResPar_[2]*trueResPar_[2] ); 
     }
     bool hasMCTruthBins() const { return mcTruthPtBinEdges_.size() > 0 ? true : false; }
     int nMCTruthPtBins() const { return static_cast<int>(mcTruthPtBinEdges_.size())-1; }
@@ -173,6 +177,8 @@ namespace resolutionFit {
     TString styleMode() const { return styleMode_; }
     int verbosity() const { return verbosity_; }
 
+    TString systExtrapolation() const { return systExtra_; }
+    double scalePli() const { return scalePli_; }
 
     void addPt3Threshold(Pt3Var pt3Variable, double pt3RelMax, const TString &fileName, const TString &spectrumName = "");
     void addPt3Bin(Pt3Var pt3Variable, double pt3RelMin, double pt3RelMax, double pt3RelMean, const TString &fileName, const TString &spectrumName = "");
@@ -180,10 +186,11 @@ namespace resolutionFit {
     void addFileNameMCClosure(const TString &name) { nameMCClosure_ = name; }
     void addSystUncert(const TString &label, const TString &fileNameDown, const TString &fileNameUp);
     void addMCTruthBins(int nBins, double min, double max, double relUncert);
-    void setTrueGaussResPar(double a0, double a1, double a2) {
+    void setTrueGaussResPar(double a0, double a1, double a2, double a3) {
       trueResPar_.at(0) = a0;
       trueResPar_.at(1) = a1;
       trueResPar_.at(2) = a2;
+      trueResPar_.at(3) = a3;
     }
     void addStartOffset(double delta) { startResOffset_ = delta; }
     void fitExtrapolatedSigma(bool fit) { fitExtrapolatedSigma_ = fit; }
@@ -193,6 +200,9 @@ namespace resolutionFit {
     void setLumi(double lumi) { lumi_ = lumi; }
     void isData(bool data) { isData_ = data; }
     void extendedLegend(bool ext) { extendedLegend_ = ext; }
+
+    void setSystExtrapolation(const TString &extra);
+    void setSystScalePli(double scale) { scalePli_ = scale; }
 
 
   private:
@@ -207,6 +217,8 @@ namespace resolutionFit {
     TString outNamePrefix_;
     bool isData_;
     double lumi_;
+    TString systExtra_;
+    double scalePli_;
 
     std::vector<double> ptBinEdges_;
     const TString nameStdSel_;

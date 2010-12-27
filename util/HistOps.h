@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.26 2010/12/11 17:32:29 mschrode Exp $
+// $Id: HistOps.h,v 1.27 2010/12/19 22:41:03 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.26 2010/12/11 17:32:29 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.27 2010/12/19 22:41:03 mschrode Exp $
   class HistOps
   {
   public:
@@ -848,6 +848,57 @@ namespace util
     }
 
 
+
+    // -------------------------------------------------------------------------------------
+    static TH1* combineBins(const TH1* hOrig, const std::vector<int> &nCombBins, int startBin) {
+
+      // Edges of combined bins
+      std::vector<double> newBinEdges;
+      newBinEdges.push_back(hOrig->GetXaxis()->GetBinLowEdge(startBin));
+      int bin = startBin-1;
+      for(unsigned int i = 0; i < nCombBins.size(); ++i) {
+	bin += nCombBins.at(i);
+	if( bin > hOrig->GetNbinsX() ) break;
+	newBinEdges.push_back(hOrig->GetXaxis()->GetBinUpEdge(bin));
+      }
+      TString name = hOrig->GetName();
+      TH1* hNew = new TH1D(name+"CombinedBins",hOrig->GetTitle(),newBinEdges.size()-1,&(newBinEdges.front()));
+      hNew->SetXTitle(hOrig->GetXaxis()->GetTitle());
+      hNew->SetYTitle(hOrig->GetYaxis()->GetTitle());
+      hNew->SetMarkerStyle(hOrig->GetMarkerStyle());
+      hNew->SetMarkerColor(hOrig->GetMarkerColor());
+      hNew->SetLineColor(hOrig->GetLineColor());
+
+
+      // Combine bin content using error weighted mean
+      bin = 1;
+      double y = 0.;
+      double ye = 0.;
+      for(int binOrig = startBin; binOrig <= hOrig->GetNbinsX(); ++binOrig) {
+	double yorig = hOrig->GetBinContent(binOrig);
+	double yeorig = hOrig->GetBinError(binOrig);
+
+	if( yeorig ) {
+	  y  += yorig/yeorig/yeorig;
+	  ye += 1./yeorig/yeorig;
+	}
+	
+	if( hOrig->GetXaxis()->GetBinUpEdge(binOrig) == hNew->GetXaxis()->GetBinUpEdge(bin) ) {
+	  hNew->SetBinContent(bin,y/ye);
+	  hNew->SetBinError(bin,1./sqrt(ye));
+
+	  bin++;
+	  y = 0.;
+	  ye = 0.;
+	}
+      }
+
+
+      return hNew;
+    }
+    
+
+    
   private:
     static unsigned int COUNT_;
   };

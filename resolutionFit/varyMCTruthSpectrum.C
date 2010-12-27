@@ -38,7 +38,7 @@ TH1* vary(const TString &outName, const TH1* hOrig, double expo) {
 }
 
 void varyMCTruthSpectrum(const TString &name) {
-  util::StyleSettings::presentationNoTitle();
+  util::StyleSettings::paperNoTitle();
 
   TH1* hSpec = util::FileOps::readTH1(name,"hPtGen","hSpecOrig");
 
@@ -47,13 +47,62 @@ void varyMCTruthSpectrum(const TString &name) {
   TH1* hVarDown = vary(name(0,name.Last('.'))+"_Down.root",hSpec,-0.5);
   hVarDown->SetLineColor(kBlue);
 
-  TCanvas* can = new TCanvas("can","Varied Spectra",500,500);
-  can->cd();
+  TCanvas* can2 = new TCanvas("can2","Varied Spectra",500,500);
+  can2->cd();
   util::HistOps::setAxisTitles(hSpec,"p^{gen}_{T}","GeV","jets",true);
   hSpec->SetTitle("");
   hSpec->GetYaxis()->SetRangeUser(3E-15,1.);
   hSpec->Draw("HIST");
   hVarUp->Draw("HISTsame");  
   hVarDown->Draw("HISTsame");  
+  can2->SetLogy();
+}
+
+
+
+void plotSpectra() {
+  util::StyleSettings::paperNoTitle();
+
+  std::vector<TString> fileNames;
+  fileNames.push_back("~/Kalibri_new/input/Kalibri_DijetSpectrum_Pt0020-1500_Eta00-11.root");
+  fileNames.push_back("~/Kalibri_new/input/Kalibri_DijetSpectrum_Pt0020-1500_Eta11-17.root");
+  fileNames.push_back("~/Kalibri_new/input/Kalibri_DijetSpectrum_Pt0020-1500_Eta17-23.root");
+  fileNames.push_back("~/Kalibri_new/input/Kalibri_DijetSpectrum_Pt0020-1500_Eta23-50.root");
+  util::HistVec hPtGen = util::FileOps::readTH1(fileNames,"hPtGen");
+
+  std::vector<double> etaBins;
+  etaBins.push_back(0.);
+  etaBins.push_back(1.1);
+  etaBins.push_back(1.7);
+  etaBins.push_back(2.3);
+  etaBins.push_back(5.0);
+
+  TLegend* leg = util::LabelFactory::createLegendCol(hPtGen.size(),0.4);
+  for(unsigned int i = 0; i < hPtGen.size(); ++i) {
+    hPtGen[i]->SetTitle("");
+    hPtGen[i]->GetXaxis()->SetRangeUser(20.,1500.);
+    hPtGen[i]->GetXaxis()->SetMoreLogLabels();
+    hPtGen[i]->GetXaxis()->SetTitle("p^{gen}_{T} (GeV)");
+    hPtGen[i]->GetYaxis()->SetRangeUser(3E-14,8.);
+    hPtGen[i]->GetYaxis()->SetTitle("Probability");
+    hPtGen[i]->SetLineWidth(1);
+    hPtGen[i]->SetLineColor(util::StyleSettings::color(i));
+
+    leg->AddEntry(hPtGen[i],util::toTString(etaBins.at(i))+" < |#eta| < "+util::toTString(etaBins.at(i+1)),"L");
+  }
+
+  TPaveText* label = util::LabelFactory::createPaveText(2,-0.55);
+  label->AddText("CMS Simulation, #sqrt{s} = 7 TeV");
+  label->AddText("Anti-k_{T} (d=0.5) Gen Jets");
+
+  TCanvas* can = new TCanvas("can","Dijet Spectrum",500,500);
+  can->cd();
+  hPtGen.back()->Draw("HISTL");
+  for(int i = static_cast<int>(hPtGen.size()-2); i >= 0;  i--) {
+    hPtGen[i]->Draw("HISTLsame");
+  }
+  label->Draw("same");
+  leg->Draw("same");
   can->SetLogy();
+  can->SaveAs("PtGenSpectra.eps","eps");  
 }

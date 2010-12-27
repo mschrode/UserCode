@@ -1,4 +1,4 @@
-// $Id: CutVariation.cc,v 1.22 2010/11/11 12:57:03 mschrode Exp $
+// $Id: CutVariation.cc,v 1.23 2010/12/02 14:32:16 mschrode Exp $
 
 #include "CutVariation.h"
 #include "KalibriFileParser.h"
@@ -31,7 +31,9 @@ namespace resolutionFit {
       varPoints_ = std::vector<VariationPoint*>(nPt3Cuts());
       for(int i = 0; i < nPt3Cuts(); i++) {
 	KalibriFileParser *parser = new KalibriFileParser(par_->fileNamePt3CutVariations(i),par_->ptBinIdx(),par_->verbosity());
-	// Mean pt for all varied cuts (set only once)
+	// Mean pt for all varied cuts
+	// Set only once from lowest ptsoft bin
+	// to have smallest bias
 	if( i == 0 ) {
 	  if( par_->binPt() == BinPtGen ) { 
 	    meanPt_ = parser->meanPtGen();
@@ -39,7 +41,7 @@ namespace resolutionFit {
 	  } else if( par_->binPt() == BinPtAve ) {
 	    if( par_->fitMode() == FitModeMaxLikeFull ) {
 	      meanPt_ = parser->meanPt();
-	      meanPtUncert_ = parser->meanPtAveUncert(); // TODO: User correct uncertainty
+	      meanPtUncert_ = parser->meanPtAveUncert(); // TODO: Use correct uncertainty
 	    } else if( par_->fitMode() == FitModeMaxLikeSimple ) {
 	      meanPt_ = parser->meanPtAve();
 	      meanPtUncert_ = parser->meanPtAveUncert();
@@ -54,12 +56,16 @@ namespace resolutionFit {
 	double fittedValue = parser->value(parIdx());
 	double statUncert = parser->statUncert(parIdx());
 	if( isRelValue() ) {
-	  fittedValue /= meanPt_;
+	  //fittedValue /= meanPt_;
+	  fittedValue /= parser->meanPt();
 	  statUncert /= meanPt_;
 	}
 	statUncert = sqrt( statUncert*statUncert + mcStatUncert_*mcStatUncert_ );
-	Uncertainty *uncert = new Uncertainty("Statistical uncertainty",statUncert);
-
+	Uncertainty *uncert = 0;
+// 	if( par_->isData() ) uncert = new Uncertainty("Statistical uncertainty",statUncert*sqrt(32.));
+// 	else uncert = new Uncertainty("Statistical uncertainty",statUncert);
+	uncert = new Uncertainty("Statistical uncertainty",statUncert);
+	
 	double pt3Val = pt3Max(i);
 	if( pt3Bins() ) pt3Val = pt3Mean(i);
 
@@ -134,11 +140,19 @@ namespace resolutionFit {
     name += par_->ptBinIdx();
     name += "_Par";
     name += parIdx();
-    if( pt3Bins() ) fit_ = new TF1(name,"pol1",pt3Mean(0),pt3Mean(nPt3Cuts()-1));
-    else fit_ = new TF1(name,"pol1",pt3Max(0),pt3Max(nPt3Cuts()-1));
+
+//     if( pt3Bins() ) fit_ = new TF1(name,"pol1",pt3Mean(0),pt3Mean(nPt3Cuts()-1));
+//     else fit_ = new TF1(name,"pol1",pt3Max(0),pt3Max(nPt3Cuts()-1));
+
+    fit_ = new TF1(name,"pol1",pt3Max(0),pt3Max(nPt3Cuts()-1));
     fit_->SetParameter(0,0.);
     fit_->SetParameter(1,0.);
     fit_->SetLineColor(2);
+
+//     fit_ = new TF1(name,"sqrt( sq([0]) + sq([1]*x) )",pt3Max(0),pt3Max(nPt3Cuts()-1));
+//     fit_->SetParameter(0,0.1);
+//     fit_->SetParameter(1,0.01);
+//     fit_->SetLineColor(2);
   }
 
 
@@ -153,11 +167,14 @@ namespace resolutionFit {
   }
 
   TF1 *CutVariation::getTF1(const TString &name) const {
-    TF1 *fit = new TF1(name,"pol1",0.,1.4*pt3Max(nPt3Cuts()-1));
-    for(int i = 0; i < 2; i++) {
-      fit->SetParameter(i,fit_->GetParameter(i));
-      fit->SetParError(i,fit_->GetParError(i));
-    }
+//     TF1 *fit = new TF1(name,"pol1",0.,1.4*pt3Max(nPt3Cuts()-1));
+//     for(int i = 0; i < 2; i++) {
+//       fit->SetParameter(i,fit_->GetParameter(i));
+//       fit->SetParError(i,fit_->GetParError(i));
+//     }
+
+    TF1* fit = static_cast<TF1*>(fit_->Clone(name));
+    fit->SetRange(0.,1.4*pt3Max(nPt3Cuts()-1));
     fit->SetLineColor(2);
     return fit;
   }
@@ -206,15 +223,25 @@ namespace resolutionFit {
     if( par_->verbosity() == 2 ) {
       std::cout << "CutVariation: Fitting extrapolation" << std::endl;
     }
-    if( nPt3Cuts() >= 2 ) {
+    if( nPt3Cuts() >= 3 ) {
       // Fit varied values
       graph_->Fit(fit_,"0Q");
       // Replace extrapolated value with fit results
       delete extrapolatedPoint_;
       Uncertainty *uncert = new Uncertainty("Extrapolation",fit_->GetParError(0));
-      extrapolatedPoint_ = new VariationPoint(fit_->GetParameter(0),uncert,0.,0);
+
+      double val = fit_->GetParameter(0);
+      if( par_->systExtrapolation() == "low" ) {
+ 	double diff = std::abs(fittedValue(0)-val);
+ 	val = val - 0.5*diff;
+      } else if( par_->systExtrapolation() == "high" ) {
+ 	double diff = std::abs(fittedValue(0)-val);
+ 	val = val + 0.5*diff;
+      }
+      extrapolatedPoint_ = new VariationPoint(val,uncert,0.,0);
+
     } else {
-      std::cerr << "  WARNING: Less than 2 cut variations" << std::endl;
+      std::cerr << "  WARNING: Less than 3 cut variations" << std::endl;
     }
   }
 
@@ -256,6 +283,15 @@ namespace resolutionFit {
     fitValue_ = sqrt(2.)*std::abs(fit->GetParameter(2));
     uncert_ = new Uncertainty("Statistical uncertainty",sqrt(2.)*fit->GetParError(2));
     delete fit;
+
+
+//     double rms = hPtAsym_->GetRMS();
+//     std::cout << "Before: " << sqrt(2)*rms << std::endl;
+//     rms *= 2.7;
+//     hPtAsym_->GetXaxis()->SetRangeUser(-rms,rms);
+//     fitValue_ = sqrt(2.)*hPtAsym_->GetRMS();
+//     std::cout << "After: " << fitValue_ << std::endl;
+//     uncert_ = new Uncertainty("Statistical uncertainty",sqrt(2.)*hPtAsym_->GetRMSError());
   }
 
   CutVariation::VariationPoint::VariationPoint()

@@ -1,4 +1,4 @@
-// $Id: plotResponseAndResolution.C,v 1.3 2010/08/09 12:39:42 mschrode Exp $
+// $Id: plotResponseAndResolution.C,v 1.4 2010/08/28 19:35:09 mschrode Exp $
 
 //!  Fit mean response and resolution from
 //!  Kalibri::ControlPlotsJetSmearing
@@ -46,7 +46,7 @@ std::vector<TH1*> readHistograms(const std::vector<TString> &fileNames, const TS
 //     else hists[i]->SetMarkerStyle(24+i/2); 
 
     util::HistOps::setYRange(hists[i],(int)(fileNames.size()+1));
-    hists[i]->GetXaxis()->SetRangeUser(20.,45.);
+    hists[i]->GetXaxis()->SetRangeUser(20.,1500.);
     numHists_++;
   }
   return hists;
@@ -82,13 +82,14 @@ void plotResolution(const std::vector<TString> &fileNames, const std::vector<TSt
   assert( fileNames.size() == labels.size() );
 
   std::vector<TH1*> hReso = readHistograms(fileNames,"MeanResp_hResoGauss","p^{gen}_{T}","GeV","Resolution");
-  TLegend *leg = util::LabelFactory::createLegendCol(fileNames.size(),0.6);
+  //  TLegend *leg = util::LabelFactory::createLegendCol(fileNames.size(),0.6);
+  TLegend *leg = util::LabelFactory::createLegendCol(2,0.4);
   TH1 *hFrame = util::HistOps::createFrame(hReso[0],"Resolution",0.,0.4);
   std::vector<TF1*> fits(hReso.size(),0);
   for(size_t i = 0; i < hReso.size(); ++i) {
     TString name = "Fit";
     name += i;
-    fits[i] = new TF1(name,"sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2])",20.,3500.);
+    fits[i] = new TF1(name,"sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2])",20.,1500.);
 // 		      hReso[i]->GetXaxis()->GetBinLowEdge(1),
 // 		      hReso[i]->GetXaxis()->GetBinUpEdge(hReso[i]->GetNbinsX()));
     fits[i]->SetLineWidth(1);
@@ -98,10 +99,10 @@ void plotResolution(const std::vector<TString> &fileNames, const std::vector<TSt
     fits[i]->SetParameter(2,0.04);
     if( fit ) {
       for(int bin = 1; bin <= hReso[i]->GetNbinsX(); ++bin) {
-	hReso[i]->SetBinError(bin,0.01);
-	if( hReso[i]->GetBinContent(bin) > 0.38 ) hReso[i]->SetBinError(bin,100.);
+  	hReso[i]->SetBinError(bin,0.01);
+  	if( hReso[i]->GetBinContent(bin) > 0.38 ) hReso[i]->SetBinError(bin,100.);
       }
-      hReso[i]->Fit(fits[i],"INQR");
+    hReso[i]->Fit(fits[i],"INQR");
     }
   }
 
@@ -122,15 +123,18 @@ void plotResolution(const std::vector<TString> &fileNames, const std::vector<TSt
 
   TCanvas *can = new TCanvas("canReso","Resolution",500,500);
   can->cd();
+  hFrame->GetXaxis()->SetMoreLogLabels();
   hFrame->Draw();
   for(size_t i = 0; i < hReso.size(); ++i) {
     hReso[i]->Draw("PE1same");
     TString entry = "";
     entry += i;
     entry += ": "+labels[i];
+    entry = labels[i];
     leg->AddEntry(hReso[i],entry,"P");
     if( fit ) fits[i]->Draw("same");
   }
+  leg->AddEntry(fits[0],"Interpolation","L");
   leg->Draw("same");
   can->SetLogx();
   if( outName != "" ) {
@@ -198,22 +202,16 @@ void plotResolutionScale1(const std::vector<TString> &fileNames, const std::vect
 
 
 void plotResponseAndResolution() {
-  util::StyleSettings::presentationNoTitle();
+  util::StyleSettings::paperNoTitle();
   
-  TString base = "~/results/ResolutionFit/Spring10QCDDiJet_Response";
-
   std::vector<TString> fileNames;
   std::vector<TString> labels;
 
-  fileNames.push_back(base+"_Eta00-13.root");
-  labels.push_back("|#eta| < 1.3");
-  fileNames.push_back(base+"_Eta13-30.root");
-  labels.push_back("1.3 < |#eta| < 3");
-  fileNames.push_back(base+"_Eta30-50.root");
-  labels.push_back("3 < |#eta| < 5");
+  fileNames.push_back("input/Fall10QCDFlat_MCTruthReso_PF.root");
+  labels.push_back("|#eta| < 1.1");
 
 
   plotResponse(fileNames,labels);//,"Spring10_QCDDiJet_MeanResp");
-  plotResolution(fileNames,labels,true,"Spring10_QCDDiJet_Resolution_Eta30-50");
+  plotResolution(fileNames,labels,true);//,"Spring10_QCDDiJet_Resolution_Eta30-50");
   //plotResolutionScale1(fileNames,labels);
 }

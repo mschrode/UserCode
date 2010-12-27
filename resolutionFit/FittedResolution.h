@@ -57,6 +57,10 @@ namespace resolutionFit {
       assert( ptBin>=0 && ptBin<nPtBins() );
       return ptBins_[ptBin]->uncertSystUp(parIdx);
     }
+    double fittedValue(int ptBin, int parIdx, int cutIdx) const {
+      assert( ptBin>=0 && ptBin<nPtBins() );
+      return ptBins_[ptBin]->fittedValue(parIdx,cutIdx);
+    }
 
     double extrapolatedAsym(int ptBin) const {
       assert( ptBin>=0 && ptBin<nPtBins() );
@@ -84,6 +88,8 @@ namespace resolutionFit {
     void printLaTeX() const;
     void printPoints() const;
     void createSlides() const;
+    void writeRootOutput() const;
+	
 
   private:
     const Parameters *par_;

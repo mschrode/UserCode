@@ -1,4 +1,4 @@
-// $Id: fitTailsFromAsym.C,v 1.11 2010/12/03 20:54:06 mschrode Exp $
+// $Id: fitTailsFromAsym.C,v 1.12 2010/12/11 21:32:28 mschrode Exp $
 
 #include <cmath>
 #include <fstream>
@@ -88,7 +88,9 @@ Parameters::Parameters(const sampleTools::BinningAdmin* admin, double nSigCore, 
   } else {
     std::cerr << "WARNING in Parameters: unknown or inconsistent jet algorithms for data and MC" << std::endl;
   }
-  outFileNamePrefix_ += "nSCore"+util::toTString(10.*nSigCore_)+"_nSTail"+util::toTString(10.*nSigTailStart_)+"_ptSoft"+util::toTString(100.*pt3Cut_)+"_";
+  outFileNamePrefix_ += "nSCore"+util::toTString(10.*nSigCore_)+"_nSTail"+util::toTString(10.*nSigTailStart_)+"_ptSoft";
+  if( pt3Cut_ < 0.1) outFileNamePrefix_ += "0";
+  outFileNamePrefix_ += util::toTString(1000.*pt3Cut_)+"_";
 
   labelPSoftCut_ = "p^{L2L3}_{T,3} < "+util::toTString(pt3Cut_)+"#upoint#bar{p^{ave}_{T}}";
 
@@ -140,7 +142,7 @@ TPaveText* Label::info(unsigned int etaBin) const {
 
   TPaveText *txt = util::LabelFactory::createPaveText(3,-0.68);
   txt->AddText(par_->labelJetAlgo()+",");
-  txt->AddText(par_->labelDeltaPhiCut()+",  "+par_->labelPSoftCut()+"#upoint#bar{p^{ave}_{T}}");
+  txt->AddText(par_->labelDeltaPhiCut()+",  "+par_->labelPSoftCut());
   txt->AddText(util::toTString(min)+" < p^{ave}_{T} < "+util::toTString(max)+" GeV");
 
   return txt;
@@ -191,6 +193,7 @@ public:
   TH1 *hPtAsymSmeared() const { return hist(hPtAsymSmeared_); }
   TH1 *hTailClean() const { return hist(hTailClean_); }
   double tailCleanStart() const;
+  double tailCleanEnd() const;
   TF1 *fTail() const;
   
   double widthAsym() const { return widthAsym_; }
@@ -201,6 +204,7 @@ public:
   double nTotal() const { return nTotal_; }
   double nTail() const { return nTail_; }
 
+  void getTail(const TF1* fGauss = 0);
   void smearMCAsymmetry(const AsymmetryBin* dataAsymmetryBin);
 
 
@@ -226,7 +230,7 @@ private:
   void fitWidth(const TH1* h, double &width, double &widthErr) const {
     util::HistOps::fitCoreWidth(h,par_->nSigCore(),width,widthErr);
   }
-  void getTail(const TH1* h, const TF1* fGauss = 0, double tailStart = 0);
+  void getTail(const TH1* h, const TF1* fGauss = 0);
   TH1* hist(const TH1* h) const;
   void setStyle(TH1 *h) const;
   void smearAsymmetry(double scaling, const TH1* hOrig, TH1* &hSmeared) const;
@@ -259,7 +263,7 @@ AsymmetryBin::AsymmetryBin(const Parameters* par, int type, unsigned int etaBin,
     util::HistOps::setAxisTitles(hPtAsym_,"Asymmetry","","events",true);      
     hPtAsym_->SetTitle("");
     setStyle(hPtAsym_);
-    nTotal_ = hPtAsym_->GetEntries();
+    nTotal_ = hPtAsym_->GetEntries(); // For real MC statistics!
   } else {
     std::cerr << "ERROR reading histogram '" << histName << "' from file '" << fileName << "'\n";
     exit(1);
@@ -316,6 +320,12 @@ double AsymmetryBin::tailCleanStart() const {
 
 
 // ------------------------------------------------------------------------------------
+double AsymmetryBin::tailCleanEnd() const {
+  return 0.7;
+}
+
+
+// ------------------------------------------------------------------------------------
 TH1* AsymmetryBin::hist(const TH1* h) const {
   ++count_;
   TString name = h->GetName();
@@ -338,13 +348,14 @@ void AsymmetryBin::smearMCAsymmetry(const AsymmetryBin* dataAsymmetryBin) {
 
   // Width ratio data / MC
   double scale = dataAsymmetryBin->widthAsym()/widthAsym() - 1.;
+  scale = 0.041;
 
   // Smearing asymmetry
   smearAsymmetry(scale,hPtAsym_,hPtAsymSmeared_);
   fitWidth(hPtAsymSmeared_,widthAsymSmeared_,widthAsymErrSmeared_);
   
   // Extract tails from smeared asymmetry
-  getTail(hPtAsymSmeared_,dataAsymmetryBin->fTail(),dataAsymmetryBin->tailCleanStart());
+  getTail(hPtAsymSmeared_,dataAsymmetryBin->fTail());
 }
 
 
@@ -357,17 +368,28 @@ void AsymmetryBin::smearAsymmetry(double scaling, const TH1* hOrig, TH1* &hSmear
  
  
 // ------------------------------------------------------------------------------------
-void AsymmetryBin::getTail(const TH1* h, const TF1* fGauss, double tailStart) {
+void AsymmetryBin::getTail(const TF1* fGauss) {
+  if( type() == 0 ) getTail(hPtAsym_,fGauss);
+  else if( type() == 1 ) getTail(hPtAsymSmeared_,fGauss);
+}
+
+
+// ------------------------------------------------------------------------------------
+void AsymmetryBin::getTail(const TH1* h, const TF1* fGauss) {
   double tmpResult = 0.;
 
   if( hTail_ ) delete hTail_;
   if( hTailClean_ ) delete hTailClean_;
   if( fTailFit_ ) delete fTailFit_;
 
-  if( fGauss && tailStart ) {
-    tmpResult = func::getTailFromGauss(h,fGauss,tailStart,par_->nSigCore(),hTail_,hTailClean_,fTailFit_);
+  double nSigTailStart = par_->nSigTailStart();
+  double nSigTailEnd = nSigTailStart + 3.;
+  if( fGauss ) {
+    std::cout << "Using external Gaussian for " << h->GetName() << std::endl;
+    tmpResult = func::getTailFromGauss(h,fGauss,nSigTailStart,nSigTailEnd,par_->nSigCore(),hTail_,hTailClean_,fTailFit_);
   } else {
-    tmpResult = func::getTail(h,par_->nSigCore(),par_->nSigTailStart(),hTail_,hTailClean_,fTailFit_);
+
+    tmpResult = func::getTail(h,par_->nSigCore(),nSigTailStart,nSigTailEnd,hTail_,hTailClean_,fTailFit_);
   }
   if( tmpResult < 0 ) {
     std::cerr << "ERROR in AsymmetryBin::getTail(): Fitting of tail did not work.\n";
@@ -445,6 +467,12 @@ AsymmetryAdmin::AsymmetryAdmin(const Parameters* par, unsigned int etaBin, unsig
   data_ = new AsymmetryBin(par_,0,etaBin,ptBin);
   mc_ = new AsymmetryBin(par_,1,etaBin,ptBin);
   mc_->smearMCAsymmetry(data_);
+
+//   data_->getTail(data_->fTail(),data_->tailCleanStart());
+//   mc_->getTail(data_->fTail(),data_->tailCleanStart());
+
+  data_->getTail(mc_->fTail());
+  mc_->getTail(mc_->fTail());
 
   label_ = new Label(par); 
 }
@@ -840,7 +868,7 @@ void createSlides(const Parameters* par, const std::vector< std::vector<Asymmetr
 
 
 // ------------------------------------------------------------------------------------
-void fitTailsFromAsym() {
+void fitTailsFromAsym(int pt3Bin) {
   
 
   // +++++ Set up parameters +++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -849,8 +877,69 @@ void fitTailsFromAsym() {
   gErrorIgnoreLevel = 1001;
   util::StyleSettings::presentation();
 
-  sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("input/BinningAdminTails.cfg");
-  Parameters* par = new Parameters(binAdm,2.,3.,0.2,"~/results/ResolutionFit/TailScaling/Pt3Cut/LeptonVeto/Tails_LeptonVeto_PF_Data","PtSoft1.root","~/results/ResolutionFit/TailScaling/Pt3Cut/LeptonVeto/Tails_LeptonVeto_PF_MCFall10","PtSoft1.root");
+  double pt3Cut = 0;
+  TString pt3CutStr;
+//   if( pt3Bin == 0 ) {
+//     pt3Cut = 0.05;
+//     pt3CutStr = "PtSoft0.root";
+//   } else if( pt3Bin == 1 ) {
+//     pt3Cut = 0.1;
+//     pt3CutStr = "PtSoft1.root";
+//   } else if( pt3Bin == 2 ) {
+//     pt3Cut = 0.15;
+//     pt3CutStr = "PtSoft2.root";
+//   } else if( pt3Bin == 3 ) {
+//     pt3Cut = 0.2;
+//     pt3CutStr = "PtSoft3.root";
+//   } else if( pt3Bin == 4 ) {
+//     pt3Cut = 0.25;
+//     pt3CutStr = "PtSoft4.root";
+//   } else if( pt3Bin == 5 ) {
+//     pt3Cut = 0.3;
+//     pt3CutStr = "PtSoft5.root";
+//   }
+
+if( pt3Bin == 0 ) {
+pt3Cut = 0.05;
+pt3CutStr = "PtSoft0.root";
+} else if( pt3Bin == 1 ) {
+pt3Cut = 0.075;
+pt3CutStr = "PtSoft1.root";
+} else if( pt3Bin == 2 ) {
+pt3Cut = 0.1;
+pt3CutStr = "PtSoft2.root";
+} else if( pt3Bin == 3 ) {
+pt3Cut = 0.125;
+pt3CutStr = "PtSoft3.root";
+} else if( pt3Bin == 4 ) {
+pt3Cut = 0.15;
+pt3CutStr = "PtSoft4.root";
+} else if( pt3Bin == 5 ) {
+pt3Cut = 0.175;
+pt3CutStr = "PtSoft5.root";
+} else if( pt3Bin == 6 ) {
+pt3Cut = 0.2;
+pt3CutStr = "PtSoft6.root";
+} else if( pt3Bin == 7 ) {
+pt3Cut = 0.225;
+pt3CutStr = "PtSoft7.root";
+} else if( pt3Bin == 8 ) {
+pt3Cut = 0.25;
+pt3CutStr = "PtSoft8.root";
+} else if( pt3Bin == 9 ) {
+pt3Cut = 0.275;
+pt3CutStr = "PtSoft9.root";
+} else if( pt3Bin == 10 ) {
+pt3Cut = 0.3;
+pt3CutStr = "PtSoft10.root";
+}
+
+  sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("input/BinningAdminTailsMC.cfg");
+  Parameters* par=new Parameters(binAdm,2.,3.,pt3Cut,
+				 "~/results/ResolutionFit/TailScaling/Tails_PF_DataFineBins",
+				 pt3CutStr,
+				 "~/results/ResolutionFit/TailScaling/Tails_PF_MCFineBins",
+				 pt3CutStr);
 
   // Global labels
   Label* label = new Label(par);
@@ -1024,29 +1113,40 @@ void fitTailsFromAsym() {
     std::cout << "\n\nNUMBER OF TAILS EVENTS\n";
     int bin = 1;
     int binInt = 1;
-    double nTailIntData = 0.;
-    double nTailIntMC = 0.;
+    double nIntData = 0.;
+    double nIntDataErr = 0.;
+    double nIntMC = 0.;
+    double nIntMCErr = 0.;
     for(AsymPtIt ptIt = asymAdms[etaBin].begin(); ptIt != asymAdms[etaBin].end(); ++ptIt, ++bin) {
-      double nTotal = (*ptIt)->nTotalData();
-      double nTailData = nTotal*(*ptIt)->nTailData();
-      double nTailMC = nTotal*(*ptIt)->nTailMC();
-      
-      hNTailData->SetBinContent(bin,nTailData);
-      hNTailData->SetBinError(bin,sqrt(nTailData));
-      hNTailMC->SetBinContent(bin,nTailMC);
-      hNTailMC->SetBinError(bin,sqrt(nTailMC));
+//       double nTotal = (*ptIt)->nTotalData();
+//       double nTailData = nTotal*(*ptIt)->nTailData();
+//       double nTailMC = nTotal*(*ptIt)->nTailMC();
 
-      nTailIntData += nTailData;
-      nTailIntMC += nTailMC;
+      double nTailData = (*ptIt)->nTailData();
+      double nTailDataErr = sqrt(nTailData/(*ptIt)->nTotalData());
+      double nTailMC = (*ptIt)->nTailMC();
+      double nTailMCErr = sqrt(nTailMC/(*ptIt)->nTotalMC());
+      hNTailData->SetBinContent(bin,nTailData);
+      hNTailData->SetBinError(bin,nTailDataErr);
+      hNTailMC->SetBinContent(bin,nTailMC);
+      hNTailMC->SetBinError(bin,nTailMCErr);
+
+      // Error weighted mean of several bins
+      nIntData += (nTailData/nTailDataErr/nTailDataErr);
+      nIntDataErr += (1./nTailDataErr/nTailDataErr);
+      nIntMC += (nTailMC/nTailMCErr/nTailMCErr);
+      nIntMCErr += (1./nTailMCErr/nTailMCErr);
       if( hNTailMC->GetXaxis()->GetBinUpEdge(bin) == ptBinEdgesInt.at(binInt) ) {
-	hNTailIntData->SetBinContent(binInt,nTailIntData);
-	hNTailIntData->SetBinError(binInt,sqrt(nTailIntData));
-	hNTailIntMC->SetBinContent(binInt,nTailIntMC);
-	hNTailIntMC->SetBinError(binInt,sqrt(nTailIntMC));
+	hNTailIntData->SetBinContent(binInt,nIntData/nIntDataErr);
+	hNTailIntData->SetBinError(binInt,1./sqrt(nIntDataErr));
+	hNTailIntMC->SetBinContent(binInt,nIntMC/nIntMCErr);
+	hNTailIntMC->SetBinError(binInt,1./sqrt(nIntMCErr));
 
 	binInt++;
-	nTailIntData = 0;
-	nTailIntMC = 0;
+	nIntData = 0;
+	nIntDataErr = 0;
+	nIntMC = 0;
+	nIntMCErr = 0;
       }
 
       std::cout << bin-1 << ": \t" << hNTailData->GetBinContent(bin) << " +/- " << hNTailData->GetBinError(bin) << ",  \t" << hNTailMC->GetBinContent(bin) << " +/- " << hNTailMC->GetBinError(bin) << std::endl;
@@ -1056,7 +1156,7 @@ void fitTailsFromAsym() {
     // Plot numbers
     TCanvas *can = new TCanvas("can","Number of tail events",500,500);
     can->cd();
-    hNTailMC->GetYaxis()->SetRangeUser(0,500.);
+    hNTailMC->GetYaxis()->SetRangeUser(0,0.05);
     hNTailMC->Draw("HIST");
     hNTailData->Draw("PE1same");
     labelInfo->Draw("same");
@@ -1069,7 +1169,7 @@ void fitTailsFromAsym() {
     can->SaveAs(par->outFileNamePrefix(etaBin)+"NumTailEvts.eps","eps");
 
     can->cd();
-    hNTailIntMC->GetYaxis()->SetRangeUser(0,500.);
+    hNTailIntMC->GetYaxis()->SetRangeUser(0,0.05);
     hNTailIntMC->Draw("HIST");
     hNTailIntData->Draw("PE1same");
     labelInfo->Draw("same");
@@ -1114,6 +1214,10 @@ void fitTailsFromAsym() {
     // Writ to root file
     outFile.WriteTObject(hScalFac);
     outFile.WriteTObject(hScalFacInt);
+    outFile.WriteTObject(hNTailData);
+    outFile.WriteTObject(hNTailMC);
+    outFile.WriteTObject(hNTailIntData);
+    outFile.WriteTObject(hNTailIntMC);
 
     
     delete labelInfo;

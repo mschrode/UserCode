@@ -81,9 +81,9 @@ void compareDijetAsymmetry(const TString &binCfg = "input/BinningAdmin.cfg") {
 
   util::StyleSettings::presentationNoTitle();
   sampleTools::BinningAdmin admin(binCfg);
-  TString inData = "~/results/ResolutionFit/TailScaling/Pt3Cut/Tails_Calo_Data_Pt3Cut_Eta0_PtSoft1.root";
-  TString inMC = "~/results/ResolutionFit/TailScaling/Pt3Cut/Tails_Calo_MCFall10_Pt3Cut_Eta0_PtSoft1.root";
-  TString outNamePrefix = "PtAsym_Calo_Eta0_Pt3Corr02_";
+  TString inData = "~/results/ResolutionFit/TailScaling/HaukesCuts/NoCleaning/Tails_NoCleaning_PF_Data_Pp3Cut_Eta0_PtSoft0.root";
+  TString inMC = "~/results/ResolutionFit/TailScaling/HaukesCuts/NoCleaning/Tails_NoCleaning_PF_MCFall10_Pp3Cut_Eta0_PtSoft0.root";
+  TString outNamePrefix = "PtAsym_NoCleaning_PF_HaukesCuts_";
   
 
   // Read asymmetry 

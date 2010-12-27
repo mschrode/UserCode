@@ -41,12 +41,56 @@ namespace resolutionFit {
     ptMax_ = 1.1*meanPt(nPtBins()-1);
 
     // MC truth resolution
-    trueRes_ = new TF1("FittedResolution:trueRes",
-		       "sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2])",
-		       ptMin_,ptMax_);
-    for(int i = 0; i < 3; i++) {
+//       trueRes_ = new TF1("FittedResolution:trueRes",
+//   		       "sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2])",
+//   		       ptMin_,ptMax_);
+//       for(int i = 0; i < 3; i++) {
+//         trueRes_->SetParameter(i,par_->trueGaussResPar(i));
+//       }
+
+
+     ////////////// HACK //////////////
+    trueRes_ = new TF1("FittedResolution:trueRes","sqrt(((TMath::Sign(1,[0])*sq([0]/x))+(sq([1])*(x^([3]-1))))+sq([2]))",ptMin_,ptMax_);
+    for(int i = 0; i < 4; i++) {
       trueRes_->SetParameter(i,par_->trueGaussResPar(i));
     }
+
+
+    // PF Eta 0 - 1.1
+//     trueRes_->SetParameter(0,-1.18591);
+//     trueRes_->SetParameter(1,0.40573);
+//     trueRes_->FixParameter(2,0.);
+//     trueRes_->SetParameter(3,0.352069);
+
+// PF Eta 1.1 - 1.7
+//     trueRes_->SetParameter(0,-1.49592);
+//     trueRes_->SetParameter(1,0.627368);
+//     trueRes_->SetParameter(2,0);
+//     trueRes_->SetParameter(3,0.218365);
+
+// // PF eta 1.7 - 2.3
+// trueRes_->SetParameter(0,-1.51996);
+// trueRes_->SetParameter(1,0.766658);
+// trueRes_->SetParameter(2,0);
+// trueRes_->SetParameter(3,0.0228755);
+
+// // PF Eta 2.3 - 5.0
+// trueRes_->SetParameter(0,-0.336561);
+// trueRes_->SetParameter(1,0.572859);
+// trueRes_->SetParameter(2,0);
+// trueRes_->SetParameter(3,0.144683);
+
+
+
+
+//      // Calo 30 - 2000 GeV
+//      trueRes_->SetParameter(0,3.8663);
+//      trueRes_->SetParameter(1,0.728714);
+//      trueRes_->FixParameter(2,0.);
+//      trueRes_->SetParameter(3,0.224013);
+    
+    ///////////////////////
+
     trueRes_->SetLineWidth(lineWidth_);
     trueRes_->SetLineColor(4);
     trueRes_->SetLineStyle(1);
@@ -731,7 +775,6 @@ namespace resolutionFit {
     }
 
 
-
     // ----- Plot relative deviation (sigma(fit)-sigma(true) ) / sigma(true)  -----
 
     // Create ratio graphs with statistical uncertainties
@@ -778,7 +821,7 @@ namespace resolutionFit {
     TCanvas *bRatioTopCan = util::HistOps::createRatioTopCanvas();
     TPad *bRatioBottomPad = util::HistOps::createRatioBottomPad();
     TH1 *bRatioTopFrame = util::HistOps::createRatioTopFrame(h);
-    TH1 *bRatioBottomFrame = util::HistOps::createRatioBottomFrame(h,"p^{ref}_{T}","GeV",0.81,1.19);
+    TH1 *bRatioBottomFrame = util::HistOps::createRatioBottomFrame(h,"p^{ref}_{T}","GeV",0.91,1.29);
     
     // MaxLike
     bRatioTopCan->cd();
@@ -1181,9 +1224,24 @@ namespace resolutionFit {
       // DeltaPt
       TH1 *hDeltaPtJet12 = (*it)->getHistDeltaPtJet12("ControlDistributions:hDeltaPtJet12");
       util::HistOps::setAxisTitles(hDeltaPtJet12,"#frac{1}{2} |p_{T,1} - p_{T,2}|","GeV","events",true);
-      //util::HistOps::setYRange(hDeltaPtJet12,3,3E-5);
-      hDeltaPtJet12->GetYaxis()->SetRangeUser(3E-5,10.);
+      util::HistOps::setYRange(hDeltaPtJet12,3);
+      //hDeltaPtJet12->GetYaxis()->SetRangeUser(3E-5,10.);
       hDeltaPtJet12->SetMarkerStyle(20);
+
+      TF1* pdf = new TF1("pdf","gaus",0.,hDeltaPtJet12->GetXaxis()->GetBinUpEdge(hDeltaPtJet12->GetNbinsX()));
+      pdf->SetLineColor(kRed);
+      TH1 *htmp = (*it)->getHistPtGen("htmp");
+      double sig = (*it)->fittedValue(0,0)*htmp->GetMean();
+      delete htmp;
+      //      double sig = (*it)->fittedValue(0,0)*(*it)->meanPt();
+      double norm = hDeltaPtJet12->Integral("width");
+      pdf->SetParameter(0,2.*norm/sqrt(2.*M_PI)/sig);
+      pdf->SetParameter(1,0.);
+      pdf->SetParameter(2,sig);
+      pdf->SetLineWidth(1);
+      std::cout << "NORM " << norm << ": " << pdf->Integral(0.,1000.) << std::endl;
+
+
       hDeltaPtJet12->Fit("gaus","I0QR","",0.,2.*hDeltaPtJet12->GetRMS());
       TF1 *fit = hDeltaPtJet12->GetFunction("gaus");
       fit->SetRange(0.,hDeltaPtJet12->GetXaxis()->GetBinUpEdge(hDeltaPtJet12->GetNbinsX()));
@@ -1202,12 +1260,13 @@ namespace resolutionFit {
 	lines.push_back(line);
       }
       hDeltaPtJet12->Draw("PE1");
-      fit->Draw("same");
+      //fit->Draw("same");
       for(size_t k = 0; k < lines.size(); ++k) {
-	lines[k]->Draw("same");
+	//lines[k]->Draw("same");
       }
+      pdf->Draw("same");
       label->Draw("same");
-      can->SetLogy(1);
+      //can->SetLogy(1);
       can->SaveAs(par_->outNamePrefix()+"DeltaPtJet12_PtBin"+util::toTString(ptBin)+".eps","eps");
 
 
@@ -1222,6 +1281,7 @@ namespace resolutionFit {
       for(size_t k = 0; k < lines.size(); ++k) {
 	delete lines[k];
       }
+      delete pdf;
       delete label;
       delete can;
     } // End of loop over ptbins
@@ -1655,9 +1715,12 @@ namespace resolutionFit {
       std::cout << bin << ": " << meanPt(bin) << std::flush;
       std::cout << " (" << ptMin(bin) << " - " << ptMax(bin) << "): " << std::flush;
       for(int parIdx = 0; parIdx < par_->nFittedPars(); ++parIdx) {
-	if( parIdx == 0 ) std::cout << extrapolatedValue(bin,parIdx)*meanPt(bin) << "," << std::flush;
-	std::cout << " " << extrapolatedValue(bin,parIdx) << " (" << uncertStat(bin,parIdx) << ")" << std::flush;
-	if( parIdx == 0 ) std::cout << ", " << trueRes_->Eval(meanPt(bin)) << std::flush;
+	if( parIdx == 0 ) {
+	  double val = extrapolatedValue(bin,0);
+	  if( par_->hasCorrPtGenAsym() ) val = sqrt( val*val - ptGenAsym_->Eval(meanPt(bin))*ptGenAsym_->Eval(meanPt(bin)) );
+	  std::cout << val << " (" << uncertStat(bin,parIdx) << ")" << std::flush;
+	  std::cout << ", " << trueRes_->Eval(meanPt(bin)) << std::flush;
+	}
 	if( parIdx < par_->nFittedPars()-1 ) std::cout << " |" << std::flush;
 	else std::cout << std::endl;
       }
@@ -1694,30 +1757,93 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------------------------
   void FittedResolution::printPoints() const {
+    TString x = "ptMC";
+    TString xe = "ptMCErr";
+    TString y = "resMC";
+    TString ye = "resMCErr";
+    if( par_->isData() ) {
+      x = "ptData";
+      xe = "ptDataErr";
+      y = "resData";
+      ye = "resDataErr";
+    }
     std::cout << std::endl;
-//     for(size_t bin = 0; bin < nPtBins(); bin++) {
-//       std::cout << "x.push_back(" << meanPt(bin) << ");" << std::endl;
-//       std::cout << "xe.push_back(" << meanPtUncert(bin) << ");" << std::endl;
-// //       std::cout << "y.push_back(" << extrapolatedValue(bin,0) << ");" << std::endl;
-// //       std::cout << "ye.push_back(" << uncertStat(bin,0) << ");" << std::endl;
+    for(size_t bin = 0; bin < nPtBins(); bin++) {
+      std::cout << x << ".push_back(" << meanPt(bin) << ");" << std::endl;
+      std::cout << xe << ".push_back(" << meanPtUncert(bin) << ");" << std::endl;
+      double val = extrapolatedValue(bin,0);
 
+
+// //       // +/- variation on linearity
+//       double diff = std::abs(fittedValue(bin,0,0)-val);
+//       //val = val - 0.5*diff;
+//       //val = val + 0.5*diff;
+				 
+
+      double pli = 0.;
+      if( par_->hasCorrPtGenAsym() ) pli = ptGenAsym_->Eval(meanPt(bin));
+//       // +/- 0.25 variation on PLI
+//       //pli = 0.75*pli;
+//       //pli = 1.25*pli;
+
+
+
+      val = sqrt( val*val - pli*pli );
+      if( val == val ) {
+	std::cout << y << ".push_back(" << val << ");" << std::endl;
+	std::cout << ye << ".push_back(" << uncertStat(bin,0) << ");" << std::endl;
+      } else {
+	std::cout << y << ".push_back(" << 0 << ");" << std::endl;
+	std::cout << ye << ".push_back(" << 100000. << ");" << std::endl;
+      }
+    } 
+
+//     for(size_t bin = 0; bin < nPtBins(); bin++) {
+//       std::cout << meanPt(bin) << "\t   " << meanPtUncert(bin) << "\t   " << std::flush;
+//       //std::cout << extrapolatedValue(bin,0) << "\t   " << std::flush;
 //       double val = extrapolatedValue(bin,0);
 //       if( par_->hasCorrPtGenAsym() ) val = sqrt( val*val - ptGenAsym_->Eval(meanPt(bin))*ptGenAsym_->Eval(meanPt(bin)) );
-//       std::cout << "y.push_back(" << val << ");" << std::endl;
-//       std::cout << "ye.push_back(" << uncertStat(bin,0) << ");" << std::endl;
+//       std::cout << val << "\t   " << uncertStat(bin,0) << std::endl;
 //     } 
-
-
-    for(size_t bin = 0; bin < nPtBins(); bin++) {
-      std::cout << meanPt(bin) << "\t   " << meanPtUncert(bin) << "\t   " << std::flush;
-      //std::cout << extrapolatedValue(bin,0) << "\t   " << std::flush;
-      double val = extrapolatedValue(bin,0);
-      if( par_->hasCorrPtGenAsym() ) val = sqrt( val*val - ptGenAsym_->Eval(meanPt(bin))*ptGenAsym_->Eval(meanPt(bin)) );
-      std::cout << val << "\t   " << uncertStat(bin,0) << std::endl;
-    } 
   }
 
     
+
+  //! Write resolution to root file (via histograms; how to 
+  //! write a TGraph to file??)
+  // -------------------------------------------------------------------------------------
+  void FittedResolution::writeRootOutput() const {
+    TGraphAsymmErrors *g = getTGraphOfResolution("MaxLike","Statistic",true);
+    TGraphAsymmErrors *gUncorr = getTGraphOfResolution("MaxLike","Statistic");
+    
+    TH1* hPt = new TH1D("hPtMean","",g->GetN(),&(par_->ptBinEdges()->front()));
+    TH1* hRes = new TH1D("hResolution","",g->GetN(),&(par_->ptBinEdges()->front()));
+    TH1* hExt = new TH1D("hExtrapolationResult","",g->GetN(),&(par_->ptBinEdges()->front()));
+    for(int i = 0; i < g->GetN(); ++i) {
+      int bin = 1+i;
+      hPt->SetBinContent(bin,g->GetX()[i]);
+      hPt->SetBinError(bin,g->GetEXhigh()[i]);
+      hRes->SetBinContent(bin,g->GetY()[i]);
+      hRes->SetBinError(bin,g->GetEYhigh()[i]);
+      hExt->SetBinContent(bin,gUncorr->GetY()[i]);
+      hExt->SetBinError(bin,gUncorr->GetEYhigh()[i]);
+    }
+
+
+    TFile file(par_->outNamePrefix()+".root","RECREATE");
+    file.WriteTObject(hPt);
+    file.WriteTObject(hRes);
+    file.WriteTObject(hExt);
+    file.WriteTObject(trueRes_);
+    file.WriteTObject(ptGenAsym_);
+    file.Close();
+
+    delete hPt;
+    delete hRes;
+    delete g;
+  }
+
+
     
   // -------------------------------------------------------------------------------------
   void FittedResolution::createSlides() const {
@@ -1974,7 +2100,10 @@ namespace resolutionFit {
 	x.push_back(ptBins_[i]->meanPt());
 	ex.push_back(ptBins_[i]->meanPtUncert());
 	double val = ptBins_[i]->extrapolatedValue(0);
-	if( corrected ) val = sqrt( val*val - ptGenAsym_->Eval(x[i])*ptGenAsym_->Eval(x[i]) );
+	if( corrected ) {
+	  double pli = par_->scalePli()*ptGenAsym_->Eval(x[i]);
+	  val = sqrt( val*val - pli*pli );
+	}
 	y.push_back(val);
 	eyDown.push_back(ptBins_[i]->uncertStatDown(0));
 	eyUp.push_back(ptBins_[i]->uncertStatUp(0));

@@ -1,10 +1,11 @@
-// $Id: fitMCTruth.C,v 1.4 2010/12/11 21:42:08 mschrode Exp $
+// $Id: fitMCTruth.C,v 1.5 2010/12/19 22:42:25 mschrode Exp $
 
 //!  Fit mean response and resolution from
 //!  Kalibri::ControlPlotsJetSmearing
 
 
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <vector>
 
@@ -207,22 +208,27 @@ void fitMCTruth(const TString &fileName, double nSigCore, double minPt) {
 
   double etaMin = 0.;
   double etaMax = 0.;
+  int etaBin = 0;
   if( fileName.Contains("Eta0") ) {
     outNamePrefix += "_Eta0";
     etaMin = 0.;
     etaMax = 1.1;
+    etaBin = 0;
   } else if( fileName.Contains("Eta1") ) {
     outNamePrefix += "_Eta1";
     etaMin = 1.1;
     etaMax = 1.7;
+    etaBin = 1;
   } else if( fileName.Contains("Eta2") ) {
     outNamePrefix += "_Eta2";
     etaMin = 1.7;
     etaMax = 2.3;
+    etaBin = 2;
   } else if( fileName.Contains("Eta3") ) {
     outNamePrefix += "_Eta3";
     etaMin = 2.3;
     etaMax = 5.;
+    etaBin = 3;
   }
 
   TString jetLabel = "Anti-k_{T} (d=0.5) ";
@@ -249,6 +255,14 @@ void fitMCTruth(const TString &fileName, double nSigCore, double minPt) {
     std::cout << fit->GetParameter(i) << std::flush;
   }
   std::cout << ");" << std::endl;
+
+  std::cout << "\n\n" << etaMin << " -- " << etaMax << " & ";
+  for(int i = 0; i < fit->GetNpar(); ++i) {
+    if( i > 0 ) std::cout << " & " << std::flush;
+    std::cout << std::setprecision(2) << fit->GetParameter(i) << " \\pm " << fit->GetParError(i) << std::flush;
+  }
+  std::cout << "\\\\\n\n";
+
   
   // Plot response and resolution
   TPaveText* label = util::LabelFactory::createPaveText(2);
@@ -300,9 +314,72 @@ void fitMCTruth(const TString &fileName, double nSigCore, double minPt) {
   hSigmaGaussRatio->Draw("PE1same");
   bottomPadRes->SetLogx();
   canRes->SaveAs(outNamePrefix+"_Resolution.eps","eps");
+
+  hSigmaGauss->SetName(("hSigmaGauss_Eta"+util::toTString(etaBin)));
+  fit->SetName(("fit_Eta"+util::toTString(etaBin)));
+
+  TFile outFile("MCTruthResponse_"+jetAlgo+".root","UPDATE");
+  outFile.WriteTObject(hSigmaGauss);
+  outFile.WriteTObject(fit);
+  outFile.Close();
   
   delete label;
   delete legMean;
   delete legRes;
   delete can;
+}
+
+
+void plotMCTruth(const TString &file, const TString &jetAlgo, double minPt) {
+  util::StyleSettings::paperNoTitle();
+
+  util::HistVec hReso = util::FileOps::readHistVec(file,"hSigmaGauss_Eta");
+  std::vector<TF1*> fReso = util::FileOps::readTF1Vec(file,"fit_Eta");
+
+  std::vector<double> etaBins;
+  etaBins.push_back(0.);
+  etaBins.push_back(1.1);
+  etaBins.push_back(1.7);
+  etaBins.push_back(2.3);
+  etaBins.push_back(5.0);
+
+  TLegend* leg = util::LabelFactory::createLegendCol(hReso.size(),0.4);
+  for(unsigned int i = 0; i < hReso.size(); ++i) {
+    hReso[i]->GetXaxis()->SetRange(hReso[i]->FindBin(minPt),hReso[i]->GetNbinsX());
+    hReso[i]->GetXaxis()->SetMoreLogLabels();
+    hReso[i]->GetXaxis()->SetTitle("p^{gen}_{T} (GeV)");
+    hReso[i]->GetYaxis()->SetRangeUser(1E-3,0.38);
+    hReso[i]->GetYaxis()->SetTitle("Resolution");
+    hReso[i]->SetMarkerColor(util::StyleSettings::color(i));
+    hReso[i]->SetLineColor(util::StyleSettings::color(i));
+    fReso[i]->SetLineColor(util::StyleSettings::color(i));
+    fReso[i]->SetLineWidth(1);
+    
+    if( i < etaBins.size() ) {
+      leg->AddEntry(hReso[i],util::toTString(etaBins.at(i))+" < |#eta| < "+util::toTString(etaBins.at(i+1)));
+    }
+  }
+
+  TString jetLabel = "Anti-k_{T} (d=0.5) ";
+  if( jetAlgo == "Calo" ) jetLabel += "Calo Jets";
+  else if( jetAlgo == "PF" ) jetLabel += "PF Jets";
+
+  TPaveText* label = util::LabelFactory::createPaveText(2,-0.55);
+  label->AddText("CMS Simulation, #sqrt{s} = 7 TeV");
+  label->AddText(jetLabel);
+
+
+  TCanvas* can = new TCanvas("can","MC Truth Resolution",500,500);
+  can->cd();
+  hReso[0]->Draw("PE1");
+  for(unsigned int i = 1; i < hReso.size(); ++i) {
+    hReso[i]->Draw("PE1same");
+  }
+  for(unsigned int i = 0; i < fReso.size(); ++i) {
+    fReso[i]->Draw("same");
+  }
+  label->Draw("same");
+  leg->Draw("same");
+  can->SetLogx();
+  can->SaveAs("MCTruthReso_"+jetAlgo+".eps","eps");  
 }
