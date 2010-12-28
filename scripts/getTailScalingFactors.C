@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.4 2010/12/27 19:01:09 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.5 2010/12/28 19:16:31 mschrode Exp $
 
 #include <vector>
 
@@ -249,74 +249,78 @@ void getTailScalingFactors() {
   std::cout << "Creating scaling factor plots" << std::endl;
 
   for(unsigned int etaBin = 0; etaBin < nEtaBins; ++etaBin) {
-    std::vector<double> pt;
-    std::vector<double> pte;
-    std::vector<double> delta;
-    std::vector<double> deltae;
-    std::vector<double> scaling;
-    std::vector<double> scalinge;
+
+    TH1* hDelta = new TH1D("hDelta_Eta"+util::toTString(etaBin),
+			   ";p^{ave}_{T} (GeV);#delta = f^{Data}_{Asym}(0) - f^{MC}_{Asym}(0)",
+			   binAdm->nPtBins(etaBin),&(binAdm->ptBinEdges(etaBin).front()));
+    hDelta->SetMarkerStyle(20);
+
+    TH1* hScale = new TH1D("hScale_Eta"+util::toTString(etaBin),
+			   ";p^{ave}_{T} (GeV);Scaling Factor",
+			   binAdm->nPtBins(etaBin),&(binAdm->ptBinEdges(etaBin).front()));
+    hScale->SetMarkerStyle(20);
 
     for(std::vector<EtaPtBin*>::const_iterator it = etaPtBins.begin();
 	it != etaPtBins.end(); ++it) {
       if( (*it)->etaBin() == etaBin ) {
-	pt.push_back(0.5*(binAdm->ptMin(etaBin,(*it)->ptBin())+binAdm->ptMax(etaBin,(*it)->ptBin())));
-	pte.push_back(0.);
-	delta.push_back((*it)->deltaExtra());
-	deltae.push_back((*it)->deltaExtraErr());
-	scaling.push_back((*it)->scalingFactor());
-	scalinge.push_back((*it)->scalingFactorErr());
+	int bin = (*it)->ptBin();
+	hDelta->SetBinContent(bin,(*it)->deltaExtra());
+	hDelta->SetBinError(bin,(*it)->deltaExtraErr());
+	hScale->SetBinContent(bin,(*it)->scalingFactor());
+	hScale->SetBinError(bin,(*it)->scalingFactorErr());
       }
     }
-    TGraphAsymmErrors* gDelta = new TGraphAsymmErrors(pt.size(),&(pt.front()),&(delta.front()),
-						      &(pte.front()),&(pte.front()),
-						      &(deltae.front()),&(deltae.front()));
-    gDelta->SetMarkerStyle(20);
-
-    TGraphAsymmErrors* gScaling = new TGraphAsymmErrors(pt.size(),&(pt.front()),&(scaling.front()),
-							&(pte.front()),&(pte.front()),
-							&(scalinge.front()),&(scalinge.front()));
-    gScaling->SetMarkerStyle(20);
 
 
     // Plots
     TCanvas* can = new TCanvas("can","",500,500);
 
-    TH1* hDelta = new TH1D("hDelta",
-			   ";p^{ave}_{T} (GeV);#delta = f^{Data}_{Asym}(0) - f^{MC}_{Asym}(0)",
-			   1000,binAdm->ptMin(etaBin),binAdm->ptMax(etaBin));
-    hDelta->SetLineColor(kBlack);
-    hDelta->SetLineStyle(2);
-    for(int i = 1; i < hDelta->GetNbinsX(); ++i) {
-      hDelta->SetBinContent(i,0.);
+    TH1* hDeltaFrame = static_cast<TH1D*>(hDelta->Clone("hDeltaFrame_Eta"+util::toTString(etaBin)));
+    hDeltaFrame->SetLineColor(kBlack);
+    hDeltaFrame->SetLineStyle(2);
+    hDeltaFrame->SetMarkerStyle(1);
+    for(int i = 1; i < hDeltaFrame->GetNbinsX(); ++i) {
+      hDeltaFrame->SetBinContent(i,0.);
+      hDeltaFrame->SetBinError(i,0.);
     }
-    hDelta->GetYaxis()->SetRangeUser(-0.0045,0.013);
-    hDelta->GetXaxis()->SetMoreLogLabels();
+    hDeltaFrame->GetYaxis()->SetRangeUser(-0.0045,0.013);
+    hDeltaFrame->GetXaxis()->SetMoreLogLabels();
     can->cd();
-    hDelta->Draw();
-    gDelta->Draw("PE1same");
+    hDeltaFrame->Draw("HIST");
+    hDelta->Draw("PE1same");
     can->SetLogx();
     can->SaveAs(id+"_EtaBin"+util::toTString(etaBin)+"_Delta.eps","eps");
 
-    TH1* hScale = new TH1D("hScale",
-			   ";p^{ave}_{T} (GeV);Scaling Factor",
-			   1000,binAdm->ptMin(etaBin),binAdm->ptMax(etaBin));
-    hScale->SetLineColor(kBlack);
-    hScale->SetLineStyle(2);
-    for(int i = 1; i < hScale->GetNbinsX(); ++i) {
-      hScale->SetBinContent(i,1.);
+    TH1* hScaleFrame = static_cast<TH1D*>(hScale->Clone("hScaleFrame_Eta"+util::toTString(etaBin)));
+    hScaleFrame->SetLineColor(kBlack);
+    hScaleFrame->SetLineStyle(2);
+    hScaleFrame->SetMarkerStyle(1);
+    for(int i = 1; i < hScaleFrame->GetNbinsX(); ++i) {
+      hScaleFrame->SetBinContent(i,1.);
+      hScaleFrame->SetBinError(i,1.);
     }
-    hScale->GetYaxis()->SetRangeUser(0.69,2.49);
-    hScale->GetXaxis()->SetMoreLogLabels();
+    hScaleFrame->GetYaxis()->SetRangeUser(0.69,2.49);
+    hScaleFrame->GetXaxis()->SetMoreLogLabels();
     can->cd();
-    hScale->Draw();
-    gScaling->Draw("PE1same");
+    hScaleFrame->Draw("HIST");
+    hScale->Draw("PE1same");
     can->SetLogx();
     can->SaveAs(id+"_EtaBin"+util::toTString(etaBin)+"_ScalingFactors.eps","eps");
 
-    delete gDelta;
+
+    // To ROOT file
+    TString fileMode = "UPDATE";
+    if( etaBin == 0 ) fileMode == "RECREATE";
+    TFile outFile(id+".root",fileMode);
+    outFile.WriteTObject(hDelta);
+    outFile.WriteTObject(hScale);    
+    outFile.Close();
+    
+
     delete hDelta;
     delete hScale;
-    delete gScaling;
+    delete hDeltaFrame;
+    delete hScaleFrame;
     delete can;
   }
 }
