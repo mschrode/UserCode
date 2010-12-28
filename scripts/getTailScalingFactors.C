@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.5 2010/12/28 19:16:31 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.6 2010/12/28 22:08:29 mschrode Exp $
 
 #include <vector>
 
@@ -251,7 +251,7 @@ void getTailScalingFactors() {
   for(unsigned int etaBin = 0; etaBin < nEtaBins; ++etaBin) {
 
     TH1* hDelta = new TH1D("hDelta_Eta"+util::toTString(etaBin),
-			   ";p^{ave}_{T} (GeV);#delta = f^{Data}_{Asym}(0) - f^{MC}_{Asym}(0)",
+			   ";p^{ave}_{T} (GeV);#Delta = #LTf^{Data}_{Asym}(0) - f^{MC}_{Asym}(0)#GT",
 			   binAdm->nPtBins(etaBin),&(binAdm->ptBinEdges(etaBin).front()));
     hDelta->SetMarkerStyle(20);
 
@@ -279,7 +279,7 @@ void getTailScalingFactors() {
     hDeltaFrame->SetLineColor(kBlack);
     hDeltaFrame->SetLineStyle(2);
     hDeltaFrame->SetMarkerStyle(1);
-    for(int i = 1; i < hDeltaFrame->GetNbinsX(); ++i) {
+    for(int i = 1; i <= hDeltaFrame->GetNbinsX(); ++i) {
       hDeltaFrame->SetBinContent(i,0.);
       hDeltaFrame->SetBinError(i,0.);
     }
@@ -295,7 +295,7 @@ void getTailScalingFactors() {
     hScaleFrame->SetLineColor(kBlack);
     hScaleFrame->SetLineStyle(2);
     hScaleFrame->SetMarkerStyle(1);
-    for(int i = 1; i < hScaleFrame->GetNbinsX(); ++i) {
+    for(int i = 1; i <= hScaleFrame->GetNbinsX(); ++i) {
       hScaleFrame->SetBinContent(i,1.);
       hScaleFrame->SetBinError(i,1.);
     }
@@ -313,7 +313,9 @@ void getTailScalingFactors() {
     if( etaBin == 0 ) fileMode == "RECREATE";
     TFile outFile(id+".root",fileMode);
     outFile.WriteTObject(hDelta);
+    outFile.WriteTObject(hDeltaFrame);
     outFile.WriteTObject(hScale);    
+    outFile.WriteTObject(hScaleFrame);   
     outFile.Close();
     
 
@@ -1014,4 +1016,29 @@ void setStyleMC(TGraphAsymmErrors* g) {
   g->SetMarkerStyle(25);
   g->SetMarkerColor(kBlue);
   g->SetLineColor(kBlue);
+}
+
+
+
+void plotFinalResult() {
+  sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("input/BinningAdminTailsMC.cfg");  
+
+  std::vector<EtaPtBin*> etaPtBins;
+  unsigned int nEtaBins = 1;//binAdm->nEtaBins();
+  for(unsigned int etaBin = 0; etaBin < nEtaBins; ++etaBin) {
+
+    // Read nominal delta
+    TString histName = "hDeltaFrame_Eta"+util::toTString(etaBin);
+    TH1* hDeltaFrame = util::FileOps::readTH1("Test.root",histName,histName);
+    histName = "hDelta_Eta"+util::toTString(etaBin);
+    TH1* hDeltaNom = util::FileOps::readTH1("Test.root",histName,histName+"_Nominal");
+    
+    TCanvas* canDelta = new TCanvas("canDelta","Delta",500,500);
+    canDelta->cd();
+    hDeltaFrame->Draw("HIST");
+    hDeltaNom->Draw("PE1same");
+    canDelta->SetLogx();
+  }
+
+  delete binAdm;
 }
