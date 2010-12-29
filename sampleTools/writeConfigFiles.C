@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: writeConfigFiles.C,v 1.1 2010/11/28 13:50:17 mschrode Exp $
 
 #include <iostream>
 #include <fstream>
@@ -19,7 +19,7 @@
 //! written. The relevant steering parameters (e.g.
 //! cuts on pt) are adjusted to the current bin but
 //! other parameters are taken from the skeleton.
-void writeConfigFiles(const TString &binningConfig, const TString &skeleton, const TString ntuplePrefix, const TString &outFilePrefix) {
+void writeConfigFiles(const TString &binningConfig, const TString &skeleton, const TString ntuplePrefix, const TString &outFilePrefix, bool isMC) {
 
   sampleTools::BinningAdmin binAdmin(binningConfig);
   binAdmin.printBinning();
@@ -66,6 +66,10 @@ void writeConfigFiles(const TString &binningConfig, const TString &skeleton, con
 		outFile << tag << " = " << binAdmin.ptSoftMax(ptSoftBin) << std::endl;
 	      else if( tag == "Di-Jet input file" ) 
 		outFile << tag << " = " << (ntuplePrefix+"_Eta"+util::toTString(etaBin)+"_Pt"+util::toTString(ptBin)+".root") << std::endl;
+	      else if( tag == "Di-Jet weight relative to ntuple weight" ) {
+		if( isMC ) outFile << tag << " = " << binAdmin.hltLumi(etaBin,ptBin) << std::endl;
+		else outFile << tag << " = 1." << std::endl;
+	      }
 	      else if( tag == "create plots" )
 		outFile << tag << " = true" << std::endl;
 	      else if( tag == "plots save as eps" )
