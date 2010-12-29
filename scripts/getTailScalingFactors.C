@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.8 2010/12/29 16:11:50 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.9 2010/12/29 19:31:51 mschrode Exp $
 
 #include <vector>
 
@@ -392,7 +392,8 @@ EtaPtBin::EtaPtBin(unsigned int etaBin, unsigned int ptBin, double nSigCore, dou
   gFTailSpreadData_  = new TGraphAsymmErrors(0);
   gFTailMCTruthNonGauss_ = new TGraphAsymmErrors(0);
 
-  fExMC_ = new TF1("fExMC"+binId(),"[0] + sq([1])*x + [2]*sq(x) + [3]*sq(x*x)",exMin_,exMax_);
+  //  fExMC_ = new TF1("fExMC"+binId(),"[0] + sq([1])*x + [2]*sq(x) + [3]*sq(x*x)",exMin_,exMax_);
+  fExMC_ = new TF1("fExMC"+binId(),"[0] + sq([1])*x + [2]*sq(x) + [3]*x*x*x",exMin_,exMax_);
   fExMC_->SetParameter(0,0.005);
   fExMC_->SetParameter(1,0.);
   fExMC_->SetParameter(2,0.05);
@@ -1185,46 +1186,77 @@ TGraphAsymmErrors* totalUncertainty(const std::vector<TGraphAsymmErrors*> &uncer
 }
 
 
+TGraphAsymmErrors* uncertaintyBand(const TH1* hNom, const TGraphAsymmErrors* gRelUncert) {
+  TGraphAsymmErrors* g = static_cast<TGraphAsymmErrors*>(gRelUncert->Clone());
+  for(int i = 0; i < g->GetN(); ++i) {
+    double y = hNom->GetBinContent(1+i);
+    g->SetPoint(i,g->GetX()[i],y);
+    double eu = (g->GetEYhigh()[i])*y;
+    double ed = (g->GetEYlow()[i])*y;
+    g->SetPointError(i,g->GetEXlow()[i],g->GetEXhigh()[i],ed,eu);
+  }
+
+  return g;
+}
+  
+
+
 void plotFinalResult() {
+  util::StyleSettings::paper();
   sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("input/BinningAdminTailsMC.cfg");  
 
-  TString fileNamePrefix = "Tail_PF";
+  TString fileNamePrefix = "Tail";
+  TString outNamePrefix = "TailScalingFactors_PF";
 
   std::vector<EtaPtBin*> etaPtBins;
-  unsigned int nEtaBins = 1;//binAdm->nEtaBins();
+  unsigned int nEtaBins = binAdm->nEtaBins();
   for(unsigned int etaBin = 0; etaBin < nEtaBins; ++etaBin) {
 
     // Read nominal scaling factors
     TString histName = "hScaleFrame_Eta"+util::toTString(etaBin);
-    TH1* hScaleFrame = util::FileOps::readTH1(fileNamePrefix+".root",histName,histName);
+    TH1* hScaleFrame = util::FileOps::readTH1(fileNamePrefix+"_PF.root",histName,histName);
     histName = "hScale_Eta"+util::toTString(etaBin);
-    TH1* hScaleNom = util::FileOps::readTH1(fileNamePrefix+".root",histName,histName+"_Nominal");
+    TH1* hScaleNom = util::FileOps::readTH1(fileNamePrefix+"_PF.root",histName,histName+"_Nominal");
 
     // Variations
     std::vector<TGraphAsymmErrors*> uncerts;
-    TH1* hScaleVarExtra = util::FileOps::readTH1(fileNamePrefix+"_VarExtrapolation.root",histName,histName+"_VarExtrapolation");
-    uncerts.push_back(relUncertainty(hScaleNom,14,0.5,hScaleVarExtra));
-    TH1* hScaleVarClosure = util::FileOps::readTH1(fileNamePrefix+"_VarClosure.root",histName,histName+"_VarClosure");
-    uncerts.push_back(relUncertainty(hScaleNom,5,0.5,hScaleVarClosure));
+    TH1* hScaleVarClosure = util::FileOps::readTH1(fileNamePrefix+"VarClosure_PF.root",histName,histName+"_VarClosure");
+    uncerts.push_back(relUncertainty(hScaleNom,14,0.5,hScaleVarClosure));
+    TH1* hScaleVarExtra = util::FileOps::readTH1(fileNamePrefix+"VarExtrapolation_PF.root",histName,histName+"_VarExtrapolation");
+    uncerts.push_back(relUncertainty(hScaleNom,5,0.5,hScaleVarExtra));
 
     TGraphAsymmErrors* gTotal = totalUncertainty(uncerts,38);
+    TGraphAsymmErrors* gAbs = uncertaintyBand(hScaleNom,gTotal);
 
     // Plot scaling factors and total uncertainty    
+    hScaleFrame->GetYaxis()->SetRangeUser(0.01,2.99);
     TCanvas* canScale = new TCanvas("canScale"+util::toTString(etaBin),"Scaling Factors Eta "+util::toTString(etaBin),500,500);
     canScale->cd();
     hScaleFrame->Draw("HIST");
-    gTotal->Draw("E2same");
+    gAbs->Draw("E2same");
+    hScaleFrame->Draw("HISTsame");
     hScaleNom->Draw("PE1same");
     canScale->SetLogx();
+    canScale->SaveAs(outNamePrefix+"_Eta"+util::toTString(etaBin)+".eps","eps");
 
 
     // Plot relative uncertainties
-
-//     TCanvas* canScale = new TCanvas("canScale"+util::toTString(etaBin),"Scaling Factors Eta "+util::toTString(etaBin),500,500);
-//     canScale->cd();
-//     hScaleFrame->Draw("HIST");
-//     hScaleNom->Draw("PE1same");
-//     canScale->SetLogx();
+    TH1* hUncertsFrame = static_cast<TH1D*>(hScaleFrame->Clone("hUncertsFrame"+util::toTString(etaBin)));
+    for(int bin = 1; bin <= hUncertsFrame->GetNbinsX(); ++bin) {
+      hUncertsFrame->SetBinContent(bin,0.);
+    }
+    hUncertsFrame->GetYaxis()->SetRangeUser(-0.99,1.49);
+    hUncertsFrame->GetYaxis()->SetTitle("Relative Uncertainties");
+    TCanvas* canRelUncerts = new TCanvas("canRelUncerts"+util::toTString(etaBin),"Relative Uncertainties Eta "+util::toTString(etaBin),500,500);
+    canRelUncerts->cd();
+    hUncertsFrame->Draw("HIST");
+    gTotal->Draw("E2same");
+    for(unsigned int i = 0; i < uncerts.size(); ++i) {
+      uncerts.at(i)->Draw("E2same");
+    }
+    hUncertsFrame->Draw("HISTsame");
+    canRelUncerts->SetLogx();
+    canRelUncerts->SaveAs(outNamePrefix+"Uncertainties_Eta"+util::toTString(etaBin)+".eps","eps");
   }
 
   delete binAdm;
