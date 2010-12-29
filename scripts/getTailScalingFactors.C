@@ -1,8 +1,7 @@
-// $Id: getTailScalingFactors.C,v 1.9 2010/12/29 19:31:51 mschrode Exp $
-
-#include <vector>
+// $Id: getTailScalingFactors.C,v 1.10 2010/12/29 21:05:42 mschrode Exp $
 
 #include <cmath>
+#include <iomanip>
 #include <iostream>
 #include <vector>
 
@@ -1203,9 +1202,11 @@ TGraphAsymmErrors* uncertaintyBand(const TH1* hNom, const TGraphAsymmErrors* gRe
 
 void plotFinalResult() {
   util::StyleSettings::paper();
-  sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("input/BinningAdminTailsMC.cfg");  
+  gErrorIgnoreLevel = 1001;
 
-  TString fileNamePrefix = "Tail";
+  sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("../sampleTools/BinningAdminTailsRebinned.cfg");  
+
+  TString fileNamePrefix = "results/Tail";
   TString outNamePrefix = "TailScalingFactors_PF";
 
   std::vector<EtaPtBin*> etaPtBins;
@@ -1257,6 +1258,26 @@ void plotFinalResult() {
     hUncertsFrame->Draw("HISTsame");
     canRelUncerts->SetLogx();
     canRelUncerts->SaveAs(outNamePrefix+"Uncertainties_Eta"+util::toTString(etaBin)+".eps","eps");
+
+
+    // Print factors with total uncertainty (stat + syst)
+    if( etaBin == 0 ) {
+      std::cout << "\\hline\n";
+      std::cout << "\\eta & \\ptave & Factor & Uncertainty down & Uncertainty up \\\\\n";
+      std::cout << "\\hline\n";
+    }
+    for(int bin = 1; bin <= hScaleNom->GetNbinsX(); ++bin) {
+      std::cout << std::setprecision(1) << util::toTString(binAdm->etaMin(etaBin)) << " -- " << util::toTString(binAdm->etaMax(etaBin)) << " & ";
+      std::cout << std::setprecision(0) << util::toTString(binAdm->ptMin(etaBin,bin-1)) << " -- " << util::toTString(binAdm->ptMax(etaBin,bin-1)) << " & ";
+      std::cout << std::setprecision(4) << hScaleNom->GetBinContent(bin) << " & ";
+      double estat = hScaleNom->GetBinError(bin);
+      double esystd = gAbs->GetEYlow()[bin-1];
+      double esystu = gAbs->GetEYhigh()[bin-1];
+      std::cout << sqrt( estat*estat + esystd*esystd ) << " & ";
+      std::cout << sqrt( estat*estat + esystu*esystu ) << " \\\\\n";
+    }    
+    std::cout << "\\hline\n";
+    
   }
 
   delete binAdm;
