@@ -391,8 +391,8 @@ TGraphAsymmErrors* getBiasCorrectedMeasurement(const TGraphAsymmErrors* gMeas, c
 // ------------------------------------------------------------------------------
 void plotResults() {
 
-  const int etaBin = 0;
-  const TString jetAlgo = "Calo";
+  const int etaBin = 3;
+  const TString jetAlgo = "PF";
   const TString dir = "results";
   const double xMin = 40.;
   const double xMax = 1100.;
@@ -554,13 +554,13 @@ void plotResults() {
   //  tCanData->SaveAs(outNamePrefix+"ClosureData.eps","eps");
 
 
-  // print bias
-  std::cout << "\n\n";
-  std::cout << " BIAS\n";
-  for(int i = 0; i < gMC->GetN(); ++i) {
-    std::cout << "bias.push_back(" << gMC->GetY()[i] - fMCTruth->Eval(gMC->GetX()[i]) << ");\n";
-  }
-  std::cout << "\n\n";
+//   // print bias
+//   std::cout << "\n\n";
+//   std::cout << " BIAS\n";
+//   for(int i = 0; i < gMC->GetN(); ++i) {
+//     std::cout << "bias.push_back(" << gMC->GetY()[i] - fMCTruth->Eval(gMC->GetX()[i]) << ");\n";
+//   }
+//   std::cout << "\n\n";
 
 
   // +++++ Data / MC ratios +++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -781,9 +781,63 @@ void plotResults() {
   tCanScaledMCTruthBiasCorr->SaveAs(outNamePrefix+"ClosureScaledMCTruthBiasCorr.eps","eps");
 
 
+
+  // +++++ Ratio output +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
   std::cout << "\n\nFITTED RATIO\n\n";
   std::cout << std::setprecision(2) << etaMin << " -- " << etaMax << " & " << fDataMCRatio->GetParameter(0) << " \\pm " << fDataMCRatio->GetParError(0) << " \\\\\n";
   std::cout << "\n\n";
+
+
+  SystematicUncertainty* uncertRatioOutputJES = 0;
+  std::vector<SystematicUncertainty*> uncertsRatioOutputOther;
+  for(unsigned int i = 0; i < uncerts.size(); ++i) {
+    if( uncerts.at(i)->label() != labelUncertBias ) {
+      if( uncerts.at(i)->label() == "JEC" ) {
+	uncertRatioOutputJES = uncerts.at(i);
+      } else {
+	std::cout << "Adding uncert to ratio output: " << uncerts.at(i)->label() << std::endl;
+	uncertsRatioOutputOther.push_back(uncerts.at(i));
+      }
+    }
+  }
+  SystematicUncertainty* totalRatioOutput = new SystematicUncertainty("Total",uncertsRatioOutputOther,38);
+  std::cout << std::setprecision(5) << std::flush;
+  std::cout << "\n\n#Eta " << etaMin << " -- " << etaMax << std::endl;
+  std::cout << "MeanPt:" << std::flush;
+  for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
+    std::cout << "  " << gDataMCRatio->GetX()[i] << std::flush;
+  }
+  std::cout << "\nMeanPtError:" << std::flush;
+  for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
+    std::cout << "  " << gDataMCRatio->GetEXhigh()[i] << std::flush;
+  }
+  std::cout << "\nRatio:" << std::flush;
+  for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
+    std::cout << "  " << gDataMCRatio->GetY()[i] << std::flush;
+  }
+  std::cout << "\nRatioError:" << std::flush;
+  for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
+    std::cout << "  " << gDataMCRatio->GetEYhigh()[i] << std::flush;
+  }
+  std::cout << "\nSystJESUp:" << std::flush;
+  for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
+    std::cout << "  " << gDataMCRatio->GetY()[i]*uncertRatioOutputJES->relUp(i) << std::flush;
+  }
+  std::cout << "\nSystJESDown:" << std::flush;
+  for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
+    std::cout << "  " << gDataMCRatio->GetY()[i]*uncertRatioOutputJES->relDown(i) << std::flush;
+  }
+  std::cout << "\nSystOtherUp:" << std::flush;
+  for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
+    std::cout << "  " << gDataMCRatio->GetY()[i]*totalRatioOutput->relUp(i) << std::flush;
+  }
+  std::cout << "\nSystOtherDown:" << std::flush;
+  for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
+    std::cout << "  " << gDataMCRatio->GetY()[i]*totalRatioOutput->relDown(i) << std::flush;
+  }
+  std::cout << std::endl;
+
 
 
   // +++++ Data / MC ratio combined Photon-Jet result +++++++++++++++++++++++++++
