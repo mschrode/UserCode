@@ -5,17 +5,15 @@
 #include "TF1.h"
 #include "TString.h"
 
-namespace func {
-  bool fitCoreWidth(const TH1* hist, double nSig, double &width, double &widthErr);
-  bool fitCoreWidth(const TH1* hist, double nSig, double &width, double &widthErr, double &rms, double &rmsErr);
-  bool fitCoreWidth(const TH1* hist, double nSig, TF1* &gauss, double &width, double &widthErr);
-  bool fitCoreWidth(const TH1* hist, double nSig, TF1* &gauss, double &width, double &widthErr, double &rms, double &rmsErr);
-  double gaussInt(double mean, double sigma, double min, double max);
-  double getTail(const TH1* hAsym, double nSigCore, double nSigTailStart, TH1* &hTail, TH1* &hTailClean, TF1* &gauss);
-  double getTailCut(const TH1* hAsym, double cut, TH1* &hTail, TH1* &hTailClean);
-  double getTailFromGauss(const TH1* hAsym, const TF1* extGauss, double tailStart, double nSig, TH1* &hTail, TH1* &hTailClean, TF1* &gauss);
-  void smearHistogram(const TH1* hOrig, TH1* &hSmeared, double nTotal, double width, double scaling);
+#include "../util/HistOps.h"
 
+
+namespace func {
+  double gaussInt(double mean, double sigma, double min, double max);
+  double getTail(const TH1* hAsym, double nSigCore, double nSigTailStart, double nSigTailEnd, TH1* &hTail, TH1* &hTailClean, TF1* &gauss);
+  double getTailCut(const TH1* hAsym, double cut, TH1* &hTail, TH1* &hTailClean);
+  double getTailFromGauss(const TH1* hAsym, const TF1* extGauss, double nSigTailStart, double nSigTailEnd, double nSig, TH1* &hTail, TH1* &hTailClean, TF1* &gauss);
+  void smearHistogram(const TH1* hOrig, TH1* &hSmeared, double nTotal, double width, double scaling);
 
 
   // --------------------------------------------------
@@ -25,69 +23,7 @@ namespace func {
 
 
   // --------------------------------------------------
-  bool fitCoreWidth(const TH1* hist, double nSig, double &width, double &widthErr) {
-    double rms = 0.;
-    double rmsErr = 0.;
-    bool result = fitCoreWidth(hist,nSig,width,widthErr,rms,rmsErr);
-    return result;
-  }
-
-
-  // --------------------------------------------------
-  bool fitCoreWidth(const TH1* hist, double nSig, double &width, double &widthErr, double &rms, double &rmsErr) {
-    TF1* dummy = 0;
-    bool result = fitCoreWidth(hist,nSig,dummy,width,widthErr,rms,rmsErr);
-    delete dummy;
-    return result;
-  }
-
-
-  // --------------------------------------------------
-  bool fitCoreWidth(const TH1* hist, double nSig, TF1* &gauss, double &width, double &widthErr) {
-    double rms = 0.;
-    double rmsErr = 0.;
-    bool result = fitCoreWidth(hist,nSig,gauss,width,widthErr,rms,rmsErr);
-    return result;
-  }
-
-
-  // --------------------------------------------------
-  bool fitCoreWidth(const TH1* hist, double nSig, TF1* &gauss, double &width, double &widthErr, double &rms, double &rmsErr) {
-    bool result  = false;
-
-    TString name = hist->GetName();
-    name += "_GaussFit";
-    gauss = new TF1(name,"gaus",hist->GetXaxis()->GetBinLowEdge(1),hist->GetXaxis()->GetBinUpEdge(hist->GetNbinsX()));
-    gauss->SetLineWidth(1);
-    gauss->SetLineColor(kRed);
-
-    TH1* h = static_cast<TH1*>(hist->Clone("func::fitCoreWidth::h"));
-   
-    double mean = h->GetMean();
-    rms = h->GetRMS();
-    rmsErr = h->GetRMSError();
-    double sig = 1.8*rms;
-    if( h->Fit(gauss,"0QIR","",mean-sig,mean+sig) == 0 ) {
-      mean = gauss->GetParameter(1);
-      sig = nSig*gauss->GetParameter(2);
-      if( h->Fit(gauss,"0QIR","",mean-sig,mean+sig) == 0 ) {
-	result = true;
-	width = gauss->GetParameter(2);
-	widthErr = gauss->GetParError(2);
-      }
-    } else {
-      std::cerr << "WARNING in func::fitCoreWidth: No convergence when fitting width of '" << h->GetName() << "'\n";
-      width = 0.;
-      widthErr = 10000.;
-    }
-    delete h;
-
-    return result;
-  }
-
-
-  // --------------------------------------------------
-  double getTail(const TH1* hAsym, double nSigCore, double nSigTailStart, TH1* &hTail, TH1* &hTailClean, TF1* &gauss) {
+  double getTail(const TH1* hAsym, double nSigCore, double nSigTailStart, double nSigTailEnd, TH1* &hTail, TH1* &hTailClean, TF1* &gauss) {
     double numTail = -1.;
   
     TString name = hAsym->GetName();
@@ -103,9 +39,12 @@ namespace func {
 
     double width = 0.;
     double widthErr = 1000.;
-    if( fitCoreWidth(hAsym,nSigCore,gauss,width,widthErr) ) {
-      int optLeftTailStartBin = hTail->FindBin(-1.*std::abs(nSigTailStart*width));
-      int optRightTailStartBin = hTail->FindBin(std::abs(nSigTailStart*width));
+    if( util::HistOps::fitCoreWidth(hAsym,nSigCore,gauss,width,widthErr) ) {
+      double mean = gauss->GetParameter(1);
+      int optLeftTailStartBin = hTail->FindBin(mean-1.*std::abs(nSigTailStart*width));
+      int optLeftTailEndBin = hTail->FindBin(mean-1.*std::abs(nSigTailEnd*width));
+      int optRightTailStartBin = hTail->FindBin(mean+std::abs(nSigTailStart*width));
+      int optRightTailEndBin = hTail->FindBin(mean+std::abs(nSigTailEnd*width));
       for(int bin = 1; bin <= hTail->GetNbinsX(); ++bin) {
 	double min = hTail->GetXaxis()->GetBinLowEdge(bin);
 	double max = hTail->GetXaxis()->GetBinUpEdge(bin);
@@ -113,13 +52,13 @@ namespace func {
 	double tailPdf = hTail->GetBinContent(bin) - gaussPdf;
 	if( tailPdf < 0. ) tailPdf = 0.;
 	hTail->SetBinContent(bin,tailPdf);
-	
-	if( bin <= optLeftTailStartBin || bin >= optRightTailStartBin ) {
+	if( (bin >= optLeftTailEndBin && bin <= optLeftTailStartBin) ||
+	    (bin >= optRightTailStartBin && bin <= optRightTailEndBin ) ) {
 	  hTailClean->SetBinContent(bin,hTail->GetBinContent(bin));
 	  hTailClean->SetBinError(bin,hTail->GetBinError(bin));
 	}
       }
-      numTail = hTailClean->Integral("width");
+      numTail = hTailClean->Integral("width");  // Assumes normalized (area) distrbutions i.e. pdfs
     }
 
     return numTail;
@@ -127,7 +66,7 @@ namespace func {
 
 
   // --------------------------------------------------
-  double getTailFromGauss(const TH1* hAsym, const TF1* extGauss, double tailStart, double nSig, TH1* &hTail, TH1* &hTailClean, TF1* &gauss) {
+  double getTailFromGauss(const TH1* hAsym, const TF1* extGauss, double nSigTailStart, double nSigTailEnd, double nSig, TH1* &hTail, TH1* &hTailClean, TF1* &gauss) {
     double numTail = -1.;
   
     TString name = hAsym->GetName();
@@ -144,12 +83,16 @@ namespace func {
     // Fit Gaussian
     double width = 0.;
     double widthErr = 1000.;
-    fitCoreWidth(hAsym,nSig,gauss,width,widthErr);
+    util::HistOps::fitCoreWidth(hAsym,nSig,gauss,width,widthErr);
 
     // Extract tail using external Gaussian and tail start
     TF1 *extGaussTmp = static_cast<TF1*>(extGauss->Clone("func::getTailFromGauss::extGaussTmp"));
-    int optLeftTailStartBin = hTail->FindBin(-1.*std::abs(tailStart));
-    int optRightTailStartBin = hTail->FindBin(std::abs(tailStart));
+    double mean = extGaussTmp->GetParameter(1);
+    width = extGaussTmp->GetParameter(2);
+    int optLeftTailStartBin = hTail->FindBin(mean-1.*std::abs(nSigTailStart*width));
+    int optLeftTailEndBin = hTail->FindBin(mean-1.*std::abs(nSigTailEnd*width));
+    int optRightTailStartBin = hTail->FindBin(mean+std::abs(nSigTailStart*width));
+    int optRightTailEndBin = hTail->FindBin(mean+std::abs(nSigTailEnd*width));
     for(int bin = 1; bin <= hTail->GetNbinsX(); ++bin) {
       double min = hTail->GetXaxis()->GetBinLowEdge(bin);
       double max = hTail->GetXaxis()->GetBinUpEdge(bin);
@@ -157,12 +100,12 @@ namespace func {
       double tailPdf = hTail->GetBinContent(bin) - gaussPdf;
       if( tailPdf < 0. ) tailPdf = 0.;
       hTail->SetBinContent(bin,tailPdf);
-	
-      if( bin <= optLeftTailStartBin || bin >= optRightTailStartBin ) {
+      if( (bin >= optLeftTailEndBin && bin <= optLeftTailStartBin) ||
+	  (bin >= optRightTailStartBin && bin <= optRightTailEndBin ) ) {
 	hTailClean->SetBinContent(bin,hTail->GetBinContent(bin));
 	hTailClean->SetBinError(bin,hTail->GetBinError(bin));
       }
-      numTail = hTailClean->Integral("width");
+      numTail = hTailClean->Integral("width");  // Assumes normalized (area) distrbutions i.e. pdfs
     }
     delete extGaussTmp;
   
@@ -209,15 +152,10 @@ namespace func {
     TString name = hOrig->GetName();
     name += "Smeared";
     hSmeared = static_cast<TH1D*>(hOrig->Clone(name));
-    if( scaling > 0. ) {
+    scaling += 1.;
+    if( scaling > 1. ) {
+      scaling = sqrt( scaling*scaling - 1. )*width;
       hSmeared->Reset();
-      
-      scaling += 1.;
-      if( scaling > 1. ) {
-	scaling = sqrt( scaling*scaling - 1. )*width;
-      } else {
-	std::cerr << "WARNING in func::smearHistogram(): scaling = " << scaling << std::endl;
-      }
       for(int bin = 1; bin <= hOrig->GetNbinsX(); ++bin) {
 	double entries = hOrig->GetBinContent(bin);
 	if( entries ) {
@@ -234,9 +172,8 @@ namespace func {
 	hSmeared->SetBinError(bin,sqrt(hSmeared->GetBinContent(bin)/nTotal));
       }
     } else {
-      std::cout << "func::smearHistogram(): smear factor = " << scaling << " for '" << hOrig->GetName() << "'" << std::endl;
+      std::cerr << "WARNING in func::smearHistogram(): scaling = " << scaling << std::endl;
     }
   }
-
 }
 #endif
