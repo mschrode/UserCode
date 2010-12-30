@@ -1,4 +1,4 @@
-// $Id: BinningAdmin.h,v 1.3 2010/11/28 13:49:13 mschrode Exp $
+// $Id: BinningAdmin.h,v 1.4 2010/11/28 22:48:26 mschrode Exp $
 
 #ifndef BINNING_ADMIN_H
 #define BINNING_ADMIN_H
@@ -18,65 +18,66 @@ namespace sampleTools {
   // -------------------------------------------------------------------------------------
   class BinningAdmin {
   public:
-    BinningAdmin();
-    BinningAdmin(const TString &fileName);
-    ~BinningAdmin();
+    inline BinningAdmin();
+    inline BinningAdmin(const TString &fileName);
+    inline ~BinningAdmin();
 
-    unsigned int nEtaBins() const { return bins_->nEtaBins(); }
-    unsigned int nPtBins(unsigned int etaBin) const { return bins_->nPtBins(etaBin); }
-    unsigned int nPtSoftBins() const { return ptSoftMin_.size(); }
-    double etaMin(unsigned int etaBin) const { return bins_->etaMin(etaBin); }
-    double etaMax(unsigned int etaBin) const { return bins_->etaMax(etaBin); }
-    double ptMin(unsigned int etaBin, unsigned int ptBin) const { return bins_->ptMin(etaBin,ptBin); }
-    double ptMax(unsigned int etaBin, unsigned int ptBin) const { return bins_->ptMax(etaBin,ptBin); }
-    double ptMin(unsigned int etaBin) const { return bins_->ptMin(etaBin); }
-    double ptMax(unsigned int etaBin) const { return bins_->ptMax(etaBin); }
-    const std::vector<double> ptBinEdges(unsigned int etaBin) const { return bins_->ptBinEdges(etaBin); }
-    const std::vector<double> ptBinEdgesInt(unsigned int etaBin) const { return bins_->ptBinEdgesInt(etaBin);}
-    double ptSoftMin(unsigned int ptSoftBin) const { return ptSoftMin_.at(ptSoftBin); }
-    double ptSoftMax(unsigned int ptSoftBin) const { return ptSoftMax_.at(ptSoftBin); }
+    inline unsigned int nEtaBins() const { return bins_->nEtaBins(); }
+    inline unsigned int nPtBins(unsigned int etaBin) const { return bins_->nPtBins(etaBin); }
+    inline unsigned int nPtSoftBins() const { return ptSoftMin_.size(); }
+    inline double etaMin(unsigned int etaBin) const { return bins_->etaMin(etaBin); }
+    inline double etaMax(unsigned int etaBin) const { return bins_->etaMax(etaBin); }
+    inline double ptMin(unsigned int etaBin, unsigned int ptBin) const { return bins_->ptMin(etaBin,ptBin); }
+    inline double ptMax(unsigned int etaBin, unsigned int ptBin) const { return bins_->ptMax(etaBin,ptBin); }
+    inline double ptMin(unsigned int etaBin) const { return bins_->ptMin(etaBin); }
+    inline double ptMax(unsigned int etaBin) const { return bins_->ptMax(etaBin); }
+    inline const std::vector<double> ptBinEdges(unsigned int etaBin) const { return bins_->ptBinEdges(etaBin); }
+    inline const std::vector<double> ptBinEdgesInt(unsigned int etaBin) const { return bins_->ptBinEdgesInt(etaBin);}
+    inline double ptSoftMin(unsigned int ptSoftBin) const { return ptSoftMin_.at(ptSoftBin); }
+    inline double ptSoftMax(unsigned int ptSoftBin) const { return ptSoftMax_.at(ptSoftBin); }
     
-    bool findEtaBin(double eta, unsigned int &etaBin) const { return bins_->findEtaBin(eta,etaBin); }
-    bool findSameEtaBin(double eta1, double eta2, unsigned int &etaBin) const {
+    inline bool findEtaBin(double eta, unsigned int &etaBin) const { return bins_->findEtaBin(eta,etaBin); }
+    inline bool findSameEtaBin(double eta1, double eta2, unsigned int &etaBin) const {
       return bins_->findSameEtaBin(eta1, eta2, etaBin);
     }
-    bool findPtBin(double pt, unsigned int etaBin, unsigned int &ptBin) const {
+    inline bool findPtBin(double pt, unsigned int etaBin, unsigned int &ptBin) const {
       return bins_->findPtBin(pt,etaBin,ptBin);
     }
-    bool findEtaPtBins(double eta, double pt, unsigned int &etaBin, unsigned int &ptBin) const {
+    inline bool findEtaPtBins(double eta, double pt, unsigned int &etaBin, unsigned int &ptBin) const {
       return bins_->findEtaPtBins(eta,pt,etaBin,ptBin);
     }
-    unsigned int nPtBins(const TString &hltName, unsigned int etaBin) const;
-    bool findPtBin(const TString &hltName, double pt, unsigned int etaBin, unsigned int &ptBin) const;
-    bool findHltMax(unsigned int etaBin, unsigned int ptBin, TString &hltName) const;
+    inline unsigned int nPtBins(const TString &hltName, unsigned int etaBin) const;
+    inline bool findPtBin(const TString &hltName, double pt, unsigned int etaBin, unsigned int &ptBin) const;
+    inline bool findHltMax(unsigned int etaBin, unsigned int ptBin, TString &hltName) const;
     
-    void printBinning() const { bins_->print(); }
+    inline void printBinning() const { bins_->print(); }
+    inline void printPtSoftBins() const;
 
-    double hltTurnOn(const TString &hltName) const {
+    inline double hltTurnOn(const TString &hltName) const {
       HltInfoIt it = hltInfos_.find(hltName);
       return it != hltInfos_.end() ? it->second->turnOn() : 0.;
     }
-    double hltLumi(const TString &hltName) const {
+    inline double hltLumi(const TString &hltName) const {
       HltInfoIt it = hltInfos_.find(hltName);
       return it != hltInfos_.end() ? it->second->lumi() : 0.;
     }
-    double hltLumi(unsigned int etaBin, unsigned int ptBin) const {
+    inline double hltLumi(unsigned int etaBin, unsigned int ptBin) const {
       TString hltName;
       findHltMax(etaBin,ptBin,hltName);
       return hltLumi(hltName);
     }
-    unsigned int hltMinPtBin(const TString &hltName, unsigned int etaBin) const {
+    inline unsigned int hltMinPtBin(const TString &hltName, unsigned int etaBin) const {
       HltInfoIt it = hltInfos_.find(hltName);
       return it != hltInfos_.end() ? it->second->minPtBin(etaBin) : 0;
     }
-    unsigned int hltMaxPtBin(const TString &hltName, unsigned int etaBin) const {
+    inline unsigned int hltMaxPtBin(const TString &hltName, unsigned int etaBin) const {
       HltInfoIt it = hltInfos_.find(hltName);
       return it != hltInfos_.end() ? it->second->maxPtBin(etaBin) : nPtBins(etaBin)-1;
     }
-    TString triggerName(double thres) const;
+    inline TString triggerName(double thres) const;
 
-    void print() const;
-    void print(const TString &hlt) const;
+    inline void print() const;
+    inline void print(const TString &hlt) const;
     
     
 
@@ -84,10 +85,10 @@ namespace sampleTools {
 
     class PtBinRange {
     public: 
-      PtBinRange(unsigned int minPtBin, unsigned int maxPtBin) : minPtBin_(minPtBin), maxPtBin_(maxPtBin) {};
+      inline PtBinRange(unsigned int minPtBin, unsigned int maxPtBin) : minPtBin_(minPtBin), maxPtBin_(maxPtBin) {};
 
-      unsigned int minPtBin() const { return minPtBin_; }
-      unsigned int maxPtBin() const { return maxPtBin_; }
+      inline unsigned int minPtBin() const { return minPtBin_; }
+      inline unsigned int maxPtBin() const { return maxPtBin_; }
 
     private:
       const unsigned int minPtBin_;
@@ -97,8 +98,8 @@ namespace sampleTools {
 
     class HltMaxInfo {
     public:
-      HltMaxInfo(double turnOn, double lumi) : turnOn_(turnOn), lumi_(lumi) {};
-      ~HltMaxInfo() {
+      inline HltMaxInfo(double turnOn, double lumi) : turnOn_(turnOn), lumi_(lumi) {};
+      inline ~HltMaxInfo() {
 	for(std::map<unsigned int,PtBinRange*>::iterator it = etaPtBins_.begin();
 	    it != etaPtBins_.end(); ++it) {
 	  delete it->second;
@@ -106,10 +107,10 @@ namespace sampleTools {
 	etaPtBins_.clear();
       }
 
-      void addEtaPtBinRange(unsigned int etaBin, unsigned int minPtBin, unsigned int maxPtBin) {
+      inline void addEtaPtBinRange(unsigned int etaBin, unsigned int minPtBin, unsigned int maxPtBin) {
 	etaPtBins_[etaBin] = new PtBinRange(minPtBin,maxPtBin);
       }
-      void setPtMaxBin(unsigned int etaBin, unsigned int maxPtBin) {
+      inline void setPtMaxBin(unsigned int etaBin, unsigned int maxPtBin) {
 	std::map<unsigned int,PtBinRange*>::iterator it = etaPtBins_.find(etaBin);
 	if( it != etaPtBins_.end() ) {
 	  PtBinRange* range = it->second;
@@ -118,13 +119,13 @@ namespace sampleTools {
 	}
       }
 
-      double turnOn() const { return turnOn_; }
-      double lumi() const { return lumi_; }
-      unsigned int minPtBin(unsigned int etaBin) const {
+      inline double turnOn() const { return turnOn_; }
+      inline double lumi() const { return lumi_; }
+      inline unsigned int minPtBin(unsigned int etaBin) const {
 	EtaPtBinIt it = etaPtBins_.find(etaBin);
 	return  it != etaPtBins_.end() ? it->second->minPtBin() : 1000;
       }
-      unsigned int maxPtBin(unsigned int etaBin) const {
+      inline unsigned int maxPtBin(unsigned int etaBin) const {
 	EtaPtBinIt it = etaPtBins_.find(etaBin);
 	return  it != etaPtBins_.end() ? it->second->maxPtBin() : 1000;
       }
@@ -203,8 +204,8 @@ namespace sampleTools {
     } // End of loop over trigger names
 
     // PtSoft binning:
-    ptSoftMax_ = parser.readDoubleVec("PtSoft max"); 
-    ptSoftMin_ = parser.readDoubleVec("PtSoft min"); 
+    ptSoftMin_ = parser.readDoubleVec("Min ptSoft"); 
+    ptSoftMax_ = parser.readDoubleVec("Max ptSoft"); 
     if( ptSoftMin_.size() != ptSoftMax_.size() ) {
       if( ptSoftMin_.size() == 0 ) {
 	for(unsigned int i = 0; i < ptSoftMax_.size(); ++i) {
@@ -288,6 +289,19 @@ namespace sampleTools {
 
 
   // -------------------------------------------------------------------------------------
+  void BinningAdmin::printPtSoftBins() const {
+    for(unsigned int i = 0; i < nPtSoftBins(); ++i) {
+      if( i == 0 ) std::cout << "if" << std::flush;
+      else std::cout << "} else if" << std::flush;
+      std::cout << "( pt3Bin == " << i << " ) {" << std::endl;
+      std::cout << "pt3Cut = " << ptSoftMax(i) << ";" << std::endl;
+      std::cout << "pt3CutStr = \"PtSoft" << i << ".root\";" << std::endl;
+    }
+    std::cout << "}" << std::endl;
+  }
+
+
+  // -------------------------------------------------------------------------------------
   void BinningAdmin::print(const TString &hlt) const {
     if( hltInfos_.find(hlt) != hltInfos_.end() ) {
       std::cout << "\nBinning for " << hlt << ":" << std::endl;
@@ -305,7 +319,9 @@ namespace sampleTools {
   // -------------------------------------------------------------------------------------
   TString BinningAdmin::triggerName(double thres) const {
     TString hlt;
-    if( thres == 50 ) hlt = "HLT_DiJetAve50U";
+    if( thres == 15 ) hlt = "HLT_DiJetAve15U";
+    else if( thres == 30 ) hlt = "HLT_DiJetAve30U";
+    else if( thres == 50 ) hlt = "HLT_DiJetAve50U";
     else if( thres == 70 ) hlt = "HLT_DiJetAve70U";
     else if( thres == 100 ) hlt = "HLT_DiJetAve100U";
     else if( thres == 140 ) hlt = "HLT_DiJetAve140U";
