@@ -1,10 +1,11 @@
-// $Id: getTailScalingFactors.C,v 1.10 2010/12/29 21:05:42 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.11 2010/12/29 22:01:30 mschrode Exp $
 
 #include <cmath>
 #include <iomanip>
 #include <iostream>
 #include <vector>
 
+#include "TBox.h"
 #include "TCanvas.h"
 #include "TError.h"
 #include "TF1.h"
@@ -26,6 +27,10 @@
 
 
 
+const double gBINLABEL_WIDTH = -0.48;
+const double gLEG_WIDTH = 0.48;
+
+
 ///////////////////////// TYPE DEFINITIONS /////////////////////////////////////////////////
 
 
@@ -38,8 +43,8 @@ void setStyleMC(TGraphAsymmErrors* g);
 // ------------------------------------------------------------------------------------
 class Pt3Bin {
 public:
-  Pt3Bin(const TString &fileNameData, const TString &fileNameMC, unsigned int etaBin, unsigned int ptBin, unsigned int pt3Bin, double pt3Thres, double nSigCore, double coreScalingFactor, double tailWindowDataMin, double tailWindowDataMax, double tailWindowMCMin, double tailWindowMCMax);
-  Pt3Bin(const TString &fileName, unsigned int etaBin, unsigned int ptBin, double nSigCore, double coreScalingFactor, double tailWindowMin, double tailWindowMax);
+  Pt3Bin(const TString &fileNameData, const TString &fileNameMC, unsigned int etaBin, unsigned int ptBin, unsigned int pt3Bin, double pt3Thres, double nSigCore, double coreScalingFactor, double tailWindowDataMin, double tailWindowDataMax, double tailWindowMCMin, double tailWindowMCMax, const sampleTools::BinningAdmin* adm, const TString &jetLabel);
+  Pt3Bin(const TString &fileName, unsigned int etaBin, unsigned int ptBin, double nSigCore, double coreScalingFactor, double tailWindowMin, double tailWindowMax, const sampleTools::BinningAdmin* adm, const TString &jetLabel);
   ~Pt3Bin();
 
   double pt3Thres() const { return pt3Thres_; }
@@ -54,9 +59,9 @@ public:
   double fTailMCSmearedNonGauss() const { return fNMCSmearedNonGauss_; }
   double fTailMCSmearedNonGaussErr() const { return fNMCSmearedNonGaussErr_; }
 
-  void plotAsymmetryDataMC(const TString &outNameId, const TPaveText* label) const;
-  void plotAsymmetryDataMCSmeared(const TString &outNameId, const TPaveText* label) const;
-  void plotMCTruthResponse(const TString &outNameId, const TPaveText* label) const;
+  void plotAsymmetryDataMC(const TString &outNameIdw) const;
+  void plotAsymmetryDataMCSmeared(const TString &outNameId) const;
+  void plotMCTruthResponse(const TString &outNameId) const;
 
 
 private:
@@ -85,9 +90,12 @@ private:
   TH1* hResp_;
   TF1* fGaussMCTruth_;
 
+  TPaveText* binLabel_;
+
   TH1* readHist(const TString &fileName, const TString &id) const;  
   TH1* readMCTruthResponse(const TString &fileName, const TString &id) const;
   void init(double nSigCore, double coreScalingFactor, double tailWindowDataMin, double tailWindowDataMax, double tailWindowMCMin, double tailWindowMCMax);
+  void initBinLabel(const sampleTools::BinningAdmin* adm, const TString &jetLabel, bool isMCTruth = false);
   void getFTail(const TH1* h, double entries, int start, int end, double &fTail, double &fTailErr) const;
 };
 
@@ -96,7 +104,7 @@ private:
 // ------------------------------------------------------------------------------------
 class EtaPtBin {
 public:
-  EtaPtBin(unsigned int etaBin, unsigned int ptBin, double nSigCore, double coreScalingFactor);
+  EtaPtBin(unsigned int etaBin, unsigned int ptBin, double nSigCore, double coreScalingFactor,const sampleTools::BinningAdmin* adm, const TString &jetLabel);
   ~EtaPtBin();
 
 
@@ -113,9 +121,9 @@ public:
   double scalingFactor() const { return scalingFactor_; }
   double scalingFactorErr() const { return scalingFactorErr_; }
   
-  void plotAsymmetryDistributions(const TString &outNameId, const TPaveText* label) const;
-  void plotExtrapolation(const TString &outNameId, const TPaveText* labelData, const TPaveText* labelMC) const;
-  void plotMCTruthResponse(const TString &outNameId, const TPaveText* label) const;
+  void plotAsymmetryDistributions(const TString &outNameId) const;
+  void plotExtrapolation(const TString &outNameId) const;
+  void plotMCTruthResponse(const TString &outNameId) const;
 
   bool hasMCTruthResponse() const { return hasMCTruthResponse_; }
 
@@ -132,6 +140,8 @@ private:
   const double coreScalingFactor_;
   const double exMin_;
   const double exMax_;
+  const sampleTools::BinningAdmin* binAdm_;
+  const TString jetLabel_;
 
   double tailWindowDataMin_;
   double tailWindowDataMax_;
@@ -157,6 +167,8 @@ private:
   std::vector<Pt3Bin*> pt3Bins_;
   Pt3Bin* mcTruthResponse_;
   bool hasMCTruthResponse_;
+
+  TPaveText* binLabel_;
 
   TString binId() const { return "_EtaBin"+util::toTString(etaBin_)+"_PtBin"+util::toTString(ptBin_); }
   TString binId(unsigned int pt3BinIdx) const { return binId()+"_Pt3Bin"+util::toTString(pt3BinIdx)+"_"; }
@@ -188,17 +200,14 @@ void getTailScalingFactors() {
 
   const TString jetAlgo = "PF";
 
-  util::StyleSettings::paper();
+  util::StyleSettings::paperNoTitle();
   gErrorIgnoreLevel = 1001;        // Do not print ROOT message if eps file has been created
-  sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("../sampleTools/BinningAdminTailsRebinned.cfg");//"input/BinningAdminTailsMC.cfg");
+  sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("../sampleTools/BinningAdminTailsRebinned.cfg");
 
   TString id = outLabel+"_"+jetAlgo;
   TString jetLabel = "Anti-k_{T} (d=0.5) ";
   if( jetAlgo == "Calo" ) jetLabel += "Calo Jets";
   else if( jetAlgo == "PF" ) jetLabel += "PF Jets";
-  TPaveText* labelMC = 0;
-  TPaveText* labelData = 0;
-
 
 
 
@@ -217,14 +226,6 @@ void getTailScalingFactors() {
     else if( etaBin == 2 ) coreScaling = 0.;
     else if( etaBin == 3 ) coreScaling = 0.041;
 
-    TString etaBinLabel =  util::toTString(binAdm->etaMin(etaBin))+" < |#eta| < "+util::toTString(binAdm->etaMax(etaBin));
-    if( labelMC ) delete labelMC;
-    labelMC = util::LabelFactory::createPaveText(1);
-    labelMC->AddText(jetLabel+", "+etaBinLabel);
-    if( labelData ) delete labelData;
-    labelData = util::LabelFactory::createPaveText(1);
-    labelData->AddText(jetLabel+", "+etaBinLabel);
-
     for(unsigned int ptBin = 0; ptBin < binAdm->nPtBins(etaBin); ++ptBin) {
 
       TString fileNameData = "~/results/ResolutionFit/TailScalingNote/Tails_PF_DataRebinned_Eta";
@@ -233,7 +234,7 @@ void getTailScalingFactors() {
       fileNameMC += etaBin;
 
       // Create eta-pt bin
-      EtaPtBin* bin = new EtaPtBin(etaBin,ptBin,nSigCore,coreScaling);
+      EtaPtBin* bin = new EtaPtBin(etaBin,ptBin,nSigCore,coreScaling,binAdm,jetLabel);
 
       // Define window
       bin->findWindow(fileNameMC+"_PtSoft0.root",fileNameMC+"_PtSoft0.root",nSigTailStart,nSigTailEnd);
@@ -268,12 +269,12 @@ void getTailScalingFactors() {
       it != etaPtBins.end(); ++it ) {
 
     // Asymmetry
-    (*it)->plotAsymmetryDistributions(id,labelData);
-    (*it)->plotMCTruthResponse(id,labelMC);
+    (*it)->plotAsymmetryDistributions(id);
+    (*it)->plotMCTruthResponse(id);
     
     // Extrapolation
     (*it)->extrapolate(minPt3Data,fixDataShape,mcTruthRef);  
-    (*it)->plotExtrapolation(id,labelData,labelMC);  
+    (*it)->plotExtrapolation(id);  
   }
 
 
@@ -374,10 +375,11 @@ void getTailScalingFactors() {
 
 
 // ------------------------------------------------------------------------------------
-EtaPtBin::EtaPtBin(unsigned int etaBin, unsigned int ptBin, double nSigCore, double coreScalingFactor)
+EtaPtBin::EtaPtBin(unsigned int etaBin, unsigned int ptBin, double nSigCore, double coreScalingFactor, const sampleTools::BinningAdmin* binAdm, const TString &jetLabel)
   : etaBin_(etaBin), ptBin_(ptBin),
     nSigCore_(nSigCore), coreScalingFactor_(coreScalingFactor),
-    exMin_(0.), exMax_(0.32) {
+    exMin_(0.), exMax_(0.32),
+    binAdm_(binAdm), jetLabel_(jetLabel) {
 
   tailWindowDataMin_ = 0.;
   tailWindowDataMax_ = 0.;
@@ -391,7 +393,6 @@ EtaPtBin::EtaPtBin(unsigned int etaBin, unsigned int ptBin, double nSigCore, dou
   gFTailSpreadData_  = new TGraphAsymmErrors(0);
   gFTailMCTruthNonGauss_ = new TGraphAsymmErrors(0);
 
-  //  fExMC_ = new TF1("fExMC"+binId(),"[0] + sq([1])*x + [2]*sq(x) + [3]*sq(x*x)",exMin_,exMax_);
   fExMC_ = new TF1("fExMC"+binId(),"[0] + sq([1])*x + [2]*sq(x) + [3]*x*x*x",exMin_,exMax_);
   fExMC_->SetParameter(0,0.005);
   fExMC_->SetParameter(1,0.);
@@ -409,6 +410,11 @@ EtaPtBin::EtaPtBin(unsigned int etaBin, unsigned int ptBin, double nSigCore, dou
 
   mcTruthResponse_ = 0;
   hasMCTruthResponse_ = false;
+
+  binLabel_ = util::LabelFactory::createPaveText(4,gBINLABEL_WIDTH);
+  binLabel_->AddText(jetLabel_);
+  binLabel_->AddText(util::toTString(binAdm_->etaMin(etaBin_))+" < |#eta| < "+util::toTString(binAdm_->etaMax(etaBin_)));
+  binLabel_->AddText(util::toTString(binAdm_->ptMin(etaBin_,ptBin_))+" < p^{ave}_{T} < "+util::toTString(binAdm_->ptMax(etaBin_,ptBin_))+" GeV");
 }
 
 
@@ -427,54 +433,77 @@ EtaPtBin::~EtaPtBin() {
   delete fExMC_;
   delete fExData_;
   if( hasMCTruthResponse() ) delete mcTruthResponse_;
+  if( binLabel_ ) delete binLabel_;
 }
 
 
 // ------------------------------------------------------------------------------------
-void EtaPtBin::plotAsymmetryDistributions(const TString &outNameId, const TPaveText* label) const {
+void EtaPtBin::plotAsymmetryDistributions(const TString &outNameId) const {
   unsigned int pt3Bin = 0;
   for(std::vector<Pt3Bin*>::const_iterator it = pt3Bins_.begin();
       it != pt3Bins_.end(); ++it, ++pt3Bin) {
-    (*it)->plotAsymmetryDataMC(outNameId+binId(pt3Bin),label);
-    (*it)->plotAsymmetryDataMCSmeared(outNameId+binId(pt3Bin),label);
+    (*it)->plotAsymmetryDataMC(outNameId+binId(pt3Bin));
+    (*it)->plotAsymmetryDataMCSmeared(outNameId+binId(pt3Bin));
   }
 }
 
 
 // ------------------------------------------------------------------------------------
-void EtaPtBin::plotMCTruthResponse(const TString &outNameId, const TPaveText* label) const {
-  if( hasMCTruthResponse() ) mcTruthResponse_->plotMCTruthResponse(outNameId+binId(),label);
+void EtaPtBin::plotMCTruthResponse(const TString &outNameId) const {
+  if( hasMCTruthResponse() ) mcTruthResponse_->plotMCTruthResponse(outNameId+binId());
 }
 
 
 // ------------------------------------------------------------------------------------
-void EtaPtBin::plotExtrapolation(const TString &outNameId, const TPaveText* labelData, const TPaveText* labelMC) const {
+void EtaPtBin::plotExtrapolation(const TString &outNameId) const {
 
   // Extrapolation MC Closure
+  TLegend* leg = util::LabelFactory::createLegendCol(3,gLEG_WIDTH);
+  leg->AddEntry(gFTailMC_,"Asymmetry","P");
+  leg->AddEntry(fExMC_,"Extrapolation","L");
+  if( hasMCTruthResponse() ) leg->AddEntry(gFTailMCTruth_,"Response","P");
+
   TCanvas* can = new TCanvas("can","Number of events",500,500);
   can->cd();
-  TH1* hFrame = new TH1D("hFrame",";p_{T,3} Threshold;f_{Asym}",1000,0.,0.44);
+  TH1* hFrame = new TH1D("hFrame",";p^{rel}_{T,3} Threshold;f_{Asym}",1000,0.,0.44);
   hFrame->GetYaxis()->SetRangeUser(0.,2.3*gFTailMC_->GetY()[gFTailMC_->GetN()-1]);
   hFrame->Draw();
   fExMC_->Draw("same");
+  if( hasMCTruthResponse() ) {
+    gFTailMCTruth_->Draw("PE1same");
+  }
   gFTailMC_->Draw("PE1same");
-  labelMC->DrawClone("same");
+  binLabel_->DrawClone("same");
+  leg->Draw("same");
   can->SaveAs(outNameId+binId()+"_ExtrapolationMCClosure.eps","eps");
+  delete leg;
 
-  // Extrapolation MC Closure + Data
+  // Extrapolation MC + Data
+  leg = util::LabelFactory::createLegendCol(4,gLEG_WIDTH);
+  leg->AddEntry(gFTailData_,"Asymmetry Data","P");
+  leg->AddEntry(fExData_,"Extrapolation Data","L");
+  leg->AddEntry(gFTailMC_,"Asymmetry MC","P");
+  leg->AddEntry(fExMC_,"Extrapolation MC","L");
+
   can->cd();
   hFrame->Draw();
   fExMC_->Draw("same");
+  fExData_->Draw("same");
   gFTailMC_->Draw("PE1same");
-  if( hasMCTruthResponse() ) {
-    gFTailMCTruth_->Draw("PE1same");
-    gFTailMCTruthNonGauss_->Draw("PE1same");
-  }
   gFTailData_->Draw("PE1same");
-  labelData->DrawClone("same");
+  binLabel_->DrawClone("same");
+  leg->Draw("same");
   can->SaveAs(outNameId+binId()+"_Extrapolation.eps","eps");
+  delete leg;
 
   // Extrapolation MC Closure + Data + Shifted Extrapolation
+  leg = util::LabelFactory::createLegendCol(5,gLEG_WIDTH);
+  leg->AddEntry(gFTailData_,"Asymmetry Data","P");
+  leg->AddEntry(fExData_,"Extrapolation Data","L");
+  leg->AddEntry(gFTailMC_,"Asymmetry MC","P");
+  leg->AddEntry(fExMC_,"Extrapolation MC","L");
+  if( hasMCTruthResponse() ) leg->AddEntry(gFTailMCTruth_,"Response","P");
+
   can->cd();
   hFrame->Draw();
   fExMC_->Draw("same");
@@ -483,13 +512,16 @@ void EtaPtBin::plotExtrapolation(const TString &outNameId, const TPaveText* labe
   gFTailData_->Draw("PE1same");
   if( hasMCTruthResponse() ) {
     gFTailMCTruth_->Draw("PE1same");
-    gFTailMCTruthNonGauss_->Draw("PE1same");
+    //gFTailMCTruthNonGauss_->Draw("PE1same");
   }
-  labelData->DrawClone("same");
+  binLabel_->DrawClone("same");
+  leg->Draw("same");
   can->SaveAs(outNameId+binId()+"_Extrapolation2.eps","eps");
+  delete leg;
 
   // Spread of ftail for mc
   double relErr = extraMCErr_/extraMC();
+  hFrame->GetYaxis()->SetTitle("f_{Asym} - Fit");
   hFrame->GetYaxis()->SetRangeUser(std::min(-7.*relErr,0.),10.*relErr);
   for(int i = 1; i <= hFrame->GetNbinsX(); ++i) {
     hFrame->SetBinContent(i,0.);
@@ -502,13 +534,18 @@ void EtaPtBin::plotExtrapolation(const TString &outNameId, const TPaveText* labe
   hBand->SetFillStyle(1001);
   hBand->SetFillColor(42);
 
+  leg = util::LabelFactory::createLegendCol(2,gLEG_WIDTH);
+  leg->AddEntry(gFTailSpreadMC_,"Asymmetry MC","P");
+  leg->AddEntry(hBand,"Standard Dev.","F");
+
   can->cd();
   hBand->Draw("E3");
   hFrame->Draw("same");
   gFTailSpreadMC_->Draw("Psame");
-  labelMC->DrawClone("same");
+  binLabel_->DrawClone("same");
+  leg->Draw("same");
   can->SaveAs(outNameId+binId()+"_SpreadMC.eps","eps");  
-
+  delete leg;
 
   // Spread of ftail for data
   relErr = extraDataErr_/extraData();
@@ -522,12 +559,18 @@ void EtaPtBin::plotExtrapolation(const TString &outNameId, const TPaveText* labe
     hBand->SetBinError(i,relErr);
   }
 
+  leg = util::LabelFactory::createLegendCol(2,gLEG_WIDTH);
+  leg->AddEntry(gFTailSpreadData_,"Asymmetry Data","P");
+  leg->AddEntry(hBand,"Standard Dev.","F");
+
   can->cd();
   hBand->Draw("E3");
   hFrame->Draw("same");
   gFTailSpreadData_->Draw("Psame");
-  labelData->DrawClone("same");
+  binLabel_->DrawClone("same");
+  leg->Draw("same");
   can->SaveAs(outNameId+binId()+"_SpreadData.eps","eps");  
+  delete leg;
 
   delete hFrame;
   delete hBand;
@@ -537,7 +580,7 @@ void EtaPtBin::plotExtrapolation(const TString &outNameId, const TPaveText* labe
 
 // ------------------------------------------------------------------------------------
 void EtaPtBin::addPt3Bin(double thres, const TString &fileNameData, const TString &fileNameMC) {
-  pt3Bins_.push_back(new Pt3Bin(fileNameData,fileNameMC,etaBin_,ptBin_,pt3Bins_.size(),thres,nSigCore_,coreScalingFactor_,tailWindowDataMin_,tailWindowDataMax_,tailWindowMCMin_,tailWindowMCMax_));
+  pt3Bins_.push_back(new Pt3Bin(fileNameData,fileNameMC,etaBin_,ptBin_,pt3Bins_.size(),thres,nSigCore_,coreScalingFactor_,tailWindowDataMin_,tailWindowDataMax_,tailWindowMCMin_,tailWindowMCMax_,binAdm_,jetLabel_));
 }
 
 
@@ -546,7 +589,7 @@ void EtaPtBin::addMCTruthResponse(const TString &fileName) {
   if( hasMCTruthResponse() ) delete mcTruthResponse_;
   double winMin = 1.+sqrt(2.)*tailWindowMCMin_;
   double winMax = 1.+sqrt(2.)*tailWindowMCMax_;
-  mcTruthResponse_ = new Pt3Bin(fileName,etaBin_,ptBin_,nSigCore_,coreScalingFactor_,winMin,winMax);
+  mcTruthResponse_ = new Pt3Bin(fileName,etaBin_,ptBin_,nSigCore_,coreScalingFactor_,winMin,winMax,binAdm_,jetLabel_);
   hasMCTruthResponse_ = true;
 }
 
@@ -574,6 +617,8 @@ void EtaPtBin::findWindow(const TString &fileNameData, const TString &fileNameMC
     tailWindowDataMax_ = std::abs(nSigTailWindowMax*width);
   }
   delete h;
+
+  binLabel_->AddText(util::toTString(nSigTailWindowMin)+" - "+util::toTString(nSigTailWindowMax)+" #sigma  Window");
 }
 
 
@@ -633,6 +678,8 @@ void EtaPtBin::extrapolate(double minPt3Data, bool fixDataShape, bool mcTruthRef
     gFTailMCTruthNonGauss_->SetMarkerStyle(27);
     gFTailMCTruthNonGauss_->SetMarkerColor(kGreen);
     gFTailMCTruthNonGauss_->SetLineColor(gFTailMCTruth_->GetMarkerColor());
+
+    std::cout << ">>>> " << (mcTruthResponse_->fTailMCSmearedNonGauss()/mcTruthResponse_->fTailMCSmeared()) << std::endl;
   }
 
   // Extrapolate
@@ -689,7 +736,7 @@ void EtaPtBin::extrapolate(double minPt3Data, bool fixDataShape, bool mcTruthRef
 
 
   // Fit extrapolation to data
-  fExData_->SetLineColor(gFTailMC_->GetLineColor());
+  fExData_->SetLineColor(gFTailData_->GetLineColor());
   if( fixDataShape ) {
     fExData_->FixParameter(1,fExMC_->GetParameter(1));
     fExData_->FixParameter(2,fExMC_->GetParameter(2));
@@ -751,7 +798,7 @@ void EtaPtBin::extrapolate(double minPt3Data, bool fixDataShape, bool mcTruthRef
 
 // Constructor for asymmetry
 // ------------------------------------------------------------------------------------
-Pt3Bin::Pt3Bin(const TString &fileNameData, const TString &fileNameMC, unsigned int etaBin, unsigned int ptBin, unsigned int pt3Bin, double pt3Thres, double nSigCore, double coreScalingFactor, double tailWindowDataMin, double tailWindowDataMax, double tailWindowMCMin, double tailWindowMCMax)
+Pt3Bin::Pt3Bin(const TString &fileNameData, const TString &fileNameMC, unsigned int etaBin, unsigned int ptBin, unsigned int pt3Bin, double pt3Thres, double nSigCore, double coreScalingFactor, double tailWindowDataMin, double tailWindowDataMax, double tailWindowMCMin, double tailWindowMCMax, const sampleTools::BinningAdmin* adm, const TString &jetLabel)
   : etaBin_(etaBin), ptBin_(ptBin), pt3Bin_(pt3Bin), pt3Thres_(pt3Thres),
     coreScalingFactor_(coreScalingFactor) {
 
@@ -759,6 +806,9 @@ Pt3Bin::Pt3Bin(const TString &fileNameData, const TString &fileNameMC, unsigned 
   hAsymMC_ = readHist(fileNameMC,"MC");
   hResp_ = 0;
   fGaussMCTruth_ = 0;
+
+  hAsymData_->UseCurrentStyle();
+  hAsymMC_->UseCurrentStyle();
 
   // Smear MC asymmetry
   double width = 0.;
@@ -790,12 +840,13 @@ Pt3Bin::Pt3Bin(const TString &fileNameData, const TString &fileNameMC, unsigned 
   setStyleDataMarker(hAsymData_);
   setStyleMCFilled(hAsymMC_);
   setStyleMCFilled(hAsymMCSmeared_);
+  initBinLabel(adm,jetLabel);
 }
 
 
 // Constructor for MC truth response
 // ------------------------------------------------------------------------------------
-Pt3Bin::Pt3Bin(const TString &fileName, unsigned int etaBin, unsigned int ptBin, double nSigCore, double coreScalingFactor, double tailWindowMin, double tailWindowMax) 
+Pt3Bin::Pt3Bin(const TString &fileName, unsigned int etaBin, unsigned int ptBin, double nSigCore, double coreScalingFactor, double tailWindowMin, double tailWindowMax, const sampleTools::BinningAdmin* adm, const TString &jetLabel) 
   : etaBin_(etaBin), ptBin_(ptBin), pt3Bin_(1000), pt3Thres_(1000.),
     coreScalingFactor_(coreScalingFactor) {
 
@@ -807,6 +858,8 @@ Pt3Bin::Pt3Bin(const TString &fileName, unsigned int etaBin, unsigned int ptBin,
   
   TH1* h = readMCTruthResponse(fileName,"MCTruthResponse");
   double entries = h->GetEntries();
+  util::HistOps::setAxisTitles(h,"Symmetrised Response","GeV","events");
+  h->UseCurrentStyle();
 
   // Smear core
   double width = 0.;
@@ -837,6 +890,18 @@ Pt3Bin::Pt3Bin(const TString &fileName, unsigned int etaBin, unsigned int ptBin,
   }
 
   setStyleDataMarker(hResp_);
+  initBinLabel(adm,jetLabel,true);
+}
+
+
+// ------------------------------------------------------------------------------------
+void Pt3Bin::initBinLabel(const sampleTools::BinningAdmin* adm, const TString &jetLabel, bool isMCTruth) {
+  if( isMCTruth ) binLabel_ = util::LabelFactory::createPaveText(3,gBINLABEL_WIDTH);
+  else binLabel_ = util::LabelFactory::createPaveText(4,gBINLABEL_WIDTH);
+  binLabel_->AddText(jetLabel);
+  binLabel_->AddText(util::toTString(adm->etaMin(etaBin_))+" < |#eta| < "+util::toTString(adm->etaMax(etaBin_)));
+  binLabel_->AddText(util::toTString(adm->ptMin(etaBin_,ptBin_))+" < p^{ave}_{T} < "+util::toTString(adm->ptMax(etaBin_,ptBin_))+" GeV");
+  if( !isMCTruth ) binLabel_->AddText(util::toTString(adm->ptSoftMin(pt3Bin_))+" < p^{rel}_{T,3} < "+util::toTString(adm->ptSoftMax(pt3Bin_)));
 }
 
 
@@ -847,6 +912,7 @@ Pt3Bin::~Pt3Bin() {
   if( hAsymMCSmeared_ ) delete hAsymMCSmeared_;
   if( hResp_ ) delete hResp_;
   if( fGaussMCTruth_ ) delete fGaussMCTruth_;
+  if( binLabel_ ) delete binLabel_;
 }
 
 
@@ -900,11 +966,15 @@ void Pt3Bin::getFTail(const TH1* h, double entries, int start, int end, double &
 
 
 // ------------------------------------------------------------------------------------
-void Pt3Bin::plotAsymmetryDataMC(const TString &outNameId, const TPaveText* label) const {
+void Pt3Bin::plotAsymmetryDataMC(const TString &outNameId) const {
+
+  TLegend* leg = util::LabelFactory::createLegendCol(2,gLEG_WIDTH);
+  leg->AddEntry(hAsymData_,"Data","P");
+  leg->AddEntry(hAsymMC_,"MC","F");
 
   // Log scale
-  util::HistOps::setYRange(hAsymMC_,3,3E-5);
-  util::HistOps::setYRange(hAsymData_,3,3E-5);
+  util::HistOps::setYRange(hAsymMC_,4,3E-5);
+  util::HistOps::setYRange(hAsymData_,4,3E-5);
   hAsymMC_->GetXaxis()->SetRangeUser(-1.,1.);
 
   TString canName = outNameId+"PtAsym";
@@ -912,17 +982,19 @@ void Pt3Bin::plotAsymmetryDataMC(const TString &outNameId, const TPaveText* labe
   can->cd();
   hAsymMC_->Draw("HISTE");
   hAsymData_->Draw("PE1same");
-  label->DrawClone("same");
+  binLabel_->Draw("same");
+  leg->Draw("same");
   can->SetLogy(1);
   can->SaveAs(outNameId+"PtAsymLog.eps","eps");
 
   // Linear scale
-  util::HistOps::setYRange(hAsymMC_,3);
+  util::HistOps::setYRange(hAsymMC_,4);
   hAsymMC_->GetXaxis()->SetRangeUser(-0.4,0.4);
   can->cd();
   hAsymMC_->Draw("HISTE");
   hAsymData_->Draw("PE1same");
-  label->DrawClone("same");
+  binLabel_->Draw("same");
+  leg->Draw("same");
   can->SetLogy(0);
   can->SaveAs(outNameId+"PtAsym.eps","eps");
   
@@ -982,6 +1054,7 @@ void Pt3Bin::plotAsymmetryDataMC(const TString &outNameId, const TPaveText* labe
 //   hRatio->Draw("PE1same");
 //   can->SaveAs(outNameId+"PtAsymBottomRatio.eps","eps");
 
+  delete leg;
   delete can;
 
   hAsymMC_->GetXaxis()->SetRangeUser(-1.,1.);
@@ -990,11 +1063,15 @@ void Pt3Bin::plotAsymmetryDataMC(const TString &outNameId, const TPaveText* labe
 
 
 // ------------------------------------------------------------------------------------
-void Pt3Bin::plotAsymmetryDataMCSmeared(const TString &outNameId, const TPaveText* label) const {
+void Pt3Bin::plotAsymmetryDataMCSmeared(const TString &outNameId) const {
+
+  TLegend* leg = util::LabelFactory::createLegendCol(2,gLEG_WIDTH);
+  leg->AddEntry(hAsymData_,"Data","P");
+  leg->AddEntry(hAsymMCSmeared_,"Reweighted MC","F");
 
   // Log scale
-  util::HistOps::setYRange(hAsymMCSmeared_,3,3E-5);
-  util::HistOps::setYRange(hAsymData_,3,3E-5);
+  util::HistOps::setYRange(hAsymMCSmeared_,4,3E-5);
+  util::HistOps::setYRange(hAsymData_,4,3E-5);
   hAsymMCSmeared_->GetXaxis()->SetRangeUser(-1.,1.);
 
   TString canName = outNameId+"PtAsym";
@@ -1002,7 +1079,8 @@ void Pt3Bin::plotAsymmetryDataMCSmeared(const TString &outNameId, const TPaveTex
   can->cd();
   hAsymMCSmeared_->Draw("HISTE");
   hAsymData_->Draw("PE1same");
-  label->DrawClone("same");
+  binLabel_->Draw("same");
+  leg->Draw("same");
   can->SetLogy(1);
   can->SaveAs(outNameId+"PtSmearAsymLog.eps","eps");
 
@@ -1010,12 +1088,12 @@ void Pt3Bin::plotAsymmetryDataMCSmeared(const TString &outNameId, const TPaveTex
   TLine* winMCMin = new TLine(hAsymMCSmeared_->GetXaxis()->GetBinLowEdge(tailStartBinMC_),0.,
 			      hAsymMCSmeared_->GetXaxis()->GetBinLowEdge(tailStartBinMC_),10.);
   winMCMin->SetLineWidth(1);
-  winMCMin->SetLineStyle(2);
+  winMCMin->SetLineStyle(1);
   winMCMin->SetLineColor(kRed);
   TLine* winMCMax = new TLine(hAsymMCSmeared_->GetXaxis()->GetBinUpEdge(tailEndBinMC_),0.,
 			      hAsymMCSmeared_->GetXaxis()->GetBinUpEdge(tailEndBinMC_),10.);
   winMCMax->SetLineWidth(1);
-  winMCMax->SetLineStyle(2);
+  winMCMax->SetLineStyle(1);
   winMCMax->SetLineColor(kRed);
 
   TLine* winDataMin = new TLine(hAsymData_->GetXaxis()->GetBinLowEdge(tailStartBinData_),0.,
@@ -1029,30 +1107,48 @@ void Pt3Bin::plotAsymmetryDataMCSmeared(const TString &outNameId, const TPaveTex
   winDataMax->SetLineStyle(1);
   winDataMax->SetLineColor(kRed);
 
+  TBox* winMC = new TBox(hAsymMCSmeared_->GetXaxis()->GetBinLowEdge(tailStartBinMC_),0.,
+			 hAsymMCSmeared_->GetXaxis()->GetBinUpEdge(tailEndBinMC_),10.);
+  winMC->SetLineWidth(1);
+  winMC->SetFillStyle(3444);
+  winMC->SetLineColor(kRed);
+  winMC->SetFillColor(winMC->GetLineColor());
+
+  TLegend* legWin = util::LabelFactory::createLegendCol(3,gLEG_WIDTH);
+  legWin->AddEntry(hAsymData_,"Data","P");
+  legWin->AddEntry(hAsymMCSmeared_,"Reweighted MC","F");
+  legWin->AddEntry(winMC,"Window","F");
+
   hAsymMCSmeared_->GetXaxis()->SetRangeUser(0.,1.);
   can->cd();
   hAsymMCSmeared_->Draw("HISTE");
   hAsymData_->Draw("PE1same");
-  winMCMin->Draw("same");
-  winMCMax->Draw("same");
-  winDataMin->Draw("same");
-  winDataMax->Draw("same");
-  label->DrawClone("same");
+  winMC->Draw("same");
+  //winMCMin->Draw("same");
+  //winMCMax->Draw("same");
+  //winDataMin->Draw("same");
+  //winDataMax->Draw("same");
+  binLabel_->Draw("same");
+  legWin->Draw("same");
   can->SetLogy(1);
   can->SaveAs(outNameId+"PtSmearAsymTail.eps","eps");
+  delete legWin;
+  delete winMC;
   delete winMCMin;
   delete winMCMax;
 
   // Linear scale
-  util::HistOps::setYRange(hAsymMCSmeared_,3);
+  util::HistOps::setYRange(hAsymMCSmeared_,4);
   hAsymMCSmeared_->GetXaxis()->SetRangeUser(-0.4,0.4);
   can->cd();
   hAsymMCSmeared_->Draw("HISTE");
   hAsymData_->Draw("PE1same");
-  label->DrawClone("same");
+  binLabel_->Draw("same");
+  leg->Draw("same");
   can->SetLogy(0);
   can->SaveAs(outNameId+"PtSmearAsym.eps","eps");
 
+  delete leg;
   delete can;
 
   hAsymMCSmeared_->GetXaxis()->SetRangeUser(-1.,1.);
@@ -1061,9 +1157,16 @@ void Pt3Bin::plotAsymmetryDataMCSmeared(const TString &outNameId, const TPaveTex
 
 
 // ------------------------------------------------------------------------------------
-void Pt3Bin::plotMCTruthResponse(const TString &outNameId, const TPaveText* label) const {
+void Pt3Bin::plotMCTruthResponse(const TString &outNameId) const {
 
   // Log scale
+  TBox* winMC = new TBox(hResp_->GetXaxis()->GetBinLowEdge(tailStartBinMC_),0.,
+			 hResp_->GetXaxis()->GetBinUpEdge(tailEndBinMC_),10.);
+  winMC->SetLineWidth(1);
+  winMC->SetFillStyle(3444);
+  winMC->SetLineColor(kRed);
+  winMC->SetFillColor(winMC->GetLineColor());
+
   TLine* winMCMin = new TLine(hResp_->GetXaxis()->GetBinLowEdge(tailStartBinMC_),0.,
 			      hResp_->GetXaxis()->GetBinLowEdge(tailStartBinMC_),10.);
   winMCMin->SetLineWidth(1);
@@ -1075,6 +1178,10 @@ void Pt3Bin::plotMCTruthResponse(const TString &outNameId, const TPaveText* labe
   winMCMax->SetLineStyle(2);
   winMCMax->SetLineColor(kRed);
 
+  TLegend* leg = util::LabelFactory::createLegendCol(2,gLEG_WIDTH);
+  leg->AddEntry(hResp_,"Reweighted MC","P");
+  leg->AddEntry(winMC,"Window","F");
+
   util::HistOps::setYRange(hResp_,3,3E-5);
   hResp_->GetXaxis()->SetRangeUser(0.,2.);
 
@@ -1082,10 +1189,12 @@ void Pt3Bin::plotMCTruthResponse(const TString &outNameId, const TPaveText* labe
   TCanvas *can = new TCanvas(canName,canName,500,500);
   can->cd();
   hResp_->Draw("PE1");
-  fGaussMCTruth_->Draw("same");
-  winMCMin->Draw("same");
-  winMCMax->Draw("same");
-  label->DrawClone("same");
+  //  fGaussMCTruth_->Draw("same");
+  winMC->Draw("same");
+//   winMCMin->Draw("same");
+//   winMCMax->Draw("same");
+  binLabel_->Draw("same");
+  leg->Draw("same");
   can->SetLogy(1);
   can->SaveAs(outNameId+"_MCTruthResponseLog.eps","eps");
 
@@ -1094,13 +1203,17 @@ void Pt3Bin::plotMCTruthResponse(const TString &outNameId, const TPaveText* labe
   hResp_->GetXaxis()->SetRangeUser(0.4,1.6);
   can->cd();
   hResp_->Draw("PE1");
-  fGaussMCTruth_->Draw("same");
-  label->DrawClone("same");
+  //  fGaussMCTruth_->Draw("same");
+  binLabel_->Draw("same");
   can->SetLogy(0);
   can->SaveAs(outNameId+"_MCTruthResponse.eps","eps");
 
   hResp_->GetXaxis()->SetRangeUser(0.,2.);
 
+  delete winMC;
+  delete winMCMin;
+  delete winMCMax;
+  delete leg;
   delete can;
 }
 
@@ -1229,6 +1342,22 @@ void plotFinalResult() {
     TGraphAsymmErrors* gTotal = totalUncertainty(uncerts,38);
     TGraphAsymmErrors* gAbs = uncertaintyBand(hScaleNom,gTotal);
 
+    // Label
+    TPaveText* label = util::LabelFactory::createPaveText(2,gBINLABEL_WIDTH);
+    label->AddText("Anti-k_{T} (d=0.5) PF Jets");
+    label->AddText(util::toTString(binAdm->etaMin(etaBin))+" < |#eta| < "+util::toTString(binAdm->etaMax(etaBin)));
+
+    TLegend* legScale = util::LabelFactory::createLegendCol(2,gLEG_WIDTH);
+    legScale->AddEntry(hScaleNom,"Scaling Factors","P");
+    legScale->AddEntry(gAbs,"Syst. Uncertainty","F");
+
+    TLegend* legUncert = util::LabelFactory::createLegendCol(uncerts.size()+1,gLEG_WIDTH);
+    legUncert->AddEntry(uncerts.at(0),"Non-Closure","F");
+    legUncert->AddEntry(uncerts.at(1),"Extrapolation","F");
+    //    legUncert->AddEntry(uncerts.at(2),"Reweighting","F");
+    legUncert->AddEntry(gTotal,"Total","F");
+
+
     // Plot scaling factors and total uncertainty    
     hScaleFrame->GetYaxis()->SetRangeUser(0.01,2.99);
     TCanvas* canScale = new TCanvas("canScale"+util::toTString(etaBin),"Scaling Factors Eta "+util::toTString(etaBin),500,500);
@@ -1238,6 +1367,8 @@ void plotFinalResult() {
     hScaleFrame->Draw("HISTsame");
     hScaleNom->Draw("PE1same");
     canScale->SetLogx();
+    label->Draw("same");
+    legScale->Draw("same");
     canScale->SaveAs(outNamePrefix+"_Eta"+util::toTString(etaBin)+".eps","eps");
 
 
@@ -1256,6 +1387,8 @@ void plotFinalResult() {
       uncerts.at(i)->Draw("E2same");
     }
     hUncertsFrame->Draw("HISTsame");
+    label->Draw("same");
+    legUncert->Draw("same");
     canRelUncerts->SetLogx();
     canRelUncerts->SaveAs(outNamePrefix+"Uncertainties_Eta"+util::toTString(etaBin)+".eps","eps");
 
