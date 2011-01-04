@@ -1,5 +1,6 @@
 // $ Id: $
 
+#include <cassert>
 #include <iomanip>
 #include <iostream>
 #include <vector>
@@ -37,6 +38,7 @@ public:
   TGraphAsymmErrors* gRelBandSteps(double mean) const;
   TGraphAsymmErrors* gRelBandSmooth(double mean) const;
   TGraphAsymmErrors* gBandSmooth(const TF1* f) const;
+  TGraphAsymmErrors* gBandSmooth(const TGraphAsymmErrors* g) const;
 
   unsigned int nPoints() const { return ptSmooth_.size(); }
   double ptSmooth(unsigned int i) const { return ptSmooth_.at(i); }
@@ -279,6 +281,26 @@ TGraphAsymmErrors* SystematicUncertainty::gBandSmooth(const TF1* f) const {
 }
 
 
+//  Band of systematic uncertainty around TGraph
+// ------------------------------------------------------------------------------
+TGraphAsymmErrors* SystematicUncertainty::gBandSmooth(const TGraphAsymmErrors* g) const {
+  assert( g->GetN() <= static_cast<int>(ptSmooth_.size()) );
+  TGraphAsymmErrors* gBand = static_cast<TGraphAsymmErrors*>(g->Clone());
+  for(int i = 0; i < gBand->GetN(); ++i) {
+    double val = gBand->GetY()[i];
+    gBand->SetPointError(i,ptSmoothErrDown_.at(i),ptSmoothErrUp_.at(i),
+			 val*relErrDown_.at(i),val*relErrUp_.at(i));
+  }
+  gBand->SetFillColor(color_);
+  gBand->SetFillStyle(fillStyle_);
+  gBand->SetLineColor(0);
+  
+  return gBand;  
+}
+
+
+
+
 
 
 
@@ -287,6 +309,7 @@ TGraphAsymmErrors* SystematicUncertainty::gBandSmooth(const TF1* f) const {
 
 TGraphAsymmErrors* getPhotonJetRatio(const TString &fileName);
 TGraphAsymmErrors* getPhotonJetRatioSystematics(const TString &fileName, const TF1* fRatio);
+void fitRatio(const TGraphAsymmErrors* gRatio, const TGraphAsymmErrors* gRatioBand, TF1* fit, double &ratio, double &stat, double &systDown, double &systUp);
 
 
 // ------------------------------------------------------------------------------
@@ -389,9 +412,9 @@ TGraphAsymmErrors* getBiasCorrectedMeasurement(const TGraphAsymmErrors* gMeas, c
 
 
 // ------------------------------------------------------------------------------
-void plotResults() {
+void plotResults(unsigned int etaBin = 0) {
 
-  const int etaBin = 3;
+  //const int etaBin = 0;
   const TString jetAlgo = "PF";
   const TString dir = "results";
   const double xMin = 40.;
@@ -563,61 +586,6 @@ void plotResults() {
 //   std::cout << "\n\n";
 
 
-  // +++++ Data / MC ratios +++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-  std::cout << "Creating data - MC ratio plots" << std::endl;
-
-  TGraphAsymmErrors* gDataMCRatio = util::HistOps::createRatioGraph(gData,gMC);
-  
-  TF1* fDataMCRatio = new TF1("fDataMCRatio","pol0",xMin,xMax);
-  fDataMCRatio->SetLineWidth(1);
-  fDataMCRatio->SetLineColor(28);
-  gDataMCRatio->Fit(fDataMCRatio,"0");
-
-  labelStart = -0.5;
-
-  TPaveText* labelDataMC = util::LabelFactory::createPaveText(1);
-  labelDataMC->AddText(jetLabel);
-
-  TLegend* legDataMC = util::LabelFactory::createLegendColWithOffset(2,labelStart,1);
-  legDataMC->AddEntry(gData,"Resolution (Data)","P");
-  legDataMC->AddEntry(gMC,"Resolution (MC)","P");
-
-  TLegend* legDataMCRatio = util::LabelFactory::createLegendColWithOffset(2,labelStart,1);
-  legDataMCRatio->AddEntry(gDataMCRatio,"Measurement","P");
-  legDataMCRatio->AddEntry(fDataMCRatio,"Fit","L");
-
-  TCanvas* tCanDataMC = util::HistOps::createRatioTopCanvas();
-  TPad* bPadDataMC = util::HistOps::createRatioBottomPad();
-  tCanDataMC->Clear();
-  tCanDataMC->cd();
-  tFrame->Draw();
-  gMC->Draw("PE1same");
-  gData->Draw("PE1same");
-  labelDataMC->Draw("same");
-  legDataMC->Draw("same");
-  gPad->SetLogx();
-  bPadDataMC->Draw();
-  bPadDataMC->cd();
-  bFrame->Draw();
-  gDataMCRatio->Draw("PE1same");
-  gPad->SetLogx();
-  tCanDataMC->SaveAs(outNamePrefix+"DataMC.eps","eps");
-
-  TCanvas* canDataMCRatio = new TCanvas("canDataMCRatio","Data MC Ratio",500,500);
-  canDataMCRatio->cd();
-  TH1* hFrameDataMCRatio = util::HistOps::createRatioFrame(xMin,xMax,0.61,1.89,bFrame->GetXaxis()->GetTitle(),"#sigma(Data) / #sigma(MC)");
-  hFrameDataMCRatio->SetTitle(title);
-  hFrameDataMCRatio->GetYaxis()->SetMoreLogLabels();
-  hFrameDataMCRatio->Draw();
-  gDataMCRatio->Draw("PE1same");
-  fDataMCRatio->Draw("same");
-  labelDataMC->Draw("same");
-  legDataMCRatio->Draw("same");
-  gPad->SetLogx();
-  canDataMCRatio->SaveAs(outNamePrefix+"DataMCRatio.eps","eps");
-
-
 
   // +++++ Systematic uncertainties +++++++++++++++++++++++++++++++++++++++++++++
 
@@ -668,7 +636,85 @@ void plotResults() {
   canRelSyst->SaveAs(outNamePrefix+"RelativeSystematicUncertainties.eps","eps");
 
 
-  
+
+
+  // +++++ Data / MC ratios +++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  std::cout << "Creating data - MC ratio plots" << std::endl;
+
+
+  // Systematic uncertainty w/o residual bias (cancels in ratio!)
+  std::vector<SystematicUncertainty*> uncertsRatio;
+  for(unsigned int i = 0; i < uncerts.size(); ++i) {
+    if( uncerts.at(i)->label() != labelUncertBias ) {
+      std::cout << "Adding uncert " << uncerts.at(i)->label() << std::endl;
+      uncertsRatio.push_back(uncerts.at(i));
+    }
+  }
+  SystematicUncertainty* totalRatio = new SystematicUncertainty("Total",uncertsRatio,38);
+
+  TGraphAsymmErrors* gDataMCRatio = util::HistOps::createRatioGraph(gData,gMC);
+  TGraphAsymmErrors* gDataMCRatioBand = totalRatio->gBandSmooth(gDataMCRatio);
+
+  TF1* fDataMCRatio = new TF1("fDataMCRatio","pol0",xMin,xMax);
+  fDataMCRatio->SetLineWidth(1);
+  fDataMCRatio->SetLineColor(28);
+
+  //  gDataMCRatio->Fit(fDataMCRatio,"0");
+
+  double ratio = 0.;
+  double ratioStat = 0.;
+  double ratioSystDown = 0.;
+  double ratioSystUp = 0.;
+  fitRatio(gDataMCRatio,gDataMCRatioBand,fDataMCRatio,ratio,ratioStat,ratioSystDown,ratioSystUp);
+
+  labelStart = -0.5;
+
+  TPaveText* labelDataMC = util::LabelFactory::createPaveText(1);
+  labelDataMC->AddText(jetLabel);
+
+  TLegend* legDataMC = util::LabelFactory::createLegendColWithOffset(2,labelStart,1);
+  legDataMC->AddEntry(gData,"Resolution (Data)","P");
+  legDataMC->AddEntry(gMC,"Resolution (MC)","P");
+
+  TLegend* legDataMCRatio = util::LabelFactory::createLegendColWithOffset(2,labelStart,1);
+  legDataMCRatio->AddEntry(gDataMCRatio,"Measurement","P");
+  legDataMCRatio->AddEntry(fDataMCRatio,"Fit","L");
+
+  TCanvas* tCanDataMC = util::HistOps::createRatioTopCanvas();
+  TPad* bPadDataMC = util::HistOps::createRatioBottomPad();
+  tCanDataMC->Clear();
+  tCanDataMC->cd();
+  tFrame->Draw();
+  gMC->Draw("PE1same");
+  gData->Draw("PE1same");
+  labelDataMC->Draw("same");
+  legDataMC->Draw("same");
+  gPad->SetLogx();
+  bPadDataMC->Draw();
+  bPadDataMC->cd();
+  bFrame->Draw();
+  gDataMCRatio->Draw("PE1same");
+  gPad->SetLogx();
+  tCanDataMC->SaveAs(outNamePrefix+"DataMC.eps","eps");
+
+  TCanvas* canDataMCRatio = new TCanvas("canDataMCRatio","Data MC Ratio",500,500);
+  canDataMCRatio->cd();
+  TH1* hFrameDataMCRatio = util::HistOps::createRatioFrame(xMin,xMax,0.61,1.89,bFrame->GetXaxis()->GetTitle(),"#sigma(Data) / #sigma(MC)");
+  hFrameDataMCRatio->SetTitle(title);
+  hFrameDataMCRatio->GetYaxis()->SetMoreLogLabels();
+  hFrameDataMCRatio->Draw();
+  gDataMCRatioBand->Draw("E3same");
+  gDataMCRatio->Draw("PE1same");
+  fDataMCRatio->Draw("same");
+  labelDataMC->Draw("same");
+  legDataMCRatio->Draw("same");
+  gPad->SetLogx();
+  canDataMCRatio->SaveAs(outNamePrefix+"DataMCRatio.eps","eps");
+
+
+
+ 
 
   // +++++ Scaled MC truth ++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -739,13 +785,14 @@ void plotResults() {
 
   // Systematic uncertainty w/o residual bias
   std::vector<SystematicUncertainty*> uncertsBiasCorr;
-  for(unsigned int i = 0; i < uncerts.size(); ++i) {
-    if( uncerts.at(i)->label() != labelUncertBias ) {
-      std::cout << "Adding uncert " << uncerts.at(i)->label() << std::endl;
-      uncertsBiasCorr.push_back(uncerts.at(i));
-    }
-  }
-  uncertsBiasCorr.push_back(new SystematicUncertainty("RatioStats",nameMC,fDataMCRatio->GetParError(0)));
+//   for(unsigned int i = 0; i < uncerts.size(); ++i) {
+//     if( uncerts.at(i)->label() != labelUncertBias ) {
+//       std::cout << "Adding uncert " << uncerts.at(i)->label() << std::endl;
+//       uncertsBiasCorr.push_back(uncerts.at(i));
+//     }
+//   }
+  uncertsBiasCorr.push_back(new SystematicUncertainty("RatioStats",nameMC,0.5*(ratioSystDown+ratioSystUp)));
+  uncertsBiasCorr.push_back(new SystematicUncertainty("RatioStats",nameMC,ratioStat));
 
   SystematicUncertainty* totalBiasCorr = new SystematicUncertainty("Total",uncertsBiasCorr,38);
 
@@ -785,9 +832,8 @@ void plotResults() {
   // +++++ Ratio output +++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   std::cout << "\n\nFITTED RATIO\n\n";
-  std::cout << std::setprecision(2) << etaMin << " -- " << etaMax << " & " << fDataMCRatio->GetParameter(0) << " \\pm " << fDataMCRatio->GetParError(0) << " \\\\\n";
-  std::cout << "\n\n";
-
+  std::cout << std::setprecision(2) << etaMin << " -- " << etaMax << " & ";
+  std::cout << std::setprecision(3) << " $" << ratio << " \\pm " << ratioStat << " + " << ratioSystUp << " - " << ratioSystDown << "$ \\\\\n\n\n";
 
   SystematicUncertainty* uncertRatioOutputJES = 0;
   std::vector<SystematicUncertainty*> uncertsRatioOutputOther;
@@ -802,41 +848,41 @@ void plotResults() {
     }
   }
   SystematicUncertainty* totalRatioOutput = new SystematicUncertainty("Total",uncertsRatioOutputOther,38);
-  std::cout << std::setprecision(5) << std::flush;
-  std::cout << "\n\n#Eta " << etaMin << " -- " << etaMax << std::endl;
-  std::cout << "MeanPt:" << std::flush;
-  for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
-    std::cout << "  " << gDataMCRatio->GetX()[i] << std::flush;
-  }
-  std::cout << "\nMeanPtError:" << std::flush;
-  for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
-    std::cout << "  " << gDataMCRatio->GetEXhigh()[i] << std::flush;
-  }
-  std::cout << "\nRatio:" << std::flush;
-  for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
-    std::cout << "  " << gDataMCRatio->GetY()[i] << std::flush;
-  }
-  std::cout << "\nRatioError:" << std::flush;
-  for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
-    std::cout << "  " << gDataMCRatio->GetEYhigh()[i] << std::flush;
-  }
-  std::cout << "\nSystJESUp:" << std::flush;
-  for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
-    std::cout << "  " << gDataMCRatio->GetY()[i]*uncertRatioOutputJES->relUp(i) << std::flush;
-  }
-  std::cout << "\nSystJESDown:" << std::flush;
-  for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
-    std::cout << "  " << gDataMCRatio->GetY()[i]*uncertRatioOutputJES->relDown(i) << std::flush;
-  }
-  std::cout << "\nSystOtherUp:" << std::flush;
-  for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
-    std::cout << "  " << gDataMCRatio->GetY()[i]*totalRatioOutput->relUp(i) << std::flush;
-  }
-  std::cout << "\nSystOtherDown:" << std::flush;
-  for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
-    std::cout << "  " << gDataMCRatio->GetY()[i]*totalRatioOutput->relDown(i) << std::flush;
-  }
-  std::cout << std::endl;
+//   std::cout << std::setprecision(5) << std::flush;
+//   std::cout << "\n\n#Eta " << etaMin << " -- " << etaMax << std::endl;
+//   std::cout << "MeanPt:" << std::flush;
+//   for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
+//     std::cout << "  " << gDataMCRatio->GetX()[i] << std::flush;
+//   }
+//   std::cout << "\nMeanPtError:" << std::flush;
+//   for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
+//     std::cout << "  " << gDataMCRatio->GetEXhigh()[i] << std::flush;
+//   }
+//   std::cout << "\nRatio:" << std::flush;
+//   for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
+//     std::cout << "  " << gDataMCRatio->GetY()[i] << std::flush;
+//   }
+//   std::cout << "\nRatioError:" << std::flush;
+//   for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
+//     std::cout << "  " << gDataMCRatio->GetEYhigh()[i] << std::flush;
+//   }
+//   std::cout << "\nSystJESUp:" << std::flush;
+//   for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
+//     std::cout << "  " << gDataMCRatio->GetY()[i]*uncertRatioOutputJES->relUp(i) << std::flush;
+//   }
+//   std::cout << "\nSystJESDown:" << std::flush;
+//   for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
+//     std::cout << "  " << gDataMCRatio->GetY()[i]*uncertRatioOutputJES->relDown(i) << std::flush;
+//   }
+//   std::cout << "\nSystOtherUp:" << std::flush;
+//   for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
+//     std::cout << "  " << gDataMCRatio->GetY()[i]*totalRatioOutput->relUp(i) << std::flush;
+//   }
+//   std::cout << "\nSystOtherDown:" << std::flush;
+//   for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
+//     std::cout << "  " << gDataMCRatio->GetY()[i]*totalRatioOutput->relDown(i) << std::flush;
+//   }
+//   std::cout << std::endl;
 
 
 
@@ -994,4 +1040,33 @@ TGraphAsymmErrors* getPhotonJetRatioSystematics(const TString &fileName, const T
 					       &(systDown.front()),&(systUp.front()));
 
   return g;
+}
+
+
+
+void fitRatio(const TGraphAsymmErrors* gRatio, const TGraphAsymmErrors* gRatioBand, TF1* fit, double &ratio, double &stat, double &systDown, double &systUp) {
+  assert( gRatio->GetN() == gRatioBand->GetN() );
+
+  // Systematic up and down shift of points (keep stat errors)
+  TGraphAsymmErrors* gRatioFit = static_cast<TGraphAsymmErrors*>(gRatio->Clone());
+  TGraphAsymmErrors* gUp = static_cast<TGraphAsymmErrors*>(gRatio->Clone());
+  TGraphAsymmErrors* gDown = static_cast<TGraphAsymmErrors*>(gRatio->Clone());
+  for(int i = 0; i < gRatio->GetN(); ++i) {
+    gUp->SetPoint(i,gUp->GetX()[i],gUp->GetY()[i]+gRatioBand->GetEYhigh()[i]);
+    gDown->SetPoint(i,gDown->GetX()[i],gDown->GetY()[i]-gRatioBand->GetEYlow()[i]);
+  }
+
+  gUp->Fit(fit,"0Q");
+  systUp = fit->GetParameter(0);
+  gDown->Fit(fit,"0Q");
+  systDown = fit->GetParameter(0);
+  gRatioFit->Fit(fit,"0Q");
+  ratio = fit->GetParameter(0);
+  stat =  fit->GetParError(0);
+  systUp = std::abs(systUp-ratio);
+  systDown = std::abs(systDown-ratio);
+
+  delete gRatioFit;
+  delete gUp;
+  delete gDown;
 }
