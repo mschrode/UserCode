@@ -1,4 +1,4 @@
-// $Id: fitMCTruth.C,v 1.5 2010/12/19 22:42:25 mschrode Exp $
+// $Id: fitMCTruth.C,v 1.6 2010/12/27 13:34:05 mschrode Exp $
 
 //!  Fit mean response and resolution from
 //!  Kalibri::ControlPlotsJetSmearing
@@ -345,6 +345,14 @@ void plotMCTruth(const TString &file, const TString &jetAlgo, double minPt) {
 
   TLegend* leg = util::LabelFactory::createLegendCol(hReso.size(),0.4);
   for(unsigned int i = 0; i < hReso.size(); ++i) {
+    for(int bin = 1; bin <= hReso[i]->GetNbinsX(); ++bin) {
+      if( hReso[i]->GetBinError(bin) > 0.1 ) {
+	hReso[i]->SetBinContent(bin,-1.);
+	hReso[i]->SetBinError(bin,0.);
+      }
+    }
+    hReso[i]->UseCurrentStyle();
+    hReso[i]->SetMarkerStyle(20);
     hReso[i]->GetXaxis()->SetRange(hReso[i]->FindBin(minPt),hReso[i]->GetNbinsX());
     hReso[i]->GetXaxis()->SetMoreLogLabels();
     hReso[i]->GetXaxis()->SetTitle("p^{gen}_{T} (GeV)");
