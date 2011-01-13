@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.11 2010/12/29 22:01:30 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.12 2011/01/03 18:20:23 mschrode Exp $
 
 #include <cmath>
 #include <iomanip>
@@ -274,7 +274,11 @@ void getTailScalingFactors() {
     
     // Extrapolation
     (*it)->extrapolate(minPt3Data,fixDataShape,mcTruthRef);  
-    (*it)->plotExtrapolation(id);  
+    (*it)->plotExtrapolation(id);
+
+    // Print fractional number of events  
+//     std::cout << std::setprecision(2) << " & $" << (*it)->extraData() << " \\pm " << (*it)->extraDataErr() << "$" << std::flush;
+//     std::cout << " & $" << (*it)->extraMC() << " \\pm " << (*it)->extraMCErr() << "$ " << std::endl;
   }
 
 
@@ -286,7 +290,7 @@ void getTailScalingFactors() {
   for(unsigned int etaBin = 0; etaBin < nEtaBins; ++etaBin) {
 
     TH1* hDelta = new TH1D("hDelta_Eta"+util::toTString(etaBin),
-			   ";p^{ave}_{T} (GeV);#Delta = #LTf^{Data}_{Asym}(0) - f^{MC}_{Asym}(0)#GT",
+			   ";p^{ave}_{T} (GeV);#Delta = f^{Data}_{Asym}(0) - f^{MC}_{Asym}(0)",
 			   binAdm->nPtBins(etaBin),&(binAdm->ptBinEdges(etaBin).front()));
     hDelta->SetMarkerStyle(20);
 
@@ -521,7 +525,7 @@ void EtaPtBin::plotExtrapolation(const TString &outNameId) const {
 
   // Spread of ftail for mc
   double relErr = extraMCErr_/extraMC();
-  hFrame->GetYaxis()->SetTitle("f_{Asym} - Fit");
+  hFrame->GetYaxis()->SetTitle("( f_{Asym} - Fit ) / Fit");
   hFrame->GetYaxis()->SetRangeUser(std::min(-7.*relErr,0.),10.*relErr);
   for(int i = 1; i <= hFrame->GetNbinsX(); ++i) {
     hFrame->SetBinContent(i,0.);
@@ -605,6 +609,7 @@ void EtaPtBin::findWindow(const TString &fileNameData, const TString &fileNameMC
   if( util::HistOps::fitCoreWidth(h,nSigCore_,width,widthErr) ) {
     tailWindowMCMin_ = std::abs(nSigTailWindowMin*width);
     tailWindowMCMax_ = std::abs(nSigTailWindowMax*width);
+    //std::cout << "SIG(" << etaBin_ << ", " << ptBin_ << "): " << width << " \\pm " << widthErr << std::endl;
   }
   delete h;
 
@@ -679,7 +684,7 @@ void EtaPtBin::extrapolate(double minPt3Data, bool fixDataShape, bool mcTruthRef
     gFTailMCTruthNonGauss_->SetMarkerColor(kGreen);
     gFTailMCTruthNonGauss_->SetLineColor(gFTailMCTruth_->GetMarkerColor());
 
-    std::cout << ">>>> " << (mcTruthResponse_->fTailMCSmearedNonGauss()/mcTruthResponse_->fTailMCSmeared()) << std::endl;
+    //    std::cout << ">>>> " << (mcTruthResponse_->fTailMCSmearedNonGauss()/mcTruthResponse_->fTailMCSmeared()) << std::endl;
   }
 
   // Extrapolate
@@ -787,6 +792,9 @@ void EtaPtBin::extrapolate(double minPt3Data, bool fixDataShape, bool mcTruthRef
     ref = mcTruthResponse_->fTailMCSmeared();
     refE = mcTruthResponse_->fTailMCSmearedErr();
   }
+  
+  //  std::cout << "(" << etaBin_ << "," << ptBin_ << ")   $" << ref << " \\pm " << refE << "$" << std::endl;
+
   scalingFactor_ = (ref+deltaEx_)/ref;
   scalingFactorErr_ = sqrt( pow(deltaExErr_/ref,2.) + pow(deltaEx_*refE/ref/ref,2.) );
 
@@ -815,14 +823,6 @@ Pt3Bin::Pt3Bin(const TString &fileNameData, const TString &fileNameMC, unsigned 
   double widthErr = 1000.;
   if( util::HistOps::fitCoreWidth(hAsymMC_,nSigCore,width,widthErr) ) {
     func::smearHistogram(hAsymMC_,hAsymMCSmeared_,hAsymMC_->GetEntries(),width,coreScalingFactor);
-
-//   double widthData = 0.;
-//   if( util::HistOps::fitCoreWidth(hAsymMC_,nSigCore,width,widthErr) && 
-//       util::HistOps::fitCoreWidth(hAsymData_,nSigCore,widthData,widthErr) ) {
-//     double fac = widthData/width - 1.;
-//     func::smearHistogram(hAsymMC_,hAsymMCSmeared_,hAsymMC_->GetEntries(),width,fac);
-
-
   } else {
     func::smearHistogram(hAsymMC_,hAsymMCSmeared_,hAsymMC_->GetEntries(),0.,0.);
   }
@@ -869,12 +869,18 @@ Pt3Bin::Pt3Bin(const TString &fileName, unsigned int etaBin, unsigned int ptBin,
   } else {
     func::smearHistogram(h,hResp_,h->GetEntries(),0.,0.);
   }
+  //  std::cout << "(" << etaBin_ << "," << ptBin_ << ") Entries " << h->GetEntries() << " (" << hResp_->GetEntries() << ")\n";
+
   delete h;
+
 
   // Get relative number of entries in tail
   tailStartBinMC_ = hResp_->FindBin(tailWindowMin);
   tailEndBinMC_ = hResp_->FindBin(tailWindowMax);
   getFTail(hResp_,entries,tailStartBinMC_,tailEndBinMC_,fNMCSmeared_,fNMCSmearedErr_);
+
+  //  std::cout << "  " << tailWindowMin << " (" << tailStartBinMC_ << ")" << " - " << tailWindowMax << " (" << tailEndBinMC_ << ")\n";
+  //  std::cout << "  " << fNMCSmeared_ << std::endl;
 
   // Get tail after Gaussian subtraction (note: this is a Gaussian to the smeared histogram!)
   if( util::HistOps::fitCoreWidth(hResp_,nSigCore,fGaussMCTruth_,width,widthErr) ) {
