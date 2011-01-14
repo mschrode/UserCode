@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: rebin.C,v 1.1 2011/01/13 14:35:38 mschrode Exp $
 
 #include <cassert>
 #include <iostream>
@@ -14,7 +14,7 @@
 #include "../util/FileOps.h"
 
 
-void rebin(const TString &inFile, const TString &outFile, const TString &binAdmCfg, const TString &binRebinCfg = "fromentries", bool rescaleWithLumi = false) {
+void rebin(const TString &inFile, const TString &outFile, bool addToExistingFile, const TString &binAdmCfg, const TString &binRebinCfg = "fromentries", bool rescaleWithLumi = false, const TString hist = "AbsAsym") {
   
   std::cout << "Entering 'rebin'" << std::endl;
 
@@ -62,15 +62,27 @@ void rebin(const TString &inFile, const TString &outFile, const TString &binAdmC
 
       std::cout << "ok" << std::endl;
     }
-    unsigned int nPtSoftBins = admin->nPtSoftBins();
+    bool hasPtSoftBinning = !hist.Contains("MCTruth");
+    unsigned int nPtSoftBins = 1;
+    if( hasPtSoftBinning ) nPtSoftBins = admin->nPtSoftBins();
     for(unsigned int ptSoftBin = 0; ptSoftBin < nPtSoftBins; ++ptSoftBin) {
-      TString fileNameIn = inFile+"_Eta"+util::toTString(etaBin)+"_PtSoft"+util::toTString(ptSoftBin)+".root";
-      TString fileNameOut = outFile+"_Eta"+util::toTString(etaBin)+"_PtSoft"+util::toTString(ptSoftBin)+".root";
+      TString fileNameIn = inFile+"_Eta"+util::toTString(etaBin)+".root";
+      TString fileNameOut = outFile+"_Eta"+util::toTString(etaBin)+".root";
+      if( hasPtSoftBinning ) {
+	fileNameIn = inFile+"_Eta"+util::toTString(etaBin)+"_PtSoft"+util::toTString(ptSoftBin)+".root";
+	fileNameOut = outFile+"_Eta"+util::toTString(etaBin)+"_PtSoft"+util::toTString(ptSoftBin)+".root";
+      }
 
       // Read histograms from file
-      TString histName = "hPtAbsAsym_Eta"+util::toTString(etaBin)+"_Pt";
-      //      TString histName = "hRespSymAbs_";
-      //TString histName = "hRespMeas_";
+      TString histName = "";
+      if( hist == "AbsAsym" ) histName = "hPtAbsAsym_Eta"+util::toTString(etaBin)+"_Pt";
+      else if( hist == "MCTruth" ) histName = "hRespMeasAbs_";
+      else if( hist == "SymMCTruth" ) histName = "hRespSymAbs_";
+      else {
+	std::cout << "Unknown histogram name '" << hist << "'" << std::endl;
+	exit(0);
+      }
+      std::cout << "Getting histograms '" << histName << "' for eta bin " << util::toTString(etaBin) << std::endl;
       util::HistVec histOrig = util::FileOps::readHistVec(fileNameIn,histName,histName+"tmp");
       if( rescaleWithLumi ) {
 	for(unsigned int i = 0; i < histOrig.size(); ++i) {
@@ -130,6 +142,7 @@ void rebin(const TString &inFile, const TString &outFile, const TString &binAdmC
       hTmp->Reset();
       if( verbose ) std::cout << "Combining pt bins " << std::flush;
       //      std::cout << "Adding entries" << std::endl;
+      TString ptMinStr = util::toTString(admin->ptMin(etaBin));
       for(size_t i = 0; i < histOrig.size(); ++i) {
  	if( verbose ) std::cout << "  " << i << std::flush;
  	hTmp->Add(histOrig.at(i));
@@ -137,11 +150,15 @@ void rebin(const TString &inFile, const TString &outFile, const TString &binAdmC
  	nCombHists++;
 	if( nCombHists == nCombBins.at(nNewHists) ) {
 	  if( rebinFromEntries ) std::cout << "  " << admin->ptMax(etaBin,i) << std::flush;
+	  TString ptMaxStr = util::toTString(admin->ptMax(etaBin,i));
+	  TString title = ptMinStr+" < p_{T} < "+ptMaxStr+" GeV, "+util::toTString(admin->etaMin(etaBin))+" < |#eta| < "+util::toTString(admin->etaMax(etaBin));
+	  hTmp->SetTitle(title);
 	  newHists.push_back(static_cast<TH1D*>(hTmp->Clone(histName+util::toTString(nNewHists))));
 	  //	  std::cout << "  >> " << newHists.back()->GetEntries() << " (" << newHists.back()->Integral() << ")" << std::endl;
 	  nNewHists++;
 	  nCombHists = 0;
 	  hTmp->Reset();
+	  ptMinStr = ptMaxStr;
 	  if( verbose ) std::cout << "  ok" << std::endl;
 	  if( verbose ) std::cout << " and combining pt bins " << std::flush;
 	}
@@ -151,12 +168,14 @@ void rebin(const TString &inFile, const TString &outFile, const TString &binAdmC
     
       
       // Write combined hists to output file
-      TFile oFile(fileNameOut,"RECREATE");
-      //TFile oFile(fileNameOut,"UPDATE");
+      TFile* oFile = 0;
+      if( addToExistingFile ) oFile = new TFile(fileNameOut,"UPDATE");
+      else oFile = new TFile(fileNameOut,"RECREATE");
       for(util::HistIt it = newHists.begin(); it != newHists.end(); ++it) {
- 	oFile.WriteTObject(*it);
+ 	oFile->WriteTObject(*it);
       }   
-      oFile.Close();
+      oFile->Close();
+      delete oFile;
       for(util::HistIt it = newHists.begin(); it != newHists.end(); ++it) {
  	delete *it;
       }
