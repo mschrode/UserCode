@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.14 2011/01/15 22:37:32 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.15 2011/01/16 13:13:39 mschrode Exp $
 
 #include <cmath>
 #include <iomanip>
@@ -58,6 +58,8 @@ public:
   int nPtAsymBins() const { return hAsymMC_->GetNbinsX(); }
 
   double coreScalingFactor() const { return coreScalingFactor_; }
+  double sigma() const { return sig_; }
+  double sigmaSmeared() { return sigSmeared_; }
   double fTailData() const { return fNData_; }
   double fTailDataErr() const { return fNDataErr_; }
   double fTailMC() const { return fNMC_; }
@@ -81,6 +83,8 @@ private:
   const double pt3Thres_;
 
   double coreScalingFactor_;
+  double sig_;
+  double sigSmeared_;
   int tailStartBin_;
   int tailEndBin_;
   double fNMCSmeared_;
@@ -126,7 +130,10 @@ public:
   double tailWindowMax() const { return tailWindowMax_; }
   double tailWindowEffMin() const { return tailWindowEffMin_; }
   double tailWindowEffMax() const { return tailWindowEffMax_; }
+  double sigma(int i) const { return pt3Bins_.at(i)->sigma(); }
+  double sigmaSmeared(int i) { return pt3Bins_.at(i)->sigmaSmeared(); }
 
+  double fTailMCSmeared(int i) const { return pt3Bins_.at(i)->fTailMCSmeared(); }
   double extraMC() const { return extraMC_; }
   double extraMCErr() const { return extraMCErr_; }
   double extraData() const { return extraData_; }
@@ -218,7 +225,7 @@ void getTailScalingFactors() {
 
   std::cout << "Setting up parameters" << std::endl;
 
-  const TString outLabel = "Tail_GenCuts_Sig30-60_PtSoft002";
+  const TString outLabel = "Test";//"Tail_GenCuts_Sig30-60_PtSoft002";
   const double nSigCore = 2.;
 
   const double nSigTailStart = 1.5;
@@ -259,14 +266,22 @@ void getTailScalingFactors() {
 
     for(unsigned int ptBin = 0; ptBin < binAdm->nPtBins(etaBin); ++ptBin) {
       if( DEBUG ) std::cout << "Setting up bin (" << etaBin << ", " << ptBin << ")" << std::endl;
+      
+//       TString path = "~/results/ResolutionFit/TailScalingPreApprovalJetMET/";
+//       TString fileNameData = path+"Tails_PF_PtGenCuts_PpSoft002_Rebinned_Eta";
+//       TString fileNameMC = path+"Tails_PF_PtGenCuts_PpSoft002_Rebinned_Eta";
+      
+      TString path = "~/results/ResolutionFit/TailScalingPreApprovalJetMET/";
+      TString fileNameData = path+"Tails_PF_PtGenCuts_PpSoft002_Rebinned_Eta";
+      TString fileNameMC = path+"Tails_PF_PtGenCuts_PpSoft002_Rebinned_Eta";
 
-//         TString path = "../sampleTools/";
-//         TString fileNameData = path+"Tails_PF_MC_PtGenCuts_PtSoft005_Rebinned_Eta";
-//         TString fileNameMC = path+"Tails_PF_MC_PtGenCuts_PtSoft005_Rebinned_Eta";
+//       TString path = "~/results/ResolutionFit/TailScalingPreApprovalJetMET/";
+//       TString fileNameData = path+"Tails_PF_PtGenCuts_PpSoft002_Rebinned_Eta";
+//       TString fileNameMC = path+"Tails_PF_PtGenCuts_PpSoftCuts_Rebinned_Eta";
 
-        TString path = "~/results/ResolutionFit/TailScalingPreApprovalSusy/";
-        TString fileNameData = path+"Tails_PtSoft002_PF_MCPtGenCuts_Rebinned_Eta";
-        TString fileNameMC = path+"Tails_PtSoft002_PF_MCPtGenCuts_Rebinned_Eta";
+//       TString path = "../sampleTools/";
+//       TString fileNameData = path+"Tails_PF_MCFineBins_Rebinned_Eta";
+//       TString fileNameMC = path+"Tails_PF_MCFineBins_Rebinned_Eta";
 
       fileNameData += etaBin;
       fileNameMC += etaBin;
@@ -293,11 +308,9 @@ void getTailScalingFactors() {
 //       bin->addPt3Bin(0.300,fileNameData+"_PtSoft10.root",fileNameMC+"_PtSoft10.root");
 
       // Add symmetrized mc truth response
-      //bin->addSymMCTruthResponse("results/MCTruth_Rebinned_Eta"+util::toTString(etaBin)+".root");
       //bin->addSymMCTruthResponse(fileNameMC+"_PtSoft0.root");
 
       // Add mc truth response for toy asymmetry
-      //bin->addMCTruthForToyAsym("results/MCTruth_Rebinned_Eta"+util::toTString(etaBin)+".root");
       bin->addMCTruthForToyAsym(fileNameMC+"_PtSoft0.root");
 
       etaPtBins.push_back(bin);
@@ -450,8 +463,8 @@ EtaPtBin::EtaPtBin(unsigned int etaBin, unsigned int ptBin, double nSigCore, dou
   gFTailSpreadData_  = new TGraphAsymmErrors(0);
   gFTailMCTruthNonGauss_ = new TGraphAsymmErrors(0);
 
-  //fExMC_ = new TF1("fExMC"+binId(),"[0] + sq([1])*x + [2]*sq(x) + [3]*x*x*x",exMin_,exMax_);
-  fExMC_ = new TF1("fExMC"+binId(),"[0] + sq([1])*x + [2]*sq(x)",exMin_,exMax_);
+  fExMC_ = new TF1("fExMC"+binId(),"[0] + sq([1])*x + [2]*sq(x) + [3]*x*x*x",exMin_,exMax_);
+  //fExMC_ = new TF1("fExMC"+binId(),"[0] + sq([1])*x + [2]*sq(x)",exMin_,exMax_);
   fExMC_->SetParameter(0,0.005);
   fExMC_->SetParameter(1,0.);
   fExMC_->SetParameter(2,0.05);
@@ -713,8 +726,7 @@ void EtaPtBin::findWindow(const TString &fileName, double nSigTailWindowMin, dou
     tailWindowMax_ = h->GetXaxis()->GetBinUpEdge(tailMaxBin_);
     tailWindowEffMin_ = tailWindowMin_/width;
     tailWindowEffMax_ = tailWindowMax_/width;
-
-    //std::cout << "SIG(" << etaBin_ << ", " << ptBin_ << "): " << width << " \\pm " << widthErr << std::endl;
+    if( DEBUG ) std::cout << "EtaPtBin::findWindow(): sig(" << etaBin_ << ", " << ptBin_ << "): " << width << " \\pm " << widthErr << std::endl;
   } else {
     std::cerr << "ERROR in EtaPtBin::findWindow(): fit of core region did not converge" << std::endl;
     std::cerr << "  Window is not defined properly" << std::endl;
@@ -933,7 +945,7 @@ void EtaPtBin::extrapolate(double minPt3Data, bool fixDataShape, bool mcTruthRef
 
   // Extrapolation of ftail
   extraMC_ = fExMC_->GetParameter(0);
-  extraMCErr_ = hSpread->GetRMS()*extraMC_;
+  extraMCErr_ = fExMC_->GetParError(0);//hSpread->GetRMS()*extraMC_;
 
 
   // Fill graphs of ftail vs pt3 for data
@@ -994,22 +1006,22 @@ void EtaPtBin::extrapolate(double minPt3Data, bool fixDataShape, bool mcTruthRef
 
   // Extrapolated ftail
   extraData_ = fExData_->GetParameter(0);
-  extraDataErr_ = hSpread->GetRMS()*extraData_;
+  extraDataErr_ = fExData_->GetParError(0);//hSpread->GetRMS()*extraData_;
   delete hSpread;
 
 
   // Set delta: absolute difference of extrapolated values
   deltaEx_ = extraData_ - extraMC_;
-  // Uncertainty from fitted parameters (no fluctuations with fixed window)
+  // Uncertainty from fitted parameters
   deltaExErr_ = sqrt( pow(extraDataErr_,2.) + pow(extraMCErr_,2.) );
 
 
   // Scaling factor (fmc(0)+delta)/fmc(0)
   double ref = extraMC_;
   double refE = extraMCErr_;
-  if( hasSymMCTruth() && mcTruthRef ) {
-    ref = symMCTruth_->fTailMCSmeared();
-    refE = symMCTruth_->fTailMCSmearedErr();
+  if( hasToyMC() && mcTruthRef ) {
+    ref = toyMC_->fTailMCSmeared();
+    refE = toyMC_->fTailMCSmearedErr();
   }
   
   //  std::cout << "(" << etaBin_ << "," << ptBin_ << ")   $" << ref << " \\pm " << refE << "$" << std::endl;
@@ -1055,13 +1067,16 @@ Pt3Bin::Pt3Bin(const TString &fileNameData, const TString &fileNameMC, unsigned 
   hAsymMC_->UseCurrentStyle();
 
   // Smear MC asymmetry
-  double width = 0.;
+  sig_ = 0.;
   double widthErr = 1000.;
-  if( util::HistOps::fitCoreWidth(hAsymMC_,nSigCore,width,widthErr) ) {
-    func::smearHistogram(hAsymMC_,hAsymMCSmeared_,hAsymMC_->GetEntries(),width,coreScalingFactor);
+  if( util::HistOps::fitCoreWidth(hAsymMC_,nSigCore,sig_,widthErr) ) {
+    func::smearHistogram(hAsymMC_,hAsymMCSmeared_,hAsymMC_->GetEntries(),sig_,coreScalingFactor);
   } else {
     func::smearHistogram(hAsymMC_,hAsymMCSmeared_,hAsymMC_->GetEntries(),0.,0.);
   }
+
+  // Width of smeared asymmetry
+  if( !util::HistOps::fitCoreWidth(hAsymMCSmeared_,nSigCore,sigSmeared_,widthErr) ) sigSmeared_ = 0.;
 
   // Get relative number of entries in tail
   getFTail(hAsymMC_,hAsymMC_->GetEntries(),tailStartBin_,tailEndBin_,fNMC_,fNMCErr_);
@@ -1090,6 +1105,8 @@ Pt3Bin::Pt3Bin(const TString &fileName, unsigned int etaBin, unsigned int ptBin,
   hResp_ = 0;
   hPtAveSpecData_ = 0;
   hPtAveSpecMC_ = 0;
+  sig_ = 0.;
+  sigSmeared_ = 0.;
 
   
   TH1* h = readMCTruthResponse(fileName,"SymmetrizedMCTruth");
@@ -1154,6 +1171,8 @@ Pt3Bin::Pt3Bin(const TString &fileName, unsigned int etaBin, unsigned int ptBin,
   hSymResp_ = 0;
   hPtAveSpecData_ = 0;
   hPtAveSpecMC_ = 0;
+  sig_ = 0.;
+  sigSmeared_ = 0.;
 
 
   // Get response from file  
@@ -1671,32 +1690,44 @@ void setStyleMC(TGraphAsymmErrors* g) {
 
 // ------------------------------------------------------------------------------------
 void printWindowBorders(const std::vector<EtaPtBin*> &bins) {
-  std::cout << "\n\n\n***  Window Borders  ***\n";
+  std::cout << "\n\n\n***  Window Borders  ***\n\n";
+  std::cout << "EtaBin \t PtBin \t Min(A) - Max(A) \t Min/sig_1 - Max/sig_1 \t Min/sigSmear_1 - Max/sigSmear_1 \t f_1 \t f(Gauss)\n" << std::endl;
   for(EtaPtBinConstIt it = bins.begin(); it != bins.end(); ++it) {
     EtaPtBin* bin = *it;
-    std::cout << "(" << bin->etaBin() << ", " << bin->ptBin() << "): " << bin->tailWindowMin() << " - " << bin->tailWindowMax() << std::endl;
+    double min = bin->tailWindowMin();
+    double max = bin->tailWindowMax();
+    double sig = bin->sigma(0);
+    double sigSmear = bin->sigmaSmeared(0);
+    double fGauss = (erf(max/sqrt(2.)/sigSmear) - erf(min/sqrt(2.)/sigSmear))/2.;
+    double fAsym = bin->fTailMCSmeared(0);
+    std::cout << bin->etaBin() << "\t" << bin->ptBin() << "\t";
+    std::cout << min << " - " << max << " \t " << min/sig << " - " << max/sig << " \t ";
+    std::cout << min/sigSmear << " - " << max/sigSmear << " \t ";
+    std::cout << fGauss << " \t " << fAsym << std::endl;
   }
   std::cout << "\n";
 
-  // hack
-  for(EtaPtBinConstIt it = bins.begin(); it != bins.end(); ++it) {
-    EtaPtBin* bin = *it;
-    std::cout << "min.push_back(" << bin->tailWindowMin() << ");" << std::endl;
-  }
-  for(EtaPtBinConstIt it = bins.begin(); it != bins.end(); ++it) {
-    EtaPtBin* bin = *it;
-    std::cout << "max.push_back(" << bin->tailWindowMax() << ");" << std::endl;
-  }
+//   // hack
+//   for(EtaPtBinConstIt it = bins.begin(); it != bins.end(); ++it) {
+//     EtaPtBin* bin = *it;
+//     std::cout << "min.push_back(" << bin->tailWindowMin() << ");" << std::endl;
+//   }
+//   for(EtaPtBinConstIt it = bins.begin(); it != bins.end(); ++it) {
+//     EtaPtBin* bin = *it;
+//     std::cout << "max.push_back(" << bin->tailWindowMax() << ");" << std::endl;
+//   }
 }
 
 
 // ------------------------------------------------------------------------------------
 void printMCClosure(const std::vector<EtaPtBin*> &bins) {
   std::cout << "\n\n\n***  MC Closure  ***\n";
-  std::cout << "Bin \t\t\t fAsym(0) \t\t ToyAsym \t\t SymMCTruth \n";
+  std::cout << "Bin \t\t\t fAsym(0) \t\t ToyAsym \t (ToyAsym-fAsym(0))/fAsym(0) \t SymMCTruth \n";
   for(EtaPtBinConstIt it = bins.begin(); it != bins.end(); ++it) {
     EtaPtBin* bin = *it;
-    std::cout << "(" << bin->etaBin() << ", " << bin->ptBin() << "): \t " << bin->extraMC() << " +/- " << bin->extraMCErr() << " \t " << bin->toyMC() << " +/- " << bin->toyMCErr() << " \t " << bin->symResp()  << " +/- " << bin->symRespErr() << std::endl;
+    std::cout << "(" << bin->etaBin() << ", " << bin->ptBin() << "): \t " << bin->extraMC() << " +/- " << bin->extraMCErr() << " \t " << bin->toyMC() << " +/- " << bin->toyMCErr() << " \t " << (bin->toyMC()-bin->extraMC())/bin->extraMC() << std::flush;
+    if( bin->hasSymMCTruth() ) std::cout << bin->symResp()  << " +/- " << bin->symRespErr() << std::flush;
+    std::cout << std::endl;
   }
   std::cout << "\n";
 
