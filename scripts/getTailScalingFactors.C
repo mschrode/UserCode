@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.13 2011/01/13 13:54:29 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.14 2011/01/15 22:37:32 mschrode Exp $
 
 #include <cmath>
 #include <iomanip>
@@ -27,7 +27,7 @@
 
 
 
-const bool DEBUG = true;
+const bool DEBUG = false;
 const double BINLABEL_WIDTH = -0.48;
 const double LEG_WIDTH = 0.48;
 
@@ -124,6 +124,8 @@ public:
   unsigned int ptBin() const { return ptBin_; }
   double tailWindowMin() const { return tailWindowMin_; }
   double tailWindowMax() const { return tailWindowMax_; }
+  double tailWindowEffMin() const { return tailWindowEffMin_; }
+  double tailWindowEffMax() const { return tailWindowEffMax_; }
 
   double extraMC() const { return extraMC_; }
   double extraMCErr() const { return extraMCErr_; }
@@ -167,6 +169,8 @@ private:
 
   double tailWindowMin_;
   double tailWindowMax_;
+  double tailWindowEffMin_;
+  double tailWindowEffMax_;
   int tailMinBin_;
   int tailMaxBin_;
   TGraphAsymmErrors* gFTailMC_;
@@ -214,7 +218,7 @@ void getTailScalingFactors() {
 
   std::cout << "Setting up parameters" << std::endl;
 
-  const TString outLabel = "Tail";
+  const TString outLabel = "Tail_GenCuts_Sig30-60_PtSoft002";
   const double nSigCore = 2.;
 
   const double nSigTailStart = 1.5;
@@ -244,6 +248,7 @@ void getTailScalingFactors() {
 
   std::vector<EtaPtBin*> etaPtBins;
   unsigned int nEtaBins = binAdm->nEtaBins();
+  unsigned int globalBin = 0;
   for(unsigned int etaBin = 0; etaBin < nEtaBins; ++etaBin) {
     //etaBin = 0;
     double coreScaling = 0.;
@@ -255,10 +260,15 @@ void getTailScalingFactors() {
     for(unsigned int ptBin = 0; ptBin < binAdm->nPtBins(etaBin); ++ptBin) {
       if( DEBUG ) std::cout << "Setting up bin (" << etaBin << ", " << ptBin << ")" << std::endl;
 
-      TString path = "../sampleTools/";
-      TString fileNameData = path+"Tails_PF_MC_PtGenCuts_PtSoft005_Rebinned_Eta";
+//         TString path = "../sampleTools/";
+//         TString fileNameData = path+"Tails_PF_MC_PtGenCuts_PtSoft005_Rebinned_Eta";
+//         TString fileNameMC = path+"Tails_PF_MC_PtGenCuts_PtSoft005_Rebinned_Eta";
+
+        TString path = "~/results/ResolutionFit/TailScalingPreApprovalSusy/";
+        TString fileNameData = path+"Tails_PtSoft002_PF_MCPtGenCuts_Rebinned_Eta";
+        TString fileNameMC = path+"Tails_PtSoft002_PF_MCPtGenCuts_Rebinned_Eta";
+
       fileNameData += etaBin;
-      TString fileNameMC = path+"Tails_PF_MC_PtGenCuts_PtSoft005_Rebinned_Eta";
       fileNameMC += etaBin;
 
       // Create eta-pt bin
@@ -266,6 +276,8 @@ void getTailScalingFactors() {
 
       // Define window
       bin->findWindow(fileNameMC+"_PtSoft0.root",nSigTailStart,nSigTailEnd);
+      //bin->setWindow(fileNameMC+"_PtSoft0.root",globalBin);
+      ++globalBin;
 
       // Add pt3 bins
       bin->addPt3Bin(0.050,fileNameData+"_PtSoft0.root",fileNameMC+"_PtSoft0.root");
@@ -282,7 +294,7 @@ void getTailScalingFactors() {
 
       // Add symmetrized mc truth response
       //bin->addSymMCTruthResponse("results/MCTruth_Rebinned_Eta"+util::toTString(etaBin)+".root");
-      bin->addSymMCTruthResponse(fileNameMC+"_PtSoft0.root");
+      //bin->addSymMCTruthResponse(fileNameMC+"_PtSoft0.root");
 
       // Add mc truth response for toy asymmetry
       //bin->addMCTruthForToyAsym("results/MCTruth_Rebinned_Eta"+util::toTString(etaBin)+".root");
@@ -697,9 +709,10 @@ void EtaPtBin::findWindow(const TString &fileName, double nSigTailWindowMin, dou
   if( util::HistOps::fitCoreWidth(h,nSigCore_,width,widthErr) ) {
     tailMinBin_ = h->FindBin(std::abs(nSigTailWindowMin*width));
     tailMaxBin_ = h->FindBin(std::abs(nSigTailWindowMax*width));
-
     tailWindowMin_ = h->GetXaxis()->GetBinLowEdge(tailMinBin_);
     tailWindowMax_ = h->GetXaxis()->GetBinUpEdge(tailMaxBin_);
+    tailWindowEffMin_ = tailWindowMin_/width;
+    tailWindowEffMax_ = tailWindowMax_/width;
 
     //std::cout << "SIG(" << etaBin_ << ", " << ptBin_ << "): " << width << " \\pm " << widthErr << std::endl;
   } else {
@@ -707,6 +720,8 @@ void EtaPtBin::findWindow(const TString &fileName, double nSigTailWindowMin, dou
     std::cerr << "  Window is not defined properly" << std::endl;
     tailWindowMin_ = 0.;
     tailWindowMax_ = 0.;
+    tailWindowEffMin_ = 0.;
+    tailWindowEffMax_ = 0.;
     tailMinBin_ = 0;
     tailMaxBin_ = 0;
   }
@@ -734,16 +749,22 @@ void EtaPtBin::findWindowFEvts(const TString &fileName, double nSigTailWindowMin
     double nTot = h->Integral();
     if( nTot > 0. ) {
       double fTmp = h->Integral(tailMinBin_,tailMaxBin_)/nTot;
-      while( tailMaxBin_ < h->GetNbinsX() && fTmp < fWin ) ++tailMaxBin_;
+      while( tailMaxBin_ < h->GetNbinsX() && fTmp < fWin ) {
+	++tailMaxBin_;
+	fTmp = h->Integral(tailMinBin_,tailMaxBin_)/nTot;
+      }
     }
     tailWindowMin_ = h->GetXaxis()->GetBinLowEdge(tailMinBin_);
     tailWindowMax_ = h->GetXaxis()->GetBinUpEdge(tailMaxBin_);
-    //std::cout << "SIG(" << etaBin_ << ", " << ptBin_ << "): " << width << " \\pm " << widthErr << std::endl;
+    tailWindowEffMin_ = tailWindowMin_/width;
+    tailWindowEffMax_ = tailWindowMax_/width;
   } else {
     std::cerr << "ERROR in EtaPtBin::findWindowFEvts(): fit of core region did not converge" << std::endl;
     std::cerr << "  Window is not defined properly" << std::endl;
     tailWindowMin_ = 0.;
     tailWindowMax_ = 0.;
+    tailWindowEffMin_ = 0.;
+    tailWindowEffMax_ = 0.;
     tailMinBin_ = 0;
     tailMaxBin_ = 0;
   }
@@ -758,7 +779,22 @@ void EtaPtBin::findWindowFEvts(const TString &fileName, double nSigTailWindowMin
 // ------------------------------------------------------------------------------------
 void EtaPtBin::setWindow(const TString &fileName, unsigned int bin) {
   std::vector<double> min;
+  min.push_back(0.128713);
+  min.push_back(0.0693069);
+  min.push_back(0.0693069);
+  min.push_back(0.148515);
+  min.push_back(0.0693069);
+  min.push_back(0.128713);
+  min.push_back(0.128713);
+
   std::vector<double> max;
+  max.push_back(0.247525);
+  max.push_back(0.148515);
+  max.push_back(0.128713);
+  max.push_back(0.267327);
+  max.push_back(0.148515);
+  max.push_back(0.227723);
+  max.push_back(0.247525);
 
   TString histName = "hPtAbsAsym_Eta"+util::toTString(etaBin_)+"_Pt"+util::toTString(ptBin_);
   TH1* h = util::FileOps::readTH1(fileName,histName);
@@ -769,10 +805,14 @@ void EtaPtBin::setWindow(const TString &fileName, unsigned int bin) {
     binLabel_->AddText(util::toTString(tailWindowMin_)+" < A < "+util::toTString(tailWindowMax_));
     tailMinBin_ = h->FindBin(tailWindowMin_+0.001);
     tailMaxBin_ = h->FindBin(tailWindowMax_-0.001);
+    tailWindowEffMin_ = 0.;
+    tailWindowEffMax_ = 0.;
   } else {
     std::cerr << "ERROR in EtaPtBin::setWindow(): borders not specified properly" << std::endl;
     tailWindowMin_ = 0.;
     tailWindowMax_ = 0.;
+    tailWindowEffMin_ = 0.;
+    tailWindowEffMax_ = 0.;
     tailMinBin_ = 0;
     tailMaxBin_ = 0;
   }
@@ -819,8 +859,8 @@ void EtaPtBin::extrapolate(double minPt3Data, bool fixDataShape, bool mcTruthRef
     gFTailMCTruth_ = new TGraphAsymmErrors(pt3.size(),&(pt3.front()),&(n.front()),
 					   &(pt3e.front()),&(pt3e.front()),
 					   &(ne.front()),&(ne.front()));
-    gFTailMCTruth_->SetMarkerStyle(21);
-    gFTailMCTruth_->SetMarkerColor(kRed);
+    gFTailMCTruth_->SetMarkerStyle(24);
+    gFTailMCTruth_->SetMarkerColor(kGreen+2);
     gFTailMCTruth_->SetLineColor(gFTailMCTruth_->GetMarkerColor());
 
     // After Gaussian subtraction
@@ -859,8 +899,8 @@ void EtaPtBin::extrapolate(double minPt3Data, bool fixDataShape, bool mcTruthRef
     gFTailToyMC_ = new TGraphAsymmErrors(pt3.size(),&(pt3.front()),&(n.front()),
 					 &(pt3e.front()),&(pt3e.front()),
 					 &(ne.front()),&(ne.front()));
-    gFTailToyMC_->SetMarkerStyle(24);
-    gFTailToyMC_->SetMarkerColor(kGreen);
+    gFTailToyMC_->SetMarkerStyle(21);
+    gFTailToyMC_->SetMarkerColor(kRed);
     gFTailToyMC_->SetLineColor(gFTailToyMC_->GetMarkerColor());
   }
 
@@ -1641,11 +1681,11 @@ void printWindowBorders(const std::vector<EtaPtBin*> &bins) {
   // hack
   for(EtaPtBinConstIt it = bins.begin(); it != bins.end(); ++it) {
     EtaPtBin* bin = *it;
-    std::cout << "min.push_back(" << bin->tailWindowMin() << ")" << std::endl;
+    std::cout << "min.push_back(" << bin->tailWindowMin() << ");" << std::endl;
   }
   for(EtaPtBinConstIt it = bins.begin(); it != bins.end(); ++it) {
     EtaPtBin* bin = *it;
-    std::cout << "max.push_back(" << bin->tailWindowMax() << ")" << std::endl;
+    std::cout << "max.push_back(" << bin->tailWindowMax() << ");" << std::endl;
   }
 }
 
