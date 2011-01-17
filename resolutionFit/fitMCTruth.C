@@ -1,4 +1,4 @@
-// $Id: fitMCTruth.C,v 1.6 2010/12/27 13:34:05 mschrode Exp $
+// $Id: fitMCTruth.C,v 1.7 2011/01/05 09:47:29 mschrode Exp $
 
 //!  Fit mean response and resolution from
 //!  Kalibri::ControlPlotsJetSmearing
@@ -14,6 +14,7 @@
 #include "TH1.h"
 #include "TH1D.h"
 #include "TH2.h"
+#include "TLine.h"
 #include "TPaveText.h"
 #include "TString.h"
 
@@ -23,7 +24,6 @@
 #include "../util/StyleSettings.h"
 
 
-unsigned int gN_FILES = 0;
 unsigned int gCOLOR_GAUSS = kRed;
 unsigned int gMARKER_GAUSS = 20;
 unsigned int gCOLOR_RMS = kBlue;
@@ -39,47 +39,60 @@ TH1* createTH1FromTH2(const TH2* h2, const TString &name, const TString &xTitle,
 
 
 
-void fitProfile(const TString &fileName, double nSigCore, TH1* &hMean, TH1* &hMeanGauss, TH1* &hRMS, TH1* &hSigmaGauss, const TString &outNamePrefix) {
-  std::cout << "Fitting profiles (" << gN_FILES << ")" << std::endl;
+void fitProfile(const TString &fileName, double nSigCore, TH1* &hMean, TH1* &hMeanGauss, TH1* &hRMS, TH1* &hSigmaGauss, TH1* &hChi2Ndof, const TString &outNamePrefix, double etaMin, double etaMax, const TString &rootOutFileName, const TString &histNameSuffix) {
+  std::cout << "Fitting profiles" << std::endl;
 
   // Get 2D histogram resp vs pt from file
   std::cout << "  Getting 2D histogram 'response vs ptGen' from file '" << fileName << "'" << std::endl;
-  TH2* hRespVsPt = util::FileOps::readTH2(fileName,"MeanResp_hRespVsPtGen","hRespVsPt_File"+util::toTString(gN_FILES));
+  TH2* hRespVsPt = util::FileOps::readTH2(fileName,"MeanResp_hRespVsPtGen","hRespVsPt_File"+histNameSuffix);
 
 
   // Creating products
   std::cout << "  Creating result histograms" << std::endl;
-  hMean = createTH1FromTH2(hRespVsPt,"hMean"+util::toTString(gN_FILES),"p^{gen}_{T}","GeV","Response Mean");
+  hMean = createTH1FromTH2(hRespVsPt,"hMean"+histNameSuffix,"p^{gen}_{T}","GeV","Response Mean");
   hMean->SetMarkerStyle(gMARKER_RMS);
   hMean->SetMarkerColor(gCOLOR_RMS);
   hMean->SetLineColor(gCOLOR_RMS);
-  hMeanGauss = createTH1FromTH2(hRespVsPt,"hMeanGauss"+util::toTString(gN_FILES),"p^{gen}_{T}","GeV","Response Gauss Mean");
+  hMeanGauss = createTH1FromTH2(hRespVsPt,"hMeanGauss"+histNameSuffix,"p^{gen}_{T}","GeV","Response Gauss Mean");
   hMeanGauss->SetMarkerStyle(gMARKER_GAUSS);
   hMeanGauss->SetMarkerColor(gCOLOR_GAUSS);
   hMeanGauss->SetLineColor(gCOLOR_GAUSS);
-  hRMS = createTH1FromTH2(hRespVsPt,"hRMS"+util::toTString(gN_FILES),"p^{gen}_{T}","GeV","Response Standard Deviation");
+  hRMS = createTH1FromTH2(hRespVsPt,"hRMS"+histNameSuffix,"p^{gen}_{T}","GeV","Response Standard Deviation");
   hRMS->SetMarkerStyle(gMARKER_RMS);
   hRMS->SetMarkerColor(gCOLOR_RMS);
   hRMS->SetLineColor(gCOLOR_RMS);
-  hSigmaGauss = createTH1FromTH2(hRespVsPt,"hSigmaGauss"+util::toTString(gN_FILES),"p^{gen}_{T}","GeV","Response Gaussian Width");
+  hSigmaGauss = createTH1FromTH2(hRespVsPt,"hSigmaGauss"+histNameSuffix,"p^{gen}_{T}","GeV","Response Gaussian Width");
   hSigmaGauss->SetMarkerStyle(gMARKER_GAUSS);
   hSigmaGauss->SetMarkerColor(gCOLOR_GAUSS);
   hSigmaGauss->SetLineColor(gCOLOR_GAUSS);
+
+  hChi2Ndof = static_cast<TH1D*>(hMean->Clone("hChi2Ndof"));
+  hChi2Ndof->SetYTitle("#chi^{2} / ndof");
+  hChi2Ndof->SetMarkerColor(kBlack);
 
 
   // Fill response distributions per pt bin
   std::cout << "  Filling response distributions per ptGen bin" << std::endl;
   util::HistVec hResp;
-  util::HistOps::fillSlices(hRespVsPt,hResp,"hResp_File"+util::toTString(gN_FILES));
+  util::HistOps::fillSlices(hRespVsPt,hResp,"hMCTruthResp"+histNameSuffix);
   for(util::HistItConst hIt = hResp.begin(); hIt != hResp.end(); ++hIt) {
     util::HistOps::setAxisTitles(*hIt,"Response","","jets");
+    (*hIt)->UseCurrentStyle();
     (*hIt)->SetMarkerStyle(20);
   }
+
+  std::cout << "  Writing response distributions to file" << std::endl;
+  TFile outFile(rootOutFileName,"UPDATE");
+  for(util::HistItConst hIt = hResp.begin(); hIt != hResp.end(); ++hIt) {
+    outFile.WriteTObject(*hIt);
+  }
+  outFile.Close();
 
 
   // Fitting response distributions
   std::cout << "  Fitting response distributions per ptGen bin" << std::endl;
   std::vector<TF1*> fGauss;
+  util::HistVec hRatio;
   int bin = 1;
   for(util::HistItConst hIt = hResp.begin(); hIt != hResp.end(); ++hIt, ++bin) {
     double width = 0.;
@@ -96,12 +109,18 @@ void fitProfile(const TString &fileName, double nSigCore, TH1* &hMean, TH1* &hMe
       hRMS->SetBinError(bin,rmsErr);
       hSigmaGauss->SetBinContent(bin,width);
       hSigmaGauss->SetBinError(bin,widthErr);
+      
+      hChi2Ndof->SetBinContent(bin,fit->GetChisquare() / fit->GetNDF());
+
     } else {
-      fit = new TF1("fGauss"+util::toTString(gN_FILES)+"_Bin"+util::toTString(bin),"gaus");
+      fit = new TF1("fGauss"+histNameSuffix+"_Bin"+util::toTString(bin),"gaus");
     }
     fit->SetLineWidth(1);
     fit->SetLineColor(gCOLOR_GAUSS);    
     fGauss.push_back(fit);
+
+    // Ratio to Gaussian fit
+    hRatio.push_back(util::HistOps::createRatioPlot(*hIt,fit));    
   }
 
 
@@ -111,26 +130,58 @@ void fitProfile(const TString &fileName, double nSigCore, TH1* &hMean, TH1* &hMe
   for(util::HistItConst hIt = hResp.begin(); hIt != hResp.end(); ++hIt, ++bin) {
     double ptMin = hRespVsPt->GetXaxis()->GetBinLowEdge(bin);
     double ptMax = hRespVsPt->GetXaxis()->GetBinUpEdge(bin);
-    TPaveText* label = util::LabelFactory::createPaveText(1);
-    label->AddText(util::toTString(ptMin)+" < p^{gen}_{T} < "+util::toTString(ptMax)+" GeV");
+    TPaveText* label = util::LabelFactory::createPaveText(3);
+    label->AddText("CMS Simulation,  #sqrt{s} = 7 TeV");
+    TString jetLabel = "Anti-k_{T} (d=0.5) ";
+    if( outNamePrefix.Contains("Calo") ) jetLabel += "Calo Jets";
+    else if( outNamePrefix.Contains("PF") ) jetLabel += "PF Jets";
+    label->AddText(jetLabel);
+    label->AddText(util::toTString(etaMin)+" < |#eta| < "+util::toTString(etaMax)+",  "+util::toTString(ptMin,0)+" < p^{gen}_{T} < "+util::toTString(ptMax,0)+" GeV");
+
+
     TCanvas* can = new TCanvas("can","Response PtBin "+util::toTString(bin),500,500);
 
     can->cd();
-    util::HistOps::setYRange(*hIt,2);
-    (*hIt)->GetXaxis()->SetRangeUser(0.55,1.45);
-    (*hIt)->Draw("PE1");
-    fGauss.at(bin-1)->Draw("same");
-    label->Draw("same");
-    can->SaveAs(outNamePrefix+"_Linear_PtBin"+util::toTString(bin-1)+".eps","eps");
-
-    can->cd();
     util::HistOps::setYRange(*hIt,2,true);
-    (*hIt)->GetXaxis()->SetRangeUser(0.,2.);
-    (*hIt)->Draw("PE1");
+    //(*hIt)->GetXaxis()->SetRangeUser(0.,2.);
+    (*hIt)->Draw("PE1same");
     fGauss.at(bin-1)->Draw("same");
     label->Draw("same");
     can->SetLogy();
     can->SaveAs(outNamePrefix+"_Log_PtBin"+util::toTString(bin-1)+".eps","eps");
+
+    delete can;
+    can = util::HistOps::createRatioTopCanvas();
+    TPad *bPad = util::HistOps::createRatioBottomPad();
+    TH1 *tFrame = util::HistOps::createRatioTopHist((*hIt));
+    TH1 *bFrame = util::HistOps::createRatioBottomFrame((*hIt),"Response","",0.91,1.09);
+    can->cd();
+    double min = 10.;
+    double max = 0.;
+    util::HistOps::findYRange((*hIt),4,min,max);
+    tFrame->GetYaxis()->SetRangeUser(0.,max);
+    std::vector<TLine*> lines;
+    for(int i = 1; i <= 4; ++i) {
+      double mean = fGauss.at(bin-1)->GetParameter(1);
+      double sig = fGauss.at(bin-1)->GetParameter(2);
+      lines.push_back(new TLine(mean+i*sig,0.,mean+i*sig,max));
+      lines.push_back(new TLine(mean-i*sig,0.,mean-i*sig,max));
+    }
+
+    tFrame->GetXaxis()->SetRange(tFrame->FindBin(0.71),tFrame->FindBin(1.31));
+    bFrame->GetXaxis()->SetRange(bFrame->FindBin(0.71),bFrame->FindBin(1.31));
+    tFrame->Draw("PE1");
+    fGauss.at(bin-1)->Draw("same");
+    for(size_t i = 0; i < lines.size(); ++i) {
+      lines.at(i)->SetLineColor(kBlue);
+      //lines.at(i)->Draw("same");
+    }
+    label->Draw("same");
+    bPad->Draw();
+    bPad->cd();
+    bFrame->Draw();
+    hRatio.at(bin-1)->Draw("PE1same");
+    can->SaveAs(outNamePrefix+"_Linear_PtBin"+util::toTString(bin-1)+".eps","eps");
 
     delete label;
     delete can;
@@ -166,9 +217,6 @@ void fitProfile(const TString &fileName, double nSigCore, TH1* &hMean, TH1* &hMe
     oFile << "\\end{frame} \n";
   }
   oFile.close();
-
-
-  gN_FILES++;
 }
 
 
@@ -203,9 +251,6 @@ void fitMCTruth(const TString &fileName, double nSigCore, double minPt) {
   else if( fileName.Contains("Calo") ) jetAlgo = "Calo";
   
   TString outNamePrefix = "MCTruthResponse_"+jetAlgo;
-
-  if( gN_FILES > 1 ) outNamePrefix += "_F"+util::toTString(gN_FILES);
-
   double etaMin = 0.;
   double etaMax = 0.;
   int etaBin = 0;
@@ -230,11 +275,29 @@ void fitMCTruth(const TString &fileName, double nSigCore, double minPt) {
     etaMax = 5.;
     etaBin = 3;
   }
+  TString histNameSuffix = "";
+  if( fileName.Contains("Dijets") ) {
+    outNamePrefix += "_Dijets";
+    histNameSuffix += "_Dijets";
+  } else if( fileName.Contains("DeltaR10") ) {
+    outNamePrefix += "_DeltaR10";
+    histNameSuffix += "_DeltaR10"; 
+  } else if( fileName.Contains("DeltaR20") ) {
+    outNamePrefix += "_DeltaR20";
+    histNameSuffix += "_DeltaR20"; 
+  } else if( fileName.Contains("DeltaR25") ) {
+    outNamePrefix += "_DeltaR25";
+    histNameSuffix += "_DeltaR25";
+  }
 
   TString jetLabel = "Anti-k_{T} (d=0.5) ";
   if( jetAlgo == "Calo" ) jetLabel += "Calo Jets";
   else if( jetAlgo == "PF" ) jetLabel += "PF Jets";
   jetLabel += ", "+util::toTString(etaMin)+" < |#eta| < "+util::toTString(etaMax);
+
+
+  // Root out file name
+  TString rootOutFileName = "MCTruthResponse_"+jetAlgo+".root";
 
 
 
@@ -243,10 +306,11 @@ void fitMCTruth(const TString &fileName, double nSigCore, double minPt) {
   TH1* hMeanGauss = 0;
   TH1* hRMS = 0;
   TH1* hSigmaGauss = 0;
-  fitProfile(fileName,nSigCore,hMean,hMeanGauss,hRMS,hSigmaGauss,outNamePrefix);
+  TH1* hChi2Ndof = 0;
+  fitProfile(fileName,nSigCore,hMean,hMeanGauss,hRMS,hSigmaGauss,hChi2Ndof,outNamePrefix,etaMin,etaMax,rootOutFileName,("_Eta"+util::toTString(etaBin)+histNameSuffix));
 
   // Fit resolution
-  TF1* fit = fitResolution(hSigmaGauss,"Res_F"+util::toTString(gN_FILES),minPt,2000.);
+  TF1* fit = fitResolution(hSigmaGauss,"Res_Eta"+util::toTString(etaBin)+histNameSuffix,minPt,2000.);
 
   std::cout << std::endl;
   std::cout << "par->setTrueGaussResPar(" << std::flush;
@@ -284,6 +348,15 @@ void fitMCTruth(const TString &fileName, double nSigCore, double minPt) {
   can->SetLogx();
   can->SaveAs(outNamePrefix+"_MeanResponse.eps","eps");
 
+  can->cd();
+  hChi2Ndof->GetYaxis()->SetRangeUser(0.,13.);
+  hChi2Ndof->GetXaxis()->SetMoreLogLabels();
+  hChi2Ndof->SetMarkerStyle(20);
+  hChi2Ndof->Draw("P");
+  label->Draw("same");
+  can->SetLogx();
+  can->SaveAs(outNamePrefix+"_Chi2Ndof.eps","eps");
+
   TLegend* legRes = util::LabelFactory::createLegendColWithOffset(3,0.75,2);
   legRes->AddEntry(hRMS,"Arithmetic Mean","P");
   legRes->AddEntry(hSigmaGauss,"Gaussian Mean","P");
@@ -315,8 +388,8 @@ void fitMCTruth(const TString &fileName, double nSigCore, double minPt) {
   bottomPadRes->SetLogx();
   canRes->SaveAs(outNamePrefix+"_Resolution.eps","eps");
 
-  hSigmaGauss->SetName(("hSigmaGauss_Eta"+util::toTString(etaBin)));
-  fit->SetName(("fit_Eta"+util::toTString(etaBin)));
+  hSigmaGauss->SetName(("hSigmaGauss_Eta"+util::toTString(etaBin)+histNameSuffix));
+  fit->SetName(("fit_Eta"+util::toTString(etaBin)+histNameSuffix));
 
   TFile outFile("MCTruthResponse_"+jetAlgo+".root","UPDATE");
   outFile.WriteTObject(hSigmaGauss);
@@ -330,7 +403,9 @@ void fitMCTruth(const TString &fileName, double nSigCore, double minPt) {
 }
 
 
-void plotMCTruth(const TString &file, const TString &jetAlgo, double minPt) {
+
+// Compare MCTruth of different eta in one plot
+void plotMCTruthForDifferentEta(const TString &file, const TString &jetAlgo, double minPt) {
   util::StyleSettings::paperNoTitle();
 
   util::HistVec hReso = util::FileOps::readHistVec(file,"hSigmaGauss_Eta");
@@ -350,16 +425,23 @@ void plotMCTruth(const TString &file, const TString &jetAlgo, double minPt) {
 	hReso[i]->SetBinContent(bin,-1.);
 	hReso[i]->SetBinError(bin,0.);
       }
+      if( hReso[i]->GetXaxis()->GetBinLowEdge(bin) < minPt ) {
+	hReso[i]->SetBinContent(bin,-1.);
+	hReso[i]->SetBinError(bin,0.);
+      }
+    }
+    double maxPt = 0.;
+    for(int bin = hReso[i]->GetNbinsX(); bin > 0; --bin) {
+      if( hReso[i]->GetBinContent(bin) > 0. ) {
+	maxPt = hReso[i]->GetXaxis()->GetBinUpEdge(bin);
+	break;
+      }
     }
     hReso[i]->UseCurrentStyle();
-    hReso[i]->SetMarkerStyle(20);
-    hReso[i]->GetXaxis()->SetRange(hReso[i]->FindBin(minPt),hReso[i]->GetNbinsX());
-    hReso[i]->GetXaxis()->SetMoreLogLabels();
-    hReso[i]->GetXaxis()->SetTitle("p^{gen}_{T} (GeV)");
-    hReso[i]->GetYaxis()->SetRangeUser(1E-3,0.38);
-    hReso[i]->GetYaxis()->SetTitle("Resolution");
+    hReso[i]->SetMarkerStyle(20+i);
     hReso[i]->SetMarkerColor(util::StyleSettings::color(i));
     hReso[i]->SetLineColor(util::StyleSettings::color(i));
+    fReso[i]->SetRange(minPt,maxPt);
     fReso[i]->SetLineColor(util::StyleSettings::color(i));
     fReso[i]->SetLineWidth(1);
     
@@ -367,6 +449,11 @@ void plotMCTruth(const TString &file, const TString &jetAlgo, double minPt) {
       leg->AddEntry(hReso[i],util::toTString(etaBins.at(i))+" < |#eta| < "+util::toTString(etaBins.at(i+1)));
     }
   }
+
+  TH1* hFrame = new TH1D("hFrame",";p^{gen}_{T} (GeV);Resolution",10000,9.,2500.);
+  hFrame->GetXaxis()->SetMoreLogLabels();
+  hFrame->GetXaxis()->SetNoExponent();
+  hFrame->GetYaxis()->SetRangeUser(1E-3,0.38);
 
   TString jetLabel = "Anti-k_{T} (d=0.5) ";
   if( jetAlgo == "Calo" ) jetLabel += "Calo Jets";
@@ -379,8 +466,8 @@ void plotMCTruth(const TString &file, const TString &jetAlgo, double minPt) {
 
   TCanvas* can = new TCanvas("can","MC Truth Resolution",500,500);
   can->cd();
-  hReso[0]->Draw("PE1");
-  for(unsigned int i = 1; i < hReso.size(); ++i) {
+  hFrame->Draw();
+  for(unsigned int i = 0; i < hReso.size(); ++i) {
     hReso[i]->Draw("PE1same");
   }
   for(unsigned int i = 0; i < fReso.size(); ++i) {
@@ -391,3 +478,145 @@ void plotMCTruth(const TString &file, const TString &jetAlgo, double minPt) {
   can->SetLogx();
   can->SaveAs("MCTruthReso_"+jetAlgo+".eps","eps");  
 }
+
+
+
+void plots(const TString &id, const std::vector<TH1*> &reso, const std::vector<TF1*> &fits, const std::vector<TString> &labels, const TString &jetAlgo, double minPt) {
+  util::StyleSettings::paperNoTitle();
+
+  assert( reso.size() == fits.size() );
+  assert( reso.size() == labels.size() );
+
+  TLegend* leg = util::LabelFactory::createLegendCol(reso.size(),0.48);
+  for(unsigned int i = 0; i < reso.size(); ++i) {
+    for(int bin = 1; bin <= reso[i]->GetNbinsX(); ++bin) {
+      if( reso[i]->GetBinError(bin) > 0.1 ) {
+	reso[i]->SetBinContent(bin,-1.);
+	reso[i]->SetBinError(bin,0.);
+      }
+      if( reso[i]->GetXaxis()->GetBinLowEdge(bin) < minPt ) {
+	reso[i]->SetBinContent(bin,-1.);
+	reso[i]->SetBinError(bin,0.);
+      }
+    }
+    double maxPt = 0.;
+    for(int bin = reso[i]->GetNbinsX(); bin > 0; --bin) {
+      if( reso[i]->GetBinContent(bin) > 0. ) {
+	maxPt = reso[i]->GetXaxis()->GetBinUpEdge(bin);
+	break;
+      }
+    }
+    reso[i]->UseCurrentStyle();
+    reso[i]->SetMarkerStyle(20+i);
+    reso[i]->SetMarkerColor(util::StyleSettings::color(i));
+    reso[i]->SetLineColor(util::StyleSettings::color(i));
+    fits[i]->SetRange(minPt,maxPt);
+    fits[i]->SetLineColor(util::StyleSettings::color(i));
+    fits[i]->SetLineWidth(1);
+    
+    leg->AddEntry(reso[i],labels[i],"PL");
+  }
+
+  TH1* hFrame = new TH1D("hFrame"+id,";p^{gen}_{T} (GeV);Resolution",10000,9.,2500.);
+  hFrame->GetXaxis()->SetMoreLogLabels();
+  hFrame->GetXaxis()->SetNoExponent();
+  hFrame->GetYaxis()->SetRangeUser(1E-3,0.38);
+
+  TString jetLabel = "Anti-k_{T} (d=0.5) ";
+  if( jetAlgo == "Calo" ) jetLabel += "Calo Jets";
+  else if( jetAlgo == "PF" ) jetLabel += "PF Jets";
+
+  TPaveText* label = util::LabelFactory::createPaveText(3,-0.5);
+  label->AddText("CMS Simulation");
+  label->AddText("#sqrt{s} = 7 TeV,  |#eta| < 1.1");
+  label->AddText(jetLabel);
+
+  TCanvas* can = new TCanvas("can"+id,"MC Truth Resolution "+id,500,500);
+  can->cd();
+  hFrame->Draw();
+  for(unsigned int i = 0; i < reso.size(); ++i) {
+    reso[i]->Draw("PE1same");
+  }
+  for(unsigned int i = 0; i < fits.size(); ++i) {
+    fits[i]->Draw("same");
+  }
+  label->Draw("same");
+  leg->Draw("same");
+  can->SetLogx();
+  can->SaveAs("MCTruthReso_"+id+"_"+jetAlgo+".eps","eps"); 
+}
+
+
+
+// Compare MCTruth resolutions for different DeltaRMax and dijet selection
+// vs no selection
+void plotMCTruthForSelections(const TString &file, const TString &jetAlgo, double minPt) {
+  std::vector<TH1*> reso;
+  std::vector<TF1*> fits;
+  std::vector<TString> labels;
+  
+  // Nominal vs dijet selection
+  reso.push_back(util::FileOps::readTH1(file,"hSigmaGauss_Eta0_DeltaR10"));
+  reso.push_back(util::FileOps::readTH1(file,"hSigmaGauss_Eta0_Dijets"));
+  fits.push_back(util::FileOps::readTF1(file,"fit_Eta0_DeltaR10"));
+  fits.push_back(util::FileOps::readTF1(file,"fit_Eta0_Dijets"));
+  labels.push_back("All events");
+  labels.push_back("Dijet events");
+
+  plots("DijetSelection",reso,fits,labels,jetAlgo,minPt);
+  
+  reso.clear();
+  fits.clear();
+  labels.clear();
+
+
+  // Different DeltaR
+  reso.push_back(util::FileOps::readTH1(file,"hSigmaGauss_Eta0_DeltaR10"));
+  reso.push_back(util::FileOps::readTH1(file,"hSigmaGauss_Eta0_DeltaR20"));
+  reso.push_back(util::FileOps::readTH1(file,"hSigmaGauss_Eta0_DeltaR25"));
+  fits.push_back(util::FileOps::readTF1(file,"fit_Eta0_DeltaR10"));
+  fits.push_back(util::FileOps::readTF1(file,"fit_Eta0_DeltaR20"));
+  fits.push_back(util::FileOps::readTF1(file,"fit_Eta0_DeltaR25"));
+  labels.push_back("#DeltaR_{max} < 0.10    ");
+  labels.push_back("#DeltaR_{max} < 0.20    ");
+  labels.push_back("#DeltaR_{max} < 0.25    ");
+
+  plots("DeltaRMax",reso,fits,labels,jetAlgo,minPt);
+  
+  reso.clear();
+  fits.clear();
+  labels.clear();
+}
+
+
+// Compare MCTruth distributions for dijet vs all selection
+void plotMCTruthDistributionsForSelection(const TString &fileNameAll, const TString &fileNameDijets) {
+  util::StyleSettings::paperNoTitle();
+
+  util::HistVec hRespAll = util::FileOps::readHistVec(fileNameAll,"hMCTruthResp_Eta0_DeltaR10","hRespAll");
+  util::HistVec hRespDijets = util::FileOps::readHistVec(fileNameDijets,"hMCTruthResp_Eta0_Dijets","hRespDijets");
+  assert( hRespAll.size() == hRespDijets.size() );
+
+  for(unsigned int i = 0; i < hRespAll.size(); ++i) {
+    hRespAll[i]->UseCurrentStyle();
+    if( hRespAll[i]->Integral("width") ) hRespAll[i]->Scale(1./hRespAll[i]->Integral("width"));
+    hRespAll[i]->SetMarkerStyle(1);
+    hRespAll[i]->SetLineColor(kBlack);
+
+    hRespDijets[i]->UseCurrentStyle();
+    if( hRespDijets[i]->Integral("width") ) hRespDijets[i]->Scale(1./hRespDijets[i]->Integral("width"));
+    hRespDijets[i]->SetMarkerStyle(1);
+    hRespDijets[i]->SetLineColor(kRed);
+  }
+
+  TCanvas* can = new TCanvas("can","MCTruthResponse",500,500);
+  for(unsigned int i = 0; i < hRespAll.size(); ++i) {
+    can->cd();
+    hRespAll[i]->Draw("HIST");
+    hRespDijets[i]->Draw("HISTsame");
+    can->SetLogy();
+    can->SaveAs("MCTruthResponseDistribution_DijetSelection_PtBin"+util::toTString(i)+".eps","eps");
+  }
+  delete can;
+}
+
