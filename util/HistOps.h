@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.27 2010/12/19 22:41:03 mschrode Exp $
+// $Id: HistOps.h,v 1.28 2010/12/27 13:31:17 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.27 2010/12/19 22:41:03 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.28 2010/12/27 13:31:17 mschrode Exp $
   class HistOps
   {
   public:
@@ -84,6 +84,25 @@ namespace util
       setAxisTitles(h,xTitle,xUnit,yTitle,norm);
 
       return h;
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static void findXRange(const TH1 *h, int& min, int& max) {
+      min = 1;
+      for(int i = 1; i <= h->GetNbinsX(); ++i) {
+	if( h->GetBinContent(i) > 0. ) {
+	  min = i;
+	  break;
+	}
+      }
+      max = h->GetNbinsX();
+      for(int i = h->GetNbinsX(); i > 0; --i) {
+	if( h->GetBinContent(i) > 0. ) {
+	  max = i;
+	  break;
+	}
+      }
     }
 
 
@@ -356,6 +375,27 @@ namespace util
       hRatio->SetMarkerColor(h1->GetLineColor());
       hRatio->SetYTitle(yTitle);
       hRatio->Divide(h2);
+      setYRange(hRatio,1.,1.,0.);
+
+      return hRatio;
+    }
+
+    // -------------------------------------------------------------------------------------
+    static TH1D *createRatioPlot(const TH1 *h, const TF1 *f, const TString &yTitle = "") {
+      TString name = "Ratio_";
+      name += h->GetName();
+      TH1D *hRatio = static_cast<TH1D*>(h->Clone(name));
+      hRatio->SetMarkerStyle(h->GetMarkerStyle());
+      hRatio->SetMarkerColor(h->GetLineColor());
+      hRatio->SetYTitle(yTitle);
+      hRatio->Reset();
+      for(int bin = 1; bin <= hRatio->GetNbinsX(); ++bin) {
+	double ref = f->Eval(hRatio->GetBinCenter(bin));
+	if( ref != 0. ) {
+	  hRatio->SetBinContent(bin,h->GetBinContent(bin)/ref);
+	  hRatio->SetBinError(bin,h->GetBinError(bin)/ref);
+	}
+      }
       setYRange(hRatio,1.,1.,0.);
 
       return hRatio;
