@@ -63,10 +63,10 @@ void getCombinedRatio(unsigned int etaBin, double ptMin, double ptMax, TF1* &fRa
   uncertJESU.push_back(0.064);
 
   for(size_t i = 0; i < uncertJESU.size(); ++i) {
-    uncertTotalD.push_back( sqrt(uncertJESD.at(i)*uncertJESD.at(i)) + 
-			    sqrt(uncertOtherD.at(i)*uncertOtherD.at(i)) );
-    uncertTotalU.push_back( sqrt(uncertJESU.at(i)*uncertJESU.at(i)) + 
-			    sqrt(uncertOtherU.at(i)*uncertOtherU.at(i)) );
+    uncertTotalD.push_back( sqrt(uncertJESD.at(i)*uncertJESD.at(i) + 
+				 uncertOtherD.at(i)*uncertOtherD.at(i) ) );
+    uncertTotalU.push_back( sqrt(uncertJESU.at(i)*uncertJESU.at(i) + 
+				 uncertOtherU.at(i)*uncertOtherU.at(i) ) );
   }
 
   
