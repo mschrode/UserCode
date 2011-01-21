@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.17 2011/01/17 15:23:09 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.18 2011/01/17 23:03:49 mschrode Exp $
 
 #include <cmath>
 #include <iomanip>
@@ -47,9 +47,11 @@ void setStyleDataMarker(TH1* h);
 void setStyleMCFilled(TH1* h);
 void setStyleData(TGraphAsymmErrors* g);
 void setStyleMC(TGraphAsymmErrors* g);
-void printWindowBorders(const std::vector<EtaPtBin*> &bins);
-void printMCClosure(const std::vector<EtaPtBin*> &bins);
-void printExtrapolation(const std::vector<EtaPtBin*> &bins);
+
+void printBin(unsigned int etaBin, unsigned int ptBin, const sampleTools::BinningAdmin* adm);
+void printWindowBorders(const std::vector<EtaPtBin*> &bins, const sampleTools::BinningAdmin* adm);
+void printMCClosure(const std::vector<EtaPtBin*> &bins, const sampleTools::BinningAdmin* adm);
+void printExtrapolation(const std::vector<EtaPtBin*> &bins, const sampleTools::BinningAdmin* adm);
 
 
 // ------------------------------------------------------------------------------------
@@ -150,6 +152,7 @@ public:
   double sigmaSmeared(int i) { return pt3Bins_.at(i)->sigmaSmeared(); }
 
   double fTailMCSmeared(int i) const { return pt3Bins_.at(i)->fTailMCSmeared(); }
+  double fTailMCSmearedErr(int i) const { return pt3Bins_.at(i)->fTailMCSmearedErr(); }
   double extraMC() const { return extraMC_; }
   double extraMCErr() const { return extraMCErr_; }
   double extraData() const { return extraData_; }
@@ -241,16 +244,22 @@ void getTailScalingFactors() {
 
   std::cout << "Setting up parameters" << std::endl;
 
-  const TString outLabel = "Test";//"Tail_GenCuts_Sig30-60_PtSoft002";
+  const TString outLabel = "TailSig15-25";
+  //const TString outLabel = "TailSig15-25VarExtrapolation";
+  //const TString outLabel = "TailSig15-25VarCoreDown";
+  //const TString outLabel = "TailSig15-25VarCoreUp";
+  //const TString outLabel = "TailSig15-25VarClosure";
+  //const TString outLabel = "TailMCClosureSig15-25";
+
   const double nSigCore = 2.;
 
-  const double nSigTailStart = 3.;
-  const double nSigTailEnd = 6.;
+  const double nSigTailStart = 1.5;
+  const double nSigTailEnd = 2.5;
 
   const double minPt3Data = 0.;
-  const bool useExtrapolatedValue = true;
+  const bool useExtrapolatedValue = outLabel.Contains("VarExtrapolation") ? false : true;
   const bool fixDataShape = false;
-  const bool mcTruthRef = false;
+  const bool mcTruthRef = outLabel.Contains("VarClosure") ? true : false;
 
 
   const TString jetAlgo = "PF";
@@ -278,40 +287,37 @@ void getTailScalingFactors() {
     //etaBin = 0;
     double coreScaling = 0.;
     // From combined photon+jet and dijet results
-
-    // Nominal
-    if( etaBin == 0 )      coreScaling = 0.048;
-    else if( etaBin == 1 ) coreScaling = 0.058;
-    else if( etaBin == 2 ) coreScaling = 0.;
-    else if( etaBin == 3 ) coreScaling = 0.110;
-
-//      // Uncertainties down
-//      if( etaBin == 0 )      coreScaling = 0.011;
-//      else if( etaBin == 1 ) coreScaling = 0.012;
-//      else if( etaBin == 2 ) coreScaling = 0.;
-//      else if( etaBin == 3 ) coreScaling = 0.010;
-
-//      // Uncertainties up
-//      if( etaBin == 0 )      coreScaling = 0.081;
-//      else if( etaBin == 1 ) coreScaling = 0.097;
-//      else if( etaBin == 2 ) coreScaling = 0.045;
-//      else if( etaBin == 3 ) coreScaling = 0.190;
-
+    if( outLabel.Contains("VarCoreDown") ) {
+      // Uncertainties down
+      if( etaBin == 0 )      coreScaling = 0.011;
+      else if( etaBin == 1 ) coreScaling = 0.012;
+      else if( etaBin == 2 ) coreScaling = 0.;
+      else if( etaBin == 3 ) coreScaling = 0.010;
+    } else if( outLabel.Contains("VarCoreUp") ) {
+      // Uncertainties up
+      if( etaBin == 0 )      coreScaling = 0.081;
+      else if( etaBin == 1 ) coreScaling = 0.097;
+      else if( etaBin == 2 ) coreScaling = 0.045;
+      else if( etaBin == 3 ) coreScaling = 0.190;
+    } else {
+      // Nominal
+      if( etaBin == 0 )      coreScaling = 0.048;
+      else if( etaBin == 1 ) coreScaling = 0.058;
+      else if( etaBin == 2 ) coreScaling = 0.;
+ 	else if( etaBin == 3 ) coreScaling = 0.110;
+    }
+    
     
     for(unsigned int ptBin = 0; ptBin < binAdm->nPtBins(etaBin); ++ptBin) {
       if( DEBUG ) std::cout << "Setting up bin (" << etaBin << ", " << ptBin << ")" << std::endl;
       
-//       TString path = "~/results/ResolutionFit/TailScalingPreApprovalJetMET/";
-//       TString fileNameData = path+"Tails_PF_PtGenCuts_PpSoft002_Rebinned_Eta";
-//       TString fileNameMC = path+"Tails_PF_PtGenCuts_PpSoft002_Rebinned_Eta";
-      
-//       TString path = "~/results/ResolutionFit/TailScalingPreApprovalJetMET/";
-//       TString fileNameData = path+"Tails_PF_PtGenCuts_PpSoft002_Rebinned_Eta";
-//       TString fileNameMC = path+"Tails_PF_PtGenCuts_PpSoft002_Rebinned_Eta";
-
       TString path = "~/results/ResolutionFit/TailScalingRA2CleaningV1/";
       TString fileNameData = path+"Tails2010Run_PF_Data_Rebinned_Eta";
-      TString fileNameMC = path+"Tails2010Run_PF_Data_Rebinned_Eta";
+      TString fileNameMC = path+"Tails2010Run_PF_MC_Rebinned_Eta";
+//       TString fileNameData = path+"Tails2010Run_PF_PtGenSel_PpSoft005_Rebinned_Eta";
+//       TString fileNameMC = path+"Tails2010Run_PF_PtGenSel_PpSoft005_Rebinned_Eta";
+
+
 
       fileNameData += etaBin;
       fileNameMC += etaBin;
@@ -333,6 +339,7 @@ void getTailScalingFactors() {
       bin->addPt3Bin(0.175,fileNameData+"_PtSoft5.root",fileNameMC+"_PtSoft5.root");
       bin->addPt3Bin(0.200,fileNameData+"_PtSoft6.root",fileNameMC+"_PtSoft6.root");
       bin->addPt3Bin(0.225,fileNameData+"_PtSoft7.root",fileNameMC+"_PtSoft7.root");
+
 //       bin->addPt3Bin(0.250,fileNameData+"_PtSoft8.root",fileNameMC+"_PtSoft8.root");
 //       bin->addPt3Bin(0.275,fileNameData+"_PtSoft9.root",fileNameMC+"_PtSoft9.root");
 //       bin->addPt3Bin(0.300,fileNameData+"_PtSoft10.root",fileNameMC+"_PtSoft10.root");
@@ -341,7 +348,8 @@ void getTailScalingFactors() {
       //bin->addSymMCTruthResponse(fileNameMC+"_PtSoft0.root");
 
       // Add mc truth response for toy asymmetry
-      //bin->addMCTruthForToyAsym(fileNameMC+"_PtSoft0.root");
+      //bin->addMCTruthForToyAsym(fileNameMC+"_PtSoft2.root");
+      bin->addMCTruthForToyAsym(path+"Tails2010Run_PF_PtGenSel_PtSoftCuts_Rebinned_Eta"+util::toTString(etaBin)+"_PtSoft0.root");
 
       etaPtBins.push_back(bin);
       if( DEBUG ) std::cout << "Done setting up bin" << std::endl;
@@ -466,9 +474,11 @@ void getTailScalingFactors() {
     delete can;
   }
 
-  printWindowBorders(etaPtBins);
-  printMCClosure(etaPtBins);
-  printExtrapolation(etaPtBins);
+  printWindowBorders(etaPtBins,binAdm);
+  printMCClosure(etaPtBins,binAdm);
+  printExtrapolation(etaPtBins,binAdm);
+
+  delete binAdm;
 }
 
 
@@ -504,7 +514,6 @@ EtaPtBin::EtaPtBin(unsigned int etaBin, unsigned int ptBin, double nSigCore, dou
   gFTailMCTruthNonGauss_ = new TGraphAsymmErrors(0);
 
   fExMC_ = new TF1("fExMC"+binId(),"[0] + sq([1])*x + [2]*sq(x) + [3]*x*x*x",exMin_,exMax_);
-  //fExMC_ = new TF1("fExMC"+binId(),"[0] + sq([1])*x + [2]*sq(x)",exMin_,exMax_);
   fExMC_->SetParameter(0,0.005);
   fExMC_->SetParameter(1,0.);
   fExMC_->SetParameter(2,0.05);
@@ -1760,9 +1769,20 @@ void setStyleMC(TGraphAsymmErrors* g) {
 
 
 // ------------------------------------------------------------------------------------
-void printWindowBorders(const std::vector<EtaPtBin*> &bins) {
+void printBin(unsigned int etaBin, unsigned int ptBin, const sampleTools::BinningAdmin* adm) {
+  std::cout << cout.setf(ios::fixed,ios::floatfield);
+  std::cout << setprecision(1) << "    $" << adm->etaMin(etaBin) << " - " << adm->etaMax(etaBin) << "$ & $";
+  std::cout << setprecision(0) << adm->ptMin(etaBin,ptBin) << " - " << adm->ptMax(etaBin,ptBin) << "$";
+  std::cout << setprecision(5);
+}
+
+
+// ------------------------------------------------------------------------------------
+void printWindowBorders(const std::vector<EtaPtBin*> &bins, const sampleTools::BinningAdmin* adm) {
   std::cout << "\n\n\n***  Window Borders  ***\n\n";
-  std::cout << "EtaBin \t PtBin \t Min(A) - Max(A) \t Min/sig_1 - Max/sig_1 \t Min/sigSmear_1 - Max/sigSmear_1 \t f_1 \t f(Gauss)\n" << std::endl;
+
+  std::cout << "\\begin{tabular}[ht]{cccccc}\n\\hline\n\\hline\n";
+  std::cout << "$\\eta$ & $\\ptave (\\gevnospace)$ & $A_{0} - A_{1}$ & $\\frac{A_{0}-A_{1}}{\\sigma(\\pti{3} = 0.05)}$ & $\\int^{n_{1}}_{n_{0}}\\mathcal{G}$ & $\\fasymmc(\\pti{3} = 0.05)$ \\\\ \n\\hline\n";
   for(EtaPtBinConstIt it = bins.begin(); it != bins.end(); ++it) {
     EtaPtBin* bin = *it;
     double min = bin->tailWindowMin();
@@ -1771,12 +1791,15 @@ void printWindowBorders(const std::vector<EtaPtBin*> &bins) {
     double sigSmear = bin->sigmaSmeared(0);
     double fGauss = (erf(max/sqrt(2.)/sigSmear) - erf(min/sqrt(2.)/sigSmear))/2.;
     double fAsym = bin->fTailMCSmeared(0);
-    std::cout << bin->etaBin() << "\t" << bin->ptBin() << "\t";
-    std::cout << min << " - " << max << " \t " << min/sig << " - " << max/sig << " \t ";
-    std::cout << min/sigSmear << " - " << max/sigSmear << " \t ";
-    std::cout << fGauss << " \t " << fAsym << std::endl;
+    double fAsymErr = bin->fTailMCSmearedErr(0);
+
+    printBin(bin->etaBin(),bin->ptBin(),adm);
+    std::cout << std::setprecision(4) << " & $" << min << " - " << max << "$ & $";
+    std::cout << min/sigSmear << " - " << max/sigSmear << "$ & $";
+    std::cout << fGauss << "$ & $" << fAsym << " \\pm " << fAsymErr << "$ \\\\" << std::endl;
+    if( bin->etaBin() == adm->nEtaBins()-1 ) std::cout << "  \\hline\n";
   }
-  std::cout << "\n";
+  std::cout << "  \\hline\n\\end{tabular}\n\n";
 
 //   // hack
 //   for(EtaPtBinConstIt it = bins.begin(); it != bins.end(); ++it) {
@@ -1791,35 +1814,39 @@ void printWindowBorders(const std::vector<EtaPtBin*> &bins) {
 
 
 // ------------------------------------------------------------------------------------
-void printMCClosure(const std::vector<EtaPtBin*> &bins) {
+void printMCClosure(const std::vector<EtaPtBin*> &bins, const sampleTools::BinningAdmin* adm) {
   if( bins.front()->hasToyMC() || bins.front()->hasSymMCTruth()  ) {
     std::cout << "\n\n\n***  MC Closure  ***\n";
-    std::cout << "Bin \t\t\t fAsym(0) \t\t ToyAsym \t (ToyAsym-fAsym(0))/fAsym(0)";
-    if( bins.front()->hasSymMCTruth() ) std::cout << " \t SymMCTruth";
-    std::cout << std::endl;
+    std::cout << "\\begin{tabular}[ht]{ccccc}\n\\hline\n\\hline\n";
+    std::cout << "$\\eta$ & $\\ptave (\\gevnospace)$ & $\\fasymmc(0)$ & \\fasymtoy & $(\\fasymtoy-\\fasymmc(0))/\\fasymtoy$ \\\\ \n\\hline \n";
     for(EtaPtBinConstIt it = bins.begin(); it != bins.end(); ++it) {
       EtaPtBin* bin = *it;
-      std::cout << "(" << bin->etaBin() << ", " << bin->ptBin() << "): \t " << bin->extraMC() << " +/- " << bin->extraMCErr() << " \t " << bin->toyMC() << " +/- " << bin->toyMCErr() << " \t " << (bin->toyMC()-bin->extraMC())/bin->extraMC() << std::flush;
-      if( bin->hasSymMCTruth() ) std::cout << bin->symResp()  << " +/- " << bin->symRespErr() << std::flush;
-      std::cout << std::endl;
+      printBin(bin->etaBin(),bin->ptBin(),adm);
+      std::cout << " & $" << std::setprecision(3) << bin->extraMC() << " \\pm " << bin->extraMCErr();
+      std::cout << "$ & $" << bin->toyMC() << " \\pm " << bin->toyMCErr();
+      std::cout << "$ & $" << (bin->toyMC()-bin->extraMC())/bin->extraMC() << "$ \\\\ \n";
+      if( bin->etaBin() == adm->nEtaBins()-1 ) std::cout << "  \\hline\n";
     }
-    std::cout << "\n";
+    std::cout << "  \\hline\n\\end{tabular}\n\n";
   }
 }
 
 
 // ------------------------------------------------------------------------------------
-void printExtrapolation(const std::vector<EtaPtBin*> &bins) {
+void printExtrapolation(const std::vector<EtaPtBin*> &bins, const sampleTools::BinningAdmin* adm) {
   std::cout << "\n\n\n***  Extrapolation  ***\n";
-  std::cout << "Bin \t\t\t fAsymData(0) \t\t\t fAsymMC(0) \t\t\t Scaling Factor \n";
+  std::cout << "\\begin{tabular}[ht]{ccccc}\n\\hline\n\\hline\n";
+  std::cout << "$\\eta$ & $\\ptave (\\gevnospace)$ & $\\mean{\\ptave} (\\gevnospace)$ & $\\fasymdata(0)$ & $\\fasymmc(0)$ \\\\ \n\\hline \n";
   for(EtaPtBinConstIt it = bins.begin(); it != bins.end(); ++it) {
     EtaPtBin* bin = *it;
-    std::cout << "(" << bin->etaBin() << ", " << bin->ptBin() << "): \t ";
-    std::cout << bin->extraMC() << " +/- " << bin->extraMCErr() << " \t ";
-    std::cout << bin->extraData() << " +/- " << bin->extraDataErr() << " \t ";  
-    std::cout << bin->scalingFactor() << " +/- " << bin->scalingFactorErr() << std::endl;
+    printBin(bin->etaBin(),bin->ptBin(),adm);
+    std::cout << setprecision(3);
+    std::cout << " & $" << bin->extraMC() << " +/- " << bin->extraMCErr();
+    std::cout << "$ & $"  << bin->extraData() << " +/- " << bin->extraDataErr();  
+    std::cout << "$ & $"  << bin->scalingFactor() << " +/- " << bin->scalingFactorErr() << "$ \\\\ \n";
+    if( bin->etaBin() == adm->nEtaBins()-1 ) std::cout << "  \\hline\n";
   }
-  std::cout << "\n";
+  std::cout << "  \\hline\n\\end{tabular}\n\n";
 }
 
 
@@ -1920,15 +1947,18 @@ TGraphAsymmErrors* uncertaintyBand(const TH1* hNom, const TGraphAsymmErrors* gRe
   
 
 // ------------------------------------------------------------------------------------
-void plotFinalResult() {
+void plotFinalResult(int windowIdx = 0) {
   util::StyleSettings::paper();
   gErrorIgnoreLevel = 1001;
 
   sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("../sampleTools/BinningAdminTailsRebinned.cfg");  
 
-  TString fileNamePrefix = "Test";//"results/Tail";
-  TString outNamePrefix = "TailScalingFactors_PF";
-
+  TString fileNamePrefix = "results/RA2CleaningV1/TailSig15-25";
+  TString outNamePrefix = "TailScalingFactorsSig15-25_PF";
+  if( windowIdx == 1 ) {
+    fileNamePrefix = "results/RA2CleaningV1/TailSig25-50";
+    outNamePrefix = "TailScalingFactorsSig25-50_PF";
+  }
   std::vector<EtaPtBin*> etaPtBins;
   unsigned int nEtaBins = binAdm->nEtaBins();
   for(unsigned int etaBin = 0; etaBin < nEtaBins; ++etaBin) {
@@ -1937,7 +1967,7 @@ void plotFinalResult() {
 
     // Read mean pt
     //TString histName = "hPtAveMeanData_Eta"+util::toTString(etaBin);
-    TString histName = "hPtAveMeanData"+util::toTString(etaBin);
+    TString histName = "hPtAveMeanData_Eta"+util::toTString(etaBin);
     TH1* hPtAveMeanData = util::FileOps::readTH1(fileNamePrefix+"_PF.root",histName,histName);
 
     // Read nominal scaling factors
@@ -1954,35 +1984,43 @@ void plotFinalResult() {
     // ****** Variations for systematic uncertainties *************************************
 
     // Read histograms with variations
-    //    TH1* hScaleVarClosure = util::FileOps::readTH1(fileNamePrefix+"VarClosure_PF.root",histName,histName+"_VarClosure");
+    TH1* hScaleVarClosure = util::FileOps::readTH1(fileNamePrefix+"VarClosure_PF.root",histName,histName+"_VarClosure");
     TH1* hScaleVarExtra = util::FileOps::readTH1(fileNamePrefix+"VarExtrapolation_PF.root",histName,histName+"_VarExtrapolation");
     TH1* hScaleVarCoreUp = util::FileOps::readTH1(fileNamePrefix+"VarCoreUp_PF.root",histName,histName+"_VarCoreUp");
     TH1* hScaleVarCoreDown = util::FileOps::readTH1(fileNamePrefix+"VarCoreDown_PF.root",histName,histName+"_VarCoreDown");
 
     // Get relative uncertainties
     std::vector<TGraphAsymmErrors*> uncerts;
-    //uncerts.push_back(relUncertainty(hScaleNom,14,0.5,hScaleVarClosure));
-    uncerts.push_back(relUncertainty(hScaleNom,5,0.5,hScaleVarExtra));
-    uncerts.push_back(relUncertainty(hScaleNom,46,0.5,hScaleVarCoreUp,hScaleVarCoreDown));
+    uncerts.push_back(relUncertainty(hScaleNom,14,0.5,hScaleVarClosure));
+    uncerts.push_back(relUncertainty(hScaleNom,5,1.,hScaleVarExtra));
+    uncerts.push_back(relUncertainty(hScaleNom,46,1.,hScaleVarCoreUp,hScaleVarCoreDown));
 
     // Define labels
     std::vector<TString> uncertLabels;
-    //uncertLabels.push_back("MC Closure");
+    uncertLabels.push_back("MC Closure");
     uncertLabels.push_back("Extrapolation");
     uncertLabels.push_back("Reweighting");
 
     // Add up uncertainties
     TGraphAsymmErrors* gUncertRelTotal = totalUncertainty(uncerts,38);
     TGraphAsymmErrors* gUncertAbs = uncertaintyBand(hScaleNom,gUncertRelTotal);
-
-
+    TGraphAsymmErrors* gUncertAbsPos = static_cast<TGraphAsymmErrors*>(gUncertAbs->Clone());
+    for(int i = 0; i < gUncertAbsPos->GetN(); ++i) {
+      gUncertAbsPos->SetPointError(i,gUncertAbsPos->GetEXlow()[i],gUncertAbsPos->GetEXhigh()[i],
+				   gUncertAbsPos->GetEYlow()[i]>gUncertAbsPos->GetY()[i] ? gUncertAbsPos->GetY()[i] : gUncertAbsPos->GetEYlow()[i],gUncertAbsPos->GetEYhigh()[i]);
+    }
 
     // ****** Plotting ********************************************************************
 
     // Label
-    TPaveText* label = util::LabelFactory::createPaveText(2,BINLABEL_WIDTH);
+    TPaveText* label = util::LabelFactory::createPaveText(3,BINLABEL_WIDTH);
     label->AddText("Anti-k_{T} (d=0.5) PF Jets");
     label->AddText(util::toTString(binAdm->etaMin(etaBin))+" < |#eta| < "+util::toTString(binAdm->etaMax(etaBin)));
+    if( windowIdx == 0 ) {
+      label->AddText("1.5 - 2.5 #sigma Window");
+    } else {
+      label->AddText("2.5 - 5.0 #sigma Window");
+    }
 
     TLegend* legScale = util::LabelFactory::createLegendCol(2,LEG_WIDTH);
     legScale->AddEntry(gNomRatio,"Scaling Factor","P");
@@ -1997,11 +2035,16 @@ void plotFinalResult() {
 
     // Plot scaling factors and total uncertainty    
     hScaleFrame->GetYaxis()->SetRangeUser(0.01,2.99);
+    if( gNomRatio->GetY()[0] > 3. ) hScaleFrame->GetYaxis()->SetRangeUser(0.01,6.99);
     hScaleFrame->GetYaxis()->SetTitle("Scaling Factor");
     TCanvas* canScale = new TCanvas("canScale"+util::toTString(etaBin),"Scaling Factors Eta "+util::toTString(etaBin),500,500);
     canScale->cd();
     hScaleFrame->Draw("HIST");
-    gUncertAbs->Draw("E2same");
+    if( windowIdx == 0 && etaBin == 3 ) {
+      gUncertAbsPos->Draw("E2same");
+    } else {
+      gUncertAbs->Draw("E2same");
+    }
     hScaleFrame->Draw("HISTsame");
     gNomRatio->Draw("PE1same");
     label->Draw("same");
@@ -2017,6 +2060,7 @@ void plotFinalResult() {
       hUncertsFrame->SetBinContent(bin,0.);
     }
     hUncertsFrame->GetYaxis()->SetRangeUser(-0.99,1.49);
+    if( windowIdx == 0 && etaBin == 3 ) hUncertsFrame->GetYaxis()->SetRangeUser(-5.1,5.);
     hUncertsFrame->GetYaxis()->SetTitle("Relative Uncertainties");
     TCanvas* canRelUncerts = new TCanvas("canRelUncerts"+util::toTString(etaBin),"Relative Uncertainties Eta "+util::toTString(etaBin),500,500);
     canRelUncerts->cd();
@@ -2044,8 +2088,8 @@ void plotFinalResult() {
       std::cout << "\\hline\n";
     }
     for(int bin = 1; bin <= hScaleNom->GetNbinsX(); ++bin) {
-      std::cout << std::setprecision(1) << util::toTString(binAdm->etaMin(etaBin)) << " -- " << util::toTString(binAdm->etaMax(etaBin)) << " & ";
-      std::cout << std::setprecision(0) << util::toTString(binAdm->ptMin(etaBin,bin-1)) << " -- " << util::toTString(binAdm->ptMax(etaBin,bin-1)) << " & $";
+      std::cout << std::setprecision(1) << util::toTString(binAdm->etaMin(etaBin)) << " - " << util::toTString(binAdm->etaMax(etaBin)) << " & ";
+      std::cout << std::setprecision(0) << util::toTString(binAdm->ptMin(etaBin,bin-1)) << " - " << util::toTString(binAdm->ptMax(etaBin,bin-1)) << " & $";
       std::cout << std::setprecision(4) << hPtAveMeanData->GetBinContent(bin) << " \\pm " << hPtAveMeanData->GetBinError(bin) << "$ & $";
       std::cout << std::setprecision(4) << hScaleNom->GetBinContent(bin);
       double estat = hScaleNom->GetBinError(bin);
@@ -2054,7 +2098,7 @@ void plotFinalResult() {
       double etotd = sqrt( estat*estat + esystd*esystd );
       double etotu = sqrt( estat*estat + esystu*esystu );
       std::cout << " \\pm " << estat << "^{+" << esystu << "}_{-" << esystd << "}$ & $";
-      std::cout << hScaleNom->GetBinContent(bin) << "^{+" << etotu << "}_{" << etotd << "} $ \\\\\n";
+      std::cout << hScaleNom->GetBinContent(bin) << "^{+" << etotu << "}_{-" << etotd << "} $ \\\\\n";
     }    
     std::cout << "\\hline\n";
   }
