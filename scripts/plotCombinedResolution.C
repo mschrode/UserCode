@@ -1,4 +1,4 @@
-#include <fstream>
+#include <cassert>
 #include <iostream>
 #include <vector>
 
@@ -6,451 +6,286 @@
 #include "TF1.h"
 #include "TH1.h"
 #include "TH1D.h"
-#include "TGraphErrors.h"
+#include "TGraphAsymmErrors.h"
 #include "TLegend.h"
 #include "TPaveText.h"
 #include "TString.h"
 
+#include "../util/utils.h"
+#include "../util/ConfigParser.h"
 #include "../util/HistOps.h"
 #include "../util/LabelFactory.h"
 #include "../util/StyleSettings.h"
 
 
+void getCombinedRatio(unsigned int etaBin, double ptMin, double ptMax, TF1* &fRatio, TGraphAsymmErrors* &gRatioStat, TGraphAsymmErrors* &gUncertTotal, TGraphAsymmErrors* &gUncertJES) {
 
-class Measurement {
-public:
-  Measurement(const TString &name, const TF1 *mcTruth, int color, int marker);
+  std::cout << "Entering getCombinedRatio(etaBin = " << etaBin << ")" << std::endl;
 
-  void readData(const TString &fileName) { read(fileName,"Data"); }
-  void readMC(const TString &fileName) { read(fileName,"MC"); }
+  // combined ratios and uncertainties for different eta bins
+  std::vector<double> ratio;
+  std::vector<double> stat;
+  std::vector<double> uncertOtherD;
+  std::vector<double> uncertOtherU;
+  std::vector<double> uncertJESD;
+  std::vector<double> uncertJESU;
+  std::vector<double> uncertTotalD;
+  std::vector<double> uncertTotalU;
 
-  TGraphErrors *gData() { return g_; }
-  TGraphErrors *gDataRatio() { return gRatio_; }
-  TGraphErrors *gMC() { return gMC_; }
-  TGraphErrors *gMCRatio() { return gMCRatio_; }
+  ratio.push_back(1.048);
+  ratio.push_back(1.058);
+  ratio.push_back(0.983);
+  ratio.push_back(1.110);
 
-  TString name() const { return name_; }
-  int nBins() const { return static_cast<int>(x_.size()); }
-  void print() const;
+  stat.push_back(0.012);
+  stat.push_back(0.021);
+  stat.push_back(0.032);
+  stat.push_back(0.043);
 
+  uncertOtherD.push_back(0.007);
+  uncertOtherD.push_back(0.006);
+  uncertOtherD.push_back(0.010);
+  uncertOtherD.push_back(0.016);  
+			 
+  uncertOtherU.push_back(0.008);
+  uncertOtherU.push_back(0.007);
+  uncertOtherU.push_back(0.011);
+  uncertOtherU.push_back(0.018);
 
-private:
-  const TString name_;
-  const int color_;
-  const int marker_;
-  
-  std::vector<double> x_;
-  std::vector<double> xe_;
-  std::vector<double> y_;
-  std::vector<double> ye_;
-  std::vector<double> xmc_;
-  std::vector<double> xmce_;
-  std::vector<double> ymc_;
-  std::vector<double> ymce_;
+  uncertJESD.push_back(0.035);
+  uncertJESD.push_back(0.040);
+  uncertJESD.push_back(0.050);
+  uncertJESD.push_back(0.088);
 
-  TF1 *mcTruth_;
-  TGraphErrors *g_;
-  TGraphErrors *gRatio_;
-  TGraphErrors *gMC_;
-  TGraphErrors *gMCRatio_;
+  uncertJESU.push_back(0.031);
+  uncertJESU.push_back(0.033);
+  uncertJESU.push_back(0.052);
+  uncertJESU.push_back(0.064);
 
-  void createTGraphs();
-  void read(const TString &fileName, const TString &sample);
-};
-
-
-
-Measurement::Measurement(const TString &name, const TF1 *mcTruth, int color, int marker)
-  : name_(name), color_(color), marker_(marker), g_(0), gRatio_(0), gMC_(0), gMCRatio_(0) {
-
-  // MC truth resolution
-  mcTruth_ = static_cast<TF1*>(mcTruth->Clone(name+"_MCTruth"));
-
-  createTGraphs();
-}
-
-
-void Measurement::createTGraphs() {
-  if( g_ ) delete g_;
-  if( gRatio_ ) delete gRatio_;
-  if( gMC_ ) delete gMC_;
-  if( gMCRatio_ ) delete gMCRatio_;
-
-  g_ = new TGraphErrors(x_.size(),&(x_.front()),&(y_.front()),&(xe_.front()),&(ye_.front()));
-  g_->SetMarkerStyle(marker_);
-  g_->SetLineColor(color_);
-  g_->SetMarkerColor(color_);
-  gRatio_ = util::HistOps::createRatioGraph(g_,mcTruth_);
-
-  gMC_ = new TGraphErrors(xmc_.size(),&(xmc_.front()),&(ymc_.front()),&(xmce_.front()),&(ymce_.front()));
-  gMC_->SetMarkerStyle(marker_+4);
-  gMC_->SetLineColor(color_);
-  gMC_->SetMarkerColor(color_);
-  gMCRatio_ = util::HistOps::createRatioGraph(gMC_,mcTruth_);
-}
-
-
-
-void Measurement::read(const TString &fileName, const TString &sample) {
-  
-  std::vector<double> *x = 0;
-  std::vector<double> *xe = 0;
-  std::vector<double> *y = 0;
-  std::vector<double> *ye = 0;
-
-  if( sample == "Data" ) {
-    x = &x_;
-    xe = &xe_;
-    y = &y_;
-    ye = &ye_;
-  } else if( sample == "MC" ) {
-    x = &xmc_;
-    xe = &xmce_;
-    y = &ymc_;
-    ye = &ymce_;
-  } else {
-    std::cerr << "ERROR: Unknown tag '" << sample << "'" << std::endl;
-    exit(-1);
+  for(size_t i = 0; i < uncertJESU.size(); ++i) {
+    uncertTotalD.push_back( sqrt(uncertJESD.at(i)*uncertJESD.at(i)) + 
+			    sqrt(uncertOtherD.at(i)*uncertOtherD.at(i)) );
+    uncertTotalU.push_back( sqrt(uncertJESU.at(i)*uncertJESU.at(i)) + 
+			    sqrt(uncertOtherU.at(i)*uncertOtherU.at(i)) );
   }
 
-  std::ifstream file;
-  file.open(fileName.Data());
-  if( file.is_open() ) {
-    double tmp = 0.;
-    while( !file.eof() ) {
-      file >> tmp;
-      if( tmp != ( ye->size() ? ye->back() : -1. ) ) {
-	x->push_back(tmp);
-	file >> tmp;
-	xe->push_back(tmp);
-	file >> tmp;
-	y->push_back(tmp);
-	file >> tmp;
-	ye->push_back(tmp);
-      }
-    }
-    createTGraphs();
-  } else {
-    std::cerr << "ERROR opening file '" << fileName << "'\n";
+  
+  // create ratio and graphs as bands for syst uncertainties
+  fRatio = new TF1("fRatio_Eta"+util::toTString(etaBin),"pol0",ptMin,ptMax);
+  fRatio->SetParameter(0,ratio.at(etaBin));
+  fRatio->SetParError(0,stat.at(etaBin));
+  fRatio->SetLineWidth(1);
+
+  double x = 0.5*(ptMin+ptMax);
+  double xe = 0.5*(ptMax-ptMin);
+  double y = ratio.at(etaBin);
+  double yed = uncertJESD.at(etaBin);
+  double yeu = uncertJESU.at(etaBin);
+  gUncertJES = new TGraphAsymmErrors(1,&x,&y,&xe,&xe,&yed,&yeu);
+  gUncertJES->SetFillStyle(1001);
+  gUncertJES->SetFillColor(5);
+  gUncertJES->SetLineColor(gUncertJES->GetFillColor());
+
+  yed = uncertTotalD.at(etaBin);
+  yeu = uncertTotalU.at(etaBin);
+  gUncertTotal = new TGraphAsymmErrors(1,&x,&y,&xe,&xe,&yed,&yeu);
+  gUncertTotal->SetFillStyle(1001);
+  gUncertTotal->SetFillColor(38);
+  gUncertTotal->SetLineColor(gUncertTotal->GetFillColor());
+
+  yed = stat.at(etaBin);
+  yeu = stat.at(etaBin);
+  gRatioStat = new TGraphAsymmErrors(1,&x,&y,&xe,&xe,&yed,&yeu);
+  gRatioStat->SetFillStyle(1001);
+  gRatioStat->SetFillColor(15);
+  gRatioStat->SetLineColor(gRatioStat->GetFillColor());
+
+
+  std::cout << "Leaving getCombinedRatio(etaBin = " << etaBin << ")" << std::endl;
+}
+
+
+
+TGraphAsymmErrors* getPoints(const TString &fileName, const TString &mode, double &etaMin, double &etaMax) {
+  std::cout << "Entering getPoints()" << std::endl;
+
+  // Read points and errors from file
+  util::ConfigParser parser(fileName.Data());
+
+  // Eta bins
+  etaMin = parser.readDouble("EtaMin",":");
+  etaMax = parser.readDouble("EtaMax",":");
+
+  // Points
+  TString prefix;
+  if( mode == "Combined" ) prefix = "";
+  else if( mode == "PhotonJet" ) prefix = "PhotonJet";
+  else if( mode == "Dijet" ) prefix = "Dijet";
+  else {
+    std::cerr << "ERROR in getPoints(): Unknown mode '" << mode << "'" << std::endl;
     exit(1);
   }
-  file.close();
-}
 
-
-void Measurement::print() const {
-  std::cout << "\n\n---------------------------------------------------------------\n";
-  std::cout << name() << " (data)" << std::endl;
-  for(size_t i = 0; i < x_.size(); ++i) {
-    std::cout << x_[i] << " +/- " << xe_[i] << ":  ";
-    std::cout << y_[i] << " +/- " << ye_[i] << std::endl;
+  std::vector<double> pt = parser.readDoubleVec((mode+"MeanPt").Data(),":");
+  std::vector<double> ptErr = parser.readDoubleVec((mode+"MeanPtError").Data(),":");
+  std::vector<double> ratio = parser.readDoubleVec((mode+"Ratio").Data(),":");
+  std::vector<double> ratioErr = parser.readDoubleVec((mode+"RatioError").Data(),":");
+    
+  // Check for sanity
+  assert( pt.size() == ptErr.size() );
+  assert( pt.size() == ratio.size() );
+  assert( pt.size() == ratioErr.size() );
+  if( pt.size() == 0 ) {
+    std::cerr << "WARNING: no field with name '" << (mode+"MeanPt") << "' in file '" << fileName << "'" << std::endl;
   }
-  std::cout << std::endl;
-  std::cout << name() << " (MC)" << std::endl;
-  for(size_t i = 0; i < xmc_.size(); ++i) {
-    std::cout << xmc_[i] << " +/- " << xmce_[i] << ":  ";
-    std::cout << ymc_[i] << " +/- " << ymce_[i] << std::endl;
-  }
-  std::cout << "---------------------------------------------------------------\n\n";
-}
 
+  // Create TGraph of nominal values and statistical errors
+  TGraphAsymmErrors* gStat = new TGraphAsymmErrors(pt.size(),&(pt.front()),&(ratio.front()),
+						   &(ptErr.front()),&(ptErr.front()),
+						   &(ratioErr.front()),&(ratioErr.front()));
+  gStat->SetMarkerStyle(20);
 
+  std::cout << "Leaving getPoints()" << std::endl;
 
-TGraphErrors *biasCorrection(const TGraphErrors *gData, const TGraphErrors *gMC, const TF1 *mcTruth) {
-  TGraphErrors *g = new TGraphErrors(gData->GetN());
-  for(int p = 0; p < gData->GetN(); ++p) {
-    g->SetPoint(p,gData->GetX()[p],gData->GetY()[p]-(gMC->GetY()[p]-mcTruth->Eval(gMC->GetX()[p])));
-    g->SetPointError(p,gData->GetErrorX(p),gData->GetErrorY(p));    
-  }
-  g->SetMarkerStyle(gData->GetMarkerStyle());
-  g->SetMarkerColor(gData->GetMarkerColor());
-  g->SetLineColor(gData->GetLineColor());
-
-  return g;
+  return gStat;
 }
 
 
 
-void plotCombinedResolution() {
-  util::StyleSettings::presentationNoTitle();
+void plotCombinedResolution(const TString fileNameBase = "results/GaussCoreCombined_2010-12-31") {
+  util::StyleSettings::paperNoTitle();
 
-  double xMin = 20.;
-  double xMax = 250.;
+  std::vector<double> etaBins;
+  etaBins.push_back(0.);
+  etaBins.push_back(1.1);
+  etaBins.push_back(1.7);
+  etaBins.push_back(2.3);
+  etaBins.push_back(5.0);
 
-
-  // MC truth resolution
-  TF1 *mcTruth = new TF1("mcTruth","sqrt([0]*[0]/x/x + [1]*[1]/x + [2]*[2])",xMin,xMax);
-  mcTruth->SetLineWidth(2);
-  mcTruth->SetLineStyle(2);
-  mcTruth->SetParameter(0,3.12704);
-  mcTruth->SetParameter(1,1.16413);
-  mcTruth->SetParameter(2,0.0344903);
-  
-
-  Measurement *mPtBal = new Measurement("#gamma + jet balance",mcTruth,kBlue+1,21);
-  mPtBal->readData("resGauss_PtBalance_2010-10-17_Data");
-  mPtBal->readMC("resGauss_PtBalance_2010-10-17_MC");
-  mPtBal->print();
-
-  Measurement *mMPF = new Measurement("#gamma + jet MPF",mcTruth,kGreen+3,22);
-  mMPF->readData("resGauss_MPF_2010-10-17_Data");
-  mMPF->readMC("resGauss_MPF_2010-10-17_MC");
-  mMPF->print();
-
-  Measurement *mMaxLike = new Measurement("Dijet max likelihood",mcTruth,kRed,20);
-  mMaxLike->readData("resGauss_MaxLike_2010-10-17_Data");
-  mMaxLike->readMC("resGauss_MaxLike_2010-10-17_MC");
-  mMaxLike->print();
-
-  TPaveText *txt = util::LabelFactory::createPaveText(1,-0.2);
-  txt->AddText("|#eta| < 1.3");
-
-  TLegend *legMeas = util::LabelFactory::createLegendCol(7,0.8);
-  legMeas->AddEntry(mPtBal->gData(),"#gamma + jet balance (data)","P");
-  legMeas->AddEntry(mPtBal->gMC(),"#gamma + jet balance (MC)","P");
-  legMeas->AddEntry(mMPF->gData(),"#gamma + jet MPF (data)","P");
-  legMeas->AddEntry(mMPF->gMC(),"#gamma + jet MPF (MC)","P");
-  legMeas->AddEntry(mMaxLike->gData(),"Dijet max likelihood (data)","P");
-  legMeas->AddEntry(mMaxLike->gMC(),"Dijet max likelihood (MC)","P");
-  legMeas->AddEntry(mcTruth,"MC truth","L");
-
-
-
-  TCanvas *can0 = new TCanvas("can0","Resolution",500,500);
-  can0->cd();
-  TH1 *hFrame = new TH1D("hFrame",";p_{T} (GeV);#sigma / p_{T}",1000,xMin,xMax);
-  hFrame->GetYaxis()->SetRangeUser(0.,1.3);
-  hFrame->GetXaxis()->SetMoreLogLabels();
-  hFrame->Draw();
-  mcTruth->Draw("same");
-  mPtBal->gData()->Draw("PE1same");
-  mPtBal->gMC()->Draw("PE1same");  
-  mMPF->gData()->Draw("PE1same");
-  mMPF->gMC()->Draw("PE1same");  
-  mMaxLike->gData()->Draw("PE1same");
-  mMaxLike->gMC()->Draw("PE1same"); 
-  txt->Draw("same");
-  legMeas->Draw("same");
-  can0->SetLogx();
-
-  TCanvas *can1 = new TCanvas("can1","Ratio Meas / MCTruth",500,500);
-  can1->cd();
-  TH1 *hRatioFrame = util::HistOps::createRatioFrame(hFrame,"#sigma(Meas) / #sigma(MCTruth)",0.6,2.4);
-  hRatioFrame->GetXaxis()->SetMoreLogLabels();
-  hRatioFrame->Draw();
-  mPtBal->gDataRatio()->Draw("PE1same");
-  mPtBal->gMCRatio()->Draw("PE1same");  
-  mMPF->gDataRatio()->Draw("PE1same");
-  mMPF->gMCRatio()->Draw("PE1same");  
-  mMaxLike->gDataRatio()->Draw("PE1same");
-  mMaxLike->gMCRatio()->Draw("PE1same");  
-  txt->Draw("same");
-  legMeas->Draw("same");
-  can1->SetLogx();
-
-  TCanvas *bRatioTopCan = util::HistOps::createRatioTopCanvas();
-  TPad *bRatioBottomPad = util::HistOps::createRatioBottomPad();
-  TH1 *bRatioTopFrame = util::HistOps::createRatioTopFrame(hFrame);
-  TH1 *bRatioBottomFrame = util::HistOps::createRatioBottomFrame(hFrame,"p_{T}","GeV",0.61,1.81);
-
-  bRatioTopCan->cd();
-  bRatioTopFrame->GetYaxis()->SetRangeUser(0.,1.3);
-  bRatioTopFrame->Draw();
-  mcTruth->Draw("same");
-  mPtBal->gData()->Draw("PE1same");
-  mPtBal->gMC()->Draw("PE1same");  
-  mMPF->gData()->Draw("PE1same");
-  mMPF->gMC()->Draw("PE1same");  
-  mMaxLike->gData()->Draw("PE1same");
-  mMaxLike->gMC()->Draw("PE1same");
-  txt->Draw("same");  
-  legMeas->Draw("same");
-  gPad->SetLogx();
-  bRatioBottomPad->Draw();
-  bRatioBottomPad->cd();
-  bRatioBottomFrame->GetXaxis()->SetMoreLogLabels();
-  bRatioBottomFrame->Draw();
-  mPtBal->gDataRatio()->Draw("PE1same");
-  mPtBal->gMCRatio()->Draw("PE1same");  
-  mMPF->gDataRatio()->Draw("PE1same");
-  mMPF->gMCRatio()->Draw("PE1same");  
-  mMaxLike->gDataRatio()->Draw("PE1same");
-  mMaxLike->gMCRatio()->Draw("PE1same");  
-  gPad->SetLogx();
-
-
-  // Interpolated dijet data
-  TF1 *fInterDijet = static_cast<TF1*>(mcTruth->Clone("fInterDijet"));
-  fInterDijet->SetLineWidth(2);
-  fInterDijet->SetLineStyle(1);
-  fInterDijet->SetLineColor(2);
-  mMaxLike->gData()->Fit("fInterDijet","0Q");
-
-
-  // Bias correction for gamma-jet measurements
-  TGraphErrors *gMPFCorr = biasCorrection(mMPF->gData(),mMPF->gMC(),mcTruth);
-  TGraphErrors *gPtBalCorr = biasCorrection(mPtBal->gData(),mPtBal->gMC(),mcTruth);
-
-  TLegend *legInterDijet = util::LabelFactory::createLegendCol(5,0.8);
-  legInterDijet->AddEntry(gPtBalCorr,"#gamma + jet balance (bias corr.)","P");
-  legInterDijet->AddEntry(gMPFCorr,"#gamma + jet MPF (bias corr.)","P");
-  legInterDijet->AddEntry(mMaxLike->gData(),"Dijet max likelihood","P");
-  legInterDijet->AddEntry(fInterDijet,"Interpolation (max likelihood)","L");
-  legInterDijet->AddEntry(mcTruth,"MC truth","L");
-  
-  TCanvas *canInter0 = new TCanvas("canInter0","Interpolated maxlike",500,500);
-  canInter0->cd();
-  hFrame->Draw();
-  util::HistOps::getUncertaintyBand(fInterDijet,0.1,xMin,xMax,kRed-6)->Draw("E3same");
-  mcTruth->Draw("same");
-  mMaxLike->gData()->Draw("PE1same");
-  fInterDijet->Draw("same");
-  gMPFCorr->Draw("PE1same");
-  gPtBalCorr->Draw("PE1same");
-  txt->Draw("same");
-  legInterDijet->Draw("same");
-  canInter0->SetLogx();
-
-  TH1 *hInterDijetRatio = util::HistOps::createRatio(fInterDijet,mcTruth,xMin,xMax,"","");
-
-  TCanvas *canInter1 = new TCanvas("canInter1","Ratio Inter / MCTruth",500,500);
-  canInter1->cd();
-  hRatioFrame->Draw();
-  util::HistOps::getUncertaintyBand(hInterDijetRatio,0.1,xMin,xMax,kRed-6)->Draw("E3same");
-  hRatioFrame->Draw("same");
-  mMaxLike->gDataRatio()->Draw("PE1same");
-  hInterDijetRatio->Draw("same");
-  util::HistOps::createRatioGraph(gMPFCorr,mcTruth)->Draw("PE1same");
-  util::HistOps::createRatioGraph(gPtBalCorr,mcTruth)->Draw("PE1same");
-  txt->Draw("same");
-  legInterDijet->Draw("same");
-  canInter1->SetLogx();
-
-
-  // Interpolation: dijet data, bias corrected gamma-jet data
-  TF1 *fInterAll = static_cast<TF1*>(mcTruth->Clone("fInterAll"));
-  fInterAll->SetLineWidth(2);
-  fInterAll->SetLineStyle(1);
-  fInterAll->SetLineColor(1);
-  TGraphErrors *gAll = new TGraphErrors(gMPFCorr->GetN()+gPtBalCorr->GetN()+mMaxLike->gData()->GetN());
-  for(int p = 0; p < gMPFCorr->GetN(); ++p) {
-    gAll->SetPoint(p,gMPFCorr->GetX()[p],gMPFCorr->GetY()[p]);
-    gAll->SetPointError(p,gMPFCorr->GetErrorX(p),gMPFCorr->GetErrorY(p));
+  std::vector<double> etaMean;
+  std::vector<double> etaErr;
+  for(size_t i = 0; i < etaBins.size()-1; ++i) {
+    etaMean.push_back(0.5*(etaBins.at(i)+etaBins.at(1+i)));
+    etaErr.push_back(0.5*(etaBins.at(1+i)-etaBins.at(i)));
   }
-  int nOffset = gMPFCorr->GetN();
-   for(int p = 0; p < gPtBalCorr->GetN(); ++p) {
-     gAll->SetPoint(p+nOffset,gPtBalCorr->GetX()[p],gPtBalCorr->GetY()[p]);
-     gAll->SetPointError(p+nOffset,gPtBalCorr->GetErrorX(p),gPtBalCorr->GetErrorY(p));
-   }
-  nOffset += gMPFCorr->GetN();
-  for(int p = 0; p < mMaxLike->gData()->GetN(); ++p) {
-    gAll->SetPoint(p+nOffset,mMaxLike->gData()->GetX()[p],mMaxLike->gData()->GetY()[p]);
-    gAll->SetPointError(p+nOffset,mMaxLike->gData()->GetErrorX(p),mMaxLike->gData()->GetErrorY(p));
-  }
-  gAll->Fit("fInterAll","0");
+  std::vector<double> ratioVsEta;
+  std::vector<double> systVsEtaU;
+  std::vector<double> systVsEtaD;
 
+  TH1* hRatioVsEta = new TH1D("hRatioVsEta",";|#eta|;#sigma(Data) / #sigma(MC)",etaBins.size()-1,&(etaBins.front()));
+  hRatioVsEta->GetYaxis()->SetRangeUser(0.51,1.69);
+  hRatioVsEta->SetMarkerStyle(20);
 
-  TLegend *legInterAll = util::LabelFactory::createLegendCol(5,0.8);
-  legInterAll->AddEntry(gPtBalCorr,"#gamma + jet balance (bias corr.)","P");
-  legInterAll->AddEntry(gMPFCorr,"#gamma + jet MPF (bias corr.)","P");
-  legInterAll->AddEntry(mMaxLike->gData(),"Dijet max likelihood","P");
-  legInterAll->AddEntry(fInterAll,"Interpolation","L");
-  legInterAll->AddEntry(mcTruth,"MC truth","L");
+  for(unsigned int etaBin = 0; etaBin < 4; ++etaBin) {
+    std::cout << "Creating plots for etaBin " << etaBin << std::endl;
 
-  
-  TCanvas *canInterAll0 = new TCanvas("canInterAll0","Interpolated all",500,500);
-  canInterAll0->cd();
-  hFrame->Draw();
-  util::HistOps::getUncertaintyBand(fInterAll,0.1,xMin,xMax,1,3013)->Draw("E3same");
-  mcTruth->Draw("same");
-  fInterAll->Draw("same");
-  gMPFCorr->Draw("PE1same");
-  gPtBalCorr->Draw("PE1same");
-  mMaxLike->gData()->Draw("PE1same");
-  txt->Draw("same");
-  legInterAll->Draw("same");
-  canInterAll0->SetLogx();
+    TString fileName = fileNameBase+"_Eta"+util::toTString(etaBin)+".txt";
 
-  TH1 *hInterAllRatio = util::HistOps::createRatio(fInterAll,mcTruth,xMin,xMax,"","");
+    std::cout << "  Reading points" << std::endl;
+    double etaMin = 10.;
+    double etaMax = 10.;
+    std::cout << "    Reading photon jets" << std::endl;
+    TGraphAsymmErrors* gPhotonJet = getPoints(fileName,"PhotonJet",etaMin,etaMax);
+    gPhotonJet->SetMarkerStyle(20);
+    gPhotonJet->SetMarkerColor(kBlue);
+    gPhotonJet->SetLineColor(gPhotonJet->GetMarkerColor());
+    std::cout << "    Reading photon jets done" << std::endl;
+    std::cout << "    Reading dijets" << std::endl;
+    TGraphAsymmErrors* gDijet = getPoints(fileName,"Dijet",etaMin,etaMax);
+    gDijet->SetMarkerColor(kRed);
+    gDijet->SetLineColor(gDijet->GetMarkerColor());
+    gDijet->SetMarkerStyle(24);
+    std::cout << "    Reading dijets done" << std::endl;
+    std::cout << ">> NPhotonJet = " << gPhotonJet->GetN() << std::endl;
+    std::cout << ">> NDijet = " << gDijet->GetN() << std::endl;
 
-  TCanvas *canInterAll1 = new TCanvas("canInterAll1","Ratio Inter All / MCTruth",500,500);
-  canInterAll1->cd();
-  hRatioFrame->Draw();
-  util::HistOps::getUncertaintyBand(hInterAllRatio,0.1,xMin,xMax,1,3013)->Draw("E3same");
-  hRatioFrame->Draw("same");
-  hInterAllRatio->Draw("same");
-  util::HistOps::createRatioGraph(gMPFCorr,mcTruth)->Draw("PE1same");
-  util::HistOps::createRatioGraph(gPtBalCorr,mcTruth)->Draw("PE1same");
-  mMaxLike->gDataRatio()->Draw("PE1same");
-  txt->Draw("same");
-  legInterAll->Draw("same");
-  canInterAll1->SetLogx();
+    double ptMin = 0.5*gPhotonJet->GetX()[0];
+    double ptMax = 2.*gDijet->GetX()[gDijet->GetN()-1];
+    std::cout << "  Points read" << std::endl;
+    
+    std::cout << "  Filling ratio vs eta" << std::endl;
+    // Bands around ratio
+    TGraphAsymmErrors* gSystJes = 0;
+    TGraphAsymmErrors* gSystTotal = 0;
+    TF1* fRatio = 0;
+    TGraphAsymmErrors* gRatioStat = 0;
+    getCombinedRatio(etaBin,ptMin,ptMax,fRatio,gRatioStat,gSystTotal,gSystJes);
 
+    hRatioVsEta->SetBinContent(etaBin+1,fRatio->GetParameter(0));
+    hRatioVsEta->SetBinError(etaBin+1,fRatio->GetParError(0));
+    ratioVsEta.push_back(fRatio->GetParameter(0));
+    systVsEtaD.push_back(gSystTotal->GetEYlow()[0]);
+    systVsEtaU.push_back(gSystTotal->GetEYhigh()[0]);
+    std::cout << "  Done filling ratio vs eta" << std::endl;
 
+    // Labels
+    TPaveText* label = util::LabelFactory::createPaveText(2,-0.48);
+    label->AddText("Anti-k_{T} (d=0.5) PF Jets");
+    label->AddText(util::toTString(etaMin)+" < |#eta| < "+util::toTString(etaMax));
 
+    TLegend* leg = util::LabelFactory::createLegendCol(5,0.49);
+    leg->AddEntry(gPhotonJet,"Photon + Jet","P");
+    leg->AddEntry(gDijet,"Dijets","P");
+    leg->AddEntry(fRatio,"Fit","L");
+    leg->AddEntry(gRatioStat,"Stat. uncertainty","F");
+    leg->AddEntry(gSystTotal,"Syst. uncertainty","F");
 
-
-
-
-  if( false ) {
-    // Uncertainties on MaxLike
-    TGraphErrors *gMaxLikeRatioData = mMaxLike->gDataRatio();
-     
-    // Mean scaling factor
-    gMaxLikeRatioData->Fit("pol0","0Q");
-    double maxLikeScaleMean = gMaxLikeRatioData->GetFunction("pol0")->GetParameter(0);
-    double maxLikeScaleUncert = 0.5*(maxLikeScaleMean-1.);
-    double maxLikeScaleHigh = gMaxLikeRatioData->GetY()[0];
-    double maxLikeScaleLow = gMaxLikeRatioData->GetY()[0];
-    for(int i = 1; i < gMaxLikeRatioData->GetN(); ++i) {
-      if( gMaxLikeRatioData->GetY()[i] > maxLikeScaleHigh ) maxLikeScaleHigh = gMaxLikeRatioData->GetY()[i];
-      else if( gMaxLikeRatioData->GetY()[i] < maxLikeScaleLow ) maxLikeScaleLow = gMaxLikeRatioData->GetY()[i];
+    // Plot
+    TH1* hFrame = new TH1D("hFrame_Eta"+util::toTString(etaBin),";p_{T} (GeV);#sigma(Data) / #sigma(MC)",
+			   1000,ptMin,ptMax);
+    for(int bin = 1; bin <= hFrame->GetNbinsX(); ++bin) {
+      hFrame->SetBinContent(bin,1);
     }
-    TH1 *hMaxLikeScale = new TH1D("hMaxLikeScale",";p_{T} (GeV);#sigma(Meas) / #sigma(MCTruth)",1000,xMin,xMax);
-    hMaxLikeScale->GetYaxis()->SetRangeUser(0.6,2.);
-    hMaxLikeScale->GetXaxis()->SetMoreLogLabels();
-    hMaxLikeScale->SetLineColor(gMaxLikeRatioData->GetLineColor());
-    TH1 *hMaxLikeScaleUncert = static_cast<TH1D*>(hMaxLikeScale->Clone("hMaxLikeScaleUncert"));
-    hMaxLikeScaleUncert->SetFillColor(kRed-6);
-    TH1 *hMaxLikeScaleHighLow = static_cast<TH1D*>(hMaxLikeScaleUncert->Clone("hMaxLikeScaleHighLow"));
+    hFrame->SetLineStyle(2);
+    hFrame->GetXaxis()->SetMoreLogLabels();
+    hFrame->GetXaxis()->SetNoExponent();
+    hFrame->GetYaxis()->SetRangeUser(0.21,2.29);
 
-    for(int bin = 1; bin <= hMaxLikeScale->GetNbinsX(); ++bin) {
-      hMaxLikeScale->SetBinContent(bin,maxLikeScaleMean);
-
-      hMaxLikeScaleUncert->SetBinContent(bin,maxLikeScaleMean);
-      hMaxLikeScaleUncert->SetBinError(bin,maxLikeScaleUncert);
-
-      hMaxLikeScaleHighLow->SetBinContent(bin,maxLikeScaleLow+0.5*(maxLikeScaleHigh-maxLikeScaleLow));
-      hMaxLikeScaleHighLow->SetBinError(bin,0.5*(maxLikeScaleHigh-maxLikeScaleLow));
-    }
-
-    TCanvas *canMaxLikeExtra1 = new TCanvas("canMaxLikeExtra1","MaxLike: Ratio Meas / MCTruth",500,500);
-    canMaxLikeExtra1->cd();
-    hMaxLikeScaleHighLow->Draw("E3");
-    hMaxLikeScale->Draw("same");
-    hRatioFrame->Draw("same");
-    mMaxLike->gDataRatio()->Draw("PE1same");
-    canMaxLikeExtra1->SetLogx();
-
-
-    // Extrapolated resolution
-    TH1 *hMaxLikeExtra = static_cast<TH1D*>(hFrame->Clone("hMaxLikeExtra"));
-    hMaxLikeExtra->SetLineColor(gMaxLikeRatioData->GetLineColor());
-    TH1 *hMaxLikeExtraUncert = static_cast<TH1D*>(hMaxLikeExtra->Clone("hMaxLikeExtraUncert"));
-    hMaxLikeExtraUncert->SetFillColor(hMaxLikeScaleHighLow->GetFillColor());
-    for(int bin = 1; bin <= hMaxLikeExtra->GetNbinsX(); ++bin) {
-      double mc = mcTruth->Eval(hMaxLikeExtra->GetBinCenter(bin));
-      hMaxLikeExtra->SetBinContent(bin,mc*hMaxLikeScale->GetBinContent(bin));
-      hMaxLikeExtraUncert->SetBinContent(bin,mc*hMaxLikeScaleHighLow->GetBinContent(bin));
-      hMaxLikeExtraUncert->SetBinError(bin,mc*hMaxLikeScaleHighLow->GetBinError(bin));
-    }
-
-    TCanvas *canMaxLikeExtra2 = new TCanvas("canMaxLikeExtra2","MaxLike: Extrapolation",500,500);
-    canMaxLikeExtra2->cd();
-    hMaxLikeExtraUncert->Draw("E3");
-    hMaxLikeExtra->Draw("same");
-    mMaxLike->gData()->Draw("PE1same");
-    mcTruth->Draw("same");
-    canMaxLikeExtra2->SetLogx();
+    TCanvas* can = new TCanvas("Can_Eta"+util::toTString(etaBin),"Ratio Eta"+util::toTString(etaBin),500,500);
+    can->cd();
+    hFrame->Draw("HIST");
+    gSystTotal->Draw("E2same");
+    gRatioStat->Draw("E2same");
+    gPhotonJet->Draw("PE1same");
+    gDijet->Draw("PE1same");
+    fRatio->Draw("same");
+    label->Draw("same");
+    leg->Draw("same");
+    can->SetLogx();
+    gPad->RedrawAxis();
+    can->SaveAs("CombinedResolution_Eta"+util::toTString(etaBin)+".eps","eps");
   }
+
+//   std::cout << "ratio.at(0) = " << ratio.at(0) << std::endl;
+//   std::cout << "etaMean.at(0) = " << etaMean.at(0) << std::endl;
+//   std::cout << "etaErr.at(0) = " << etaErr.at(0) << std::endl;
+
+   TGraphAsymmErrors* gUncert = new TGraphAsymmErrors(ratioVsEta.size(),&(etaMean.front()),&(ratioVsEta.front()),
+ 						     &(etaErr.front()),&(etaErr.front()),
+ 						     &(systVsEtaD.front()),&(systVsEtaU.front()));
+   gUncert->SetFillStyle(1001);
+   gUncert->SetFillColor(38);
+   gUncert->SetLineColor(gUncert->GetFillColor());
+
+   TPaveText* label = util::LabelFactory::createPaveText(1,-0.48);
+   label->AddText("Anti-k_{T} (d=0.5) PF Jets");
+
+   TLegend* leg = util::LabelFactory::createLegendCol(3,0.49);
+   leg->AddEntry(hRatioVsEta,"Ratio","P");
+   leg->AddEntry(gUncert,"Syst. uncertainty","F");
+
+
+  TCanvas* can = new TCanvas("Can_ResVsEta","Ratio vs Eta",500,500);
+  can->cd();
+  hRatioVsEta->Draw("PE1");
+  gUncert->Draw("E2same");
+  hRatioVsEta->Draw("PE1same");
+  label->Draw("same");
+  leg->Draw("same");
+  gPad->RedrawAxis();
+  can->SaveAs("CombinedResolutionVsEta.eps","eps");
 }
+
+
+
+
