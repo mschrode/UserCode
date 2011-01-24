@@ -18,6 +18,12 @@
 #include "../util/StyleSettings.h"
 
 
+const int COLOR_SYST = 7;
+const int COLOR_STAT = 1;
+const int COLOR_PHOTONJET = 46;
+const int COLOR_DIJETS = 38;
+
+
 void getCombinedRatio(unsigned int etaBin, double ptMin, double ptMax, TF1* &fRatio, TGraphAsymmErrors* &gRatioStat, TGraphAsymmErrors* &gUncertTotal, TGraphAsymmErrors* &gUncertJES) {
 
   std::cout << "Entering getCombinedRatio(etaBin = " << etaBin << ")" << std::endl;
@@ -63,10 +69,10 @@ void getCombinedRatio(unsigned int etaBin, double ptMin, double ptMax, TF1* &fRa
   uncertJESU.push_back(0.064);
 
   for(size_t i = 0; i < uncertJESU.size(); ++i) {
-    uncertTotalD.push_back( sqrt(uncertJESD.at(i)*uncertJESD.at(i) + 
-				 uncertOtherD.at(i)*uncertOtherD.at(i) ) );
-    uncertTotalU.push_back( sqrt(uncertJESU.at(i)*uncertJESU.at(i) + 
-				 uncertOtherU.at(i)*uncertOtherU.at(i) ) );
+    uncertTotalD.push_back( sqrt( uncertJESD.at(i)*uncertJESD.at(i) + 
+				  uncertOtherD.at(i)*uncertOtherD.at(i) ) );
+    uncertTotalU.push_back( sqrt( uncertJESU.at(i)*uncertJESU.at(i) + 
+			          uncertOtherU.at(i)*uncertOtherU.at(i) ) );
   }
 
   
@@ -90,14 +96,14 @@ void getCombinedRatio(unsigned int etaBin, double ptMin, double ptMax, TF1* &fRa
   yeu = uncertTotalU.at(etaBin);
   gUncertTotal = new TGraphAsymmErrors(1,&x,&y,&xe,&xe,&yed,&yeu);
   gUncertTotal->SetFillStyle(1001);
-  gUncertTotal->SetFillColor(38);
+  gUncertTotal->SetFillColor(COLOR_SYST);
   gUncertTotal->SetLineColor(gUncertTotal->GetFillColor());
 
   yed = stat.at(etaBin);
   yeu = stat.at(etaBin);
   gRatioStat = new TGraphAsymmErrors(1,&x,&y,&xe,&xe,&yed,&yeu);
-  gRatioStat->SetFillStyle(1001);
-  gRatioStat->SetFillColor(15);
+  gRatioStat->SetFillStyle(3013);
+  gRatioStat->SetFillColor(COLOR_STAT);
   gRatioStat->SetLineColor(gRatioStat->GetFillColor());
 
 
@@ -153,7 +159,19 @@ TGraphAsymmErrors* getPoints(const TString &fileName, const TString &mode, doubl
 
 
 void plotCombinedResolution(const TString fileNameBase = "results/GaussCoreCombined_2010-12-31") {
-  util::StyleSettings::paperNoTitle();
+
+  bool showTitle = true;
+  TString title = "";
+  if( showTitle ) {
+    util::StyleSettings::paper();
+    gStyle->SetTitleAlign(13);
+    gStyle->SetTitleFontSize(0.1);
+    gStyle->SetTitleX(0.7);
+    gStyle->SetTitleH(0.038);
+    title = "CMS preliminary";
+  } else {
+    util::StyleSettings::paperNoTitle();
+  }
 
   std::vector<double> etaBins;
   etaBins.push_back(0.);
@@ -172,7 +190,7 @@ void plotCombinedResolution(const TString fileNameBase = "results/GaussCoreCombi
   std::vector<double> systVsEtaU;
   std::vector<double> systVsEtaD;
 
-  TH1* hRatioVsEta = new TH1D("hRatioVsEta",";|#eta|;#sigma(Data) / #sigma(MC)",etaBins.size()-1,&(etaBins.front()));
+  TH1* hRatioVsEta = new TH1D("hRatioVsEta",title+";|#eta|;#sigma(Data) / #sigma(MC)",etaBins.size()-1,&(etaBins.front()));
   hRatioVsEta->GetYaxis()->SetRangeUser(0.51,1.69);
   hRatioVsEta->SetMarkerStyle(20);
 
@@ -186,15 +204,15 @@ void plotCombinedResolution(const TString fileNameBase = "results/GaussCoreCombi
     double etaMax = 10.;
     std::cout << "    Reading photon jets" << std::endl;
     TGraphAsymmErrors* gPhotonJet = getPoints(fileName,"PhotonJet",etaMin,etaMax);
-    gPhotonJet->SetMarkerStyle(20);
-    gPhotonJet->SetMarkerColor(kBlue);
+    gPhotonJet->SetMarkerStyle(22);
+    gPhotonJet->SetMarkerColor(COLOR_PHOTONJET);
     gPhotonJet->SetLineColor(gPhotonJet->GetMarkerColor());
     std::cout << "    Reading photon jets done" << std::endl;
     std::cout << "    Reading dijets" << std::endl;
     TGraphAsymmErrors* gDijet = getPoints(fileName,"Dijet",etaMin,etaMax);
-    gDijet->SetMarkerColor(kRed);
+    gDijet->SetMarkerColor(COLOR_DIJETS);
     gDijet->SetLineColor(gDijet->GetMarkerColor());
-    gDijet->SetMarkerStyle(24);
+    gDijet->SetMarkerStyle(20);
     std::cout << "    Reading dijets done" << std::endl;
     std::cout << ">> NPhotonJet = " << gPhotonJet->GetN() << std::endl;
     std::cout << ">> NDijet = " << gDijet->GetN() << std::endl;
@@ -216,22 +234,26 @@ void plotCombinedResolution(const TString fileNameBase = "results/GaussCoreCombi
     ratioVsEta.push_back(fRatio->GetParameter(0));
     systVsEtaD.push_back(gSystTotal->GetEYlow()[0]);
     systVsEtaU.push_back(gSystTotal->GetEYhigh()[0]);
+
+    std::cout << "&&&& " << etaBin << ": " << systVsEtaD.back() << std::endl;
+
     std::cout << "  Done filling ratio vs eta" << std::endl;
 
     // Labels
-    TPaveText* label = util::LabelFactory::createPaveText(2,-0.48);
-    label->AddText("Anti-k_{T} (d=0.5) PF Jets");
+    TPaveText* label = util::LabelFactory::createPaveText(3,-0.46);
+    label->AddText("#sqrt{s} = 7 TeV");
+    label->AddText("Anti-k_{T} (R=0.5) PF Jets");
     label->AddText(util::toTString(etaMin)+" < |#eta| < "+util::toTString(etaMax));
 
-    TLegend* leg = util::LabelFactory::createLegendCol(5,0.49);
-    leg->AddEntry(gPhotonJet,"Photon + Jet","P");
-    leg->AddEntry(gDijet,"Dijets","P");
-    leg->AddEntry(fRatio,"Fit","L");
+    TLegend* leg = util::LabelFactory::createLegendCol(5,0.52);
+    leg->AddEntry(gPhotonJet,"Photon+Jet, (L = 34 pb^{-1})","P");
+    leg->AddEntry(gDijet,"Dijets (L = 33 pb^{-1})","P");
+    leg->AddEntry(fRatio,"Combined ratio","L");
     leg->AddEntry(gRatioStat,"Stat. uncertainty","F");
     leg->AddEntry(gSystTotal,"Syst. uncertainty","F");
 
     // Plot
-    TH1* hFrame = new TH1D("hFrame_Eta"+util::toTString(etaBin),";p_{T} (GeV);#sigma(Data) / #sigma(MC)",
+    TH1* hFrame = new TH1D("hFrame_Eta"+util::toTString(etaBin),title+";p_{T} (GeV);#sigma(Data) / #sigma(MC)",
 			   1000,ptMin,ptMax);
     for(int bin = 1; bin <= hFrame->GetNbinsX(); ++bin) {
       hFrame->SetBinContent(bin,1);
@@ -239,7 +261,7 @@ void plotCombinedResolution(const TString fileNameBase = "results/GaussCoreCombi
     hFrame->SetLineStyle(2);
     hFrame->GetXaxis()->SetMoreLogLabels();
     hFrame->GetXaxis()->SetNoExponent();
-    hFrame->GetYaxis()->SetRangeUser(0.21,2.29);
+    hFrame->GetYaxis()->SetRangeUser(0.61,1.99);
 
     TCanvas* can = new TCanvas("Can_Eta"+util::toTString(etaBin),"Ratio Eta"+util::toTString(etaBin),500,500);
     can->cd();
@@ -264,14 +286,19 @@ void plotCombinedResolution(const TString fileNameBase = "results/GaussCoreCombi
  						     &(etaErr.front()),&(etaErr.front()),
  						     &(systVsEtaD.front()),&(systVsEtaU.front()));
    gUncert->SetFillStyle(1001);
-   gUncert->SetFillColor(38);
+   gUncert->SetFillColor(COLOR_SYST);
    gUncert->SetLineColor(gUncert->GetFillColor());
 
-   TPaveText* label = util::LabelFactory::createPaveText(1,-0.48);
-   label->AddText("Anti-k_{T} (d=0.5) PF Jets");
+   TPaveText* label = util::LabelFactory::createPaveText(6,-0.48);
+   label->AddText("#sqrt{s} = 7 TeV");
+   label->AddText("Anti-k_{T} (R=0.5) PF Jets");
+   label->AddText("Photon+Jet (L = 34 pb^{-1})");
+   label->AddText("   22 < p_{T} < 180 GeV");
+   label->AddText("Dijets (L = 33 pb^{-1})");
+   label->AddText("   43 < p_{T} < 1000 GeV");
 
-   TLegend* leg = util::LabelFactory::createLegendCol(3,0.49);
-   leg->AddEntry(hRatioVsEta,"Ratio","P");
+   TLegend* leg = util::LabelFactory::createLegendCol(2,0.49);
+   leg->AddEntry(hRatioVsEta,"Combined ratio","P");
    leg->AddEntry(gUncert,"Syst. uncertainty","F");
 
 
