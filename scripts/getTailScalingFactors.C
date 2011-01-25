@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.19 2011/01/21 19:12:35 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.20 2011/01/24 20:22:16 mschrode Exp $
 
 #include <cmath>
 #include <iomanip>
@@ -35,8 +35,8 @@ const double PT3PLOTMAX = 0.29;
 const TString FASYM = "f_{asym}";
 const TString FASYMMC = "f^{mc}_{asym}";
 const TString FASYMDATA = "f^{data}_{asym}";
-const bool SHOW_HEADER = true;
-const TString HEADER = "CMS preliminary";
+const bool SHOW_HEADER = false;
+const TString HEADER = SHOW_HEADER ? "CMS preliminary" : "";
 const TString LUMI_LABEL = "#sqrt{s} = 7 TeV,  L = 36 pb^{ -1}";
 
 
@@ -326,10 +326,6 @@ void getTailScalingFactors() {
       TString path = "~/results/ResolutionFit/TailScalingRA2CleaningV1/";
       TString fileNameData = path+"Tails2010Run_PF_Data_Rebinned_Eta";
       TString fileNameMC = path+"Tails2010Run_PF_MC_Rebinned_Eta";
-//       TString fileNameData = path+"Tails2010Run_PF_PtGenSel_PpSoft005_Rebinned_Eta";
-//       TString fileNameMC = path+"Tails2010Run_PF_PtGenSel_PpSoft005_Rebinned_Eta";
-
-
 
       fileNameData += etaBin;
       fileNameMC += etaBin;
@@ -616,7 +612,7 @@ void EtaPtBin::plotExtrapolation(const TString &outNameId) const {
 
   TCanvas* can = new TCanvas("can","Number of events",500,500);
   can->cd();
-  TH1* hFrame = new TH1D("hFrame",";"+PT3RELVAR,1000,0.,PT3PLOTMAX);
+  TH1* hFrame = new TH1D("hFrame",HEADER+";"+PT3RELVAR,1000,0.,PT3PLOTMAX);
   hFrame->GetYaxis()->SetRangeUser(0.,2.3*gFTailMC_->GetY()[gFTailMC_->GetN()-1]);
 
   if( hasToyMC() ) {
@@ -1839,13 +1835,13 @@ void printMCClosure(const std::vector<EtaPtBin*> &bins, const sampleTools::Binni
   if( bins.front()->hasToyMC() || bins.front()->hasSymMCTruth()  ) {
     std::cout << "\n\n\n***  MC Closure  ***\n";
     std::cout << "\\begin{tabular}[ht]{ccccc}\n\\hline\n\\hline\n";
-    std::cout << "$\\eta$ & $\\ptave (\\gevnospace)$ & $\\fasymmc(0)$ & \\fasymtoy & $(\\fasymtoy-\\fasymmc(0))/\\fasymtoy$ \\\\ \n\\hline \n";
+    std::cout << "$\\eta$ & $\\ptave (\\gevnospace)$ & $\\fasymmc(0)$ & \\fasymtoy & $\\fasymmc(0))/\\fasymtoy$ \\\\ \n\\hline \n";
     for(EtaPtBinConstIt it = bins.begin(); it != bins.end(); ++it) {
       EtaPtBin* bin = *it;
       printBin(bin->etaBin(),bin->ptBin(),adm);
       std::cout << " & $" << std::setprecision(3) << bin->extraMC() << " \\pm " << bin->extraMCErr();
       std::cout << "$ & $" << bin->toyMC() << " \\pm " << bin->toyMCErr();
-      std::cout << "$ & $" << (bin->toyMC()-bin->extraMC())/bin->extraMC() << "$ \\\\ \n";
+      std::cout << "$ & $" << bin->extraMC()/bin->toyMC() << "$ \\\\ \n";
       if( bin->etaBin() == adm->nEtaBins()-1 ) std::cout << "  \\hline\n";
     }
     std::cout << "  \\hline\n\\end{tabular}\n\n";
