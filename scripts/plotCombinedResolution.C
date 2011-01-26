@@ -18,7 +18,7 @@
 #include "../util/StyleSettings.h"
 
 
-const int COLOR_SYST = 7;
+const int COLOR_SYST = 5;
 const int COLOR_STAT = 1;
 const int COLOR_PHOTONJET = 46;
 const int COLOR_DIJETS = 38;
@@ -246,7 +246,7 @@ void plotCombinedResolution(const TString fileNameBase = "results/GaussCoreCombi
     label->AddText(util::toTString(etaMin)+" < |#eta| < "+util::toTString(etaMax));
 
     TLegend* leg = util::LabelFactory::createLegendCol(5,0.52);
-    leg->AddEntry(gPhotonJet,"Photon+Jet, (L = 34 pb^{-1})","P");
+    leg->AddEntry(gPhotonJet,"Photon+Jet (L = 36 pb^{-1})","P");
     leg->AddEntry(gDijet,"Dijets (L = 33 pb^{-1})","P");
     leg->AddEntry(fRatio,"Combined ratio","L");
     leg->AddEntry(gRatioStat,"Stat. uncertainty","F");
@@ -292,7 +292,7 @@ void plotCombinedResolution(const TString fileNameBase = "results/GaussCoreCombi
    TPaveText* label = util::LabelFactory::createPaveText(6,-0.48);
    label->AddText("#sqrt{s} = 7 TeV");
    label->AddText("Anti-k_{T} (R=0.5) PF Jets");
-   label->AddText("Photon+Jet (L = 34 pb^{-1})");
+   label->AddText("Photon+Jet (L = 36 pb^{-1})");
    label->AddText("   22 < p_{T} < 180 GeV");
    label->AddText("Dijets (L = 33 pb^{-1})");
    label->AddText("   43 < p_{T} < 1000 GeV");
