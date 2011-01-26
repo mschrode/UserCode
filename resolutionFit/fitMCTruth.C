@@ -1,4 +1,4 @@
-// $Id: fitMCTruth.C,v 1.7 2011/01/05 09:47:29 mschrode Exp $
+// $Id: fitMCTruth.C,v 1.8 2011/01/17 23:46:15 mschrode Exp $
 
 //!  Fit mean response and resolution from
 //!  Kalibri::ControlPlotsJetSmearing
@@ -135,6 +135,7 @@ void fitProfile(const TString &fileName, double nSigCore, TH1* &hMean, TH1* &hMe
     TString jetLabel = "Anti-k_{T} (d=0.5) ";
     if( outNamePrefix.Contains("Calo") ) jetLabel += "Calo Jets";
     else if( outNamePrefix.Contains("PF") ) jetLabel += "PF Jets";
+    else if( outNamePrefix.Contains("JPT") ) jetLabel += "JPT Jets";
     label->AddText(jetLabel);
     label->AddText(util::toTString(etaMin)+" < |#eta| < "+util::toTString(etaMax)+",  "+util::toTString(ptMin,0)+" < p^{gen}_{T} < "+util::toTString(ptMax,0)+" GeV");
 
@@ -249,6 +250,7 @@ void fitMCTruth(const TString &fileName, double nSigCore, double minPt) {
   TString jetAlgo;
   if( fileName.Contains("PF") ) jetAlgo = "PF";
   else if( fileName.Contains("Calo") ) jetAlgo = "Calo";
+  else if( fileName.Contains("JPT") ) jetAlgo = "JPT";
   
   TString outNamePrefix = "MCTruthResponse_"+jetAlgo;
   double etaMin = 0.;
@@ -293,6 +295,7 @@ void fitMCTruth(const TString &fileName, double nSigCore, double minPt) {
   TString jetLabel = "Anti-k_{T} (d=0.5) ";
   if( jetAlgo == "Calo" ) jetLabel += "Calo Jets";
   else if( jetAlgo == "PF" ) jetLabel += "PF Jets";
+  else if( jetAlgo == "JPT" ) jetLabel += "JPT Jets";
   jetLabel += ", "+util::toTString(etaMin)+" < |#eta| < "+util::toTString(etaMax);
 
 
@@ -320,12 +323,12 @@ void fitMCTruth(const TString &fileName, double nSigCore, double minPt) {
   }
   std::cout << ");" << std::endl;
 
-  std::cout << "\n\n" << etaMin << " -- " << etaMax << " & ";
+  std::cout << "\n\n$" << etaMin << " - " << etaMax;
   for(int i = 0; i < fit->GetNpar(); ++i) {
-    if( i > 0 ) std::cout << " & " << std::flush;
+    std::cout << "$ & $" << std::flush;
     std::cout << std::setprecision(2) << fit->GetParameter(i) << " \\pm " << fit->GetParError(i) << std::flush;
   }
-  std::cout << "\\\\\n\n";
+  std::cout << "$ \\\\\n\n";
 
   
   // Plot response and resolution
@@ -458,6 +461,7 @@ void plotMCTruthForDifferentEta(const TString &file, const TString &jetAlgo, dou
   TString jetLabel = "Anti-k_{T} (d=0.5) ";
   if( jetAlgo == "Calo" ) jetLabel += "Calo Jets";
   else if( jetAlgo == "PF" ) jetLabel += "PF Jets";
+  else if( jetAlgo == "JPT" ) jetLabel += "JPT Jets";
 
   TPaveText* label = util::LabelFactory::createPaveText(2,-0.55);
   label->AddText("CMS Simulation, #sqrt{s} = 7 TeV");
@@ -525,6 +529,7 @@ void plots(const TString &id, const std::vector<TH1*> &reso, const std::vector<T
   TString jetLabel = "Anti-k_{T} (d=0.5) ";
   if( jetAlgo == "Calo" ) jetLabel += "Calo Jets";
   else if( jetAlgo == "PF" ) jetLabel += "PF Jets";
+  else if( jetAlgo == "JPT" ) jetLabel += "JPT Jets";
 
   TPaveText* label = util::LabelFactory::createPaveText(3,-0.5);
   label->AddText("CMS Simulation");

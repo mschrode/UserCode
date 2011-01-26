@@ -27,11 +27,13 @@
 // ------------------------------------------------------------------------------
 class SystematicUncertainty {
 public:
+  SystematicUncertainty(unsigned int nPoints);
   SystematicUncertainty(const TString &label, const TString &fileName, int color = -1, int fillStyle = -1);
   SystematicUncertainty(const TString &label, const TString &fileNameNom, const TString &fileNameVar, int color = -1, int fillStyle = -1);
   SystematicUncertainty(const TString &label, const TString &fileNameNom, const TString &fileNameVarUp, const TString &fileNameVarDown, bool symmetrize, int color = -1, int fillStyle = -1);
   SystematicUncertainty(const TString &label, const TString &fileNameNom, double relUncert, int color = -1, int fillStyle = -1);
   SystematicUncertainty(const TString &label, const std::vector<SystematicUncertainty*> uncerts, int color = -1, int fillStyle = -1);
+  SystematicUncertainty(const TString &label, double val, double ptMin, double ptMax, double up, double down, int color = -1, int fillStyle = -1);
   
   TString label() const { return label_; }
 
@@ -65,6 +67,22 @@ public:
   std::vector<double> relErrUp_;
   std::vector<double> relErrDown_;
 };
+
+
+//  Empty uncertainty (everything initialized to 0)
+// ------------------------------------------------------------------------------
+SystematicUncertainty::SystematicUncertainty(unsigned int nPoints) : label_(""), color_(0), fillStyle_(0) {
+  for(unsigned int i = 0; i < nPoints; ++i) {
+    ptSmooth_.push_back(0.);
+    ptSmoothErrUp_.push_back(0.);
+    ptSmoothErrDown_.push_back(0.);
+    ptSteps_.push_back(0.);
+    ptStepsErr_.push_back(0.);
+    relVal_.push_back(0.);
+    relErrUp_.push_back(0.);
+    relErrDown_.push_back(0.);
+  }
+}
 
 
 //  Uncertainty from non-closure (50% of residual)
@@ -166,7 +184,7 @@ SystematicUncertainty::SystematicUncertainty(const TString &label, const TString
 
 //  Constant relative uncertainty
 // ------------------------------------------------------------------------------
-SystematicUncertainty::SystematicUncertainty(const TString &label, const TString &fileNameNom, double relUncert, int color, int fillStyle) {
+SystematicUncertainty::SystematicUncertainty(const TString &label, const TString &fileNameNom, double relUncert, int color, int fillStyle) : label_(label) {
 
   color >= 0 ? color_ = color : color_ = kGray;
   fillStyle >= 0 ? fillStyle_ = fillStyle : fillStyle_ = 1001;  // Filled area
@@ -213,6 +231,34 @@ SystematicUncertainty::SystematicUncertainty(const TString &label, const std::ve
     relErrDown_.push_back(sqrt(relErrDown));
   }
 }
+
+
+//  Constant relative uncertainty
+// ------------------------------------------------------------------------------
+SystematicUncertainty::SystematicUncertainty(const TString &label, double ptMin, double ptMax, double val, double up, double down, int color, int fillStyle) : label_(label) {
+
+  color >= 0 ? color_ = color : color_ = kGray;
+  fillStyle >= 0 ? fillStyle_ = fillStyle : fillStyle_ = 1001;  // Filled area
+
+  for(int i = 0; i < 2; ++i) {
+    if( i == 0 ) {
+      ptSmooth_.push_back(ptMin);
+      ptSmoothErrUp_.push_back(0.5*(ptMax-ptMin));
+      ptSmoothErrDown_.push_back(0.);
+    } else {
+      ptSmooth_.push_back(ptMax);
+      ptSmoothErrDown_.push_back(0.5*(ptMax-ptMin));
+      ptSmoothErrUp_.push_back(0.);
+    }
+    ptSteps_.push_back(0.);
+    ptStepsErr_.push_back(0.);
+    relVal_.push_back(0.);
+    relErrUp_.push_back(std::abs(up-val)/val);
+    relErrDown_.push_back(std::abs(val-down)/val);
+  }
+}
+
+
 
 
 
@@ -422,7 +468,7 @@ void plotResults(unsigned int etaBin = 0) {
   const double yMin = 1E-3;
   const double yMax = 0.38;
   const double lumi = 32.7;
-  const bool showTitle = false;
+  const bool showTitle = true;
 
 
 
@@ -465,9 +511,10 @@ void plotResults(unsigned int etaBin = 0) {
 
   TString outNamePrefix = "ResFit_"+jetAlgo+"_Eta"+util::toTString(etaBin)+"_";
 
-  TString jetLabel = "Anti-k_{T} (d=0.5) ";
+  TString jetLabel = "Anti-k_{T} (R=0.5) ";
   if( jetAlgo == "Calo" ) jetLabel += "Calo Jets";
   else if( jetAlgo == "PF" ) jetLabel += "PF Jets";
+  else if( jetAlgo == "JPT" ) jetLabel += "JPT Jets";
   jetLabel += ", "+util::toTString(etaMin)+" < |#eta| < "+util::toTString(etaMax);
 
   TString title = "";
@@ -593,7 +640,7 @@ void plotResults(unsigned int etaBin = 0) {
 
   TString labelUncertBias = "MC Closure";
   std::vector<SystematicUncertainty*> uncerts;
-  uncerts.push_back(new SystematicUncertainty("JEC",nameMC,nameJESUp,nameJESDown,true,14));
+  //  uncerts.push_back(new SystematicUncertainty("JEC",nameMC,nameJESUp,nameJESDown,true,14));
   uncerts.push_back(new SystematicUncertainty(labelUncertBias,nameMC,46));
   uncerts.push_back(new SystematicUncertainty("Extrapolation",nameMC,nameExtrapolation,7));
   uncerts.push_back(new SystematicUncertainty("Spectrum",nameMC,nameSpectrumUp,nameSpectrumDown,true,5));
@@ -662,11 +709,17 @@ void plotResults(unsigned int etaBin = 0) {
 
   //  gDataMCRatio->Fit(fDataMCRatio,"0");
 
+  // Ratio with combined systematic uncertainties
   double ratio = 0.;
   double ratioStat = 0.;
   double ratioSystDown = 0.;
   double ratioSystUp = 0.;
   fitRatio(gDataMCRatio,gDataMCRatioBand,fDataMCRatio,ratio,ratioStat,ratioSystDown,ratioSystUp);
+
+  // Syst band on ratio fit
+  SystematicUncertainty* ratioSystUncert = new SystematicUncertainty("Syst. uncertainty",xMin,xMax,ratio,ratio+ratioSystUp,ratio-ratioSystDown,38);
+  TGraphAsymmErrors* gBandRatioSystUncert = ratioSystUncert->gBandSmooth(fDataMCRatio);
+  
 
   labelStart = -0.5;
 
@@ -677,9 +730,10 @@ void plotResults(unsigned int etaBin = 0) {
   legDataMC->AddEntry(gData,"Resolution (Data)","P");
   legDataMC->AddEntry(gMC,"Resolution (MC)","P");
 
-  TLegend* legDataMCRatio = util::LabelFactory::createLegendColWithOffset(2,labelStart,1);
+  TLegend* legDataMCRatio = util::LabelFactory::createLegendColWithOffset(3,labelStart,1);
   legDataMCRatio->AddEntry(gDataMCRatio,"Measurement","P");
   legDataMCRatio->AddEntry(fDataMCRatio,"Fit","L");
+  legDataMCRatio->AddEntry(gBandRatioSystUncert,"Syst. Uncertainty","F");
 
   TCanvas* tCanDataMC = util::HistOps::createRatioTopCanvas();
   TPad* bPadDataMC = util::HistOps::createRatioBottomPad();
@@ -703,13 +757,24 @@ void plotResults(unsigned int etaBin = 0) {
   TH1* hFrameDataMCRatio = util::HistOps::createRatioFrame(xMin,xMax,0.61,1.89,bFrame->GetXaxis()->GetTitle(),"#sigma(Data) / #sigma(MC)");
   hFrameDataMCRatio->SetTitle(title);
   hFrameDataMCRatio->GetYaxis()->SetMoreLogLabels();
+//   hFrameDataMCRatio->Draw();
+//   gDataMCRatioBand->Draw("E3same");
+//   gDataMCRatio->Draw("PE1same");
+//   fDataMCRatio->Draw("same");
+//   labelDataMC->Draw("same");
+//   legDataMCRatio->Draw("same");
+//   gPad->SetLogx();
+//   canDataMCRatio->SaveAs(outNamePrefix+"DataMCRatio.eps","eps");
+
+  canDataMCRatio->cd();
   hFrameDataMCRatio->Draw();
-  gDataMCRatioBand->Draw("E3same");
-  gDataMCRatio->Draw("PE1same");
+  gBandRatioSystUncert->Draw("E3same");
   fDataMCRatio->Draw("same");
+  gDataMCRatio->Draw("PE1same");
   labelDataMC->Draw("same");
   legDataMCRatio->Draw("same");
   gPad->SetLogx();
+  gPad->RedrawAxis();
   canDataMCRatio->SaveAs(outNamePrefix+"DataMCRatio.eps","eps");
 
 
@@ -832,14 +897,15 @@ void plotResults(unsigned int etaBin = 0) {
   // +++++ Ratio output +++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   std::cout << "\n\nFITTED RATIO\n\n";
-  std::cout << std::setprecision(2) << etaMin << " -- " << etaMax << " & ";
-  std::cout << std::setprecision(3) << " $" << ratio << " \\pm " << ratioStat << " + " << ratioSystUp << " - " << ratioSystDown << "$ \\\\\n\n\n";
+  std::cout << std::setprecision(2) << "$" << etaMin << " - " << etaMax << "$ & ";
+  std::cout << std::setprecision(4) << " $" << ratio << std::setprecision(3) << " \\pm " << ratioStat << "^{+" << ratioSystUp << "}_{-" << ratioSystDown << "}$ \\\\\n\n\n";
 
-  SystematicUncertainty* uncertRatioOutputJES = 0;
+  SystematicUncertainty* uncertRatioOutputJES = new SystematicUncertainty(uncerts.at(0)->nPoints());
   std::vector<SystematicUncertainty*> uncertsRatioOutputOther;
   for(unsigned int i = 0; i < uncerts.size(); ++i) {
     if( uncerts.at(i)->label() != labelUncertBias ) {
       if( uncerts.at(i)->label() == "JEC" ) {
+	delete uncertRatioOutputJES;
 	uncertRatioOutputJES = uncerts.at(i);
       } else {
 	std::cout << "Adding uncert to ratio output: " << uncerts.at(i)->label() << std::endl;
@@ -848,41 +914,49 @@ void plotResults(unsigned int etaBin = 0) {
     }
   }
   SystematicUncertainty* totalRatioOutput = new SystematicUncertainty("Total",uncertsRatioOutputOther,38);
-//   std::cout << std::setprecision(5) << std::flush;
-//   std::cout << "\n\n#Eta " << etaMin << " -- " << etaMax << std::endl;
-//   std::cout << "MeanPt:" << std::flush;
-//   for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
-//     std::cout << "  " << gDataMCRatio->GetX()[i] << std::flush;
-//   }
-//   std::cout << "\nMeanPtError:" << std::flush;
-//   for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
-//     std::cout << "  " << gDataMCRatio->GetEXhigh()[i] << std::flush;
-//   }
-//   std::cout << "\nRatio:" << std::flush;
-//   for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
-//     std::cout << "  " << gDataMCRatio->GetY()[i] << std::flush;
-//   }
-//   std::cout << "\nRatioError:" << std::flush;
-//   for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
-//     std::cout << "  " << gDataMCRatio->GetEYhigh()[i] << std::flush;
-//   }
-//   std::cout << "\nSystJESUp:" << std::flush;
-//   for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
-//     std::cout << "  " << gDataMCRatio->GetY()[i]*uncertRatioOutputJES->relUp(i) << std::flush;
-//   }
-//   std::cout << "\nSystJESDown:" << std::flush;
-//   for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
-//     std::cout << "  " << gDataMCRatio->GetY()[i]*uncertRatioOutputJES->relDown(i) << std::flush;
-//   }
-//   std::cout << "\nSystOtherUp:" << std::flush;
-//   for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
-//     std::cout << "  " << gDataMCRatio->GetY()[i]*totalRatioOutput->relUp(i) << std::flush;
-//   }
-//   std::cout << "\nSystOtherDown:" << std::flush;
-//   for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
-//     std::cout << "  " << gDataMCRatio->GetY()[i]*totalRatioOutput->relDown(i) << std::flush;
-//   }
-//   std::cout << std::endl;
+  std::vector<unsigned int> ptBins;
+  for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
+    if( gDataMCRatio->GetY()[i] == 0. ) {
+      std::cerr << "WARNING: problematic ptBin " << i << std::endl;
+    } else {
+      ptBins.push_back(i);
+    }
+  }
+  std::cout << std::setprecision(5) << std::flush;
+  std::cout << "\n\n#Eta " << etaMin << " -- " << etaMax << std::endl;
+  std::cout << "MeanPt:" << std::flush;
+  for(std::vector<unsigned int>::const_iterator it = ptBins.begin(); it != ptBins.end(); ++it) {
+    std::cout << "  " << gDataMCRatio->GetX()[*it] << std::flush;
+  }
+  std::cout << "\nMeanPtError:" << std::flush;
+  for(std::vector<unsigned int>::const_iterator it = ptBins.begin(); it != ptBins.end(); ++it) {
+    std::cout << "  " << gDataMCRatio->GetEXhigh()[*it] << std::flush;
+  }
+  std::cout << "\nRatio:" << std::flush;
+  for(std::vector<unsigned int>::const_iterator it = ptBins.begin(); it != ptBins.end(); ++it) {
+    std::cout << "  " << gDataMCRatio->GetY()[*it] << std::flush;
+  }
+  std::cout << "\nRatioError:" << std::flush;
+   for(std::vector<unsigned int>::const_iterator it = ptBins.begin(); it != ptBins.end(); ++it) {
+     std::cout << "  " << gDataMCRatio->GetEYhigh()[*it] << std::flush;
+   }
+   std::cout << "\nSystJESUp:" << std::flush;
+   for(std::vector<unsigned int>::const_iterator it = ptBins.begin(); it != ptBins.end(); ++it) {
+     std::cout << "  " << gDataMCRatio->GetY()[*it]*uncertRatioOutputJES->relUp(*it) << std::flush;
+   }
+   std::cout << "\nSystJESDown:" << std::flush;
+   for(std::vector<unsigned int>::const_iterator it = ptBins.begin(); it != ptBins.end(); ++it) {
+     std::cout << "  " << gDataMCRatio->GetY()[*it]*uncertRatioOutputJES->relDown(*it) << std::flush;
+   }
+   std::cout << "\nSystOtherUp:" << std::flush;
+   for(std::vector<unsigned int>::const_iterator it = ptBins.begin(); it != ptBins.end(); ++it) {
+     std::cout << "  " << gDataMCRatio->GetY()[*it]*totalRatioOutput->relUp(*it) << std::flush;
+   }
+   std::cout << "\nSystOtherDown:" << std::flush;
+   for(std::vector<unsigned int>::const_iterator it = ptBins.begin(); it != ptBins.end(); ++it) {
+     std::cout << "  " << gDataMCRatio->GetY()[*it]*totalRatioOutput->relDown(*it) << std::flush;
+   }
+   std::cout << std::endl;
 
 
 
@@ -1044,6 +1118,9 @@ TGraphAsymmErrors* getPhotonJetRatioSystematics(const TString &fileName, const T
 
 
 
+// Fit ratio and determine statistical and systematic uncertainty
+// on ratio
+// -------------------------------------------------------------------------------------------------
 void fitRatio(const TGraphAsymmErrors* gRatio, const TGraphAsymmErrors* gRatioBand, TF1* fit, double &ratio, double &stat, double &systDown, double &systUp) {
   assert( gRatio->GetN() == gRatioBand->GetN() );
 
