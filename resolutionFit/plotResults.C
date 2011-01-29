@@ -21,7 +21,6 @@
 
 
 
-
 // ==============================================================================
 
 // ------------------------------------------------------------------------------
@@ -274,9 +273,9 @@ TGraphAsymmErrors* SystematicUncertainty::gRelBandSteps(double mean) const {
 					       &(ptSteps_.front()),&(y.front()),
 					       &(ptStepsErr_.front()),&(ptStepsErr_.front()),
 					       &(relErrDown_.front()),&(relErrUp_.front()));
-  g->SetFillColor(color_);
+  g->SetFillColor(fillStyle_ ? color_ : 0);
   g->SetFillStyle(fillStyle_);
-  g->SetLineColor(0);
+  g->SetLineColor(color_);
   
   return g;  
 }
@@ -294,9 +293,9 @@ TGraphAsymmErrors* SystematicUncertainty::gRelBandSmooth(double mean) const {
 					       &(ptSmooth_.front()),&(y.front()),
 					       &(ptSmoothErrDown_.front()),&(ptSmoothErrUp_.front()),
 					       &(relErrDown_.front()),&(relErrUp_.front()));
-  g->SetFillColor(color_);
+  g->SetFillColor(fillStyle_ ? color_ : 0);
   g->SetFillStyle(fillStyle_);
-  g->SetLineColor(0);
+  g->SetLineColor(color_);
   
   return g;  
 }
@@ -319,9 +318,9 @@ TGraphAsymmErrors* SystematicUncertainty::gBandSmooth(const TF1* f) const {
 					       &(ptSmooth_.front()),&(y.front()),
 					       &(ptSmoothErrDown_.front()),&(ptSmoothErrUp_.front()),
 					       &(yed.front()),&(yeu.front()));
-  g->SetFillColor(color_);
+  g->SetFillColor(fillStyle_ ? color_ : 0);
   g->SetFillStyle(fillStyle_);
-  g->SetLineColor(0);
+  g->SetLineColor(color_);
   
   return g;  
 }
@@ -337,9 +336,9 @@ TGraphAsymmErrors* SystematicUncertainty::gBandSmooth(const TGraphAsymmErrors* g
     gBand->SetPointError(i,ptSmoothErrDown_.at(i),ptSmoothErrUp_.at(i),
 			 val*relErrDown_.at(i),val*relErrUp_.at(i));
   }
-  gBand->SetFillColor(color_);
+  gBand->SetFillColor(fillStyle_ ? color_ : 0);
   gBand->SetFillStyle(fillStyle_);
-  gBand->SetLineColor(0);
+  gBand->SetLineColor(color_);
   
   return gBand;  
 }
@@ -355,7 +354,7 @@ TGraphAsymmErrors* SystematicUncertainty::gBandSmooth(const TGraphAsymmErrors* g
 
 TGraphAsymmErrors* getPhotonJetRatio(const TString &fileName);
 TGraphAsymmErrors* getPhotonJetRatioSystematics(const TString &fileName, const TF1* fRatio);
-void fitRatio(const TGraphAsymmErrors* gRatio, const TGraphAsymmErrors* gRatioBand, TF1* fit, double &ratio, double &stat, double &systDown, double &systUp);
+void fitRatio(const TGraphAsymmErrors* gRatio, const TGraphAsymmErrors* gRatioBand, TF1* fit, double &ratio, double &stat, double &systDown, double &systUp, TGraphAsymmErrors* &gRatioStatBand);
 
 
 // ------------------------------------------------------------------------------
@@ -458,17 +457,17 @@ TGraphAsymmErrors* getBiasCorrectedMeasurement(const TGraphAsymmErrors* gMeas, c
 
 
 // ------------------------------------------------------------------------------
-void plotResults(unsigned int etaBin = 0) {
+void plotResults(unsigned int etaBin = 0, bool showCMSPreliminary = false) {
 
   //const int etaBin = 0;
-  const TString jetAlgo = "PF";
+  const TString jetAlgo = "Calo";
   const TString dir = "results";
   const double xMin = 40.;
   const double xMax = 1100.;
   const double yMin = 1E-3;
   const double yMax = 0.38;
-  const double lumi = 32.7;
-  const bool showTitle = true;
+  const double lumi = 33;
+  const bool showTitle = showCMSPreliminary;
 
 
 
@@ -583,8 +582,10 @@ void plotResults(unsigned int etaBin = 0) {
   TH1 *tFrame = util::HistOps::createRatioTopFrame(xMin,xMax,yMin,yMax,"#sigma / p^{ref}_{T}");
   tFrame->SetTitle(title);
   tFrame->GetXaxis()->SetMoreLogLabels();
+  tFrame->GetXaxis()->SetNoExponent();
   TH1 *bFrame = util::HistOps::createRatioBottomFrame(tFrame,"p^{ref}_{T}","GeV",0.81,1.29);
   bFrame->GetXaxis()->SetMoreLogLabels();
+  bFrame->GetXaxis()->SetNoExponent();
 
   TCanvas *tCanMC = util::HistOps::createRatioTopCanvas();
   TPad *bPadMC = util::HistOps::createRatioBottomPad();
@@ -640,13 +641,13 @@ void plotResults(unsigned int etaBin = 0) {
 
   TString labelUncertBias = "MC Closure";
   std::vector<SystematicUncertainty*> uncerts;
-  //  uncerts.push_back(new SystematicUncertainty("JEC",nameMC,nameJESUp,nameJESDown,true,14));
+  uncerts.push_back(new SystematicUncertainty("JEC",nameMC,nameJESUp,nameJESDown,true,14));
   uncerts.push_back(new SystematicUncertainty(labelUncertBias,nameMC,46));
   uncerts.push_back(new SystematicUncertainty("Extrapolation",nameMC,nameExtrapolation,7));
-  uncerts.push_back(new SystematicUncertainty("Spectrum",nameMC,nameSpectrumUp,nameSpectrumDown,true,5));
+  uncerts.push_back(new SystematicUncertainty("Spectrum",nameMC,nameSpectrumUp,nameSpectrumDown,true,38));
   uncerts.push_back(new SystematicUncertainty("Particle Level Imbalance",nameMC,namePLIUp,namePLIDown,false,8));
   
-  SystematicUncertainty* total = new SystematicUncertainty("Total",uncerts,38);
+  SystematicUncertainty* total = new SystematicUncertainty("Total",uncerts,5);
 
 
   // Relative systematic uncertainties
@@ -664,6 +665,8 @@ void plotResults(unsigned int etaBin = 0) {
   canRelSyst->cd();
   TH1* hFrameRelSyst = new TH1D("hFrameRelSyst","",1000,xMin,xMax);
   hFrameRelSyst->SetTitle(title);
+  hFrameRelSyst->GetXaxis()->SetMoreLogLabels();
+  hFrameRelSyst->GetXaxis()->SetNoExponent();
   for(int bin = 1; bin <= hFrameRelSyst->GetNbinsX(); ++bin) {
     hFrameRelSyst->SetBinContent(bin,0.);
   }
@@ -698,7 +701,7 @@ void plotResults(unsigned int etaBin = 0) {
       uncertsRatio.push_back(uncerts.at(i));
     }
   }
-  SystematicUncertainty* totalRatio = new SystematicUncertainty("Total",uncertsRatio,38);
+  SystematicUncertainty* totalRatio = new SystematicUncertainty("Total",uncertsRatio,5);
 
   TGraphAsymmErrors* gDataMCRatio = util::HistOps::createRatioGraph(gData,gMC);
   TGraphAsymmErrors* gDataMCRatioBand = totalRatio->gBandSmooth(gDataMCRatio);
@@ -714,25 +717,28 @@ void plotResults(unsigned int etaBin = 0) {
   double ratioStat = 0.;
   double ratioSystDown = 0.;
   double ratioSystUp = 0.;
-  fitRatio(gDataMCRatio,gDataMCRatioBand,fDataMCRatio,ratio,ratioStat,ratioSystDown,ratioSystUp);
+  TGraphAsymmErrors* gBandRatioStatUncert = 0;
+  fitRatio(gDataMCRatio,gDataMCRatioBand,fDataMCRatio,ratio,ratioStat,ratioSystDown,ratioSystUp,gBandRatioStatUncert);
 
   // Syst band on ratio fit
-  SystematicUncertainty* ratioSystUncert = new SystematicUncertainty("Syst. uncertainty",xMin,xMax,ratio,ratio+ratioSystUp,ratio-ratioSystDown,38);
+  SystematicUncertainty* ratioSystUncert = new SystematicUncertainty("Syst. uncertainty",xMin,xMax,ratio,ratio+ratioSystUp,ratio-ratioSystDown,5);
   TGraphAsymmErrors* gBandRatioSystUncert = ratioSystUncert->gBandSmooth(fDataMCRatio);
   
 
   labelStart = -0.5;
 
-  TPaveText* labelDataMC = util::LabelFactory::createPaveText(1);
+  TPaveText* labelDataMC = util::LabelFactory::createPaveText(2);
+  labelDataMC->AddText("#sqrt{s} = 7 TeV, L = "+util::toTString(lumi)+" pb^{-1}");
   labelDataMC->AddText(jetLabel);
 
-  TLegend* legDataMC = util::LabelFactory::createLegendColWithOffset(2,labelStart,1);
+  TLegend* legDataMC = util::LabelFactory::createLegendColWithOffset(2,labelStart,2);
   legDataMC->AddEntry(gData,"Resolution (Data)","P");
   legDataMC->AddEntry(gMC,"Resolution (MC)","P");
 
-  TLegend* legDataMCRatio = util::LabelFactory::createLegendColWithOffset(3,labelStart,1);
+  TLegend* legDataMCRatio = util::LabelFactory::createLegendColWithOffset(4,labelStart,2);
   legDataMCRatio->AddEntry(gDataMCRatio,"Measurement","P");
   legDataMCRatio->AddEntry(fDataMCRatio,"Fit","L");
+  legDataMCRatio->AddEntry(gBandRatioStatUncert,"Stat. Uncertainty","F");
   legDataMCRatio->AddEntry(gBandRatioSystUncert,"Syst. Uncertainty","F");
 
   TCanvas* tCanDataMC = util::HistOps::createRatioTopCanvas();
@@ -756,7 +762,8 @@ void plotResults(unsigned int etaBin = 0) {
   canDataMCRatio->cd();
   TH1* hFrameDataMCRatio = util::HistOps::createRatioFrame(xMin,xMax,0.61,1.89,bFrame->GetXaxis()->GetTitle(),"#sigma(Data) / #sigma(MC)");
   hFrameDataMCRatio->SetTitle(title);
-  hFrameDataMCRatio->GetYaxis()->SetMoreLogLabels();
+  hFrameDataMCRatio->GetXaxis()->SetMoreLogLabels();
+  hFrameDataMCRatio->GetXaxis()->SetNoExponent();
 //   hFrameDataMCRatio->Draw();
 //   gDataMCRatioBand->Draw("E3same");
 //   gDataMCRatio->Draw("PE1same");
@@ -769,6 +776,7 @@ void plotResults(unsigned int etaBin = 0) {
   canDataMCRatio->cd();
   hFrameDataMCRatio->Draw();
   gBandRatioSystUncert->Draw("E3same");
+  gBandRatioStatUncert->Draw("E2same");
   fDataMCRatio->Draw("same");
   gDataMCRatio->Draw("PE1same");
   labelDataMC->Draw("same");
@@ -804,14 +812,14 @@ void plotResults(unsigned int etaBin = 0) {
     uncertsScaled.push_back(uncerts.at(i));
   }
   uncertsScaled.push_back(new SystematicUncertainty("RatioStats",nameMC,fDataMCRatio->GetParError(0)));
-  SystematicUncertainty* totalScaled = new SystematicUncertainty("Total",uncertsScaled,38);
+  SystematicUncertainty* totalScaled = new SystematicUncertainty("Total",uncertsScaled,5);
 
   TGraphAsymmErrors* gScaledMCTruthBand = totalScaled->gBandSmooth(fScaledMCTruth);
   TGraphAsymmErrors* gScaledMCTruthRelBand = totalScaled->gRelBandSmooth(1.);
   TGraphAsymmErrors* gScaledMCTruthDataRatio = util::HistOps::createRatioGraph(gData,fScaledMCTruth);
 
 
-  TLegend* legScaledMCTruth = util::LabelFactory::createLegendColWithOffset(4,0.7,1);
+  TLegend* legScaledMCTruth = util::LabelFactory::createLegendColWithOffset(4,0.7,2);
   legScaledMCTruth->AddEntry(gData,"Data","P");
   legScaledMCTruth->AddEntry(fMCTruth,"MC Truth","L");
   legScaledMCTruth->AddEntry(fScaledMCTruth,"Scaled MC Truth","L");
@@ -819,6 +827,7 @@ void plotResults(unsigned int etaBin = 0) {
 
   TH1 *bFrameSym = util::HistOps::createRatioBottomFrame(tFrame,"p^{ref}_{T}","GeV",0.71,1.29);
   bFrameSym->GetXaxis()->SetMoreLogLabels();
+  bFrameSym->GetXaxis()->SetNoExponent();
 
   TCanvas *tCanScaledMCTruth = util::HistOps::createRatioTopCanvas();
   TPad *bPadScaledMCTruth = util::HistOps::createRatioBottomPad();
@@ -859,7 +868,7 @@ void plotResults(unsigned int etaBin = 0) {
   uncertsBiasCorr.push_back(new SystematicUncertainty("RatioStats",nameMC,0.5*(ratioSystDown+ratioSystUp)));
   uncertsBiasCorr.push_back(new SystematicUncertainty("RatioStats",nameMC,ratioStat));
 
-  SystematicUncertainty* totalBiasCorr = new SystematicUncertainty("Total",uncertsBiasCorr,38);
+  SystematicUncertainty* totalBiasCorr = new SystematicUncertainty("Total",uncertsBiasCorr,5);
 
   TGraphAsymmErrors* gDataBiasCorr = getBiasCorrectedMeasurement(gData,nameMC);
   TGraphAsymmErrors* gScaledMCTruthBandBiasCorr = totalBiasCorr->gBandSmooth(fScaledMCTruth);
@@ -867,7 +876,7 @@ void plotResults(unsigned int etaBin = 0) {
   TGraphAsymmErrors* gScaledMCTruthDataBiasCorrRatio = util::HistOps::createRatioGraph(gDataBiasCorr,fScaledMCTruth);
 
 
-  TLegend* legScaledMCTruthBiasCorr = util::LabelFactory::createLegendColWithOffset(3,0.7,1);
+  TLegend* legScaledMCTruthBiasCorr = util::LabelFactory::createLegendColWithOffset(3,0.7,2);
   legScaledMCTruthBiasCorr->AddEntry(gDataBiasCorr,"Bias Corrected Data","P");
   legScaledMCTruthBiasCorr->AddEntry(fScaledMCTruth,"Scaled MC Truth","L");
   legScaledMCTruthBiasCorr->AddEntry(gScaledMCTruthBandBiasCorr,"Systematic Uncertainty","F");
@@ -913,7 +922,7 @@ void plotResults(unsigned int etaBin = 0) {
       }
     }
   }
-  SystematicUncertainty* totalRatioOutput = new SystematicUncertainty("Total",uncertsRatioOutputOther,38);
+  SystematicUncertainty* totalRatioOutput = new SystematicUncertainty("Total",uncertsRatioOutputOther,5);
   std::vector<unsigned int> ptBins;
   for(int i = 0; i < gDataMCRatio->GetN(); ++i) {
     if( gDataMCRatio->GetY()[i] == 0. ) {
@@ -1002,7 +1011,7 @@ void plotResults(unsigned int etaBin = 0) {
     gDijetRatioSyst->SetLineColor(gDijetRatioSyst->GetFillColor());
     //gDijetRatioSyst->SetFillStyle(3004);
 
-    TLegend* legCombinedRatio = util::LabelFactory::createLegendColWithOffset(3,-0.6,1);
+    TLegend* legCombinedRatio = util::LabelFactory::createLegendColWithOffset(3,-0.6,2);
     legCombinedRatio->AddEntry(gPhotonJetRatio,"#gamma + Jet Measurement","P");
     legCombinedRatio->AddEntry(gCombinedRatio,"Dijet Measurement","P");
     legCombinedRatio->AddEntry(fCombinedRatio,"Fit","L");
@@ -1121,7 +1130,7 @@ TGraphAsymmErrors* getPhotonJetRatioSystematics(const TString &fileName, const T
 // Fit ratio and determine statistical and systematic uncertainty
 // on ratio
 // -------------------------------------------------------------------------------------------------
-void fitRatio(const TGraphAsymmErrors* gRatio, const TGraphAsymmErrors* gRatioBand, TF1* fit, double &ratio, double &stat, double &systDown, double &systUp) {
+void fitRatio(const TGraphAsymmErrors* gRatio, const TGraphAsymmErrors* gRatioBand, TF1* fit, double &ratio, double &stat, double &systDown, double &systUp, TGraphAsymmErrors* &gRatioStatBand) {
   assert( gRatio->GetN() == gRatioBand->GetN() );
 
   // Systematic up and down shift of points (keep stat errors)
@@ -1142,6 +1151,15 @@ void fitRatio(const TGraphAsymmErrors* gRatio, const TGraphAsymmErrors* gRatioBa
   stat =  fit->GetParError(0);
   systUp = std::abs(systUp-ratio);
   systDown = std::abs(systDown-ratio);
+
+  double xMin = fit->GetXmin();
+  double xMax = fit->GetXmax();
+  double x = 0.5*(xMin+xMax);
+  double xe = std::abs(x-xMin);
+  gRatioStatBand = new TGraphAsymmErrors(1,&x,&ratio,&xe,&xe,&stat,&stat);
+  gRatioStatBand->SetFillStyle(3013);
+  gRatioStatBand->SetFillColor(fit->GetLineColor());
+  gRatioStatBand->SetLineColor(gRatioStatBand->GetFillColor());
 
   delete gRatioFit;
   delete gUp;

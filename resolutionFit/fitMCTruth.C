@@ -1,4 +1,4 @@
-// $Id: fitMCTruth.C,v 1.8 2011/01/17 23:46:15 mschrode Exp $
+// $Id: fitMCTruth.C,v 1.9 2011/01/26 20:36:14 mschrode Exp $
 
 //!  Fit mean response and resolution from
 //!  Kalibri::ControlPlotsJetSmearing
@@ -132,7 +132,7 @@ void fitProfile(const TString &fileName, double nSigCore, TH1* &hMean, TH1* &hMe
     double ptMax = hRespVsPt->GetXaxis()->GetBinUpEdge(bin);
     TPaveText* label = util::LabelFactory::createPaveText(3);
     label->AddText("CMS Simulation,  #sqrt{s} = 7 TeV");
-    TString jetLabel = "Anti-k_{T} (d=0.5) ";
+    TString jetLabel = "Anti-k_{T} (R=0.5) ";
     if( outNamePrefix.Contains("Calo") ) jetLabel += "Calo Jets";
     else if( outNamePrefix.Contains("PF") ) jetLabel += "PF Jets";
     else if( outNamePrefix.Contains("JPT") ) jetLabel += "JPT Jets";
@@ -292,7 +292,7 @@ void fitMCTruth(const TString &fileName, double nSigCore, double minPt) {
     histNameSuffix += "_DeltaR25";
   }
 
-  TString jetLabel = "Anti-k_{T} (d=0.5) ";
+  TString jetLabel = "Anti-k_{T} (R=0.5) ";
   if( jetAlgo == "Calo" ) jetLabel += "Calo Jets";
   else if( jetAlgo == "PF" ) jetLabel += "PF Jets";
   else if( jetAlgo == "JPT" ) jetLabel += "JPT Jets";
@@ -326,7 +326,7 @@ void fitMCTruth(const TString &fileName, double nSigCore, double minPt) {
   std::cout << "\n\n$" << etaMin << " - " << etaMax;
   for(int i = 0; i < fit->GetNpar(); ++i) {
     std::cout << "$ & $" << std::flush;
-    std::cout << std::setprecision(2) << fit->GetParameter(i) << " \\pm " << fit->GetParError(i) << std::flush;
+    std::cout << std::setprecision(4) << fit->GetParameter(i) << " \\pm " << fit->GetParError(i) << std::flush;
   }
   std::cout << "$ \\\\\n\n";
 
@@ -458,7 +458,7 @@ void plotMCTruthForDifferentEta(const TString &file, const TString &jetAlgo, dou
   hFrame->GetXaxis()->SetNoExponent();
   hFrame->GetYaxis()->SetRangeUser(1E-3,0.38);
 
-  TString jetLabel = "Anti-k_{T} (d=0.5) ";
+  TString jetLabel = "Anti-k_{T} (R=0.5) ";
   if( jetAlgo == "Calo" ) jetLabel += "Calo Jets";
   else if( jetAlgo == "PF" ) jetLabel += "PF Jets";
   else if( jetAlgo == "JPT" ) jetLabel += "JPT Jets";
@@ -526,7 +526,7 @@ void plots(const TString &id, const std::vector<TH1*> &reso, const std::vector<T
   hFrame->GetXaxis()->SetNoExponent();
   hFrame->GetYaxis()->SetRangeUser(1E-3,0.38);
 
-  TString jetLabel = "Anti-k_{T} (d=0.5) ";
+  TString jetLabel = "Anti-k_{T} (R=0.5) ";
   if( jetAlgo == "Calo" ) jetLabel += "Calo Jets";
   else if( jetAlgo == "PF" ) jetLabel += "PF Jets";
   else if( jetAlgo == "JPT" ) jetLabel += "JPT Jets";
