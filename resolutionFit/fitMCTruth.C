@@ -1,4 +1,4 @@
-// $Id: fitMCTruth.C,v 1.9 2011/01/26 20:36:14 mschrode Exp $
+// $Id: fitMCTruth.C,v 1.10 2011/01/29 17:12:03 mschrode Exp $
 
 //!  Fit mean response and resolution from
 //!  Kalibri::ControlPlotsJetSmearing
@@ -432,6 +432,10 @@ void plotMCTruthForDifferentEta(const TString &file, const TString &jetAlgo, dou
 	hReso[i]->SetBinContent(bin,-1.);
 	hReso[i]->SetBinError(bin,0.);
       }
+      if( hReso[i]->GetXaxis()->GetBinUpEdge(bin) > 2000. ) {
+	hReso[i]->SetBinContent(bin,-1.);
+	hReso[i]->SetBinError(bin,0.);
+      }
     }
     double maxPt = 0.;
     for(int bin = hReso[i]->GetNbinsX(); bin > 0; --bin) {
@@ -502,6 +506,10 @@ void plots(const TString &id, const std::vector<TH1*> &reso, const std::vector<T
 	reso[i]->SetBinContent(bin,-1.);
 	reso[i]->SetBinError(bin,0.);
       }
+      if( reso[i]->GetXaxis()->GetBinUpEdge(bin) > 2000. ) {
+	reso[i]->SetBinContent(bin,-1.);
+	reso[i]->SetBinError(bin,0.);
+      }
     }
     double maxPt = 0.;
     for(int bin = reso[i]->GetNbinsX(); bin > 0; --bin) {
@@ -561,9 +569,14 @@ void plotMCTruthForSelections(const TString &file, const TString &jetAlgo, doubl
   std::vector<TString> labels;
   
   // Nominal vs dijet selection
-  reso.push_back(util::FileOps::readTH1(file,"hSigmaGauss_Eta0_DeltaR10"));
+  if( jetAlgo == "PF" || jetAlgo == "JPT" ) {
+    reso.push_back(util::FileOps::readTH1(file,"hSigmaGauss_Eta0_DeltaR10"));
+    fits.push_back(util::FileOps::readTF1(file,"fit_Eta0_DeltaR10"));
+  } else if( jetAlgo == "Calo" ) {
+    reso.push_back(util::FileOps::readTH1(file,"hSigmaGauss_Eta0_DeltaR25"));
+    fits.push_back(util::FileOps::readTF1(file,"fit_Eta0_DeltaR25"));
+  }    
   reso.push_back(util::FileOps::readTH1(file,"hSigmaGauss_Eta0_Dijets"));
-  fits.push_back(util::FileOps::readTF1(file,"fit_Eta0_DeltaR10"));
   fits.push_back(util::FileOps::readTF1(file,"fit_Eta0_Dijets"));
   labels.push_back("All events");
   labels.push_back("Dijet events");
