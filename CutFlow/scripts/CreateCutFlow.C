@@ -41,7 +41,7 @@ private:
   std::vector<Cut*> cuts_;
 
   double efficiencySimple(double nTotal, double nPassed) const { return nTotal > 0. ? nPassed/nTotal : 0.; }
-  double efficiencyBayes(double nTotal, double nPassed) const;
+  void efficiencyBayes(double nTotal, double nPassed, double &eff, double &effErrDown, double &effErrUp) const;
 };
 
 
@@ -78,27 +78,38 @@ void CutFlow::addCut(const TString &moduleName, const TString &description) {
 }
 
 
-double CutFlow::efficiencyBayes(double nTotal, double nPassed) const {
+void CutFlow::efficiencyBayes(double nTotal, double nPassed, double &eff, double &effErrDown, double &effErrUp) const {
   int intTotal = static_cast<int>(nTotal);
   int intPassed = static_cast<int>(nPassed);
   if( intTotal < nTotal || intPassed < nPassed ) {
+
     std::cerr << "ERROR in CutFlow::efficiencyBayes(): event numbers are non-integers" << std::endl;
-    return 0.;
-  }
+    eff = 0.;
+    effErrDown = 0.;
+    effErrUp = 0.;
 
-  TH1* hTotal = new TH1D("hTotal","",1,0,1);
-  for(int i = 0; i < intTotal; ++i) {
-    hTotal->Fill(0);
-  }
-  TH1* hPassed = new TH1D("hPassed","",1,0,1);
-  for(int i = 0; i < intPassed; ++i) {
-    hPassed->Fill(0);
-  }
+  } else {
 
-  TGraphAsymmErrors* g = new TGraphAsymmErrors(1);
-  g->BayesDivide(hPassed,hTotal,"w");
-  
-  return g->GetY()[0];
+    TH1* hTotal = new TH1D("hTotal","",1,0,1);
+    for(int i = 0; i < intTotal; ++i) {
+      hTotal->Fill(0);
+    }
+    TH1* hPassed = new TH1D("hPassed","",1,0,1);
+    for(int i = 0; i < intPassed; ++i) {
+      hPassed->Fill(0);
+    }
+    
+    TGraphAsymmErrors* g = new TGraphAsymmErrors(1);
+    g->BayesDivide(hPassed,hTotal,"w");
+    
+    eff = g->GetY()[0]; 
+    effErrDown = g->GetEYlow()[0];
+    effErrUp = g->GetEYhigh()[0];
+
+    delete hTotal;
+    delete hPassed;
+    delete g;
+  }
 }
 
 
@@ -108,16 +119,33 @@ void CutFlow::print() const {
   for(std::vector<Cut*>::const_iterator it = cuts_.begin(); it != cuts_.end(); ++it) {
     while( (*it)->description().Length() > width ) width += 2;
   }
-  std::cout << "\n\n***********************************************\n";
-  for(std::vector<Cut*>::const_iterator it = cuts_.begin(); it != cuts_.end(); ++it) {
-    std::cout << std::setw(width) << (*it)->description() << " : " <<  (*it)->nPassed() << std::endl;
+  std::cout << "\n\n**********************************************************************************************\n";
+  std::cout << std::setw(width) << "Cut     ";
+  std::cout << " : ";
+  std::cout << std::setw(10) << "# passed ";
+  std::cout << " : ";
+  std::cout << std::setw(10) << "Eff   ";
+  std::cout << " : ";
+  std::cout << std::setw(34) << "Eff Bayes                \n";
+  std::cout << "----------------------------------------------------------------------------------------------\n";
+  for(size_t i = 0; i < cuts_.size(); ++i) {
+    std::cout << std::setw(width) << cuts_.at(i)->description() << " : ";
+    std::cout << std::setw(10) << cuts_.at(i)->nPassed() << " : ";
+    if( i > 0 ) {
+      double nTotal = cuts_.at(i-1)->nPassed();
+      double nPassed = cuts_.at(i)->nPassed();
+      
+      double eff = 0.;
+      double effErrDown = 0.;
+      double effErrUp = 0.;
+      efficiencyBayes(nTotal,nPassed,eff,effErrDown,effErrUp);
+      
+      std::cout << std::setw(10) << efficiencySimple(nTotal,nPassed) << " : ";
+      std::cout << std::setw(10) << eff << " -" << effErrDown << " +" << effErrUp;
+    }
+    std::cout << std::endl;
   }
-  std::cout << "***********************************************\n\n\n";
-
-
-//   double efficiencySimple(double nTotal, double nPassed) const { nTotal > 0. ? nPassed/nTotal : 0. }
-//   double efficiencyBayes(double nTotal, double nPassed) const;
-
+  std::cout << "**********************************************************************************************\n\n\n";
 }
 
 
