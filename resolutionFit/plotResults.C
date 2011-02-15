@@ -460,7 +460,7 @@ TGraphAsymmErrors* getBiasCorrectedMeasurement(const TGraphAsymmErrors* gMeas, c
 void plotResults(unsigned int etaBin = 0, bool showCMSPreliminary = false) {
 
   //const int etaBin = 0;
-  const TString jetAlgo = "Calo";
+  const TString jetAlgo = "PF";
   const TString dir = "results";
   const double xMin = 40.;
   const double xMax = 1100.;
@@ -757,6 +757,16 @@ void plotResults(unsigned int etaBin = 0, bool showCMSPreliminary = false) {
   gDataMCRatio->Draw("PE1same");
   gPad->SetLogx();
   tCanDataMC->SaveAs(outNamePrefix+"DataMC.eps","eps");
+
+//   std::cout << "*************************************\n";
+//   std::cout << "MC\npt\tres\tstatErr\n";
+//   for(int i = 0; i < gMC->GetN(); ++i) {
+//     std::cout << gMC->GetX()[i] << " \t " << gMC->GetY()[i] << " +/- " << gMC->GetEYhigh()[i] << std::endl;
+//   }
+//   std::cout << "\nData\npt\tres\tstatErr\n";
+//   for(int i = 0; i < gData->GetN(); ++i) {
+//     std::cout << gData->GetX()[i] << " \t " << gData->GetY()[i] << " +/- " << gData->GetEYhigh()[i] << std::endl;
+//   }
 
   TCanvas* canDataMCRatio = new TCanvas("canDataMCRatio","Data MC Ratio",500,500);
   canDataMCRatio->cd();
