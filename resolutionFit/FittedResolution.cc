@@ -239,8 +239,8 @@ namespace resolutionFit {
 	} else {
 	  label = util::LabelFactory::createPaveText(4,-0.4);	  
 	  label->AddText(par_->labelLumi()+",  "+par_->labelEtaBin());	
-	  label->AddText(par_->labelPtSoftCut());
 	  label->AddText(par_->labelPt3Cut(c));
+	  label->AddText(par_->labelPtSoftCut());
 	  label->AddText(par_->labelPtBin(ptBin));
 	  leg = util::LabelFactory::createLegendCol(3,0.5);
 	}
@@ -355,7 +355,7 @@ namespace resolutionFit {
 	label->AddText(par_->labelLumi()+",  "+par_->labelEtaBin());
 	label->AddText(par_->labelPt3Cut(c));
 	label->AddText(par_->labelPtSoftCut());
-	leg = util::LabelFactory::createLegendCol(3,0.5);
+	leg = util::LabelFactory::createLegendCol(2,0.5);
       }
       leg->AddEntry(gResPtAsym,"Binned Fit","P");
       leg->AddEntry(gResMaxLike,"Likelihood Fit","P");
@@ -471,6 +471,16 @@ namespace resolutionFit {
 	TF1 *fAsym = (*it)->getTF1OfVariationAsym("FitExtrapolation");
 	fAsym->SetLineWidth(lineWidth_);
 	fAsym->SetLineStyle(2);
+
+	TGraphAsymmErrors *gGenAsym = 0;
+	TF1 *fGenAsym = 0;
+	if( par_->fitPtGenAsym() ) {
+	  gGenAsym = (*it)->getTGraphOfVariationGenAsym();
+	  gGenAsym->SetMarkerStyle(24);
+	  fGenAsym = (*it)->getTF1OfVariationGenAsym("FitExtrapolationGenAsym");
+	  fGenAsym->SetLineWidth(lineWidth_);
+	  fGenAsym->SetLineStyle(1);
+	}
 	
 	// Draw label
 	TPaveText *txt = 0;
@@ -482,10 +492,16 @@ namespace resolutionFit {
 	  leg = util::LabelFactory::createLegendWithOffset(2,1);
 	  legAsym = util::LabelFactory::createLegendWithOffset(2,1);
 	} else {
+// 	  txt = util::LabelFactory::createPaveText(3,-0.4);
+// 	  txt->AddText(par_->labelLumi()+", "+par_->labelEtaBin());
+// 	  txt->AddText(par_->labelPtSoftCut());
+// 	  txt->AddText(par_->labelPtBin(ptBin));
+
 	  txt = util::LabelFactory::createPaveText(3,-0.4);
-	  txt->AddText(par_->labelLumi()+", "+par_->labelEtaBin());
-	  txt->AddText(par_->labelPtSoftCut());
+	  txt->AddText(par_->labelEtaBin());
+	  txt->AddText("p^{gen}_{T,Soft} < 0.05 <p^{gen,ave}_{T}>");
 	  txt->AddText(par_->labelPtBin(ptBin));
+
 	  leg = util::LabelFactory::createLegendCol(2,0.45);
 	  legAsym = util::LabelFactory::createLegendCol(2,0.45);
 	}
@@ -531,6 +547,18 @@ namespace resolutionFit {
 	  txt->Draw("same");
 	  legComp->Draw("same");
 	  can->SaveAs(par_->outNamePrefix()+"ExtrapolatedPar"+util::toTString(parIdx)+"CompAsym_PtBin"+util::toTString(ptBin)+".eps","eps");
+
+	  if( par_->fitPtGenAsym() ) {
+	    can->cd();
+	    h->SetYTitle("#sigma / <p^{gen}_{T}>");
+	    h->SetXTitle("p^{gen}_{||,3} / p^{gen,ave}_{T}");
+	    h->GetYaxis()->SetRangeUser(0.,0.31);
+	    h->Draw();
+	    gGenAsym->Draw("PE1same");
+	    fGenAsym->Draw("same");
+	    txt->Draw("same");
+	    can->SaveAs(par_->outNamePrefix()+"ExtrapolatedGenAsym_PtBin"+util::toTString(ptBin)+".eps","eps");
+	  }
 	}
 
 	// Clean up
@@ -540,6 +568,10 @@ namespace resolutionFit {
 	delete fAsym;
 	delete g;
 	delete gAsym;
+	if( par_->fitPtGenAsym() ) {
+	  delete gGenAsym;
+	  delete fGenAsym;
+	}
 	delete txt;
 	delete leg;
 	delete legAsym;
@@ -1168,8 +1200,10 @@ namespace resolutionFit {
       can->cd();
 
       // Label
-      TPaveText *label = util::LabelFactory::createPaveText(2);
-      label->AddText(par_->labelLumi()+", "+par_->labelEtaBin()+", "+par_->labelDeltaPhiCut()+", "+par_->labelPt3Cut());
+      TPaveText *label = util::LabelFactory::createPaveText(4,-0.49);
+      label->AddText(par_->labelLumi());
+      label->AddText(par_->labelEtaBin()+", "+par_->labelDeltaPhiCut());
+      label->AddText(par_->labelPt3Cut());
       label->AddText(par_->labelPtBin(ptBin));
 
       // Jet pt spectra
@@ -1224,53 +1258,68 @@ namespace resolutionFit {
       // DeltaPt
       TH1 *hDeltaPtJet12 = (*it)->getHistDeltaPtJet12("ControlDistributions:hDeltaPtJet12");
       util::HistOps::setAxisTitles(hDeltaPtJet12,"#frac{1}{2} |p_{T,1} - p_{T,2}|","GeV","events",true);
-      util::HistOps::setYRange(hDeltaPtJet12,3);
-      //hDeltaPtJet12->GetYaxis()->SetRangeUser(3E-5,10.);
+      //util::HistOps::setYRange(hDeltaPtJet12,3);
       hDeltaPtJet12->SetMarkerStyle(20);
 
       TF1* pdf = new TF1("pdf","gaus",0.,hDeltaPtJet12->GetXaxis()->GetBinUpEdge(hDeltaPtJet12->GetNbinsX()));
       pdf->SetLineColor(kRed);
       TH1 *htmp = (*it)->getHistPtGen("htmp");
-      double sig = (*it)->fittedValue(0,0)*htmp->GetMean();
+      double sig = (*it)->fittedValue(0,0)*htmp->GetMean()/sqrt(2.);
       delete htmp;
-      //      double sig = (*it)->fittedValue(0,0)*(*it)->meanPt();
+      //double sig = (*it)->fittedValue(0,0)*(*it)->meanPt();
       double norm = hDeltaPtJet12->Integral("width");
       pdf->SetParameter(0,2.*norm/sqrt(2.*M_PI)/sig);
       pdf->SetParameter(1,0.);
       pdf->SetParameter(2,sig);
       pdf->SetLineWidth(1);
-      std::cout << "NORM " << norm << ": " << pdf->Integral(0.,1000.) << std::endl;
+      //      std::cout << "SIG " << sig << std::endl;
+//       std::cout << "NORM " << norm << ": " << pdf->Integral(0.,1000.) << std::endl;
 
 
       hDeltaPtJet12->Fit("gaus","I0QR","",0.,2.*hDeltaPtJet12->GetRMS());
       TF1 *fit = hDeltaPtJet12->GetFunction("gaus");
       fit->SetRange(0.,hDeltaPtJet12->GetXaxis()->GetBinUpEdge(hDeltaPtJet12->GetNbinsX()));
       fit->SetLineWidth(lineWidth_);
-      fit->SetLineColor(4);
-      double min = 3E-5;
+      fit->SetLineColor(kRed);
+      TF1* fitDraw = static_cast<TF1*>(fit->Clone("fitDraw"));
+      fitDraw->SetLineStyle(2);
+      fitDraw->SetRange(0.,85.);
+      fit->SetRange(0.,2.*fit->GetParameter(2));
+      double min = 3E-6;
       double max = 1E-1;
+      hDeltaPtJet12->GetYaxis()->SetRangeUser(min,9.);
       std::vector<TLine*> lines;
       for(int k = 0; k < 4; ++k) {
 	double x = (2.+k)*std::abs(fit->GetParameter(2));
 	if( std::abs(x) > hDeltaPtJet12->GetXaxis()->GetBinUpEdge(hDeltaPtJet12->GetNbinsX()) ) continue;
 	TLine *line = new TLine(x,min,x,max);
-	line->SetLineStyle(2);
+	line->SetLineStyle(3);
 	line->SetLineWidth(lineWidth_);
 	line->SetLineColor(4);
 	lines.push_back(line);
       }
       hDeltaPtJet12->Draw("PE1");
-      //fit->Draw("same");
+      fitDraw->Draw("same");
+      fit->Draw("same");
       for(size_t k = 0; k < lines.size(); ++k) {
-	//lines[k]->Draw("same");
+	lines[k]->Draw("same");
       }
-      pdf->Draw("same");
+      
+      TLegend* leg = util::LabelFactory::createLegendCol(4,0.49);
+      leg->AddEntry(hDeltaPtJet12,"MC Simulation","P");
+      leg->AddEntry(fit,"Gaussian Fit","L");
+      leg->AddEntry(fitDraw,"Extrapolated Fit","L");
+      leg->AddEntry(lines[0],"(2+n)#upoint#sigma', n = 0,1,...","L");
+
+      //pdf->Draw("same");
       label->Draw("same");
-      //can->SetLogy(1);
+      leg->Draw("same");
+      can->SetLogy(1);
       can->SaveAs(par_->outNamePrefix()+"DeltaPtJet12_PtBin"+util::toTString(ptBin)+".eps","eps");
 
 
       // Clean up
+      delete leg;
       delete hPtJet1;
       delete hPtJet2;
       delete hPtJet3;

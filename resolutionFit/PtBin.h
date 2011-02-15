@@ -102,8 +102,10 @@ namespace resolutionFit {
 
     TF1 *getTF1OfVariation(int parIdx, const TString &name) const { return cutVar_.at(parIdx)->getTF1(name); }
     TF1 *getTF1OfVariationAsym(const TString &name) const { return cutVarAsym_->getTF1(name); }
+    TF1 *getTF1OfVariationGenAsym(const TString &name) const { return cutVarGenAsym_->getTF1(name); }
     TGraphAsymmErrors *getTGraphOfVariation(int parIdx) const { return cutVar_.at(parIdx)->getTGraph(); }
     TGraphAsymmErrors *getTGraphOfVariationAsym() const { return cutVarAsym_->getTGraph(); }
+    TGraphAsymmErrors *getTGraphOfVariationGenAsym() const { return cutVarGenAsym_->getTGraph(); }
     TH1 *getFrameOfVariation(int parIdx, const TString &name) const { return cutVar_.at(parIdx)->getFrame(name); }
     TH1 *getFrameOfVariationAsym(const TString &name) const { return cutVarAsym_->getFrame(name); }
 

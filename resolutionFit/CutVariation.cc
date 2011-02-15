@@ -1,4 +1,4 @@
-// $Id: CutVariation.cc,v 1.23 2010/12/02 14:32:16 mschrode Exp $
+// $Id: CutVariation.cc,v 1.24 2010/12/27 13:34:05 mschrode Exp $
 
 #include "CutVariation.h"
 #include "KalibriFileParser.h"
@@ -56,8 +56,7 @@ namespace resolutionFit {
 	double fittedValue = parser->value(parIdx());
 	double statUncert = parser->statUncert(parIdx());
 	if( isRelValue() ) {
-	  //fittedValue /= meanPt_;
-	  fittedValue /= parser->meanPt();
+	  fittedValue /= meanPt_;
 	  statUncert /= meanPt_;
 	}
 	statUncert = sqrt( statUncert*statUncert + mcStatUncert_*mcStatUncert_ );

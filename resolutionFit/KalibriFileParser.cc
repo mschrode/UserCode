@@ -1,4 +1,4 @@
-// $Id: KalibriFileParser.cc,v 1.16 2010/12/02 14:32:16 mschrode Exp $
+// $Id: KalibriFileParser.cc,v 1.17 2010/12/27 13:34:05 mschrode Exp $
 
 #include "KalibriFileParser.h"
 
@@ -23,7 +23,8 @@ namespace resolutionFit {
   //!  - 2: a lot of information for debugging
   // --------------------------------------------
   KalibriFileParser::KalibriFileParser(const TString &fileName, unsigned int ptBin, int verbose, bool readFittedValues)
-    : binId_("_Eta2_Pt"+util::toTString(ptBin)), verbose_(verbose), readFittedValues_(readFittedValues) {
+    : binId_("_Eta0_Pt"+util::toTString(ptBin)), verbose_(verbose), readFittedValues_(readFittedValues) {
+    //: binId_("_0"), verbose_(verbose), readFittedValues_(readFittedValues) {
 
     // Histograms to be read from file
     hists_[("hPtGen"+binId_)] = 0;
@@ -150,6 +151,7 @@ namespace resolutionFit {
 	if( verbose_ == 2 ) std::cout << "  Getting fitted values... " << std::flush;
 	TH1 *h = 0;
 	file.GetObject("hAbsoluteParameters"+binId_,h);
+	//file.GetObject("hAbsoluteParameters",h);
 	if( !h ) {
 	  std::cerr << "  ERROR: 'hAbsoluteParameters' not found." << std::endl;
 	  ioError = -2;
@@ -182,7 +184,7 @@ namespace resolutionFit {
 	  h->SetDirectory(0);
 	  h->UseCurrentStyle();
 	  it->second = h;
-	  if( verbose_ == 2 ) std::cout << "\n   (h->GetName() == '" << h->GetName() << "')... " << std::endl;
+	  //if( verbose_ == 2 ) std::cout << "\n   (h->GetName() == '" << h->GetName() << "')... " << std::endl;
 	}
       }
       if( verbose_ == 2 ) std::cout << "ok" << std::endl;

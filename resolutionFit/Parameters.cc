@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.24 2010/12/02 14:32:16 mschrode Exp $
+// $Id: Parameters.cc,v 1.25 2010/12/27 13:34:05 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -246,7 +246,7 @@ namespace resolutionFit {
   
   TString Parameters::labelPtBin(int ptBin) const {
     TString label = util::toTString(ptMin(ptBin))+" < p^{";
-    if( binPt() == BinPtGen ) label += labelTruth();
+    if( binPt() == BinPtGen ) label += "gen";
     else if( binPt() == BinPtAve ) label += "ave";
     label += "}_{T} < "+util::toTString(ptMax(ptBin))+" GeV";
 

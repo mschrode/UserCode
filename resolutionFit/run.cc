@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.39 2010/12/02 14:32:16 mschrode Exp $
+// $Id: run.cc,v 1.40 2010/12/27 13:34:06 mschrode Exp $
 
 #ifndef RUN_RESOLUTION_FIT
 #define RUN_RESOLUTION_FIT
@@ -45,16 +45,22 @@ int main(int argc, char *argv[]) {
     TString respType = argv[1];
     int etaBin = atoi(argv[2]);
     if( respType == "Gauss" ) {
-      bool isData = true;
-      inNamePrefix = "~/results/ResolutionFit/Note/ResFitThres_PF_Data";
-      outNamePrefix = "Data_PF";
+      bool isData = false;
+//       inNamePrefix = "~/results/ResolutionFit/Note/ResFitThres_PF_Data";
+//       outNamePrefix = "Data_PF";
 
-//       inNamePrefix = "~/results/ResolutionFit/Note/ResFitThres_PF_MCFall10";
-//       outNamePrefix = "Closure_PF";
-      //outNamePrefix = "VariationExtrapolation_PF";
-      //outNamePrefix = "VariationPLIUp_PF";
-      //outNamePrefix = "VariationJESUp_PF";
-      //outNamePrefix = "VariationSpectrumDown_PF";
+      inNamePrefix = "~/results/ResolutionFit/Note/ResFitThres_Calo_MCFall10";
+      outNamePrefix = "Closure_Calo";
+      //outNamePrefix = "VariationExtrapolation_JPT";
+      //outNamePrefix = "VariationPLIDown_JPT";
+      //      outNamePrefix = "VariationJESUp_JPT";
+      //outNamePrefix = "VariationSpectrumUp_JPT";
+
+//       inNamePrefix = "../sampleTools/ResFitThres_Calo_PtGenAve_MCFall10";
+//       outNamePrefix = "PtGenAsym";
+
+//       inNamePrefix = "../sampleTools/ResFitThres_Calo_MCFall10";
+//       outNamePrefix = "ClosureBugFix";
 
 
       std::cout << "Setting up parameters for eta bin " << etaBin << std::endl;
@@ -65,23 +71,23 @@ int main(int argc, char *argv[]) {
 	outNamePrefix += "_Eta0_";
 
 	ptBinEdges.clear();
-	ptBinEdges.push_back(43.);
-	ptBinEdges.push_back(55.);
-	ptBinEdges.push_back(70.);
-	ptBinEdges.push_back(85.);
-   	ptBinEdges.push_back(100.);
-   	ptBinEdges.push_back(115.);
-   	ptBinEdges.push_back(130.);
-   	ptBinEdges.push_back(150.);
-   	ptBinEdges.push_back(170.);
-     	ptBinEdges.push_back(190.);
-       	ptBinEdges.push_back(220.);
+ 	ptBinEdges.push_back(43.);
+ 	ptBinEdges.push_back(55.);
+ 	ptBinEdges.push_back(70.);
+ 	ptBinEdges.push_back(85.);
+    	ptBinEdges.push_back(100.);
+    	ptBinEdges.push_back(115.);
+    	ptBinEdges.push_back(130.);
+    	ptBinEdges.push_back(150.);
+    	ptBinEdges.push_back(170.);
+      	ptBinEdges.push_back(190.);
+	ptBinEdges.push_back(220.);
 	ptBinEdges.push_back(250.);
 	ptBinEdges.push_back(300.);
-	ptBinEdges.push_back(350.);
- 	ptBinEdges.push_back(400.);
-    	ptBinEdges.push_back(500.);
-	ptBinEdges.push_back(1000.);
+ 	ptBinEdges.push_back(350.);
+  	ptBinEdges.push_back(400.);
+     	ptBinEdges.push_back(500.);
+ 	ptBinEdges.push_back(1000.);
 
       } else if( etaBin == 1 ) {
 	etaMin = 1.1;
@@ -162,35 +168,32 @@ int main(int argc, char *argv[]) {
       //par->setTrueGaussResPar(0.,1.23999,0.0362056); // Fall10 Calo MC truth Eta 0. - 1.1
       //par->setTrueGaussResPar(0.,0.830036,0.0389373); // Fall10 PF MC truth Eta 0. - 1.1
 
-      if( etaBin == 0 )      par->setTrueGaussResPar(-1.18591,0.40573,0.,0.352069);    // PF Eta 0 - 1.1
-      else if( etaBin == 1 ) par->setTrueGaussResPar(-1.49592,0.627368,0,0.218365);    // PF Eta 1.1 - 1.7
-      else if( etaBin == 2 ) par->setTrueGaussResPar(-1.51996,0.766658,0,0.0228755);   // PF eta 1.7 - 2.3
-      else if( etaBin == 3 ) par->setTrueGaussResPar(-0.336561,0.572859,0,0.144683);   // PF Eta 2.3 - 5.0
+//       if( etaBin == 0 )      par->setTrueGaussResPar(-1.18591,0.40573,0.,0.352069);    // PF Eta 0 - 1.1
+//       else if( etaBin == 1 ) par->setTrueGaussResPar(-1.49592,0.627368,0,0.218365);    // PF Eta 1.1 - 1.7
+//       else if( etaBin == 2 ) par->setTrueGaussResPar(-1.51996,0.766658,0,0.0228755);   // PF eta 1.7 - 2.3
+//       else if( etaBin == 3 ) par->setTrueGaussResPar(-0.336561,0.572859,0,0.144683);   // PF Eta 2.3 - 5.0
     
-//       if( etaBin == 0 )      par->setTrueGaussResPar(3.8663,0.728714,0.,0.224013);    // Calo Eta 0 - 1.1
-//       else if( etaBin == 1 ) par->setTrueGaussResPar(3.96546,0.836469,0.,0.200146);    // Calo Eta 1.1 - 1.7
-//       else if( etaBin == 2 ) par->setTrueGaussResPar(3.22132,0.731672,0.,0.159447);    // Calo Eta 1.7 - 2.3
-//       else if( etaBin == 3 ) par->setTrueGaussResPar(-3.09025,1.08265,0,-0.0753305);   // Calo Eta 2.3 - 5.0
+       if( etaBin == 0 )      par->setTrueGaussResPar(3.8663,0.728714,0.,0.224013);     // Calo Eta 0 - 1.1  
+       else if( etaBin == 1 ) par->setTrueGaussResPar(3.96546,0.836469,0.,0.200146);    // Calo Eta 1.1 - 1.7
+       else if( etaBin == 2 ) par->setTrueGaussResPar(3.22132,0.731672,0.,0.159447);    // Calo Eta 1.7 - 2.3
+       else if( etaBin == 3 ) par->setTrueGaussResPar(-3.09025,1.08265,0,-0.0753305);   // Calo Eta 2.3 - 5.0
 
-//       par->addPt3Threshold(resolutionFit::Pt3Rel,0.04,inNamePrefix+"0.root");
-//       par->addPt3Threshold(resolutionFit::Pt3Rel,0.06,inNamePrefix+"1.root");
-//       par->addPt3Threshold(resolutionFit::Pt3Rel,0.08,inNamePrefix+"2.root");
-//       par->addPt3Threshold(resolutionFit::Pt3Rel,0.10,inNamePrefix+"3.root");
-//       par->addPt3Threshold(resolutionFit::Pt3Rel,0.12,inNamePrefix+"4.root");
-//       par->addPt3Threshold(resolutionFit::Pt3Rel,0.15,inNamePrefix+"5.root");
+//       if( etaBin == 0 )      par->setTrueGaussResPar(2.10537,0.473721,0,0.296656);     // JPT Eta 0 - 1.1  
+//       else if( etaBin == 1 ) par->setTrueGaussResPar(-1.92848,0.806273,0,0.146635);    // JPT Eta 1.1 - 1.7
+//       else if( etaBin == 2 ) par->setTrueGaussResPar(-14.7575,6.32337,0,-0.433665);    // JPT Eta 1.7 - 2.3
+//       else if( etaBin == 3 ) par->setTrueGaussResPar(-5.60561,1.34509,0,0.00263488);   // JPT Eta 2.3 - 5.0
 
       //       par->addPt3Threshold(resolutionFit::Pt3Rel,0.02,inNamePrefix+"0.root");
-      par->addPt3Threshold(resolutionFit::Pt3Rel,0.04,inNamePrefix+"1.root");
-      par->addPt3Threshold(resolutionFit::Pt3Rel,0.06,inNamePrefix+"2.root");
-      par->addPt3Threshold(resolutionFit::Pt3Rel,0.08,inNamePrefix+"3.root");
-      par->addPt3Threshold(resolutionFit::Pt3Rel,0.10,inNamePrefix+"4.root");
-      par->addPt3Threshold(resolutionFit::Pt3Rel,0.12,inNamePrefix+"5.root");
-      par->addPt3Threshold(resolutionFit::Pt3Rel,0.15,inNamePrefix+"6.root");
+       par->addPt3Threshold(resolutionFit::Pt3Rel,0.04,inNamePrefix+"1.root");
+       par->addPt3Threshold(resolutionFit::Pt3Rel,0.06,inNamePrefix+"2.root");
+       par->addPt3Threshold(resolutionFit::Pt3Rel,0.08,inNamePrefix+"3.root");
+       par->addPt3Threshold(resolutionFit::Pt3Rel,0.10,inNamePrefix+"4.root");
+       par->addPt3Threshold(resolutionFit::Pt3Rel,0.12,inNamePrefix+"5.root");
+       par->addPt3Threshold(resolutionFit::Pt3Rel,0.15,inNamePrefix+"6.root");
 
-
-// For systematic variation
+      // For systematic variation
       //par->setSystExtrapolation("high");
-      //par->setSystScalePli(1.25);
+      //par->setSystScalePli(0.75);
 
 
       //par->addFileBaseNameMCStat(inNamePrefix+"Flat_");
@@ -219,10 +222,10 @@ int main(int argc, char *argv[]) {
     resolutionFit::FittedResolution *fit = new resolutionFit::FittedResolution(ptBins,par);
 
     // Plots
-     fit->plotExtrapolation();
-     fit->plotResolution();
-     //fit->plotPtAsymmetry();
-     fit->plotSpectra();
+    fit->plotExtrapolation();
+    fit->plotResolution();
+    fit->plotPtAsymmetry();
+    fit->plotSpectra();
      //fit->plotAdditionalJetActivity();
      //fit->plotControlDistributions();
      fit->plotMCClosure();
