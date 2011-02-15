@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.10 2010/07/27 17:10:20 mschrode Exp $
+# $Id: $
 
 ROOTLIBS   = $(shell root-config --libs) -lMinuit
 ROOTCFLAGS = $(shell root-config --cflags)
@@ -7,37 +7,58 @@ CFLAG      = -I $(ROOTCFLAGS)
 LFLAG      = $(ROOTLIBS)
 
 UTILDIR = ./../util
-UTIL    = $(UTILDIR)/LabelFactory.h $(UTILDIR)/HistOps.h $(UTILDIR)/StyleSettings.h $(UTILDIR)/utils.h
+UTIL    = $(UTILDIR)/ConfigParser.h $(UTILDIR)/LabelFactory.h $(UTILDIR)/HistOps.h $(UTILDIR)/StyleSettings.h $(UTILDIR)/utils.h
+TOOLS = Binning.h BinningAdmin.h
 
-OBJ     = CutVariation.o FittedResolution.o KalibriFileParser.o PtBin.o Parameters.o ResponseFunction.o Uncertainty.o run.o
+OBJ     = Binning.o BinningAdmin.o CommanderCool.o Extrapolation.o EtaBin.o FitResult.o Measurement.o OutputManager.o Parameters.o PlotMaker.o PtBin.o ResolutionFunction.o Sample.o run.o
+
 
 run: $(OBJ)	
 	g++ $(OBJ) $(LFLAG) -o run
 	@echo 'Created executable "run".'
 
-CutVariation.o: CutVariation.h CutVariation.cc Uncertainty.h KalibriFileParser.h Parameters.h $(UTIL)
-	g++ $(CFLAG) -c CutVariation.cc
+Binning.o: Binning.h Binning.cc
+	g++ $(CFLAG) -c Binning.cc
 
-FittedResolution.o: FittedResolution.h FittedResolution.cc KalibriFileParser.h PtBin.h Parameters.h ResponseFunction.h $(UTIL)
-	g++ $(CFLAG) -c FittedResolution.cc
+BinningAdmin.o: BinningAdmin.h BinningAdmin.cc Binning.h $(UTIL)
+	g++ $(CFLAG) -c BinningAdmin.cc
 
-KalibriFileParser.o: KalibriFileParser.h KalibriFileParser.cc
-	g++ $(CFLAG) -c KalibriFileParser.cc
+CommanderCool.o: CommanderCool.h CommanderCool.cc EtaBin.h FitResult.h ResolutionFunction.h Parameters.h PlotMaker.h PtBin.h
+	g++ $(CFLAG) -c CommanderCool.cc
 
-PtBin.o: PtBin.h PtBin.cc Uncertainty.h CutVariation.h KalibriFileParser.h Parameters.h
-	g++ $(CFLAG) -c PtBin.cc
+Extrapolation.o: Extrapolation.h Extrapolation.cc
+	g++ $(CFLAG) -c Extrapolation.cc	
 
-Parameters.o: Parameters.h Parameters.cc ResponseFunction.h $(UTIL)
-	g++ $(CFLAG) -c Parameters.cc
+EtaBin.o: EtaBin.h EtaBin.cc FitResult.h Parameters.h PtBin.h ResolutionFunction.h Sample.h
+	g++ $(CFLAG) -c EtaBin.cc	
 
-ResponseFunction.o: ResponseFunction.h ResponseFunction.cc
-	g++ $(CFLAG) -c ResponseFunction.cc
+FitResult.o: FitResult.h FitResult.cc Extrapolation.h Measurement.h
+	g++ $(CFLAG) -c FitResult.cc	
 
-Uncertainty.o: Uncertainty.h Uncertainty.cc
-	g++ $(CFLAG) -c Uncertainty.cc
+ResolutionFunction.o: ResolutionFunction.h ResolutionFunction.cc
+	g++ $(CFLAG) -c ResolutionFunction.cc
 
-run.o: run.cc PtBin.h FittedResolution.h Parameters.h ResponseFunction.h $(UTIL)
+Measurement.o: Measurement.h Measurement.cc
+	g++ $(CFLAG) -c Measurement.cc	
+
+OutputManager.o: OutputManager.h OutputManager.cc
+	g++ $(CFLAG) -c OutputManager.cc	
+
+Parameters.o: Parameters.h Parameters.cc OutputManager.h $(UTIL) $(TOOLS)
+	g++ $(CFLAG) -c Parameters.cc	
+
+PtBin.o: PtBin.h PtBin.cc FitResult.h Parameters.h Sample.h
+	g++ $(CFLAG) -c PtBin.cc	
+
+PlotMaker.o: PlotMaker.h PlotMaker.cc EtaBin.h FitResult.h OutputManager.h Parameters.h PtBin.h $(UTIL)
+	g++ $(CFLAG) -c PlotMaker.cc	
+
+Sample.o: Sample.h Sample.cc FitResult.h Measurement.h
+	g++ $(CFLAG) -c Sample.cc	
+
+run.o: run.cc CommanderCool.h FitResult.h Parameters.h ResolutionFunction.h $(UTIL)
 	g++ $(CFLAG) -c run.cc
+
 
 
 
