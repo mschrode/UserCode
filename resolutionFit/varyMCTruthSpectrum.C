@@ -1,3 +1,7 @@
+// $Id: $
+
+#define UTILS_AS_HEADER_FILE
+
 #include "TCanvas.h"
 #include "TFile.h"
 #include "TH1.h"

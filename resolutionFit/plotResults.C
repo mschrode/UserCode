@@ -1,4 +1,6 @@
-// $ Id: $
+// $Id: $
+
+#define UTILS_AS_HEADER_FILE
 
 #include <cassert>
 #include <iomanip>

@@ -1,8 +1,9 @@
-// $Id: fitMCTruth.C,v 1.10 2011/01/29 17:12:03 mschrode Exp $
+// $Id: fitMCTruth.C,v 1.11 2011/01/30 19:36:27 mschrode Exp $
 
 //!  Fit mean response and resolution from
 //!  Kalibri::ControlPlotsJetSmearing
 
+#define UTILS_AS_HEADER_FILE
 
 #include <fstream>
 #include <iomanip>
