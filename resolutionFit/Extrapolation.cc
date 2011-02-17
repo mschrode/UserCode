@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: Extrapolation.cc,v 1.1 2011/02/15 18:22:25 mschrode Exp $
 
 #include "Extrapolation.h"
 
@@ -12,9 +12,13 @@ namespace resolutionFit {
 
   unsigned int Extrapolation::NUM_EXTRAPOLATION_FUNCTIONS = 0;
 
+
   // -------------------------------------------------------------------------------------
-  bool Extrapolation::operator()(double meanPt,
-				 const std::vector<double> &ptSoft,
+  Extrapolation::Extrapolation(double meanPt) : meanPt_(meanPt) {}
+  
+
+  // -------------------------------------------------------------------------------------
+  bool Extrapolation::operator()(const std::vector<double> &ptSoft,
 				 const std::vector<double> &values,
 				 const std::vector<double> &uncerts,
 				 TF1* &fit) const {

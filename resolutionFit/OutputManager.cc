@@ -1,7 +1,6 @@
-// $Id: $
+// $Id: OutputManager.cc,v 1.1 2011/02/15 18:22:25 mschrode Exp $
 
 #include "OutputManager.h"
-
 
 #include <iostream>
 
@@ -26,12 +25,16 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   OutputManager::OutputManager(const TString &fileNameBase) {
     can_ = new TCanvas("OutputManager:Canvas","",500,500);
+    topCan_ = util::HistOps::createRatioTopCanvas();
+    bottomPad_ = util::HistOps::createRatioBottomPad();
+    lastPad_ = can_;
   }
 
   
   // -------------------------------------------------------------------------------------
   OutputManager::~OutputManager() {
     delete can_;
+    delete topCan_;
   }
 
 
@@ -57,6 +60,20 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------
+  void OutputManagerPSAllInOne::logx() {
+    lastPad_->SetLogx(1);
+    if( lastPad_ == topCan_ ) bottomPad_->SetLogx(1);
+ }
+
+
+  // -------------------------------------------------------------------------------------
+  void OutputManagerPSAllInOne::logy() {
+    lastPad_->SetLogy(1);
+    if( lastPad_ == topCan_ ) bottomPad_->SetLogy(1);
+  }
+
+
+  // -------------------------------------------------------------------------------------
   void OutputManagerPSAllInOne::newPage(const TString &title) {
     ps_->NewPage();
     multiCanPadIdx_ = 1;
@@ -65,7 +82,7 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------------------------
   void OutputManagerPSAllInOne::nextMultiPad(const TString &title) {
-    if( multiCanPadIdx_ == 12 ) {
+    if( multiCanPadIdx_ == 13 ) {
       ps_->NewPage();
       multiCanPadIdx_ = 1;
     }
@@ -79,9 +96,31 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   void OutputManagerPSAllInOne::nextPad(const TString &title) {
     ps_->NewPage();
+    if( title.Length() ) can_->SetTitle(title);
+    else can_->SetTitle("");
+    can_->SetLogx(0);
+    can_->SetLogy(0);
     lastPad_ = can_->cd();
-    lastPad_->SetLogx(0);
-    lastPad_->SetLogy(0);
+  }
+
+
+  void OutputManagerPSAllInOne::nextMainPad(const TString &title) {
+    ps_->NewPage();
+    if( title.Length() ) topCan_->SetTitle(title);
+    else topCan_->SetTitle("");
+    topCan_->SetLogx(0);
+    topCan_->SetLogy(0);
+    lastPad_ = topCan_->cd();
+  }
+
+
+  void OutputManagerPSAllInOne::nextRatioPad() {
+    if( lastPad_ == topCan_ ) {
+      bottomPad_->Draw();
+      bottomPad_->cd();
+      bottomPad_->SetLogx(0);
+      bottomPad_->SetLogy(0);
+    }
   }
 
 
@@ -99,17 +138,50 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------
+  void OutputManagerEPSSingleFiles::logx() {
+    lastPad_->SetLogx(1);
+    if( lastPad_ == topCan_ ) bottomPad_->SetLogx(1);
+ }
+
+
+  // -------------------------------------------------------------------------------------
+  void OutputManagerEPSSingleFiles::logy() {
+    lastPad_->SetLogy(1);
+    if( lastPad_ == topCan_ ) bottomPad_->SetLogy(1);
+  }
+
+
+  // -------------------------------------------------------------------------------------
   void OutputManagerEPSSingleFiles::nextPad(const TString &title) {
     if( title.Length() ) can_->SetTitle(title);
     else can_->SetTitle("");
-    can_->cd();
+    lastPad_ = can_->cd();
     can_->SetLogx(0);
     can_->SetLogy(0);
   }
 
 
+  void OutputManagerEPSSingleFiles::nextMainPad(const TString &title) {
+    if( title.Length() ) topCan_->SetTitle(title);
+    else topCan_->SetTitle("");
+    lastPad_ = topCan_->cd();
+    topCan_->SetLogx(0);
+    topCan_->SetLogy(0);
+  }
+
+
+  void OutputManagerEPSSingleFiles::nextRatioPad() {
+    if( lastPad_ == topCan_ ) {
+      bottomPad_->Draw();
+      bottomPad_->cd();
+      bottomPad_->SetLogx(0);
+      bottomPad_->SetLogy(0);
+    }
+  }
+
+
   // -------------------------------------------------------------------------------------
   void OutputManagerEPSSingleFiles::saveCurrentPad(const TString &name) {
-    can_->SaveAs(name,"eps");
+    lastPad_->SaveAs(name,"eps");
   }
 }

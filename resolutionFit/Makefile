@@ -1,4 +1,4 @@
-# $Id: $
+# $Id: Makefile,v 1.12 2011/02/15 18:16:55 mschrode Exp $
 
 ROOTLIBS   = $(shell root-config --libs) -lMinuit
 ROOTCFLAGS = $(shell root-config --cflags)
@@ -8,14 +8,17 @@ LFLAG      = $(ROOTLIBS)
 
 UTILDIR = ./../util
 UTIL    = $(UTILDIR)/ConfigParser.h $(UTILDIR)/LabelFactory.h $(UTILDIR)/HistOps.h $(UTILDIR)/StyleSettings.h $(UTILDIR)/utils.h
-TOOLS = Binning.h BinningAdmin.h
+TOOLS =  Binning.h BinningAdmin.h
 
-OBJ     = Binning.o BinningAdmin.o CommanderCool.o Extrapolation.o EtaBin.o FitResult.o Measurement.o OutputManager.o Parameters.o PlotMaker.o PtBin.o ResolutionFunction.o Sample.o run.o
+OBJ     = Binning.o BinningAdmin.o CommanderCool.o Extrapolation.o EtaBin.o FitResult.o Measurement.o OutputManager.o Parameters.o PlotMaker.o PtBin.o ResolutionFunction.o Sample.o run.o utils.o
 
 
 run: $(OBJ)	
 	g++ $(OBJ) $(LFLAG) -o run
-	@echo 'Created executable "run".'
+	@echo 'Done. Type "./run" to plot everything about jet energy resolutions.'
+
+utils.o: $(UTIL) $(UTILDIR)/utils.cc
+	g++ $(CFLAG) -c  $(UTILDIR)/utils.cc
 
 Binning.o: Binning.h Binning.cc
 	g++ $(CFLAG) -c Binning.cc
@@ -41,7 +44,7 @@ ResolutionFunction.o: ResolutionFunction.h ResolutionFunction.cc
 Measurement.o: Measurement.h Measurement.cc
 	g++ $(CFLAG) -c Measurement.cc	
 
-OutputManager.o: OutputManager.h OutputManager.cc
+OutputManager.o: OutputManager.h OutputManager.cc $(UTIL)
 	g++ $(CFLAG) -c OutputManager.cc	
 
 Parameters.o: Parameters.h Parameters.cc OutputManager.h $(UTIL) $(TOOLS)

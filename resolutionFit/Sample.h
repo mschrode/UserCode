@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: Sample.h,v 1.1 2011/02/15 18:22:25 mschrode Exp $
 
 #ifndef SAMPLE_H
 #define SAMPLE_H
@@ -33,7 +33,7 @@ namespace resolutionFit {
     TString label() const { return label_; }
 
     TH1* histPtGen(unsigned int ptSoftBin) const { return setStyle(meas_.at(ptSoftBin)->histPtGen()); }
-
+    TH1* histPdfPtTrue(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histPdfPtTrue(); }
 
     bool addFitResult(FitResult::Type type);
 

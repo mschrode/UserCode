@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: PlotMaker.cc,v 1.1 2011/02/15 18:22:25 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -23,7 +23,7 @@ namespace resolutionFit {
   PlotMaker::PlotMaker(const Parameters *par, const EtaBins &etaBins)
     : par_(par), etaBins_(etaBins),
       xMinPt_(40.), xMaxPt_(1100.),
-      yMinExtraRes_(1E-3), yMaxExtraRes_(0.38) {
+      yMinExtraRes_(1E-3), yMaxExtraRes_(0.38), yMinResRatio_(0.74), yMaxResRatio_(1.26) {
 
     // Output manager
     out_ = OutputManager::createOutputManager(par_->outMode(),par_->outFilePrefix());
@@ -47,9 +47,10 @@ namespace resolutionFit {
      
      // Loop over eta and pt bins
      for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+       const EtaBin* etaBin = *etaBinIt;
        out_->newPage("Extrapolation");
 
-       for(PtBinIt ptBinIt = (*etaBinIt)->ptBinsBegin(); ptBinIt != (*etaBinIt)->ptBinsEnd(); ++ptBinIt) {
+       for(PtBinIt ptBinIt = etaBin->ptBinsBegin(); ptBinIt != etaBin->ptBinsEnd(); ++ptBinIt) {
 	 const PtBin* ptBin = *ptBinIt;
 	 if( par_->verbosity() > 1 ) std::cout << "  " << ptBin->toTString() << std::endl;
        
@@ -59,8 +60,8 @@ namespace resolutionFit {
 	   if( par_->verbosity() > 1 ) std::cout << "    " << sample->label() << std::endl;
 
 	   // Loop over FitResultTypes
-	   for(FitResultTypeIt rIt = (*etaBinIt)->fitResultTypesBegin(); 
-	       rIt != (*etaBinIt)->fitResultTypesEnd(); ++rIt) {
+	   for(FitResultTypeIt rIt = etaBin->fitResultTypesBegin(); 
+	       rIt != etaBin->fitResultTypesEnd(); ++rIt) {
 
 	     if( par_->verbosity() > 1 ) std::cout << "      " << FitResult::toString(*rIt) << std::endl;
 	 
@@ -85,28 +86,29 @@ namespace resolutionFit {
 	     // Create frame
 	     TH1* hFrame = new TH1D("PlotMaker::plotExtrapolation::hFrame","",
 				    1000,0.,1.4*par_->ptSoftMax(par_->nPtSoftBins()-1));
-	     util::HistOps::setAxisTitles(hFrame,"p_{||,3} / p^{ref}_{T}","","#sigma / p^{ref}_{T}");
-	     hFrame->GetYaxis()->SetRangeUser(0.8*val.front(),1.1*val.back());
+	     util::HistOps::setAxisTitles(hFrame,labelMk_->ptSoft(),"","#sigma / p^{ref}_{T}");
+	     hFrame->GetYaxis()->SetRangeUser(0.8*val.front(),1.3*val.back());
 	     
-	     // Label
-	     //TPaveText* label = labelMk_->binLabel(bin);
-	     //TLegend* leg = util::LabelFactory::createLegendCol(1,0.5);
-	     //leg->AddEntry(hPtGen,sample->label(),"P");
+	     // Labels
+	     TPaveText* label = labelMk_->ptBin(sample->label(),etaBin->etaBin(),ptBin->ptBin());
+	     TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,labelMk_->start(),label->GetSize());
+	     leg->AddEntry(gVals,labelMk_->label(*rIt),"P");
+	     leg->AddEntry(fit,"Extrapolation","L");
 	   
 	     // Linear scale
 	     out_->nextMultiPad(sample->label()+": Extrapolation "+ptBin->toTString());
 	     hFrame->Draw();
 	     gVals->Draw("PE1same");
 	     fit->Draw("same");
-	     //label->Draw("same");
-	     //leg->Draw("same");
+	     label->Draw("same");
+	     leg->Draw("same");
 	     out_->saveCurrentPad(histFileName("Extrapolation",ptBin,sample,*rIt));
 	 
 	     delete gVals;
 	     delete fit;
 	     delete hFrame;
-	     //delete label;
-	     //delete leg;
+	     delete label;
+	     delete leg;
 	   } // End of loop over FitResultTypes
 	 } // End of loop over Samples
        } // End of loop over pt bins
@@ -124,6 +126,7 @@ namespace resolutionFit {
 
     // Loop over eta and pt bins
     for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+      const EtaBin* etaBin = *etaBinIt;
       out_->newPage("PtGenSpectrum");
 
       for(PtBinIt ptBinIt = (*etaBinIt)->ptBinsBegin(); ptBinIt != (*etaBinIt)->ptBinsEnd(); ++ptBinIt) {
@@ -138,26 +141,31 @@ namespace resolutionFit {
  	  for(unsigned int ptSoftBinIdx = 0; ptSoftBinIdx < sample->nPtSoftBins(); ++ptSoftBinIdx) {
  	    if( par_->verbosity() > 1 ) std::cout << "      PtSoftBin " << ptSoftBinIdx << std::endl;
 	    
- 	    // Get ptGen spectrum from sample and tweak style
+ 	    // Get ptGen spectrum and fit from sample and tweak style
  	    TH1* hPtGen = sample->histPtGen(ptSoftBinIdx);
  	    util::HistOps::setAxisTitles(hPtGen,"p^{gen}_{T}","GeV","jets",true);
+
+ 	    TH1* hPdf = sample->histPdfPtTrue(ptSoftBinIdx);
+	    hPdf->SetLineColor(kRed);
 	    
- 	    // Label
- 	    //TPaveText* label = labelMk_->binLabel(bin,ptSoftBinIdx);
- 	    //TLegend* leg = util::LabelFactory::createLegendCol(1,0.5);
- 	    //leg->AddEntry(hPtGen,sample->label(),"P");
+	     // Labels
+	    TPaveText* label = labelMk_->ptSoftBin(sample->label(),etaBin->etaBin(),ptBin->ptBin(),ptSoftBinIdx);
+	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,labelMk_->start(),label->GetSize());
+	    leg->AddEntry(hPtGen,"Generated Spectrum","P");
+	    leg->AddEntry(hPdf,"Assumed Spectrum #tilde{f}","L");
 	    
  	    // Linear scale
- 	    util::HistOps::setYRange(hPtGen,3);
+ 	    util::HistOps::setYRange(hPtGen,label->GetSize()+leg->GetNRows()+1);
  	    out_->nextMultiPad(sample->label()+": PtGen Spectrum "+ptBin->toTString()+", PtSoftBin "+util::toTString(ptSoftBinIdx));
  	    hPtGen->Draw("PE1");
- 	    //label->Draw("same");
- 	    //leg->Draw("same");
+	    hPdf->Draw("Lsame");
+ 	    label->Draw("same");
+ 	    leg->Draw("same");
  	    out_->saveCurrentPad(histFileName("PtGen",ptBin,sample,ptSoftBinIdx));
 	    
  	    delete hPtGen;
- 	    //delete label;
- 	    //delete leg;
+ 	    delete label;
+ 	    delete leg;
  	  } // End of loop over ptSoft bins	  
  	} // End of loop over MCSamples
        } // End of loop over pt bins
@@ -224,40 +232,51 @@ namespace resolutionFit {
 	   TF1* mcTruth = etaBin->mcTruthResoFunc("MCTruthReso_Eta"+util::toTString(etaBinIdx));
 	   mcTruth->SetLineColor(kRed);
 
+	   // Ratio of measurement and mc truth
+	   TGraphAsymmErrors* gRatio = util::HistOps::createRatioGraph(gResCorr,mcTruth);
+
 	   // PLI function
 	   TF1* pli = etaBin->pliFunc("PLI_Eta"+util::toTString(etaBinIdx));
 	   pli->SetLineColor(kGreen);
 	   pli->SetLineStyle(2);
 
-	   // Create frame
-	   TH1* hFrame = new TH1D("PlotMaker::plotResolution::hFrame","",1000,xMinPt_,xMaxPt_);
-	   util::HistOps::setAxisTitles(hFrame,"p^{ref}_{T}","GeV","#sigma / p^{ref}_{T}");
-	   hFrame->GetYaxis()->SetRangeUser(yMinExtraRes_,yMaxExtraRes_);
-	   hFrame->GetXaxis()->SetMoreLogLabels();
-	   hFrame->GetXaxis()->SetNoExponent();
+	   // Create frames for main and ratio plots
+	   TH1* hFrameMain = out_->mainFrame(xMinPt_,xMaxPt_,yMinExtraRes_,yMaxExtraRes_,"#sigma / p^{ref}_{T}");
+	   hFrameMain->GetXaxis()->SetMoreLogLabels();
+	   hFrameMain->GetXaxis()->SetNoExponent();
+
+	   TH1* hFrameRatio = out_->ratioFrame(hFrameMain,"p^{ref}_{T}","GeV",yMinResRatio_,yMaxResRatio_);
 	     
-	   // Label
-	   //TPaveText* label = labelMk_->binLabel(bin);
-	   //TLegend* leg = util::LabelFactory::createLegendCol(1,0.5);
-	   //leg->AddEntry(hPtGen,sample->label(),"P");
+	   // Labels
+	   TPaveText* label = labelMk_->etaBin(sampleLabel,etaBin->etaBin());
+	   TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,labelMk_->start(),label->GetSize());
+	   leg->AddEntry(gRes,"Resolution (Extrapolated)","P");
+	   leg->AddEntry(pli,"Particle Level Imbalance","L");
+	   leg->AddEntry(gResCorr,"Resolution (Corrected)","P");
+	   leg->AddEntry(mcTruth,"Resolution (MC Truth)","L");
 	   
-	   out_->nextPad(sampleLabel+": Resolution "+etaBin->toString());
-	   hFrame->Draw();
+	   out_->nextMainPad(sampleLabel+": Resolution "+etaBin->toString());
+	   hFrameMain->Draw();
 	   pli->Draw("same");
 	   mcTruth->Draw("same");
 	   gRes->Draw("PE1same");
 	   gResCorr->Draw("PE1same");
 
-	   //label->Draw("same");
-	   //leg->Draw("same");
+	   label->Draw("same");
+	   leg->Draw("same");
+	   out_->nextRatioPad();
+	   hFrameRatio->Draw();
+	   gRatio->Draw("PE1same");
 	   out_->logx();
 	   out_->saveCurrentPad(histFileName("Resolution",etaBin,sampleLabel,fitResType));
 	   
 	   delete gRes;
+	   delete gRatio;
 	   delete mcTruth;
-	   delete hFrame;
-	   //delete label;
-	   //delete leg;
+	   delete hFrameMain;
+	   delete hFrameRatio;
+	   delete label;
+	   delete leg;
 	 } // End of loop over SampleLabels
        } // End of loop over FitResultTypes
      } // End of loop over eta bins
@@ -316,75 +335,92 @@ namespace resolutionFit {
     : par_(par) {}
 
 
+  // -------------------------------------------------------------------------------------
+  TPaveText* PlotMaker::LabelMaker::ptSoftBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int ptSoftBinIdx) const {
+    TPaveText* lab = etaBin(label,etaBinIdx,1);
+    lab->AddText(ptRange(etaBinIdx,ptBinIdx)+",  "+ptSoftRange(ptSoftBinIdx));
 
-//   // -------------------------------------------------------------------------------------
-//   TPaveText* PlotMaker::LabelMaker::binLabel(unsigned int etaBin, unsigned int ptBin) const {
-//     TPaveText* label = util::LabelFactory::createPaveText(2,-0.6);
-//     label->AddText(jetAlgo()+", "+etaRange(etaBin));
-//     label->AddText(ptRange(etaBin,ptBin));
-
-//     return label;
-//   }
+    return lab;
+  }
 
 
+  // -------------------------------------------------------------------------------------
+  TPaveText* PlotMaker::LabelMaker::ptBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptBinIdx) const {
+    TPaveText* lab = etaBin(label,etaBinIdx,1);
+    lab->AddText(ptRange(etaBinIdx,ptBinIdx));
 
-//   // -------------------------------------------------------------------------------------
-//   TPaveText* PlotMaker::LabelMaker::binLabel(unsigned int etaBin, unsigned int ptBin, unsigned int ptSoftBinIdx) const {
-//     TPaveText* label = util::LabelFactory::createPaveText(3,-0.6);
-//     label->AddText(jetAlgo()+", "+etaRange(etaBin));
-//     label->AddText(ptSoftRange(ptSoftBinIdx));
-//     label->AddText(ptRange(etaBin,ptBin));
-
-//     return label;
-//   }
+    return lab;
+  }
 
 
+  // -------------------------------------------------------------------------------------
+  TPaveText* PlotMaker::LabelMaker::etaBin(SampleLabel label, unsigned int etaBinIdx, unsigned int nExtraEntries) const {
+    TPaveText* lab = util::LabelFactory::createPaveText(2+nExtraEntries);
+    lab->AddText(label+",  #sqrt{s} = 7 TeV, L = "+util::toTString(33)+" pb^{-1}");
+    lab->AddText(jets()+",  "+etaRange(etaBinIdx));
 
-//   // -------------------------------------------------------------------------------------
-//   TString PlotMaker::LabelMaker::etaRange(unsigned int etaBin) const {
-//     return util::toTString(par_->etaMin(etaBin))+" < |#eta| < "+util::toTString(par_->etaMax(etaBin));
-//   }
-
-
-
-//   // -------------------------------------------------------------------------------------
-//   TString PlotMaker::LabelMaker::ptRange(unsigned int etaBin, unsigned int ptBin) const {
-//     return util::toTString(par_->ptMin(etaBin,ptBin))+" < "+pt()+" < "+util::toTString(par_->ptMax(etaBin,ptBin))+" GeV";
-//   }
+    return lab;
+  }
 
 
+  // -------------------------------------------------------------------------------------
+  TString PlotMaker::LabelMaker::etaRange(unsigned int etaBinIdx) const {
+    return util::toTString(par_->etaMin(etaBinIdx))+" < |#eta| < "+util::toTString(par_->etaMax(etaBinIdx));
+  }
 
-//   // -------------------------------------------------------------------------------------
-//   TString PlotMaker::LabelMaker::ptSoftRange(unsigned int ptSoftBinIdx) const {
-//     TString label;
-//     if( par_->extrapolationType() == Extrapolation::Threshold ) {
-//       label = ptSoft()+" < "+util::toTString(par_->ptSoftMax(ptSoftBinIdx))+"#upoint#bar{p^{ave}_{T}}";
-//     }
-//     return label;
-//   }
+
+  // -------------------------------------------------------------------------------------
+  TString PlotMaker::LabelMaker::ptRange(unsigned int etaBinIdx, unsigned int ptBinIdx) const {
+    return util::toTString(par_->ptMin(etaBinIdx,ptBinIdx))+" < "+pt()+" < "+util::toTString(par_->ptMax(etaBinIdx,ptBinIdx))+" GeV";
+  }
+
+
+   // -------------------------------------------------------------------------------------
+   TString PlotMaker::LabelMaker::ptSoftRange(unsigned int ptSoftBinIdx) const {
+     return ptSoft()+" < "+util::toTString(par_->ptSoftMax(ptSoftBinIdx));
+   }
 
 
 
-//   // -------------------------------------------------------------------------------------
-//   TString PlotMaker::LabelMaker::jetAlgo() const {
-//     TString algo = "default jets";
-//     if( par_->jetAlgo() == AK5PF ) {
-//       algo = "AK5 PF-Jets";
-//     }
-//     return algo;
-//   }
+  // -------------------------------------------------------------------------------------
+  TString PlotMaker::LabelMaker::jets() const {
+    TString lab = "";
+    if( par_->jetAlgo() == JetProperties::AK5 ) {
+      lab += "Anti-k_{T} (R=0.5)";
+    }
+    lab += " ";
+    if( par_->jetType() == JetProperties::Calo ) lab += "Calo Jets";
+    else if( par_->jetType() == JetProperties::PF ) lab += "PF Jets";
+    else if( par_->jetType() == JetProperties::JPT ) lab += "JPT Jets";
+
+    return lab;
+  }
 
 
 
-//   // -------------------------------------------------------------------------------------
-//   TString PlotMaker::LabelMaker::pt() const { 
-//     return "p^{ave}_{T}";
-//   }
+  // -------------------------------------------------------------------------------------
+  TString PlotMaker::LabelMaker::pt() const { 
+    return "p^{ave}_{T}";
+  }
 
 
+  // -------------------------------------------------------------------------------------
+  TString PlotMaker::LabelMaker::ptSoft() const { 
+    return "p^{rel}_{||,3}";
+  }
 
-//   // -------------------------------------------------------------------------------------
-//   TString PlotMaker::LabelMaker::ptSoft() const { 
-//     return "p_{||,3}";
-//   }
+
+  // -------------------------------------------------------------------------------------
+  TString PlotMaker::LabelMaker::label(FitResult::Type type) const { 
+    TString lab = "";
+    if( FitResult::validType(type) ) {
+      if( type == FitResult::FullMaxLikeRel ) lab = "Max Like (Relative)";
+      else if( type == FitResult::FullMaxLikeAbs ) lab = "Max Like (Absolute)";
+      else if( type == FitResult::SimpleMaxLike ) lab = "Simplified Max Like";
+      else if( type == FitResult::PtAsym ) lab = "Asymmetry";
+      else if( type == FitResult::PtGenAsym ) lab = "PLI";
+    }
+    
+    return lab;
+  }
 }

@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: Measurement.h,v 1.1 2011/02/15 18:22:25 mschrode Exp $
 
 #ifndef MEASUREMENT_H
 #define MEASUREMENT_H
@@ -31,6 +31,7 @@ namespace resolutionFit {
     double meanPdfPtTrueUncert() const { return meanPdfPtTrueUncert_; }
 
     TH1* histPtGen() const { return getClone("hPtGen"); }
+    TH1* histPdfPtTrue() const { return getClone("hTruthPDF"); }
 
 
   private:

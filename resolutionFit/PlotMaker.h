@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: PlotMaker.h,v 1.1 2011/02/15 18:22:25 mschrode Exp $
 
 #ifndef PLOT_MAKER_H
 #define PLOT_MAKER_H
@@ -38,24 +38,21 @@ namespace resolutionFit {
     class LabelMaker {
     public:
       LabelMaker(const Parameters* par);
+
+      double start() const { return 0.75; }
+
+      TPaveText* ptSoftBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int ptSoftBinIdx) const;
+      TPaveText* ptBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptBinIdx) const;
+      TPaveText* etaBin(SampleLabel label, unsigned int etaBinIdx, unsigned int nExtraEntries = 0) const;
+      TString etaRange(unsigned int etaBin) const;
+      TString ptRange(unsigned int etaBin, unsigned int ptBin) const;
+      TString ptSoftRange(unsigned int ptSoftBinIdx) const;
+      TString jets() const;
+      TString pt() const;
+      TString ptSoft() const;
+      TString label(FitResult::Type type) const;
       
-/*       TPaveText* binLabel(unsigned int etaBin, unsigned int ptBin) const; */
-/*       TPaveText* binLabel(const Bin* bin) const { */
-/* 	return binLabel(bin->etaBin(),bin->ptBin()); */
-/*       } */
-/*       TPaveText* binLabel(unsigned int etaBin, unsigned int ptBin, unsigned int ptSoftBinIdx) const; */
-/*       TPaveText* binLabel(const Bin* bin, unsigned int ptSoftBinIdx) const { */
-/* 	return binLabel(bin->etaBin(),bin->ptBin(),ptSoftBinIdx); */
-/*       } */
-      
-/*       TString etaRange(unsigned int etaBin) const; */
-/*       TString ptRange(unsigned int etaBin, unsigned int ptBin) const; */
-/*       TString ptSoftRange(unsigned int ptSoftBinIdx) const; */
-/*       TString jetAlgo() const; */
-/*       TString pt() const; */
-/*       TString ptSoft() const; */
-      
-      
+
     private:
       const Parameters* par_;
     };
@@ -67,6 +64,8 @@ namespace resolutionFit {
     const double xMaxPt_;
     const double yMinExtraRes_;
     const double yMaxExtraRes_;
+    const double yMinResRatio_;
+    const double yMaxResRatio_;
 
     OutputManager* out_;
     LabelMaker* labelMk_;
