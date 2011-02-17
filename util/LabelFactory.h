@@ -1,4 +1,4 @@
-//  $Id: LabelFactory.h,v 1.15 2010/12/02 20:16:41 mschrode Exp $
+//  $Id: LabelFactory.h,v 1.16 2010/12/19 22:41:03 mschrode Exp $
 
 #ifndef LABEL_FACTORY_H
 #define LABEL_FACTORY_H
@@ -22,7 +22,7 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: LabelFactory.h,v 1.15 2010/12/02 20:16:41 mschrode Exp $
+  //!  $Id: LabelFactory.h,v 1.16 2010/12/19 22:41:03 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class LabelFactory {
   public:
@@ -175,7 +175,11 @@ namespace util {
       y0 = y1 - nEntries*height;
     }
   };
-
-  std::vector<TH1*> LabelFactory::hDummies_;
 }
+
+
+#ifdef UTILS_AS_HEADER_FILE
+std::vector<TH1*> util::LabelFactory::hDummies_;
+#endif
+
 #endif

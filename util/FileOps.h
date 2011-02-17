@@ -1,4 +1,4 @@
-// $Id: FileOps.h,v 1.6 2010/12/19 22:41:03 mschrode Exp $
+// $Id: FileOps.h,v 1.7 2010/12/27 13:31:17 mschrode Exp $
 
 #ifndef FileOps_h
 #define FileOps_h
@@ -8,6 +8,7 @@
 
 #include "TF1.h"
 #include "TFile.h"
+#include "TGraph.h"
 #include "TH1.h"
 #include "TObject.h"
 #include "TString.h"
@@ -21,6 +22,7 @@ namespace util
   {
   public:
     static TF1* readTF1(const TString &fileName, const TString &fName, const TString &newFName = "");
+    static TGraph* readTGraph(const TString &fileName, const TString &gName, const TString &newGName = "");
     static TH2* readTH2(const TString &fileName, const TString &hName, const TString &newHName = "");
     static TH1* readTH1(const TString &fileName, const TString &histName, const TString &newHistName = "");
     static util::HistVec readTH1(const std::vector<TString> &fileNames, const TString &histName, const TString &newHistName = "");
@@ -61,6 +63,23 @@ namespace util
     file.Close();
     
     return h;
+  }
+
+
+  //! Read TGraph from file
+  // -------------------------------------------------------------------------------------
+  TGraph* FileOps::readTGraph(const TString &fileName, const TString &gName, const TString &newGName) {
+    TFile file(fileName,"READ");
+    TGraph *g = 0;
+    file.GetObject(gName,g);
+    if( g ) {
+      if( newGName.Length() ) g->SetName(newGName);
+    } else {
+      std::cerr << "ERROR in FileOps::readTGraph: TGraph with name '" << gName << "' does not exist in file '" << fileName << "'\n.";
+    }
+    file.Close();
+    
+    return g;
   }
   
   

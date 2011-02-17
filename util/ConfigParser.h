@@ -1,4 +1,4 @@
-// $Id: ConfigParser.h,v 1.2 2010/11/27 23:57:52 mschrode Exp $
+// $Id: ConfigParser.h,v 1.3 2010/12/11 17:32:29 mschrode Exp $
 
 #ifndef CONFIG_PARSER_H
 #define CONFIG_PARSER_H
@@ -36,6 +36,7 @@ namespace util {
 
     inline std::string readString(const std::string &tag, const std::string &delim = ":") const;
     inline std::vector<std::string> readStringVec(const std::string &tag, const std::string &delim = ":") const;
+    inline double readDouble(const std::string &tag, const std::string &delim) const;
     inline std::vector<double> readDoubleVec(const std::string &tag, const std::string &delim = ":") const;
 
 
@@ -86,6 +87,13 @@ namespace util {
       line.erase(0,end);
     }    
     return result;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  double ConfigParser::readDouble(const std::string &tag, const std::string &delim) const {
+    std::string str = readString(tag,delim);
+    return stringToDouble(str);
   }
 
 

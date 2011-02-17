@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.28 2010/12/27 13:31:17 mschrode Exp $
+// $Id: HistOps.h,v 1.29 2011/01/17 15:23:56 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.28 2010/12/27 13:31:17 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.29 2011/01/17 15:23:56 mschrode Exp $
   class HistOps
   {
   public:
@@ -942,7 +942,10 @@ namespace util
   private:
     static unsigned int COUNT_;
   };
-
-  unsigned int HistOps::COUNT_ = 0;
 }
+
+#ifdef UTILS_AS_HEADER_FILE
+unsigned int util::HistOps::COUNT_ = 0;
+#endif
+
 #endif
