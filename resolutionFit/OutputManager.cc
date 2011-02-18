@@ -1,4 +1,4 @@
-// $Id: OutputManager.cc,v 1.1 2011/02/15 18:22:25 mschrode Exp $
+// $Id: OutputManager.cc,v 1.2 2011/02/17 13:42:32 mschrode Exp $
 
 #include "OutputManager.h"
 
@@ -26,7 +26,7 @@ namespace resolutionFit {
   OutputManager::OutputManager(const TString &fileNameBase) {
     can_ = new TCanvas("OutputManager:Canvas","",500,500);
     topCan_ = util::HistOps::createRatioTopCanvas();
-    bottomPad_ = util::HistOps::createRatioBottomPad();
+    bottomPad_ = 0;
     lastPad_ = can_;
   }
 
@@ -104,6 +104,7 @@ namespace resolutionFit {
   }
 
 
+  // -------------------------------------------------------------------------------------
   void OutputManagerPSAllInOne::nextMainPad(const TString &title) {
     ps_->NewPage();
     if( title.Length() ) topCan_->SetTitle(title);
@@ -114,14 +115,17 @@ namespace resolutionFit {
   }
 
 
+  // -------------------------------------------------------------------------------------
   void OutputManagerPSAllInOne::nextRatioPad() {
     if( lastPad_ == topCan_ ) {
+      bottomPad_ = util::HistOps::createRatioBottomPad();
       bottomPad_->Draw();
       bottomPad_->cd();
       bottomPad_->SetLogx(0);
       bottomPad_->SetLogy(0);
     }
   }
+
 
 
   // -------------------------------------------------------------------------------------
@@ -161,6 +165,7 @@ namespace resolutionFit {
   }
 
 
+  // -------------------------------------------------------------------------------------
   void OutputManagerEPSSingleFiles::nextMainPad(const TString &title) {
     if( title.Length() ) topCan_->SetTitle(title);
     else topCan_->SetTitle("");
@@ -170,8 +175,10 @@ namespace resolutionFit {
   }
 
 
+  // -------------------------------------------------------------------------------------
   void OutputManagerEPSSingleFiles::nextRatioPad() {
     if( lastPad_ == topCan_ ) {
+      bottomPad_ = util::HistOps::createRatioBottomPad();
       bottomPad_->Draw();
       bottomPad_->cd();
       bottomPad_->SetLogx(0);
