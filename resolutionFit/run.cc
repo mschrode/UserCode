@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.42 2011/02/15 18:16:55 mschrode Exp $
+// $Id: run.cc,v 1.43 2011/02/17 13:42:32 mschrode Exp $
 
 #include <iostream>
 
@@ -16,14 +16,16 @@ int main(int argc, char *argv[]) {
 
    util::StyleSettings::paperNoTitle();
 
-   Parameters* par = new Parameters("Test","testFiles/BinningAdmin4.cfg",0);
-   par->setJetProperties(JetProperties::AK5,JetProperties::PF);
+   Parameters* par = new Parameters("Test","config/BinningAdmin4.cfg",1);
+   par->setJetProperties(JetProperties::AK5,JetProperties::Calo);
 
    CommanderCool* cmd = new CommanderCool(par);
-   cmd->setMCTruthResolution(ResolutionFunction::ModifiedNSC);
-   cmd->setPLI(ResolutionFunction::NSC);
-   cmd->addMCSample("PYTHIA MC","testFiles/ResFitThres_Calo_MCFall10");
+   cmd->setMCTruthResolution("config/Parameters_MCTruthResolution.txt",ResolutionFunction::ModifiedNSC);
+   cmd->setPLI("config/Parameters_PLI.txt",ResolutionFunction::NSC);
+   cmd->addMCSample("PYTHIA MC","input/ResFitThres_Calo_MCFall10");
+   cmd->addDataSample("Data","input/ResFitThres_Calo_Data");
    cmd->addFitResult(FitResult::FullMaxLikeRel);
+   cmd->compareSamples("Data","PYTHIA MC");
    cmd->printSetup();
    cmd->makeAllPlots();
    cmd->printResult();

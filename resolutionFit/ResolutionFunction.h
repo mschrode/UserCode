@@ -1,7 +1,9 @@
-// $Id: $
+// $Id: ResolutionFunction.h,v 1.1 2011/02/15 18:22:25 mschrode Exp $
 
 #ifndef RESOLUTION_FUNCTION_H
 #define RESOLUTION_FUNCTION_H
+
+#include <vector>
 
 #include "TF1.h"
 #include "TString.h"
@@ -13,6 +15,8 @@ namespace resolutionFit {
   public:
     enum Type { NSC, ModifiedNSC };
     
+    static ResolutionFunction* createResolutionFunction(Type type, std::vector<double> &param);
+
     virtual ~ResolutionFunction();
 
     virtual Type type() const = 0;

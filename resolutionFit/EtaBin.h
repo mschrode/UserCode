@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: EtaBin.h,v 1.1 2011/02/15 18:22:25 mschrode Exp $
 
 #ifndef ETA_BIN_H
 #define ETA_BIN_H
@@ -32,6 +32,10 @@ namespace resolutionFit {
     FitResultTypeIt fitResultTypesEnd() const { return fitResultTypes_.end(); }
     SampleTypeIt sampleTypesBegin() const { return sampleTypes_.begin(); }
     SampleTypeIt sampleTypesEnd() const { return sampleTypes_.end(); }
+    ComparedSamplesIt comparedSamplesBegin() const { return compSamples_.begin(); }
+    ComparedSamplesIt comparedSamplesEnd() const { return compSamples_.end(); }
+
+    Sample::Type sampleType(const SampleLabel &label) const;
 
     double meanPt(SampleLabel label, FitResult::Type type, unsigned int ptBinIdx) const;
     double meanPtStatUncert(SampleLabel label, FitResult::Type type, unsigned int ptBinIdx) const;
@@ -49,6 +53,8 @@ namespace resolutionFit {
     bool addMCSample(const TString &label, const TString &baseFileName);
     bool addFitResult(FitResult::Type type);
 
+    bool compareSamples(const SampleLabel &label1, const SampleLabel &label2);
+
     void setMCTruthResolution(ResolutionFunction* mcTruthReso);
     void setPLI(ResolutionFunction* pli);
     
@@ -60,6 +66,7 @@ namespace resolutionFit {
     PtBins ptBins_;
     FitResultTypes fitResultTypes_;
     SampleTypes sampleTypes_;    
+    ComparedSamples compSamples_;
 
     ResolutionFunction* mcTruthReso_;
     ResolutionFunction* pli_;

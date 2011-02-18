@@ -1,10 +1,14 @@
-// $Id: $
+// $Id: CommanderCool.cc,v 1.1 2011/02/15 18:22:25 mschrode Exp $
 
 #include <iomanip>
 #include <iostream>
+#include <set>
 
 #include "CommanderCool.h"
 #include "PtBin.h"
+
+#include "../util/ConfigParser.h"
+
 
 namespace resolutionFit {
   CommanderCool::CommanderCool(const Parameters* par)
@@ -29,32 +33,41 @@ namespace resolutionFit {
   }
 
 
-  // This shoudl take a config file holding the parameters as input
-  void CommanderCool::setMCTruthResolution(ResolutionFunction::Type type) {
-    if( type == ResolutionFunction::ModifiedNSC ) {
-      std::cout << "WARNING in CommanderCool::setMCTruthResolution(): using hard-coded parameters!" << std::endl;
-      etaBins_.at(0)->setMCTruthResolution(new ResolutionFunctionModifiedNSC(10.,1000.,3.8663,0.728714,0.,0.224013));
-    } else {
-      std::cerr << "ERROR in CommanderCool::setMCTruthResolution(): Unknown type '" << type << "'" << std::endl;
-      exit(1);
+  void CommanderCool::setMCTruthResolution(const TString &fileName, ResolutionFunction::Type type) {
+    if( par_->verbosity() > 0 ) std::cout << "CommanderCool::setMCTruthResolution(): Setting MC truth resolution from config file '" << fileName << "'" << std::endl;
+
+    // Parse file for parameters and create MCTruth resolution functions
+    util::ConfigParser parser(fileName.Data());
+    for(unsigned int etaBin = 0; etaBin < par_->nEtaBins(); ++etaBin) {
+      TString key = JetProperties::toString(par_->jetType())+"Eta";
+      key += etaBin;
+      std::vector<double> param = parser.readDoubleVec(key.Data(),":");
+      etaBins_.at(etaBin)->setMCTruthResolution(ResolutionFunction::createResolutionFunction(type,param));
     }
   }
 
 
-  // This shoudl take a config file holding the parameters as input
-  void CommanderCool::setPLI(ResolutionFunction::Type type) {
-    if( type == ResolutionFunction::NSC ) {
-      std::cout << "WARNING in CommanderCool::setPLI(): using hard-coded parameters!" << std::endl;
-      etaBins_.at(0)->setPLI(new ResolutionFunctionNSC(10.,1000.,2.54877,0.149045,0.0109168));
-    } else {
-      std::cerr << "ERROR in CommanderCool::setPLI(): Unknown type '" << type << "'" << std::endl;
-      exit(1);
+  void CommanderCool::setPLI(const TString &fileName, ResolutionFunction::Type type) {
+    if( par_->verbosity() > 0 ) std::cout << "CommanderCool::setPLI: Setting Particle Level Imbalance from config file '" << fileName << "'" << std::endl;
+
+    // Parse file for parameters and create PLI resolution functions
+    util::ConfigParser parser(fileName.Data());
+    for(unsigned int etaBin = 0; etaBin < par_->nEtaBins(); ++etaBin) {
+      TString key = "Eta";
+      key += etaBin;
+      std::vector<double> param = parser.readDoubleVec(key.Data(),":");
+      etaBins_.at(etaBin)->setPLI(ResolutionFunction::createResolutionFunction(type,param));
     }
   }
 
 
 
   void CommanderCool::addDataSample(const TString &label, const TString &baseFileName) {
+    if( !isConsistentInputName(baseFileName) ) {
+      std::cerr << "WARNING in CommanderCool::addDataSample(): name of file contains a jet type string different than the current type '" << JetProperties::toString(par_->jetType()) << "'" << std::endl;
+      exit(1);
+    }
+
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
       if( !((*it)->addDataSample(label,baseFileName)) ) {
 	std::cerr << "ERROR adding DataSample '" << label << "'" << std::endl;
@@ -66,6 +79,11 @@ namespace resolutionFit {
 
 
   void CommanderCool::addMCSample(const TString &label, const TString &baseFileName) {
+    if( !isConsistentInputName(baseFileName) ) {
+      std::cerr << "WARNING in CommanderCool::addDataSample(): name of file contains a jet type string different than the current type '" << JetProperties::toString(par_->jetType()) << "'" << std::endl;
+      exit(1);
+    }
+
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
       if( !((*it)->addMCSample(label,baseFileName) ) ) {
 	std::cerr << "ERROR adding MCSample '" << label << "'" << std::endl;
@@ -79,6 +97,16 @@ namespace resolutionFit {
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
       if( !((*it)->addFitResult(type)) ) {
 	std::cerr << "ERROR adding FitResult of type '" << FitResult::toString(type) << "'" << std::endl;
+	exit(1);
+      }
+    }
+  }
+
+
+  void CommanderCool::compareSamples(const SampleLabel &label1, const SampleLabel &label2) {
+    for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
+      if( !((*it)->compareSamples(label1,label2)) ) {
+	std::cerr << "ERROR comparing samples" << std::endl;
 	exit(1);
       }
     }
@@ -131,9 +159,33 @@ namespace resolutionFit {
 	    std::cout << std::setprecision(4) << etaBin->mcTruthResolution(sampleLabel,fitResType,(*ptBinIt)->ptBin()) << std::endl;
 	  }
 	}
+	std::cout << std::endl;
       }
     }
 
     std::cout << "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n" << std::endl;
+  }
+
+
+  bool CommanderCool::isConsistentInputName(const TString &name) const {
+    // Set of all known jet types
+    std::set<JetProperties::Type> types;
+    types.insert(JetProperties::Calo);
+    types.insert(JetProperties::JPT);
+    types.insert(JetProperties::PF);
+    
+    // Remove current jet type
+    types.erase(par_->jetType());
+    
+    // Check whether name contains label of other jet types
+    bool result = true;
+    for(std::set<JetProperties::Type>::const_iterator it = types.begin(); it != types.end(); ++it) {
+      if( name.Contains(JetProperties::toString(*it)) ) {
+	result = false;
+	break;
+      }
+    }
+
+    return result;
   }
 }

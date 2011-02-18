@@ -1,4 +1,4 @@
-// $ Id: $
+// $Id: $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -15,6 +15,9 @@ namespace resolutionFit {
   public:
     enum Algo { AK5 };
     enum Type { Calo, JPT, PF };
+
+    static bool isValidType(Type type);
+    static TString toString(Type type);
   };
 
 
@@ -68,6 +71,7 @@ namespace resolutionFit {
     TString fileNameEnding() const { return ".root"; }
 
     OutputManager::Mode outMode() const { return OutputManager::PSAllInOne; }
+    //OutputManager::Mode outMode() const { return OutputManager::EPSSingleFiles; }
     TString outFilePrefix() const { return id_; }
       
 

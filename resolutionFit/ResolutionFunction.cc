@@ -1,8 +1,35 @@
-// $Id: $
+// $Id: ResolutionFunction.cc,v 1.1 2011/02/15 18:22:25 mschrode Exp $
 
 #include "ResolutionFunction.h"
 
 namespace resolutionFit {
+
+  // -------------------------------------------------------------------------------------
+  ResolutionFunction* ResolutionFunction::createResolutionFunction(Type type, std::vector<double> &param) {
+    ResolutionFunction* func = 0;
+    if( type == NSC ) {
+      if( param.size() >= 5 ) {
+	func = new ResolutionFunctionNSC(param.at(0),param.at(1),param.at(2),param.at(3),param.at(4));
+      } else {
+	std::cerr << "ERROR in ResolutionFunction::createResolutionFunction(): Too few parameters for type 'NSC'" << std::endl;
+      exit(1);
+      }
+    } else if( type == ModifiedNSC ) {
+      if( param.size() >= 6 ) {
+	func = new ResolutionFunctionModifiedNSC(param.at(0),param.at(1),param.at(2),param.at(3),param.at(4),param.at(5));
+      } else {
+	std::cerr << "ERROR in ResolutionFunction::createResolutionFunction(): Too few parameters for type 'ModifiedNSC'" << std::endl;
+      exit(1);
+      }
+    } else {
+      std::cerr << "ERROR in ResolutionFunction::createResolutionFunction(): Unknown type '" << type << "'" << std::endl;
+      exit(1);
+    }
+
+    return func;
+  }
+
+
 
   // -------------------------------------------------------------------------------------
   ResolutionFunction::~ResolutionFunction() {

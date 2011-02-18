@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.12 2011/02/15 18:16:55 mschrode Exp $
+# $Id: Makefile,v 1.13 2011/02/17 13:42:32 mschrode Exp $
 
 ROOTLIBS   = $(shell root-config --libs) -lMinuit
 ROOTCFLAGS = $(shell root-config --cflags)
@@ -26,7 +26,7 @@ Binning.o: Binning.h Binning.cc
 BinningAdmin.o: BinningAdmin.h BinningAdmin.cc Binning.h $(UTIL)
 	g++ $(CFLAG) -c BinningAdmin.cc
 
-CommanderCool.o: CommanderCool.h CommanderCool.cc EtaBin.h FitResult.h ResolutionFunction.h Parameters.h PlotMaker.h PtBin.h
+CommanderCool.o: CommanderCool.h CommanderCool.cc EtaBin.h FitResult.h ResolutionFunction.h Parameters.h PlotMaker.h PtBin.h $(UTIL)
 	g++ $(CFLAG) -c CommanderCool.cc
 
 Extrapolation.o: Extrapolation.h Extrapolation.cc

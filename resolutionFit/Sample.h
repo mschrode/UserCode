@@ -1,4 +1,4 @@
-// $Id: Sample.h,v 1.1 2011/02/15 18:22:25 mschrode Exp $
+// $Id: Sample.h,v 1.2 2011/02/17 13:42:32 mschrode Exp $
 
 #ifndef SAMPLE_H
 #define SAMPLE_H
@@ -78,6 +78,22 @@ namespace resolutionFit {
   typedef std::map<SampleLabel,Sample*> Samples;
   typedef std::map<SampleLabel,Sample*>::const_iterator SampleIt;
   
+
+  class SampleLabelPair {
+  public:
+    SampleLabelPair(const SampleLabel &label1, const SampleLabel &label2)
+      : label1_(label1), label2_(label2) {}    
+
+    SampleLabel label1() const { return label1_; }
+    SampleLabel label2() const { return label2_; }
+
+  private:
+    const SampleLabel label1_;
+    const SampleLabel label2_;
+  };
+
+  typedef std::set<SampleLabelPair*> ComparedSamples;
+  typedef std::set<SampleLabelPair*>::const_iterator ComparedSamplesIt;  
 
 
 

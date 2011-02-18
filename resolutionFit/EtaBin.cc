@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: EtaBin.cc,v 1.1 2011/02/15 18:22:25 mschrode Exp $
 
 #include <iostream>
 
@@ -21,6 +21,9 @@ namespace resolutionFit{
   // -------------------------------------------------------------------------------------
   EtaBin::~EtaBin() {
     for(std::vector<PtBin*>::iterator it = ptBins_.begin(); it != ptBins_.end(); ++it) {
+      delete *it;
+    }
+    for(ComparedSamples::iterator it = compSamples_.begin(); it != compSamples_.end(); ++it) {
       delete *it;
     }
     delete pli_;
@@ -73,6 +76,32 @@ namespace resolutionFit{
     fitResultTypes_.insert(type);
 
     return result;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  bool EtaBin::compareSamples(const SampleLabel &label1, const SampleLabel &label2) {
+    if( sampleTypes_.find(label1) != sampleTypes_.end() &&
+	sampleTypes_.find(label2) != sampleTypes_.end() ) {
+      compSamples_.insert(new SampleLabelPair(label1,label2));
+    } else {
+      std::cerr << "ERROR in EtaBin::compareSamples(): no samples with label '" << label1 << "' and '" << label2 << "'" << std::endl;
+      exit(1);
+    }
+
+    return true;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  Sample::Type EtaBin::sampleType(const SampleLabel &label) const {
+    SampleTypeIt it = sampleTypes_.find(label);
+    if( it == sampleTypes_.end() ) {
+      std::cerr << "ERROR in EtaBin::sampleType(): No sample with label '" << label << "'" << std::endl;
+      exit(1);
+    }
+
+    return it->second;
   }
 
 
