@@ -1,4 +1,4 @@
-// $Id: PlotMaker.h,v 1.2 2011/02/17 13:42:32 mschrode Exp $
+// $Id: PlotMaker.h,v 1.3 2011/02/18 18:42:22 mschrode Exp $
 
 #ifndef PLOT_MAKER_H
 #define PLOT_MAKER_H
@@ -22,13 +22,15 @@ namespace resolutionFit {
     PlotMaker(const Parameters *par, const EtaBins &etaBins);
     ~PlotMaker();
 
-    void makeAllPlots() const { 
+    void makeAllPlots() const {
+      plotAsymmetry();
       plotExtrapolation();
       plotPtGenSpectra();
       plotResolution();
     }
 
 
+    void plotAsymmetry() const;
     void plotExtrapolation() const;
     void plotPtGenSpectra() const;
     void plotResolution() const;
@@ -42,6 +44,7 @@ namespace resolutionFit {
       double start() const { return 0.75; }
 
       TPaveText* ptSoftBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int ptSoftBinIdx) const;
+      TPaveText* ptSoftBin(unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int ptSoftBinIdx) const;
       TPaveText* ptBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptBinIdx) const;
       TPaveText* ptBin(unsigned int etaBinIdx, unsigned int ptBinIdx) const;
       TPaveText* etaBin(SampleLabel label, unsigned int etaBinIdx, unsigned int nExtraEntries = 0) const;
@@ -76,7 +79,9 @@ namespace resolutionFit {
     TString histFileName(const TString &id, const EtaBin* etaBin, SampleLabel sampleLabel, FitResult::Type type) const;
     TString histFileName(const TString &id, const PtBin* ptBin, const Sample* sample, FitResult::Type type) const;
     TString histFileName(const TString &id, const PtBin* ptBin, FitResult::Type type) const;
+    TString histFileName(const TString &id, const PtBin* ptBin, const Sample* sample) const;
     TString histFileName(const TString &id, const PtBin* ptBin, const Sample* sample, unsigned int ptSoftBinIdx) const;
+    TString histFileName(const TString &id, const PtBin* ptBin, SampleLabel label1, SampleLabel label2, FitResult::Type type, unsigned int ptSoftBinIdx) const;
 
     int markerStyleExtrapolatedResolution(Sample::Type type) const;
     int markerStyleCorrectedResolution(Sample::Type type) const;

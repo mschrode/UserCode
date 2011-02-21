@@ -1,7 +1,8 @@
-// $Id: PlotMaker.cc,v 1.2 2011/02/17 13:42:32 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.3 2011/02/18 18:42:22 mschrode Exp $
 
 #include "PlotMaker.h"
 
+#include <cmath>
 #include <iostream>
 
 #include "TCanvas.h"
@@ -41,6 +42,189 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------
+  void PlotMaker::plotAsymmetry() const {
+    if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotAsymmetry(): Entering" << std::endl;
+    std::cout << "Plotting asymmetry" << std::endl;
+
+    const double asymMax = 0.49;
+
+    // +++++ Asymmetry plots per bin, with different FitResult types ++++++++++++++++++++++++++++++
+
+    // Loop over SampleLabels
+    for(SampleTypeIt sTIt = etaBins_.front()->sampleTypesBegin();
+	sTIt != etaBins_.front()->sampleTypesEnd(); ++sTIt) {
+      SampleLabel sampleLabel = sTIt->first;
+      if( par_->verbosity() > 1 ) std::cout << "  " << sampleLabel << std::endl;
+      
+      // Loop over ptSoft bins
+      for(unsigned int ptSoftBinIdx = 0; ptSoftBinIdx < par_->nPtSoftBins(); ++ptSoftBinIdx) {
+	if( par_->verbosity() > 1 ) std::cout << "      PtSoftBin " << ptSoftBinIdx << std::endl;
+	
+	// Loop over eta bins
+	for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+	  const EtaBin* etaBin = *etaBinIt;
+	  
+	  out_->newPage("Asymmetry");
+	  
+	  // Loop over pt bins
+	  for(PtBinIt ptBinIt = etaBin->ptBinsBegin(); ptBinIt != etaBin->ptBinsEnd(); ++ptBinIt) {
+	    const PtBin* ptBin = *ptBinIt;
+	    if( par_->verbosity() > 1 ) std::cout << "    " << ptBin->toTString() << std::endl;
+	    
+	    // Loop over Samples and select current one (by sampleLabel)
+	    for(SampleIt sIt = ptBin->samplesBegin(); sIt != ptBin->samplesEnd(); ++sIt) {
+	      const Sample* sample = sIt->second;
+	      if( sample->label() != sampleLabel ) continue;
+	      
+	      // Asymmetry distribution
+	      TH1* hPtAsym = sample->histPtAsym(ptSoftBinIdx);
+	      util::HistOps::setAxisTitles(hPtAsym,"Asymmetry","","events");
+	      hPtAsym->GetXaxis()->SetRangeUser(-asymMax,asymMax);
+	      
+	      // Asymmetry fits
+	      std::vector<TF1*> fits;
+	      std::vector<TString> labels;
+
+	      // Loop over FitResultTypes
+	      for(FitResultTypeIt rIt = etaBins_.front()->fitResultTypesBegin(); 
+		  rIt != etaBins_.front()->fitResultTypesEnd(); ++rIt) {
+
+		double sigma = sample->fittedValue(*rIt,ptSoftBinIdx)/sqrt(2.);
+		fits.push_back(new TF1("AsymmetryFit_"+FitResult::toString(*rIt),"gaus",-1.,1.));
+		fits.back()->SetParameter(0,1./sqrt(2.*M_PI)/sigma);
+		fits.back()->SetParameter(1,0.);
+		fits.back()->SetParameter(2,sigma);
+
+		labels.push_back("Fit: "+FitResult::toString(*rIt));
+	      } // End of loop over FitResultTypes
+
+	      for(unsigned int i = 0; i < fits.size(); ++i) {
+		fits.at(i)->SetLineWidth(1);
+		fits.at(i)->SetLineStyle(1+i);
+		fits.at(i)->SetLineColor(1+i);
+	      }
+	      
+	      // Labels
+	      TPaveText* label = labelMk_->ptSoftBin(sample->label(),etaBin->etaBin(),ptBin->ptBin(),ptSoftBinIdx);
+	      TLegend* leg = util::LabelFactory::createLegendColWithOffset(3+labels.size(),labelMk_->start(),label->GetSize());
+	      leg->AddEntry(hPtAsym,sample->label(),"P");
+	      for(unsigned int i = 0; i < fits.size(); ++i) {
+		leg->AddEntry(fits.at(i),labels.at(i),"L");
+	      }
+	    
+	      util::HistOps::setYRange(hPtAsym,label->GetSize()+leg->GetNRows()+1);
+	      out_->nextMultiPad(sample->label()+": PtAsym "+ptBin->toTString()+", PtSoftBin "+util::toTString(ptSoftBinIdx));
+	      hPtAsym->Draw("PE1");
+	      for(unsigned int i = 0; i < fits.size(); ++i) {
+		fits.at(i)->Draw("same");
+	      }
+	      label->Draw("same");
+	      leg->Draw("same");
+	      out_->saveCurrentPad(histFileName("PtAsym",ptBin,sample,ptSoftBinIdx));
+
+	      delete hPtAsym;
+	      for(unsigned int i = 0; i < fits.size(); ++i) {
+		delete fits.at(i);
+	      }
+	      delete label;
+	      delete leg;
+	    } // End of loop over Samples
+	  } // End of loop over pt bins
+	} // End of loop over eta bins
+      } // End of loop over ptSoft bins
+    } // End of loop over SampleLabels
+
+
+
+    // +++++ Asymmetry plots per bin, different Samples ++++++++++++++++++++++++++++++
+    
+    if( etaBins_.front()->nComparedSamples() > 0 ) {
+      // Loop over FitResultTypes
+      for(FitResultTypeIt rIt = etaBins_.front()->fitResultTypesBegin(); 
+	  rIt != etaBins_.front()->fitResultTypesEnd(); ++rIt) {
+	if( par_->verbosity() > 1 ) std::cout << "  " << FitResult::toString(*rIt) << std::endl;
+
+	// Loop over ptSoft bins
+	for(unsigned int ptSoftBinIdx = 0; ptSoftBinIdx < par_->nPtSoftBins(); ++ptSoftBinIdx) {
+	  if( par_->verbosity() > 1 ) std::cout << "    PtSoftBin " << ptSoftBinIdx << std::endl;
+	  
+	  // Loop over eta and bins
+	  for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+	    const EtaBin* etaBin = *etaBinIt;
+	    out_->newPage("Asymmetry");
+	    
+	    // Loop over pt bins
+	    for(PtBinIt ptBinIt = etaBin->ptBinsBegin(); ptBinIt != etaBin->ptBinsEnd(); ++ptBinIt) {
+	      const PtBin* ptBin = *ptBinIt;
+	      if( par_->verbosity() > 1 ) std::cout << "      " << ptBin->toTString() << std::endl;
+
+	      // Loop over to-be-compare Samples
+	      for(ComparedSamplesIt sCIt = etaBin->comparedSamplesBegin();
+		  sCIt != etaBin->comparedSamplesEnd(); ++sCIt) {
+		SampleLabel sLabel1 = (*sCIt)->label1();
+		SampleLabel sLabel2 = (*sCIt)->label2();
+		const Sample* sample1 = ptBin->findSample(sLabel1);
+		const Sample* sample2 = ptBin->findSample(sLabel2);
+
+		// Asymmetry distributions and fits
+		TH1* hPtAsym1 = sample1->histPtAsym(ptSoftBinIdx);
+		util::HistOps::setAxisTitles(hPtAsym1,"Asymmetry","","events");
+		hPtAsym1->GetXaxis()->SetRangeUser(-asymMax,asymMax);
+
+		double sigma = sample1->fittedValue(*rIt,ptSoftBinIdx)/sqrt(2.);
+		TF1* fit1 = new TF1("AsymmetryFit_Sample1","gaus",-1.,1.);
+		fit1->SetParameter(0,1./sqrt(2.*M_PI)/sigma);
+		fit1->SetParameter(1,0.);
+		fit1->SetParameter(2,sigma);
+		fit1->SetLineWidth(1);
+		fit1->SetLineStyle(1);
+		fit1->SetLineColor(hPtAsym1->GetLineColor());
+
+		TH1* hPtAsym2 = sample2->histPtAsym(ptSoftBinIdx);
+		util::HistOps::setAxisTitles(hPtAsym2,"Asymmetry","","events");
+		hPtAsym2->GetXaxis()->SetRangeUser(-asymMax,asymMax);
+
+		sigma = sample2->fittedValue(*rIt,ptSoftBinIdx)/sqrt(2.);
+		TF1* fit2 = new TF1("AsymmetryFit_Sample1","gaus",-1.,1.);
+		fit2->SetParameter(0,1./sqrt(2.*M_PI)/sigma);
+		fit2->SetParameter(1,0.);
+		fit2->SetParameter(2,sigma);
+		fit2->SetLineWidth(1);
+		fit2->SetLineStyle(2);
+		fit2->SetLineColor(hPtAsym2->GetLineColor());
+			      
+		// Labels
+		TPaveText* label = labelMk_->ptSoftBin(etaBin->etaBin(),ptBin->ptBin(),ptSoftBinIdx);
+		TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,labelMk_->start(),label->GetSize());
+		leg->AddEntry(hPtAsym1,sLabel1,"P");
+		leg->AddEntry(hPtAsym2,sLabel2,"P");
+	    
+		util::HistOps::setYRange(hPtAsym1,label->GetSize()+leg->GetNRows()+1);
+		out_->nextMultiPad(sLabel1+" vs "+sLabel2+": PtAsym "+ptBin->toTString()+", PtSoftBin "+util::toTString(ptSoftBinIdx));
+		hPtAsym1->Draw("PE1");
+		hPtAsym2->Draw("PE1same");
+		fit1->Draw("same");
+		fit2->Draw("same");
+		label->Draw("same");
+		leg->Draw("same");
+		out_->saveCurrentPad(histFileName("PtAsym",ptBin,sLabel1,sLabel2,*rIt,ptSoftBinIdx));
+
+		delete hPtAsym1;
+		delete hPtAsym2;
+		delete label;
+		delete leg;
+	      } // End of loop over to-be-compared samples
+	    } // End of loop over pt bins
+	  } // End of loop over eta bins
+	} // End of loop over ptSoft bins
+      } // End of loop over FitResult types
+    } // End if samples to be compared
+
+    if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotAsymmetry(): Leaving" << std::endl;
+  }
+
+
+  // -------------------------------------------------------------------------------------
   void PlotMaker::plotExtrapolation() const {
      if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotExtrapolation(): Entering" << std::endl;
      std::cout << "Plotting extrapolation" << std::endl;
@@ -48,29 +232,29 @@ namespace resolutionFit {
 
      // +++++ Extrapolation plots per Sample ++++++++++++++++++++++++++++++++++++++
 
-     // Loop over SampleLabels
-     for(SampleTypeIt sTIt = etaBins_.front()->sampleTypesBegin();
-	 sTIt != etaBins_.front()->sampleTypesEnd(); ++sTIt) {
-       SampleLabel sampleLabel = sTIt->first;
-       if( par_->verbosity() > 1 ) std::cout << "  " << sampleLabel << std::endl;
-       
-       // Loop over eta and pt bins
-       for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
-	 const EtaBin* etaBin = *etaBinIt;
-	 out_->newPage("Extrapolation");
-	 
-	 for(PtBinIt ptBinIt = etaBin->ptBinsBegin(); ptBinIt != etaBin->ptBinsEnd(); ++ptBinIt) {
-	   const PtBin* ptBin = *ptBinIt;
-	   if( par_->verbosity() > 1 ) std::cout << "    " << ptBin->toTString() << std::endl;
-	   
-	   // Loop over Samples and select current one (by sampleLabel)
-	   for(SampleIt sIt = ptBin->samplesBegin(); sIt != ptBin->samplesEnd(); ++sIt) {
-	     const Sample* sample = sIt->second;
-	     if( sample->label() != sampleLabel ) continue;
+     // Loop over FitResultTypes
+     for(FitResultTypeIt rIt = etaBins_.front()->fitResultTypesBegin(); 
+	 rIt != etaBins_.front()->fitResultTypesEnd(); ++rIt) {
 
-	     // Loop over FitResultTypes
-	     for(FitResultTypeIt rIt = etaBin->fitResultTypesBegin(); 
-		 rIt != etaBin->fitResultTypesEnd(); ++rIt) {
+       // Loop over SampleLabels
+       for(SampleTypeIt sTIt = etaBins_.front()->sampleTypesBegin();
+	   sTIt != etaBins_.front()->sampleTypesEnd(); ++sTIt) {
+	 SampleLabel sampleLabel = sTIt->first;
+	 if( par_->verbosity() > 1 ) std::cout << "  " << sampleLabel << std::endl;
+	 
+	 // Loop over eta and pt bins
+	 for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+	   const EtaBin* etaBin = *etaBinIt;
+	   out_->newPage("Extrapolation");
+	 
+	   for(PtBinIt ptBinIt = etaBin->ptBinsBegin(); ptBinIt != etaBin->ptBinsEnd(); ++ptBinIt) {
+	     const PtBin* ptBin = *ptBinIt;
+	     if( par_->verbosity() > 1 ) std::cout << "    " << ptBin->toTString() << std::endl;
+	     
+	     // Loop over Samples and select current one (by sampleLabel)
+	     for(SampleIt sIt = ptBin->samplesBegin(); sIt != ptBin->samplesEnd(); ++sIt) {
+	       const Sample* sample = sIt->second;
+	       if( sample->label() != sampleLabel ) continue;
 	       
 	       if( par_->verbosity() > 1 ) std::cout << "      " << FitResult::toString(*rIt) << std::endl;
 	       
@@ -89,8 +273,11 @@ namespace resolutionFit {
 	       sample->setStyle(gVals);
 	       
 	       // Extrapolation function
-	       TF1* fit = sample->extrapolationFunction(*rIt,"ExtrapolationForPlot");
+	       TF1* fit = sample->extrapolationFunction(*rIt,"ExtrapolationForPlotFitRange");
 	       fit->SetLineColor(kRed);
+	       TF1* extra = static_cast<TF1*>(fit->Clone("ExtrapolationForPlotPlotRange"));
+	       extra->SetRange(0.,1.4*ptSoftx.back());
+	       extra->SetLineStyle(2);
 	       
 	       // Create frame
 	       TH1* hFrame = new TH1D("PlotMaker::plotExtrapolation::hFrame","",
@@ -108,109 +295,223 @@ namespace resolutionFit {
 	       out_->nextMultiPad(sample->label()+": Extrapolation "+ptBin->toTString());
 	       hFrame->Draw();
 	       gVals->Draw("PE1same");
+	       extra->Draw("same");
 	       fit->Draw("same");
 	       label->Draw("same");
 	       leg->Draw("same");
 	       out_->saveCurrentPad(histFileName("Extrapolation",ptBin,sample,*rIt));
 	       
 	       delete gVals;
+	       delete extra;
 	       delete fit;
 	       delete hFrame;
 	       delete label;
 	       delete leg;
-	     } // End of loop over FitResultTypes
-	   } // End of loop over Samples
-	 } // End of loop over pt bins
-       } // End of loop over eta bins
-     } // End of loop over SampleLabels
+	     } // End of loop over Samples
+	   } // End of loop over pt bins
+	 } // End of loop over eta bins
+       } // End of loop over SampleLabels
+     } // End of loop over FitResultTypes
+     
 
 
 
      // +++++ Extrapolation plots, comparison of different Sample +++++++++++++++++++++++++++++++
 
-     // Loop over eta and pt bins
-     for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
-       const EtaBin* etaBin = *etaBinIt;
-       out_->newPage("Extrapolation");
-
-       for(PtBinIt ptBinIt = etaBin->ptBinsBegin(); ptBinIt != etaBin->ptBinsEnd(); ++ptBinIt) {
-	 const PtBin* ptBin = *ptBinIt;
-	 if( par_->verbosity() > 1 ) std::cout << "  " << ptBin->toTString() << std::endl;
-
-	 // Loop over FitResultTypes
-	 for(FitResultTypeIt rIt = etaBin->fitResultTypesBegin(); 
-	     rIt != etaBin->fitResultTypesEnd(); ++rIt) {
+     if( etaBins_.front()->nSampleTypes() > 1 ) {
+       // Loop over eta and pt bins
+       for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+	 const EtaBin* etaBin = *etaBinIt;
+	 out_->newPage("Extrapolation");
+	 
+	 for(PtBinIt ptBinIt = etaBin->ptBinsBegin(); ptBinIt != etaBin->ptBinsEnd(); ++ptBinIt) {
+	   const PtBin* ptBin = *ptBinIt;
+	   if( par_->verbosity() > 1 ) std::cout << "  " << ptBin->toTString() << std::endl;
 	   
-	   if( par_->verbosity() > 1 ) std::cout << "    " << FitResult::toString(*rIt) << std::endl;
-       
-	   std::vector<TGraphAsymmErrors*> gVals;
-	   double valMin = 1000.;
-	   double valMax = 0.;
-	   std::vector<TF1*> fits;
-	   std::vector<TString> labels;
+	   // Loop over FitResultTypes
+	   for(FitResultTypeIt rIt = etaBin->fitResultTypesBegin(); 
+	       rIt != etaBin->fitResultTypesEnd(); ++rIt) {
+	     
+	     if( par_->verbosity() > 1 ) std::cout << "    " << FitResult::toString(*rIt) << std::endl;
+	     
+	     std::vector<TGraphAsymmErrors*> gVals;
+	     double valMin = 1000.;
+	     double valMax = 0.;
+	     std::vector<TF1*> fits;
+	     std::vector<TF1*> extra;
+	     std::vector<TString> labels;
+	     
+	     // Loop over Samples
+	     for(SampleIt sIt = ptBin->samplesBegin(); sIt != ptBin->samplesEnd(); ++sIt) {
+	       const Sample* sample = sIt->second;
 
-	   // Loop over Samples
+	       labels.push_back(sample->label());
+	     
+	       // Graph of fitted resolutions
+	       std::vector<double> val;
+	       std::vector<double> uncert;
+	       sample->values(*rIt,val,uncert);
+	       std::vector<double> ptSoftx;
+	       sample->ptSoft(ptSoftx);
+	       std::vector<double> ptSoftxUncert(ptSoftx.size(),0.);
+	     
+	       gVals.push_back(new TGraphAsymmErrors(ptSoftx.size(),&(ptSoftx.front()),&(val.front()),
+						     &(ptSoftxUncert.front()),&(ptSoftxUncert.front()),
+						     &(uncert.front()),&(uncert.front())));
+	       sample->setStyle(gVals.back());
+	     
+	       // Extrapolation function
+	       fits.push_back(sample->extrapolationFunction(*rIt,"Extrapolation_"+((sample->label()).ReplaceAll(" ","_"))+"_FitRange"));
+	       fits.back()->SetLineColor(gVals.back()->GetMarkerColor());
+	       extra.push_back(static_cast<TF1*>(fits.back()->Clone("Extrapolation_"+((sample->label()).ReplaceAll(" ","_"))+"_PlotRange")));
+	       extra.back()->SetRange(0.,1.4*ptSoftx.back());
+	       extra.back()->SetLineStyle(2);
+
+	       if( val.front() < valMin ) valMin = val.front();
+	       if( val.back() > valMax ) valMax = val.back();
+	     } // End of loop over Samples
+	   
+	     // Create frame
+	     TH1* hFrame = new TH1D("PlotMaker::plotExtrapolation::hFrame","",
+				    1000,0.,1.4*par_->ptSoftMax(par_->nPtSoftBins()-1));
+	     util::HistOps::setAxisTitles(hFrame,labelMk_->ptSoft(),"","#sigma / p^{ref}_{T}");
+	     hFrame->GetYaxis()->SetRangeUser(0.8*valMin,1.3*valMax);
+	     
+	     // Labels
+	     TPaveText* label = labelMk_->ptBin(etaBin->etaBin(),ptBin->ptBin());
+	     TLegend* leg = util::LabelFactory::createLegendColWithOffset(labels.size(),labelMk_->start(),label->GetSize());
+	     for(size_t i = 0; i < labels.size(); ++i) {
+	       leg->AddEntry(gVals.at(i),labels.at(i),"P");
+	     }
+	   
+	     // Linear scale
+	     out_->nextMultiPad("Sample comparison: Extrapolation "+ptBin->toTString());
+	     hFrame->Draw();
+	     for(size_t i = 0; i < gVals.size(); ++i) {
+	       gVals.at(i)->Draw("PE1same");
+	       extra.at(i)->Draw("same");
+	       fits.at(i)->Draw("same");
+	     }
+	     label->Draw("same");
+	     leg->Draw("same");
+	     out_->saveCurrentPad(histFileName("Extrapolation",ptBin,*rIt));
+	 
+	     for(size_t i = 0; i < gVals.size(); ++i) {
+	       delete gVals.at(i);
+	       delete extra.at(i);
+	       delete fits.at(i);
+	     }
+	     delete hFrame;
+	     delete label;
+	     delete leg;
+	   } // End of loop over FitResultTypes
+	 } // End of loop over pt bins
+       } // End of loop over eta bins
+     } // End if nSampleTypes() > 1
+     
+
+
+
+     // +++++ Extrapolation plots, comparison of different FitResult types +++++++++++++++++++++++++++++++
+
+     // Loop over SampleLabels
+     for(SampleTypeIt sTIt = etaBins_.front()->sampleTypesBegin();
+	 sTIt != etaBins_.front()->sampleTypesEnd(); ++sTIt) {
+       SampleLabel sampleLabel = sTIt->first;
+       if( par_->verbosity() > 1 ) std::cout << "  " << sampleLabel << std::endl;
+       
+       // Loop over eta and pt bins
+       for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+	 const EtaBin* etaBin = *etaBinIt;
+	 out_->newPage("Extrapolation");
+	 
+	 for(PtBinIt ptBinIt = etaBin->ptBinsBegin(); ptBinIt != etaBin->ptBinsEnd(); ++ptBinIt) {
+	   const PtBin* ptBin = *ptBinIt;
+	   if( par_->verbosity() > 1 ) std::cout << "    " << ptBin->toTString() << std::endl;
+	     
+	   // Loop over Samples and select current one (by sampleLabel)
 	   for(SampleIt sIt = ptBin->samplesBegin(); sIt != ptBin->samplesEnd(); ++sIt) {
 	     const Sample* sample = sIt->second;
+	     if( sample->label() != sampleLabel ) continue;
+   
+	     std::vector<TGraphAsymmErrors*> gVals;
+	     double valMin = 1000.;
+	     double valMax = 0.;
+	     std::vector<TF1*> fits;
+	     std::vector<TF1*> extra;
+	     std::vector<TString> labels;
 
-	     labels.push_back(sample->label());
-	     
-	     // Graph of fitted resolutions
-	     std::vector<double> val;
-	     std::vector<double> uncert;
-	     sample->values(*rIt,val,uncert);
-	     std::vector<double> ptSoftx;
-	     sample->ptSoft(ptSoftx);
-	     std::vector<double> ptSoftxUncert(ptSoftx.size(),0.);
-	     
-	     gVals.push_back(new TGraphAsymmErrors(ptSoftx.size(),&(ptSoftx.front()),&(val.front()),
-						   &(ptSoftxUncert.front()),&(ptSoftxUncert.front()),
-						   &(uncert.front()),&(uncert.front())));
-	     sample->setStyle(gVals.back());
-	     
-	     // Extrapolation function
-	     fits.push_back(sample->extrapolationFunction(*rIt,"ExtrapolationForPlot"));
-	     fits.back()->SetLineColor(gVals.back()->GetMarkerColor());
+	     // Loop over FitResultTypes
+	     unsigned int frt = 0;
+	     for(FitResultTypeIt rIt = etaBin->fitResultTypesBegin(); 
+		 rIt != etaBin->fitResultTypesEnd(); ++rIt,++frt) {
 
-	     if( val.front() < valMin ) valMin = val.front();
-	     if( val.back() > valMax ) valMax = val.back();
+	       labels.push_back(labelMk_->label(*rIt));
+	     
+	       // Graph of fitted resolutions
+	       std::vector<double> val;
+	       std::vector<double> uncert;
+	       sample->values(*rIt,val,uncert);
+	       std::vector<double> ptSoftx;
+	       sample->ptSoft(ptSoftx);
+	       std::vector<double> ptSoftxUncert(ptSoftx.size(),0.);
+	     
+	       gVals.push_back(new TGraphAsymmErrors(ptSoftx.size(),&(ptSoftx.front()),&(val.front()),
+						     &(ptSoftxUncert.front()),&(ptSoftxUncert.front()),
+						     &(uncert.front()),&(uncert.front())));
+	       gVals.back()->SetMarkerStyle(20+frt);
+	       gVals.back()->SetLineColor(1+frt);
+	       gVals.back()->SetMarkerColor(gVals.back()->GetLineColor());
+	     
+	       // Extrapolation function
+	       fits.push_back(sample->extrapolationFunction(*rIt,"Extrapolation_"+((sample->label()).ReplaceAll(" ","_"))+"_FitRange"));
+	       fits.back()->SetLineColor(gVals.back()->GetLineColor());
+	       extra.push_back(static_cast<TF1*>(fits.back()->Clone("Extrapolation_"+((sample->label()).ReplaceAll(" ","_"))+"_PlotRange")));
+	       extra.back()->SetRange(0.,1.4*ptSoftx.back());
+	       extra.back()->SetLineStyle(2);
+	       
+	       if( val.front() < valMin ) valMin = val.front();
+	       if( val.back() > valMax ) valMax = val.back();
+	     } // End of loop over FitResultTypes
+	     
+	   
+	     // Create frame
+	     TH1* hFrame = new TH1D("PlotMaker::plotExtrapolation::hFrame","",
+				    1000,0.,1.4*par_->ptSoftMax(par_->nPtSoftBins()-1));
+	     util::HistOps::setAxisTitles(hFrame,labelMk_->ptSoft(),"","#sigma / p^{ref}_{T}");
+	     hFrame->GetYaxis()->SetRangeUser(0.8*valMin,1.3*valMax);
+	     
+	     // Labels
+	     TPaveText* label = labelMk_->ptBin(sample->label(),etaBin->etaBin(),ptBin->ptBin());
+	     TLegend* leg = util::LabelFactory::createLegendColWithOffset(labels.size(),labelMk_->start(),label->GetSize());
+	     for(size_t i = 0; i < labels.size(); ++i) {
+	       leg->AddEntry(gVals.at(i),labels.at(i),"P");
+	     }
+	   
+	     // Linear scale
+	     out_->nextMultiPad("FitResult comparison: Extrapolation "+ptBin->toTString());
+	     hFrame->Draw();
+	     for(size_t i = 0; i < gVals.size(); ++i) {
+	       gVals.at(i)->Draw("PE1same");
+	       extra.at(i)->Draw("same");
+	       fits.at(i)->Draw("same");
+	     }
+	     label->Draw("same");
+	     leg->Draw("same");
+	     out_->saveCurrentPad(histFileName("Extrapolation",ptBin,sample));
+	     
+	     for(size_t i = 0; i < gVals.size(); ++i) {
+	       delete gVals.at(i);
+	       delete extra.at(i);
+	       delete fits.at(i);
+	     }
+	     delete hFrame;
+	     delete label;
+	     delete leg;
 	   } // End of loop over Samples
-	   
-	   // Create frame
-	   TH1* hFrame = new TH1D("PlotMaker::plotExtrapolation::hFrame","",
-				  1000,0.,1.4*par_->ptSoftMax(par_->nPtSoftBins()-1));
-	   util::HistOps::setAxisTitles(hFrame,labelMk_->ptSoft(),"","#sigma / p^{ref}_{T}");
-	   hFrame->GetYaxis()->SetRangeUser(0.8*valMin,1.3*valMax);
-	     
-	   // Labels
-	   TPaveText* label = labelMk_->ptBin(etaBin->etaBin(),ptBin->ptBin());
-	   TLegend* leg = util::LabelFactory::createLegendColWithOffset(labels.size(),labelMk_->start(),label->GetSize());
-	   for(size_t i = 0; i < labels.size(); ++i) {
-	     leg->AddEntry(gVals.at(i),labels.at(i),"P");
-	   }
-	   
-	   // Linear scale
-	   out_->nextMultiPad("Sample comparison: Extrapolation "+ptBin->toTString());
-	   hFrame->Draw();
-	   for(size_t i = 0; i < gVals.size(); ++i) {
-	     gVals.at(i)->Draw("PE1same");
-	     fits.at(i)->Draw("same");
-	   }
-	   label->Draw("same");
-	   leg->Draw("same");
-	   out_->saveCurrentPad(histFileName("Extrapolation",ptBin,*rIt));
-	 
-	   for(size_t i = 0; i < gVals.size(); ++i) {
-	     delete gVals.at(i);
-	     delete fits.at(i);
-	   }
-	   delete hFrame;
-	   delete label;
-	   delete leg;
-	 } // End of loop over FitResultTypes
-       } // End of loop over pt bins
-     } // End of loop over eta bins
-
+	 } // End of loop over pt bins
+       } // End of loop over eta bins
+     } // End if nSampleTypes() > 1
      
      if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotExtrapolation(): Leaving" << std::endl;
   }
@@ -345,13 +646,15 @@ namespace resolutionFit {
 	   hFrameMain->GetXaxis()->SetNoExponent();
 
 	   TH1* hFrameRatio = out_->ratioFrame(hFrameMain,"p^{ref}_{T}","GeV",yMinResRatio_,yMaxResRatio_);
+	   hFrameRatio->GetXaxis()->SetMoreLogLabels();
+	   hFrameRatio->GetXaxis()->SetNoExponent();
 	     
 	   // Labels
 	   TPaveText* label = labelMk_->etaBin(sampleLabel,etaBin->etaBin());
 	   TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,labelMk_->start(),label->GetSize());
-	   leg->AddEntry(gRes,"Resolution (Extrapolated)","P");
+	   leg->AddEntry(gRes,"Resolution ("+FitResult::toString(fitResType)+")","P");
 	   leg->AddEntry(pli,"Particle Level Imbalance","L");
-	   leg->AddEntry(gResCorr,"Resolution (Corrected)","P");
+	   leg->AddEntry(gResCorr,"Resolution (PLI Corrected)","P");
 	   leg->AddEntry(mcTruth,"Resolution (MC Truth)","L");
 
 	   out_->nextMainPad(sampleLabel+": Resolution "+etaBin->toString());
@@ -492,17 +795,27 @@ namespace resolutionFit {
   }
 
 
-
   // -------------------------------------------------------------------------------------
   TString PlotMaker::histFileName(const TString &id, const PtBin* ptBin, FitResult::Type type) const {
     return par_->outFilePrefix()+"_"+id+"_AllSamples_"+FitResult::toString(type)+"_EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+".eps";
   }
 
 
+  // -------------------------------------------------------------------------------------
+  TString PlotMaker::histFileName(const TString &id, const PtBin* ptBin, const Sample* sample) const {
+    return par_->outFilePrefix()+"_"+id+"_AllTypes_"+((sample->label()).ReplaceAll(" ","_"))+"_EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+".eps";
+  }
+
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::histFileName(const TString &id, const PtBin* ptBin, const Sample* sample, unsigned int ptSoftBinIdx) const {
     return par_->outFilePrefix()+"_"+id+"_"+((sample->label()).ReplaceAll(" ","_"))+"_EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+"_PtSoftBin"+util::toTString(ptSoftBinIdx)+".eps";
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  TString PlotMaker::histFileName(const TString &id, const PtBin* ptBin, SampleLabel label1, SampleLabel label2, FitResult::Type type, unsigned int ptSoftBinIdx) const {
+    return par_->outFilePrefix()+"_"+id+"_"+(label1.ReplaceAll(" ","_"))+"_vs_"+(label2.ReplaceAll(" ","_"))+"_"+FitResult::toString(type)+"_EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+"_PtSoftBin"+util::toTString(ptSoftBinIdx)+".eps";
   }
 
 
@@ -538,6 +851,15 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   TPaveText* PlotMaker::LabelMaker::ptSoftBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int ptSoftBinIdx) const {
     TPaveText* lab = etaBin(label,etaBinIdx,1);
+    lab->AddText(ptRange(etaBinIdx,ptBinIdx)+",  "+ptSoftRange(ptSoftBinIdx));
+
+    return lab;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  TPaveText* PlotMaker::LabelMaker::ptSoftBin(unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int ptSoftBinIdx) const {
+    TPaveText* lab = etaBin(etaBinIdx,1);
     lab->AddText(ptRange(etaBinIdx,ptBinIdx)+",  "+ptSoftRange(ptSoftBinIdx));
 
     return lab;

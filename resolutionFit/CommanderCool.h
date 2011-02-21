@@ -1,4 +1,4 @@
-// $Id: CommanderCool.h,v 1.1 2011/02/15 18:22:25 mschrode Exp $
+// $Id: CommanderCool.h,v 1.2 2011/02/18 18:42:22 mschrode Exp $
 
 #ifndef COMMANDER_COOL_H
 #define COMMANDER_COOL_H
@@ -31,7 +31,7 @@ namespace resolutionFit {
     void addMCSample(const TString &label, const TString &baseFileName);
     void addFitResult(FitResult::Type type);
     void compareSamples(const SampleLabel &label1, const SampleLabel &label2);
-    
+
     void printSetup() const;
     void printResult() const;
     void makeAllPlots() const { plotMaker_->makeAllPlots(); }

@@ -1,4 +1,4 @@
-// $Id: Measurement.h,v 1.1 2011/02/15 18:22:25 mschrode Exp $
+// $Id: Measurement.h,v 1.2 2011/02/17 13:42:32 mschrode Exp $
 
 #ifndef MEASUREMENT_H
 #define MEASUREMENT_H
@@ -30,8 +30,10 @@ namespace resolutionFit {
     double meanPdfPtTrue() const { return meanPdfPtTrue_; }
     double meanPdfPtTrueUncert() const { return meanPdfPtTrueUncert_; }
 
-    TH1* histPtGen() const { return getClone("hPtGen"); }
+    TH1* histPdfPtAsym() const { return getClone("hFitPtAsym"); }
     TH1* histPdfPtTrue() const { return getClone("hTruthPDF"); }
+    TH1* histPtAsym() const { return getClone("hPtAsym"); }
+    TH1* histPtGen() const { return getClone("hPtGen"); }
 
 
   private:

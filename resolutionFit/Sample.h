@@ -1,4 +1,4 @@
-// $Id: Sample.h,v 1.2 2011/02/17 13:42:32 mschrode Exp $
+// $Id: Sample.h,v 1.3 2011/02/18 18:42:22 mschrode Exp $
 
 #ifndef SAMPLE_H
 #define SAMPLE_H
@@ -32,6 +32,7 @@ namespace resolutionFit {
 
     TString label() const { return label_; }
 
+    TH1* histPtAsym(unsigned int ptSoftBin) const { return setStyle(meas_.at(ptSoftBin)->histPtAsym()); }
     TH1* histPtGen(unsigned int ptSoftBin) const { return setStyle(meas_.at(ptSoftBin)->histPtGen()); }
     TH1* histPdfPtTrue(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histPdfPtTrue(); }
 

@@ -1,4 +1,4 @@
-// $Id: EtaBin.h,v 1.1 2011/02/15 18:22:25 mschrode Exp $
+// $Id: EtaBin.h,v 1.2 2011/02/18 18:42:22 mschrode Exp $
 
 #ifndef ETA_BIN_H
 #define ETA_BIN_H
@@ -30,8 +30,10 @@ namespace resolutionFit {
     const PtBin* ptBinsFront() const { return ptBins_.front(); }
     FitResultTypeIt fitResultTypesBegin() const { return fitResultTypes_.begin(); }
     FitResultTypeIt fitResultTypesEnd() const { return fitResultTypes_.end(); }
+    unsigned int nSampleTypes() const { return sampleTypes_.size(); }
     SampleTypeIt sampleTypesBegin() const { return sampleTypes_.begin(); }
     SampleTypeIt sampleTypesEnd() const { return sampleTypes_.end(); }
+    unsigned int nComparedSamples() const { return compSamples_.size(); }
     ComparedSamplesIt comparedSamplesBegin() const { return compSamples_.begin(); }
     ComparedSamplesIt comparedSamplesEnd() const { return compSamples_.end(); }
 

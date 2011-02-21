@@ -1,4 +1,4 @@
-// $Id: Extrapolation.cc,v 1.1 2011/02/15 18:22:25 mschrode Exp $
+// $Id: Extrapolation.cc,v 1.2 2011/02/17 13:42:32 mschrode Exp $
 
 #include "Extrapolation.h"
 
@@ -31,17 +31,17 @@ namespace resolutionFit {
 
 //     int nPointsToDelete = 0;
 //     for(int i = 0; i < g->GetN(); ++i) {
-//       if( g->GetX()[i]*meanPt < 6. ) nPointsToDelete++;
+//       if( g->GetX()[i]*meanPt_ < 6. ) nPointsToDelete++;
 //     }
 //     for(int i = 0; i < nPointsToDelete; ++i) {
 //       g->RemovePoint(0);
 //     }
-//    if( nPointsToDelete ) std::cout << "Deleted " << nPointsToDelete << " points: " << g->GetN() << std::endl;
+//     if( nPointsToDelete ) std::cout << "Deleted " << nPointsToDelete << " points: " << g->GetN() << std::endl;
 
     TString name = "LinearExtrapolation";
     name += NUM_EXTRAPOLATION_FUNCTIONS;
     ++NUM_EXTRAPOLATION_FUNCTIONS;
-    fit = new TF1(name,"pol1",0.,1.4*ptSoft.back());
+    fit = new TF1(name,"pol1",g->GetX()[0],g->GetX()[g->GetN()-1]);
     fit->SetLineWidth(1);
 
     return !( g->Fit(fit,"0QR") );

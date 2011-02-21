@@ -1,4 +1,4 @@
-// $Id: FitResult.h,v 1.1 2011/02/15 18:22:25 mschrode Exp $
+// $Id: FitResult.h,v 1.2 2011/02/17 13:42:32 mschrode Exp $
 
 #ifndef FIT_RESULT_H
 #define FIT_RESULT_H
@@ -87,5 +87,19 @@ namespace resolutionFit {
     bool init();
   };
 
+
+
+  // -------------------------------------------------------------------------------------
+  class FitResultPtAsym : public FitResult {
+  public:
+    FitResultPtAsym(const std::vector<Measurement*> meas, unsigned int verbosity);
+
+    FitResult::Type fitResultType() const { return FitResult::PtAsym; }
+
+    bool init();
+
+  private:
+    bool extrapolate();
+  };
 }
 #endif
