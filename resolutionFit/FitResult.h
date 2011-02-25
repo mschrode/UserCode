@@ -1,8 +1,9 @@
-// $Id: FitResult.h,v 1.2 2011/02/17 13:42:32 mschrode Exp $
+// $Id: FitResult.h,v 1.3 2011/02/21 18:25:46 mschrode Exp $
 
 #ifndef FIT_RESULT_H
 #define FIT_RESULT_H
 
+#include <map>
 #include <set>
 #include <vector>
 
@@ -38,6 +39,7 @@ namespace resolutionFit {
       return static_cast<TF1*>(extrapolation_->Clone(name)); }
     double extrapolatedValue() const { return extrapolatedValue_; }
     double extrapolatedStatUncert() const { return extrapolatedStatUncert_; }
+    double extrapolatedSystUncert() const { return extrapolatedSystUncert_; }
 
     virtual bool init() = 0;
 
@@ -53,6 +55,7 @@ namespace resolutionFit {
     std::vector<double> ptSoft_;
     double extrapolatedValue_;
     double extrapolatedStatUncert_;
+    double extrapolatedSystUncert_;
     TF1* extrapolation_;
   };
 

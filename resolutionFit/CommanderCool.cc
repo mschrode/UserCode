@@ -1,4 +1,4 @@
-// $Id: CommanderCool.cc,v 1.1 2011/02/15 18:22:25 mschrode Exp $
+// $Id: CommanderCool.cc,v 1.2 2011/02/18 18:42:22 mschrode Exp $
 
 #include <iomanip>
 #include <iostream>
@@ -97,6 +97,26 @@ namespace resolutionFit {
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
       if( !((*it)->addFitResult(type)) ) {
 	std::cerr << "ERROR adding FitResult of type '" << FitResult::toString(type) << "'" << std::endl;
+	exit(1);
+      }
+    }
+  }
+
+
+  void CommanderCool::addExtrapolationUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color) {
+    for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
+      if( !((*it)->addExtrapolationUncertainty(nominalSample,type,color)) ) {
+	std::cerr << "ERROR adding extrapolation uncertainty" << std::endl;
+	exit(1);
+      }
+    }
+  }
+
+
+  void CommanderCool::addPLIUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color) {
+    for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
+      if( !((*it)->addPLIUncertainty(nominalSample,type,color)) ) {
+	std::cerr << "ERROR adding particle level imbalance uncertainty" << std::endl;
 	exit(1);
       }
     }

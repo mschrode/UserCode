@@ -1,4 +1,4 @@
-// $Id: Sample.h,v 1.3 2011/02/18 18:42:22 mschrode Exp $
+// $Id: Sample.h,v 1.4 2011/02/21 18:25:46 mschrode Exp $
 
 #ifndef SAMPLE_H
 #define SAMPLE_H
@@ -37,6 +37,8 @@ namespace resolutionFit {
     TH1* histPdfPtTrue(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histPdfPtTrue(); }
 
     bool addFitResult(FitResult::Type type);
+    void addSystematicUncertainty(FitResult::Type type, const TString &label, double variedValue, double fraction);
+    void addSystematicUncertainty(FitResult::Type type, const TString &label, double variedValueDown, double variedValueUp, double fraction);
 
     unsigned int nPtSoftBins() const { return meas_.size(); }
     double ptSoft(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->ptSoft(); }
@@ -49,6 +51,7 @@ namespace resolutionFit {
     TF1* extrapolationFunction(FitResult::Type type, const TString &name) const;
     double extrapolatedValue(FitResult::Type type) const;
     double extrapolatedStatUncert(FitResult::Type type) const;
+    double extrapolatedSystUncert(FitResult::Type type) const;
 
     int markerStyle() const { return markerStyle_; }
     int color() const { return color_; }

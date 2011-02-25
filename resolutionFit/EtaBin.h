@@ -1,8 +1,9 @@
-// $Id: EtaBin.h,v 1.2 2011/02/18 18:42:22 mschrode Exp $
+// $Id: EtaBin.h,v 1.3 2011/02/21 18:25:46 mschrode Exp $
 
 #ifndef ETA_BIN_H
 #define ETA_BIN_H
 
+#include <set>
 #include <vector>
 
 #include "TString.h"
@@ -12,6 +13,7 @@
 #include "PtBin.h"
 #include "ResolutionFunction.h"
 #include "Sample.h"
+#include "SystematicUncertainty.h"
 
 
 namespace resolutionFit {
@@ -24,10 +26,12 @@ namespace resolutionFit {
 
     unsigned int etaBin() const { return etaBin_; }
     TString toString() const;
+    Sample::Type sampleType(const SampleLabel &label) const;
 
     PtBinIt ptBinsBegin() const { return ptBins_.begin(); }
     PtBinIt ptBinsEnd() const { return ptBins_.end(); }
     const PtBin* ptBinsFront() const { return ptBins_.front(); }
+    unsigned int nFitResultTypes() const { return fitResultTypes_.size(); }
     FitResultTypeIt fitResultTypesBegin() const { return fitResultTypes_.begin(); }
     FitResultTypeIt fitResultTypesEnd() const { return fitResultTypes_.end(); }
     unsigned int nSampleTypes() const { return sampleTypes_.size(); }
@@ -36,17 +40,18 @@ namespace resolutionFit {
     unsigned int nComparedSamples() const { return compSamples_.size(); }
     ComparedSamplesIt comparedSamplesBegin() const { return compSamples_.begin(); }
     ComparedSamplesIt comparedSamplesEnd() const { return compSamples_.end(); }
+    bool hasSystematicUncertainty(const SampleLabel &label, FitResult::Type type) const;
+    bool findSystematicUncertainty(const SampleLabel &label, FitResult::Type type, const SystematicUncertainty* &uncert) const;
 
-    Sample::Type sampleType(const SampleLabel &label) const;
-
-    double meanPt(SampleLabel label, FitResult::Type type, unsigned int ptBinIdx) const;
-    double meanPtStatUncert(SampleLabel label, FitResult::Type type, unsigned int ptBinIdx) const;
-    double extrapolatedValue(SampleLabel label, FitResult::Type type, unsigned int ptBinIdx) const;
-    double extrapolatedStatUncert(SampleLabel label, FitResult::Type type, unsigned int ptBinIdx) const;
-    double correctedResolution(SampleLabel label, FitResult::Type type, unsigned int ptBinIdx) const;
-    double correctedResolutionStatUncert(SampleLabel label, FitResult::Type type, unsigned int ptBinIdx) const;
-    double pli(SampleLabel label, FitResult::Type type, unsigned int ptBinIdx) const;
-    double mcTruthResolution(SampleLabel label, FitResult::Type type, unsigned int ptBinIdx) const;
+    double meanPt(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
+    double meanPtStatUncert(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
+    double extrapolatedValue(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
+    double extrapolatedStatUncert(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
+    double extrapolatedSystUncert(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
+    double correctedResolution(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx, double scalePLI = 1.) const;
+    double correctedResolutionStatUncert(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
+    double pli(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
+    double mcTruthResolution(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
 
     TF1* mcTruthResoFunc(const TString &name) const { return mcTruthReso_->func(name); }
     TF1* pliFunc(const TString &name) const { return pli_->func(name); }
@@ -54,6 +59,11 @@ namespace resolutionFit {
     bool addDataSample(const TString &label, const TString &baseFileName);
     bool addMCSample(const TString &label, const TString &baseFileName);
     bool addFitResult(FitResult::Type type);
+
+    bool addExtrapolationUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color);
+    bool addPLIUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color);
+/*     bool addClosureUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color); */
+/*     bool addUncertaintyFromVariedSample(const TString &uncertaintyLabel, double fraction, const SampleLabel &nominalSample, FitResult::Type type, const TString &variedSampleDown, const TString &variedSampleUp, int color); */
 
     bool compareSamples(const SampleLabel &label1, const SampleLabel &label2);
 
@@ -69,9 +79,12 @@ namespace resolutionFit {
     FitResultTypes fitResultTypes_;
     SampleTypes sampleTypes_;    
     ComparedSamples compSamples_;
+    std::set<SystematicUncertainty*> systUncerts_;
 
     ResolutionFunction* mcTruthReso_;
     ResolutionFunction* pli_;
+
+    SystematicUncertainty* findSystematicUncertainty(const SampleLabel &label, FitResult::Type type);
   };
 
   typedef std::vector<EtaBin*> EtaBins;

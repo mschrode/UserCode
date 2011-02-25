@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.14 2011/02/18 18:42:22 mschrode Exp $
+# $Id: Makefile,v 1.15 2011/02/21 18:25:46 mschrode Exp $
 
 ROOTLIBS   = $(shell root-config --libs) -lMinuit
 ROOTCFLAGS = $(shell root-config --cflags)
@@ -10,7 +10,7 @@ UTILDIR = ./../util
 UTIL    = $(UTILDIR)/ConfigParser.h $(UTILDIR)/LabelFactory.h $(UTILDIR)/HistOps.h $(UTILDIR)/StyleSettings.h $(UTILDIR)/utils.h
 TOOLS =  Binning.h BinningAdmin.h
 
-OBJ     = Binning.o BinningAdmin.o CommanderCool.o Extrapolation.o EtaBin.o FitResult.o Measurement.o OutputManager.o Parameters.o PlotMaker.o PtBin.o ResolutionFunction.o Sample.o run.o utils.o
+OBJ     = Binning.o BinningAdmin.o CommanderCool.o Extrapolation.o EtaBin.o FitResult.o Measurement.o OutputManager.o Parameters.o PlotMaker.o PtBin.o ResolutionFunction.o Sample.o SystematicUncertainty.o run.o utils.o
 
 
 run: $(OBJ)	
@@ -32,7 +32,7 @@ CommanderCool.o: CommanderCool.h CommanderCool.cc EtaBin.h FitResult.h Resolutio
 Extrapolation.o: Extrapolation.h Extrapolation.cc
 	g++ $(CFLAG) -c Extrapolation.cc	
 
-EtaBin.o: EtaBin.h EtaBin.cc FitResult.h Parameters.h PtBin.h ResolutionFunction.h Sample.h
+EtaBin.o: EtaBin.h EtaBin.cc FitResult.h Parameters.h PtBin.h ResolutionFunction.h Sample.h SystematicUncertainty.h
 	g++ $(CFLAG) -c EtaBin.cc	
 
 FitResult.o: FitResult.h FitResult.cc Extrapolation.h Measurement.h $(UTIL)
@@ -53,11 +53,14 @@ Parameters.o: Parameters.h Parameters.cc OutputManager.h $(UTIL) $(TOOLS)
 PtBin.o: PtBin.h PtBin.cc FitResult.h Parameters.h Sample.h
 	g++ $(CFLAG) -c PtBin.cc	
 
-PlotMaker.o: PlotMaker.h PlotMaker.cc EtaBin.h FitResult.h OutputManager.h Parameters.h PtBin.h $(UTIL)
+PlotMaker.o: PlotMaker.h PlotMaker.cc EtaBin.h FitResult.h OutputManager.h Parameters.h PtBin.h SystematicUncertainty.h $(UTIL)
 	g++ $(CFLAG) -c PlotMaker.cc	
 
 Sample.o: Sample.h Sample.cc FitResult.h Measurement.h
 	g++ $(CFLAG) -c Sample.cc	
+
+SystematicUncertainty.o: SystematicUncertainty.h SystematicUncertainty.cc FitResult.h Sample.h
+	g++ $(CFLAG) -c SystematicUncertainty.cc	
 
 run.o: run.cc CommanderCool.h FitResult.h Parameters.h ResolutionFunction.h $(UTIL)
 	g++ $(CFLAG) -c run.cc

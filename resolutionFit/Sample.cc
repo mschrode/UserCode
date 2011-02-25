@@ -73,7 +73,6 @@ namespace resolutionFit {
   }
 
 
-
   // -------------------------------------------------------------------
   TH1* Sample::setStyle(TH1* h) const {
     h->SetMarkerStyle(markerStyle_);
@@ -185,6 +184,15 @@ namespace resolutionFit {
     return result;
   }
 
+
+  // -------------------------------------------------------------------
+  double Sample::extrapolatedSystUncert(FitResult::Type type) const {
+    double result = 0.;
+    FitResult* fr = 0;
+    if( findFitResult(type,fr) ) result = fr->extrapolatedSystUncert();
+    
+    return result;
+  }
 
 
   // -------------------------------------------------------------------

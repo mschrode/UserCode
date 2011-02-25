@@ -1,4 +1,4 @@
-// $Id: FitResult.cc,v 1.2 2011/02/17 13:42:32 mschrode Exp $
+// $Id: FitResult.cc,v 1.3 2011/02/21 18:25:46 mschrode Exp $
 
 #include "FitResult.h"
 
@@ -69,7 +69,6 @@ namespace resolutionFit {
     if( extrapolation_ ) delete extrapolation_;
   }
 
-  
 
 
   // -------------------------------------------------------------------------------------  
@@ -111,7 +110,7 @@ namespace resolutionFit {
   bool FitResultFullMaxLikeRel::extrapolate() {
     if( verbosity_ == 1 ) std::cout << "Extrapolating" << std::endl;
     Extrapolation extra(meanPt_);
-    bool result = extra(ptSoft_,values_,statUncerts_,extrapolation_);
+    bool result = extra(ptSoft_,values_,statUncerts_,extrapolation_,extrapolatedSystUncert_);
     extrapolatedValue_ = extrapolation_->GetParameter(0);
     extrapolatedStatUncert_ = extrapolation_->GetParError(0);
 
@@ -201,7 +200,7 @@ namespace resolutionFit {
   bool FitResultPtAsym::extrapolate() {
     if( verbosity_ == 1 ) std::cout << "Extrapolating" << std::endl;
     Extrapolation extra(meanPt_);
-    bool result = extra(ptSoft_,values_,statUncerts_,extrapolation_);
+    bool result = extra(ptSoft_,values_,statUncerts_,extrapolation_,extrapolatedSystUncert_);
     extrapolatedValue_ = extrapolation_->GetParameter(0);
     extrapolatedStatUncert_ = extrapolation_->GetParError(0);
 

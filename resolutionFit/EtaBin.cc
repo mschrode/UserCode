@@ -1,4 +1,4 @@
-// $Id: EtaBin.cc,v 1.1 2011/02/15 18:22:25 mschrode Exp $
+// $Id: EtaBin.cc,v 1.2 2011/02/18 18:42:22 mschrode Exp $
 
 #include <iostream>
 
@@ -80,6 +80,110 @@ namespace resolutionFit{
 
 
   // -------------------------------------------------------------------------------------
+  bool EtaBin::hasSystematicUncertainty(const SampleLabel &label, FitResult::Type type) const {
+    bool result = false;
+    for(std::set<SystematicUncertainty*>::const_iterator it = systUncerts_.begin();
+	it != systUncerts_.end(); ++it) {
+      if( (*it)->nominalSampleLabel() == label && (*it)->fitResultType() == type ) {
+	result = true;
+	break;
+      }
+    }
+
+    return result;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  bool EtaBin::findSystematicUncertainty(const SampleLabel &label, FitResult::Type type, const SystematicUncertainty* &uncert) const {
+    uncert = 0;
+    bool result = false;
+    for(std::set<SystematicUncertainty*>::const_iterator it = systUncerts_.begin();
+	it != systUncerts_.end(); ++it) {
+      if( (*it)->nominalSampleLabel() == label && (*it)->fitResultType() == type ) {
+	result = true;
+	uncert = *it;
+	break;
+      }
+    }
+
+    return result;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  SystematicUncertainty* EtaBin::findSystematicUncertainty(const SampleLabel &label, FitResult::Type type) {
+    SystematicUncertainty* uncert = 0;
+
+    // Check whether there are uncertainties already associated to this Sample and FitResult
+    for(std::set<SystematicUncertainty*>::const_iterator it = systUncerts_.begin();
+	it != systUncerts_.end(); ++it) {
+      if( (*it)->nominalSampleLabel() == label && (*it)->fitResultType() == type ) {
+	uncert = *it;
+	break;
+      }
+    }
+
+    // If not, create new combined uncertainty and add to others
+    if( uncert == 0 ) {
+      uncert = new SystematicUncertainty("Total",5,label,type);
+      systUncerts_.insert(uncert);
+    }
+
+    return uncert;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  bool EtaBin::addExtrapolationUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color) {
+    SystematicUncertainty* uncert = findSystematicUncertainty(nominalSample,type);
+
+    TString label = "Extrapolation";
+    if( !(uncert->hasComponent(label)) ) {
+      std::vector<double> ptMean;
+      std::vector<double> ptMin;
+      std::vector<double> ptMax;
+      std::vector<double> relUncerts;
+      for(unsigned int i = 0; i < par_->nPtBins(etaBin()); ++i) {
+	ptMean.push_back(meanPt(nominalSample,type,i));
+	ptMin.push_back(par_->ptMin(etaBin(),i));
+	ptMax.push_back(par_->ptMax(etaBin(),i));
+	relUncerts.push_back(std::abs(extrapolatedSystUncert(nominalSample,type,i)/extrapolatedValue(nominalSample,type,i)));
+      }
+      uncert->addComponent(label,color,nominalSample,type,ptMean,ptMin,ptMax,relUncerts,relUncerts);
+    }
+    
+    return true;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  bool EtaBin::addPLIUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color) {
+    SystematicUncertainty* uncert = findSystematicUncertainty(nominalSample,type);
+    
+    TString label = "Particle Level Imbalance";
+    if( !(uncert->hasComponent(label)) ) {
+      std::vector<double> ptMean;
+      std::vector<double> ptMin;
+      std::vector<double> ptMax;
+      std::vector<double> relUncertDown;
+      std::vector<double> relUncertUp;
+      for(unsigned int i = 0; i < par_->nPtBins(etaBin()); ++i) {
+ 	ptMean.push_back(meanPt(nominalSample,type,i));
+ 	ptMin.push_back(par_->ptMin(etaBin(),i));
+ 	ptMax.push_back(par_->ptMax(etaBin(),i));
+	double res = correctedResolution(nominalSample,type,i);
+	relUncertDown.push_back(std::abs((correctedResolution(nominalSample,type,i,0.75)-res)/res));
+	relUncertUp.push_back(std::abs((correctedResolution(nominalSample,type,i,1.25)-res)/res));
+      }
+      uncert->addComponent(label,color,nominalSample,type,ptMean,ptMin,ptMax,relUncertDown,relUncertUp);
+    }
+    
+    return true;
+  }
+
+
+  // -------------------------------------------------------------------------------------
   bool EtaBin::compareSamples(const SampleLabel &label1, const SampleLabel &label2) {
     if( sampleTypes_.find(label1) != sampleTypes_.end() &&
 	sampleTypes_.find(label2) != sampleTypes_.end() ) {
@@ -120,7 +224,7 @@ namespace resolutionFit{
 
 
   // -------------------------------------------------------------------------------------
-  double EtaBin::meanPt(SampleLabel label, FitResult::Type type, unsigned int ptBinIdx) const {
+  double EtaBin::meanPt(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const {
     double result = 0.;
     for(PtBinIt ptBinIt = ptBins_.begin(); ptBinIt != ptBins_.end(); ++ptBinIt) {
       if( (*ptBinIt)->ptBin() == ptBinIdx ) {
@@ -134,7 +238,7 @@ namespace resolutionFit{
 
 
   // -------------------------------------------------------------------------------------
-  double EtaBin::meanPtStatUncert(SampleLabel label, FitResult::Type type, unsigned int ptBinIdx) const {
+  double EtaBin::meanPtStatUncert(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const {
     double result = 0.;
     for(PtBinIt ptBinIt = ptBins_.begin(); ptBinIt != ptBins_.end(); ++ptBinIt) {
       if( (*ptBinIt)->ptBin() == ptBinIdx ) {
@@ -148,7 +252,7 @@ namespace resolutionFit{
 
 
   // -------------------------------------------------------------------------------------
-  double EtaBin::extrapolatedValue(SampleLabel label, FitResult::Type type, unsigned int ptBinIdx) const {
+  double EtaBin::extrapolatedValue(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const {
     double result = 0.;
     for(PtBinIt ptBinIt = ptBins_.begin(); ptBinIt != ptBins_.end(); ++ptBinIt) {
       if( (*ptBinIt)->ptBin() == ptBinIdx ) {
@@ -162,7 +266,7 @@ namespace resolutionFit{
 
 
   // -------------------------------------------------------------------------------------
-  double EtaBin::extrapolatedStatUncert(SampleLabel label, FitResult::Type type, unsigned int ptBinIdx) const {
+  double EtaBin::extrapolatedStatUncert(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const {
     double result = 0.;
     for(PtBinIt ptBinIt = ptBins_.begin(); ptBinIt != ptBins_.end(); ++ptBinIt) {
       if( (*ptBinIt)->ptBin() == ptBinIdx ) {
@@ -175,31 +279,45 @@ namespace resolutionFit{
   }
 
 
+  // -------------------------------------------------------------------------------------
+  double EtaBin::extrapolatedSystUncert(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const {
+    double result = 0.;
+    for(PtBinIt ptBinIt = ptBins_.begin(); ptBinIt != ptBins_.end(); ++ptBinIt) {
+      if( (*ptBinIt)->ptBin() == ptBinIdx ) {
+	result = (*ptBinIt)->findSample(label)->extrapolatedSystUncert(type);
+	break;
+      }
+    }
+
+    return result;
+  }
+
+
   // Should be integral over bin!
   // -------------------------------------------------------------------------------------
-  double EtaBin::mcTruthResolution(SampleLabel label, FitResult::Type type, unsigned int ptBinIdx) const {
+  double EtaBin::mcTruthResolution(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const {
     return mcTruthReso_->val(meanPt(label,type,ptBinIdx));
   }
 
 
   // Should be integral over bin!
   // -------------------------------------------------------------------------------------
-  double EtaBin::pli(SampleLabel label, FitResult::Type type, unsigned int ptBinIdx) const {
+  double EtaBin::pli(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const {
     return pli_->val(meanPt(label,type,ptBinIdx));
   }
 
 
   // -------------------------------------------------------------------------------------
-  double EtaBin::correctedResolution(SampleLabel label, FitResult::Type type, unsigned int ptBinIdx) const {
+  double EtaBin::correctedResolution(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx, double scalePLI) const {
     double result = extrapolatedValue(label,type,ptBinIdx);
-    double plim = pli(label,type,ptBinIdx);
+    double plim = scalePLI*pli(label,type,ptBinIdx);
 
     return sqrt( result*result - plim*plim );
   }
 
   
   // -------------------------------------------------------------------------------------
-  double EtaBin::correctedResolutionStatUncert(SampleLabel label, FitResult::Type type, unsigned int ptBinIdx) const {
+  double EtaBin::correctedResolutionStatUncert(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const {
     return extrapolatedStatUncert(label,type,ptBinIdx);
   }
 }

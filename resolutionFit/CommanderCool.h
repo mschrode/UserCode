@@ -1,4 +1,4 @@
-// $Id: CommanderCool.h,v 1.2 2011/02/18 18:42:22 mschrode Exp $
+// $Id: CommanderCool.h,v 1.3 2011/02/21 18:25:46 mschrode Exp $
 
 #ifndef COMMANDER_COOL_H
 #define COMMANDER_COOL_H
@@ -30,6 +30,8 @@ namespace resolutionFit {
     void addDataSample(const TString &label, const TString &baseFileName);
     void addMCSample(const TString &label, const TString &baseFileName);
     void addFitResult(FitResult::Type type);
+    void addExtrapolationUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color);
+    void addPLIUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color);
     void compareSamples(const SampleLabel &label1, const SampleLabel &label2);
 
     void printSetup() const;

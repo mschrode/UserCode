@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.3 2011/02/18 18:42:22 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.4 2011/02/21 18:25:46 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -11,6 +11,7 @@
 #include "TH1.h"
 
 #include "FitResult.h"
+#include "SystematicUncertainty.h"
 
 #include "../util/utils.h"
 #include "../util/HistOps.h"
@@ -106,7 +107,7 @@ namespace resolutionFit {
 	      
 	      // Labels
 	      TPaveText* label = labelMk_->ptSoftBin(sample->label(),etaBin->etaBin(),ptBin->ptBin(),ptSoftBinIdx);
-	      TLegend* leg = util::LabelFactory::createLegendColWithOffset(3+labels.size(),labelMk_->start(),label->GetSize());
+	      TLegend* leg = util::LabelFactory::createLegendColWithOffset(1+labels.size(),labelMk_->start(),label->GetSize());
 	      leg->AddEntry(hPtAsym,sample->label(),"P");
 	      for(unsigned int i = 0; i < fits.size(); ++i) {
 		leg->AddEntry(fits.at(i),labels.at(i),"L");
@@ -319,6 +320,7 @@ namespace resolutionFit {
      // +++++ Extrapolation plots, comparison of different Sample +++++++++++++++++++++++++++++++
 
      if( etaBins_.front()->nSampleTypes() > 1 ) {
+
        // Loop over eta and pt bins
        for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
 	 const EtaBin* etaBin = *etaBinIt;
@@ -415,103 +417,105 @@ namespace resolutionFit {
      // +++++ Extrapolation plots, comparison of different FitResult types +++++++++++++++++++++++++++++++
 
      // Loop over SampleLabels
-     for(SampleTypeIt sTIt = etaBins_.front()->sampleTypesBegin();
-	 sTIt != etaBins_.front()->sampleTypesEnd(); ++sTIt) {
-       SampleLabel sampleLabel = sTIt->first;
-       if( par_->verbosity() > 1 ) std::cout << "  " << sampleLabel << std::endl;
-       
-       // Loop over eta and pt bins
-       for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
-	 const EtaBin* etaBin = *etaBinIt;
-	 out_->newPage("Extrapolation");
+     if( etaBins_.front()->nFitResultTypes() > 1 ) {
+       for(SampleTypeIt sTIt = etaBins_.front()->sampleTypesBegin();
+	   sTIt != etaBins_.front()->sampleTypesEnd(); ++sTIt) {
+	 SampleLabel sampleLabel = sTIt->first;
+	 if( par_->verbosity() > 1 ) std::cout << "  " << sampleLabel << std::endl;
 	 
-	 for(PtBinIt ptBinIt = etaBin->ptBinsBegin(); ptBinIt != etaBin->ptBinsEnd(); ++ptBinIt) {
-	   const PtBin* ptBin = *ptBinIt;
-	   if( par_->verbosity() > 1 ) std::cout << "    " << ptBin->toTString() << std::endl;
+	 // Loop over eta and pt bins
+	 for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+	   const EtaBin* etaBin = *etaBinIt;
+	   out_->newPage("Extrapolation");
+	 
+	   for(PtBinIt ptBinIt = etaBin->ptBinsBegin(); ptBinIt != etaBin->ptBinsEnd(); ++ptBinIt) {
+	     const PtBin* ptBin = *ptBinIt;
+	     if( par_->verbosity() > 1 ) std::cout << "    " << ptBin->toTString() << std::endl;
 	     
-	   // Loop over Samples and select current one (by sampleLabel)
-	   for(SampleIt sIt = ptBin->samplesBegin(); sIt != ptBin->samplesEnd(); ++sIt) {
-	     const Sample* sample = sIt->second;
-	     if( sample->label() != sampleLabel ) continue;
+	     // Loop over Samples and select current one (by sampleLabel)
+	     for(SampleIt sIt = ptBin->samplesBegin(); sIt != ptBin->samplesEnd(); ++sIt) {
+	       const Sample* sample = sIt->second;
+	       if( sample->label() != sampleLabel ) continue;
    
-	     std::vector<TGraphAsymmErrors*> gVals;
-	     double valMin = 1000.;
-	     double valMax = 0.;
-	     std::vector<TF1*> fits;
-	     std::vector<TF1*> extra;
-	     std::vector<TString> labels;
+	       std::vector<TGraphAsymmErrors*> gVals;
+	       double valMin = 1000.;
+	       double valMax = 0.;
+	       std::vector<TF1*> fits;
+	       std::vector<TF1*> extra;
+	       std::vector<TString> labels;
 
-	     // Loop over FitResultTypes
-	     unsigned int frt = 0;
-	     for(FitResultTypeIt rIt = etaBin->fitResultTypesBegin(); 
-		 rIt != etaBin->fitResultTypesEnd(); ++rIt,++frt) {
+	       // Loop over FitResultTypes
+	       unsigned int frt = 0;
+	       for(FitResultTypeIt rIt = etaBin->fitResultTypesBegin(); 
+		   rIt != etaBin->fitResultTypesEnd(); ++rIt,++frt) {
 
-	       labels.push_back(labelMk_->label(*rIt));
+		 labels.push_back(labelMk_->label(*rIt));
 	     
-	       // Graph of fitted resolutions
-	       std::vector<double> val;
-	       std::vector<double> uncert;
-	       sample->values(*rIt,val,uncert);
-	       std::vector<double> ptSoftx;
-	       sample->ptSoft(ptSoftx);
-	       std::vector<double> ptSoftxUncert(ptSoftx.size(),0.);
+		 // Graph of fitted resolutions
+		 std::vector<double> val;
+		 std::vector<double> uncert;
+		 sample->values(*rIt,val,uncert);
+		 std::vector<double> ptSoftx;
+		 sample->ptSoft(ptSoftx);
+		 std::vector<double> ptSoftxUncert(ptSoftx.size(),0.);
 	     
-	       gVals.push_back(new TGraphAsymmErrors(ptSoftx.size(),&(ptSoftx.front()),&(val.front()),
-						     &(ptSoftxUncert.front()),&(ptSoftxUncert.front()),
-						     &(uncert.front()),&(uncert.front())));
-	       gVals.back()->SetMarkerStyle(20+frt);
-	       gVals.back()->SetLineColor(1+frt);
-	       gVals.back()->SetMarkerColor(gVals.back()->GetLineColor());
+		 gVals.push_back(new TGraphAsymmErrors(ptSoftx.size(),&(ptSoftx.front()),&(val.front()),
+						       &(ptSoftxUncert.front()),&(ptSoftxUncert.front()),
+						       &(uncert.front()),&(uncert.front())));
+		 gVals.back()->SetMarkerStyle(20+frt);
+		 gVals.back()->SetLineColor(1+frt);
+		 gVals.back()->SetMarkerColor(gVals.back()->GetLineColor());
 	     
-	       // Extrapolation function
-	       fits.push_back(sample->extrapolationFunction(*rIt,"Extrapolation_"+((sample->label()).ReplaceAll(" ","_"))+"_FitRange"));
-	       fits.back()->SetLineColor(gVals.back()->GetLineColor());
-	       extra.push_back(static_cast<TF1*>(fits.back()->Clone("Extrapolation_"+((sample->label()).ReplaceAll(" ","_"))+"_PlotRange")));
-	       extra.back()->SetRange(0.,1.4*ptSoftx.back());
-	       extra.back()->SetLineStyle(2);
+		 // Extrapolation function
+		 fits.push_back(sample->extrapolationFunction(*rIt,"Extrapolation_"+((sample->label()).ReplaceAll(" ","_"))+"_FitRange"));
+		 fits.back()->SetLineColor(gVals.back()->GetLineColor());
+		 extra.push_back(static_cast<TF1*>(fits.back()->Clone("Extrapolation_"+((sample->label()).ReplaceAll(" ","_"))+"_PlotRange")));
+		 extra.back()->SetRange(0.,1.4*ptSoftx.back());
+		 extra.back()->SetLineStyle(2);
 	       
-	       if( val.front() < valMin ) valMin = val.front();
-	       if( val.back() > valMax ) valMax = val.back();
-	     } // End of loop over FitResultTypes
+		 if( val.front() < valMin ) valMin = val.front();
+		 if( val.back() > valMax ) valMax = val.back();
+	       } // End of loop over FitResultTypes
 	     
 	   
-	     // Create frame
-	     TH1* hFrame = new TH1D("PlotMaker::plotExtrapolation::hFrame","",
-				    1000,0.,1.4*par_->ptSoftMax(par_->nPtSoftBins()-1));
-	     util::HistOps::setAxisTitles(hFrame,labelMk_->ptSoft(),"","#sigma / p^{ref}_{T}");
-	     hFrame->GetYaxis()->SetRangeUser(0.8*valMin,1.3*valMax);
+	       // Create frame
+	       TH1* hFrame = new TH1D("PlotMaker::plotExtrapolation::hFrame","",
+				      1000,0.,1.4*par_->ptSoftMax(par_->nPtSoftBins()-1));
+	       util::HistOps::setAxisTitles(hFrame,labelMk_->ptSoft(),"","#sigma / p^{ref}_{T}");
+	       hFrame->GetYaxis()->SetRangeUser(0.8*valMin,1.3*valMax);
 	     
-	     // Labels
-	     TPaveText* label = labelMk_->ptBin(sample->label(),etaBin->etaBin(),ptBin->ptBin());
-	     TLegend* leg = util::LabelFactory::createLegendColWithOffset(labels.size(),labelMk_->start(),label->GetSize());
-	     for(size_t i = 0; i < labels.size(); ++i) {
-	       leg->AddEntry(gVals.at(i),labels.at(i),"P");
-	     }
+	       // Labels
+	       TPaveText* label = labelMk_->ptBin(sample->label(),etaBin->etaBin(),ptBin->ptBin());
+	       TLegend* leg = util::LabelFactory::createLegendColWithOffset(labels.size(),labelMk_->start(),label->GetSize());
+	       for(size_t i = 0; i < labels.size(); ++i) {
+		 leg->AddEntry(gVals.at(i),labels.at(i),"P");
+	       }
 	   
-	     // Linear scale
-	     out_->nextMultiPad("FitResult comparison: Extrapolation "+ptBin->toTString());
-	     hFrame->Draw();
-	     for(size_t i = 0; i < gVals.size(); ++i) {
-	       gVals.at(i)->Draw("PE1same");
-	       extra.at(i)->Draw("same");
-	       fits.at(i)->Draw("same");
-	     }
-	     label->Draw("same");
-	     leg->Draw("same");
-	     out_->saveCurrentPad(histFileName("Extrapolation",ptBin,sample));
+	       // Linear scale
+	       out_->nextMultiPad("FitResult comparison: Extrapolation "+ptBin->toTString());
+	       hFrame->Draw();
+	       for(size_t i = 0; i < gVals.size(); ++i) {
+		 gVals.at(i)->Draw("PE1same");
+		 extra.at(i)->Draw("same");
+		 fits.at(i)->Draw("same");
+	       }
+	       label->Draw("same");
+	       leg->Draw("same");
+	       out_->saveCurrentPad(histFileName("Extrapolation",ptBin,sample));
 	     
-	     for(size_t i = 0; i < gVals.size(); ++i) {
-	       delete gVals.at(i);
-	       delete extra.at(i);
-	       delete fits.at(i);
-	     }
-	     delete hFrame;
-	     delete label;
-	     delete leg;
-	   } // End of loop over Samples
-	 } // End of loop over pt bins
-       } // End of loop over eta bins
-     } // End if nSampleTypes() > 1
+	       for(size_t i = 0; i < gVals.size(); ++i) {
+		 delete gVals.at(i);
+		 delete extra.at(i);
+		 delete fits.at(i);
+	       }
+	       delete hFrame;
+	       delete label;
+	       delete leg;
+	     } // End of loop over Samples
+	   } // End of loop over pt bins
+	 } // End of loop over eta bins
+       } // End loop over SampleTypes
+     } // End if nFitResultTypes() > 1
      
      if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotExtrapolation(): Leaving" << std::endl;
   }
@@ -653,7 +657,7 @@ namespace resolutionFit {
 	   TPaveText* label = labelMk_->etaBin(sampleLabel,etaBin->etaBin());
 	   TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,labelMk_->start(),label->GetSize());
 	   leg->AddEntry(gRes,"Resolution ("+FitResult::toString(fitResType)+")","P");
-	   leg->AddEntry(pli,"Particle Level Imbalance","L");
+	   leg->AddEntry(pli,"Particle Level Imbalance (PLI)","L");
 	   leg->AddEntry(gResCorr,"Resolution (PLI Corrected)","P");
 	   leg->AddEntry(mcTruth,"Resolution (MC Truth)","L");
 
@@ -773,6 +777,89 @@ namespace resolutionFit {
      } // End of loop over eta bins
      
      if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotResolution(): Leaving" << std::endl;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  void PlotMaker::plotSystematicUncertainties() const {
+     if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotSystematicUncertainties(): Entering" << std::endl;
+     std::cout << "Plotting systematic uncertainties" << std::endl;
+     out_->newPage("Systematic Uncertainties");
+
+     // +++++ Relative systematic uncertainties ++++++++++++++++++++++++++++++++++++++
+     // Loop over eta bins
+     for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+       const EtaBin* etaBin = *etaBinIt;
+       const unsigned int etaBinIdx = etaBin->etaBin();
+       if( par_->verbosity() > 1 ) std::cout << "  Eta " << etaBinIdx << std::endl;
+
+       // Loop over FitResultTypes
+       for(FitResultTypeIt rIt = etaBin->fitResultTypesBegin(); rIt != etaBin->fitResultTypesEnd(); ++rIt) {
+	 FitResult::Type fitResType = *rIt;
+	 if( par_->verbosity() > 1 ) std::cout << "    " << FitResult::toString(fitResType) << std::endl;
+
+ 	 // Loop over SampleLabels
+ 	 for(SampleTypeIt sTIt = etaBin->sampleTypesBegin(); sTIt != etaBin->sampleTypesEnd(); ++sTIt) {
+	   SampleLabel sampleLabel = sTIt->first;
+	   Sample::Type sampleType = sTIt->second;
+ 	   if( par_->verbosity() > 1 ) std::cout << "      " << sampleLabel << std::endl;
+
+	   // If uncertainties are assigned to this sample and 
+	   // fit result type, get them
+	   const SystematicUncertainty* uncert = 0;
+	   if( etaBin->findSystematicUncertainty(sampleLabel,fitResType,uncert) ) {
+
+	     // Uncertainty bands and labels for components
+	     // and total uncertainty
+	     std::vector<TGraphAsymmErrors*> bands;
+	     TPaveText* label = labelMk_->etaBin(sampleLabel,etaBin->etaBin());
+	     TLegend* leg = util::LabelFactory::createLegendColWithOffset(uncert->nComponents()+1,labelMk_->start(),label->GetSize());
+	     // Add total uncertainty
+	     bands.push_back(uncert->relUncertSteps());
+	     for(SystUncertIt it = uncert->componentsBegin(); it != uncert->componentsEnd(); ++it) {
+	       // Add components
+	       bands.push_back(it->second->relUncertSteps());
+	       leg->AddEntry(bands.back(),it->second->label(),"F");
+	     }
+	     leg->AddEntry(bands.front(),uncert->label(),"F");
+
+	     // Create frame
+	     TH1* hFrame = new TH1D("hFrame","",1000,xMinPt_,xMaxPt_);
+	     hFrame->GetXaxis()->SetMoreLogLabels();
+	     hFrame->GetXaxis()->SetNoExponent();
+	     for(int bin = 1; bin <= hFrame->GetNbinsX(); ++bin) {
+	       hFrame->SetBinContent(bin,0.);
+	     }
+	     hFrame->SetLineStyle(2);
+	     hFrame->GetYaxis()->SetRangeUser(-0.39,0.89);
+	     util::HistOps::setAxisTitles(hFrame,"p^{ref}_{T}","GeV","Relative Uncertainty");
+	     
+	     out_->nextPad(sampleLabel+": Systematic uncertainties "+etaBin->toString());
+	     hFrame->Draw();
+	     for(std::vector<TGraphAsymmErrors*>::iterator it = bands.begin();
+		 it != bands.end(); ++it) {
+	       (*it)->Draw("E2same");
+	     }
+ 	     hFrame->Draw("same");
+ 	     label->Draw("same");
+ 	     leg->Draw("same");
+	     out_->logx();
+	     out_->saveCurrentPad(histFileName("RelativeSystematicUncertainty",etaBin,sampleLabel,fitResType));
+	     std::cout << "BLA" << std::endl;
+	     for(std::vector<TGraphAsymmErrors*>::iterator it = bands.begin();
+		 it != bands.end(); ++it) {
+	       delete *it;
+	     }
+	     delete hFrame;
+	     delete label;
+	     delete leg;
+	   } // End if has uncertainties
+	 } // End of loop over SampleLabels
+       } // End of loop over FitResultTypes
+     } // End of loop over eta bins
+
+
+    if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotSystematicUncertainties(): Leaving" << std::endl;    
   }
 
 
