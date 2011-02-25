@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.22 2011/01/26 17:48:06 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.23 2011/02/25 10:07:35 mschrode Exp $
 
 #define UTILS_AS_HEADER_FILE
 
@@ -7,6 +7,7 @@
 #include <iostream>
 #include <vector>
 
+#include "TArrow.h"
 #include "TBox.h"
 #include "TCanvas.h"
 #include "TError.h"
@@ -85,6 +86,7 @@ public:
   double fTailMCSmearedErr() const { return fNMCSmearedErr_; }
   double fTailMCSmearedNonGauss() const { return fNMCSmearedNonGauss_; }
   double fTailMCSmearedNonGaussErr() const { return fNMCSmearedNonGaussErr_; }
+  double fTailMCSmearedGauss() const { return fNMCSmearedGauss_; }
 
   void plotAsymmetryDataMC(const TString &outNameIdw) const;
   void plotAsymmetryDataMCSmeared(const TString &outNameId, double nSigTailStart, double nSigTailEnd) const;
@@ -110,6 +112,7 @@ private:
   double fNMCSmearedErr_;
   double fNMCSmearedNonGauss_;
   double fNMCSmearedNonGaussErr_;
+  double fNMCSmearedGauss_;
   double fNMC_;
   double fNMCErr_;
   double fNData_;
@@ -209,6 +212,7 @@ private:
   TGraphAsymmErrors* gFTailToyMC_; // Asymmetry from toy MC (MC truth --> asymmetry)
   TGraphAsymmErrors* gFTailMCTruth_; // Symmetrized MC truth
   TGraphAsymmErrors* gFTailMCTruthNonGauss_; // Symmetrized MC truth minus Gaussian component
+  TGraphAsymmErrors* gFTailMCGauss_;
   TGraphAsymmErrors* gFTailSpreadData_;
   TGraphAsymmErrors* gFTailSpreadMC_;
   TF1* fExMC_;
@@ -523,6 +527,7 @@ EtaPtBin::EtaPtBin(unsigned int etaBin, unsigned int ptBin, double nSigCore, dou
   gFTailSpreadMC_ = new TGraphAsymmErrors(0);
   gFTailSpreadData_  = new TGraphAsymmErrors(0);
   gFTailMCTruthNonGauss_ = new TGraphAsymmErrors(0);
+  gFTailMCGauss_ = new TGraphAsymmErrors(0);
 
   fExMC_ = new TF1("fExMC"+binId(),"[0] + sq([1])*x + [2]*sq(x) + [3]*x*x*x",exMin_,exMax_);
   fExMC_->SetParameter(0,0.005);
@@ -564,6 +569,7 @@ EtaPtBin::~EtaPtBin() {
   delete gFTailToyMC_;
   delete gFTailMCTruth_;
   delete gFTailMCTruthNonGauss_;
+  delete gFTailMCGauss_;
   delete gFTailSpreadData_;
   delete gFTailSpreadMC_;
   delete fExMC_;
@@ -632,11 +638,12 @@ void EtaPtBin::plotExtrapolation(const TString &outNameId) const {
 
   // Extrapolation MC + Data
   hFrame->GetYaxis()->SetTitle(FASYM);
-  leg = util::LabelFactory::createLegendCol(4,LEG_WIDTH);
+  leg = util::LabelFactory::createLegendCol(5,LEG_WIDTH);
   leg->AddEntry(gFTailData_,"Asymmetry Data","P");
   leg->AddEntry(fExData_,"Extrapolation Data","L");
   leg->AddEntry(gFTailMC_,"Asymmetry MC","P");
   leg->AddEntry(fExMC_,"Extrapolation MC","L");
+  leg->AddEntry(gFTailMCGauss_,"Gaussian","P");
 
   can->cd();
   hFrame->Draw();
@@ -644,10 +651,12 @@ void EtaPtBin::plotExtrapolation(const TString &outNameId) const {
   fExData_->Draw("same");
   gFTailMC_->Draw("PE1same");
   gFTailData_->Draw("PE1same");
+  gFTailMCGauss_->Draw("PE1same");
   binLabel_->DrawClone("same");
   leg->Draw("same");
   can->SaveAs(outNameId+binId()+"_Extrapolation.eps","eps");
   delete leg;
+
 
   // Extrapolation MC Closure + Data + Shifted Extrapolation
   if( hasToyMC() ) {
@@ -905,6 +914,23 @@ void EtaPtBin::extrapolate(double minPt3Data, bool fixDataShape, bool useExtrapo
 				    &(ne.front()),&(ne.front()));
   setStyleMC(gFTailMC_);
 
+  // Purely Gaussian asymmetry
+  n.clear();
+  ne.clear();
+  for(std::vector<Pt3Bin*>::const_iterator it = pt3Bins_.begin();
+      it != pt3Bins_.end(); ++it) {
+    n.push_back((*it)->fTailMCSmearedGauss());
+    ne.push_back(0.);
+  }
+  delete gFTailMCGauss_;
+  gFTailMCGauss_ = new TGraphAsymmErrors(pt3.size(),&(pt3.front()),&(n.front()),
+					 &(pt3e.front()),&(pt3e.front()),
+					 &(ne.front()),&(ne.front()));
+  gFTailMCGauss_->SetMarkerStyle(27);
+  gFTailMCGauss_->SetMarkerColor(kGreen);
+  gFTailMCGauss_->SetLineColor(gFTailMCGauss_->GetMarkerColor());
+
+
   // Fill graphs of ftail from symmetrized mc truth
   if( hasSymMCTruth() ) {
     pt3.clear();
@@ -1136,6 +1162,9 @@ Pt3Bin::Pt3Bin(const TString &fileNameData, const TString &fileNameMC, unsigned 
   // Get relative number of entries in tail
   getFTail(hAsymMC_,hAsymMC_->GetEntries(),tailStartBin_,tailEndBin_,fNMC_,fNMCErr_);
   getFTail(hAsymMCSmeared_,hAsymMC_->GetEntries(),tailStartBin_,tailEndBin_,fNMCSmeared_,fNMCSmearedErr_);
+  double minEff = hAsymMCSmeared_->GetXaxis()->GetBinLowEdge(tailStartBin_);
+  double maxEff = min(1.,hAsymMCSmeared_->GetXaxis()->GetBinUpEdge(tailEndBin_));
+  fNMCSmearedGauss_ = (erf(maxEff/sqrt(2.)/sigSmeared_) - erf(minEff/sqrt(2.)/sigSmeared_))/2.;
 
   getFTail(hAsymData_,hAsymData_->GetEntries(),tailStartBin_,tailEndBin_,fNData_,fNDataErr_);
 
@@ -1164,6 +1193,7 @@ Pt3Bin::Pt3Bin(const TString &fileName, unsigned int etaBin, unsigned int ptBin,
   sigSmeared_ = 0.;
   ptAveMeanData_ = 0.;
   ptAveMeanDataErr_ = 0.;
+  fNMCSmearedGauss_ = 0.;
 
   
   TH1* h = readMCTruthResponse(fileName,"SymmetrizedMCTruth");
@@ -1232,6 +1262,7 @@ Pt3Bin::Pt3Bin(const TString &fileName, unsigned int etaBin, unsigned int ptBin,
   sigSmeared_ = 0.;
   ptAveMeanData_ = 0.;
   ptAveMeanDataErr_ = 0.;
+  fNMCSmearedGauss_ = 0.;
 
 
   // Get response from file  
@@ -1494,29 +1525,43 @@ void Pt3Bin::plotAsymmetryDataMCSmeared(const TString &outNameId, double nSigTai
   can->SaveAs(outNameId+"PtSmearAsymLog.eps","eps");
 
   // Including tail window
-  TBox* win = new TBox(hAsymMCSmeared_->GetXaxis()->GetBinLowEdge(tailStartBin_),0.,
- 		       min(1.,hAsymMCSmeared_->GetXaxis()->GetBinUpEdge(tailEndBin_)),10.);
-  win->SetLineWidth(1);
-  win->SetFillStyle(3444);
+//   TBox* win = new TBox(hAsymMCSmeared_->GetXaxis()->GetBinLowEdge(tailStartBin_),0.,
+//  		       min(1.,hAsymMCSmeared_->GetXaxis()->GetBinUpEdge(tailEndBin_)),10.);
+//   win->SetLineWidth(1);
+//   win->SetFillStyle(3444);
+//   win->SetLineColor(kRed);
+//   win->SetFillColor(win->GetLineColor());
+
+  TLine* win = new TLine(hAsymMCSmeared_->GetXaxis()->GetBinLowEdge(tailStartBin_),0.,
+			 hAsymMCSmeared_->GetXaxis()->GetBinLowEdge(tailStartBin_),10.);
+  win->SetLineWidth(2);
   win->SetLineColor(kRed);
-  win->SetFillColor(win->GetLineColor());
+
+  TArrow* arr = new TArrow(hAsymMCSmeared_->GetXaxis()->GetBinLowEdge(tailStartBin_),3.,
+			   hAsymMCSmeared_->GetXaxis()->GetBinLowEdge(tailStartBin_)+0.2,3.);
+  arr->SetLineWidth(2);
+  arr->SetLineColor(kRed);
+  arr->SetArrowSize(0.05);
+  arr->SetAngle(30);
   
   TLegend* legWin = util::LabelFactory::createLegendCol(3,LEG_WIDTH);
   legWin->AddEntry(hAsymData_,"Data","P");
   legWin->AddEntry(hAsymMCSmeared_,"Reweighted MC","F");
   if( nSigTailEnd < 50. ) legWin->AddEntry(win,util::toTString(nSigTailStart)+" - "+util::toTString(nSigTailEnd)+" #sigma Window","F");
-  else legWin->AddEntry(win,"> "+util::toTString(nSigTailStart)+" #sigma Window","F");
+  else legWin->AddEntry(win,"> "+util::toTString(nSigTailStart)+" #sigma Window","L");
 
   hAsymMCSmeared_->GetXaxis()->SetRangeUser(0.,1.);
   can->cd();
   hAsymMCSmeared_->Draw("HISTE");
   hAsymData_->Draw("PE1same");
   win->Draw("same");
+  arr->Draw();			// Arrow not drawn if option "same" called!
   binLabel_->Draw("same");
   legWin->Draw("same");
   can->SetLogy(1);
   can->SaveAs(outNameId+"PtSmearAsymTail.eps","eps");
   delete legWin;
+  delete arr;
 
   // Without data to illustrate window definition
   if( pt3Bin_ == 0 ) {
