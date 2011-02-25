@@ -1,4 +1,6 @@
-// $Id: getTailScalingFactors.C,v 1.21 2011/01/25 14:06:15 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.22 2011/01/26 17:48:06 mschrode Exp $
+
+#define UTILS_AS_HEADER_FILE
 
 #include <cmath>
 #include <iomanip>
@@ -128,7 +130,7 @@ private:
   TH1* readMCTruthResponse(const TString &fileName, const TString &type) const;
   //  void init(double nSigCore, double coreScalingFactor, double tailWindowDataMin, double tailWindowDataMax, double tailWindowMCMin, double tailWindowMCMax);
   void initBinLabel(const sampleTools::BinningAdmin* adm, const TString &jetLabel, bool isMCTruth = false);
-  void getFTail(const TH1* h, double entries, int start, int end, double &fTail, double &fTailErr) const;
+  void getFTail(const TH1* h, double entries, int start, int end, double &fTail, double &fTailErr, double nExtraTailEvts = 0) const;
 };
 
 
@@ -247,7 +249,7 @@ void getTailScalingFactors() {
 
   std::cout << "Setting up parameters" << std::endl;
 
-  const TString outLabel = "TailSig25-50";
+  const TString outLabel = "TailSig25-Inf";
   //const TString outLabel = "TailSig25-InfVarExtrapolation";
   //const TString outLabel = "TailSig25-InfVarCoreDown";
   //const TString outLabel = "TailSig25-InfVarCoreUp";
@@ -257,7 +259,7 @@ void getTailScalingFactors() {
   const double nSigCore = 2.;
 
   const double nSigTailStart = 2.5;
-  const double nSigTailEnd = 5.0;
+  const double nSigTailEnd = 1000.;
 
   const double minPt3Data = 0.;
   const bool useExtrapolatedValue = outLabel.Contains("VarExtrapolation") ? false : true;
@@ -1354,14 +1356,16 @@ TH1* Pt3Bin::readMCTruthResponse(const TString &fileName, const TString &type) c
 
 // Gaussian approximation for binomial error
 // ------------------------------------------------------------------------------------
-void Pt3Bin::getFTail(const TH1* h, double entries, int start, int end, double &fTail, double &fTailErr) const {
+void Pt3Bin::getFTail(const TH1* h, double entries, int start, int end, double &fTail, double &fTailErr, double nExtraTailEvts) const {
   // Relative number of tail events
   // useage of Integral() because
   // a) possiblity to get #evts in certain interval
   // b) get total #evts consistently taking into account normalizations
-  double nTail = h->Integral(start,end);
   double nTotal = h->Integral();
+  double nTail = h->Integral(start,end);// + nExtraTailEvts*nTotal/entries;
   fTail = nTail/nTotal;
+
+  //if( nExtraTailEvts > 1. ) std::cout << "nTail = " << nTail << " (" << nTotal << ")" << std::endl;
   
   // Total number of events for uncertainty calculation
   // from number of entries (assume no overflow)
@@ -1491,12 +1495,12 @@ void Pt3Bin::plotAsymmetryDataMCSmeared(const TString &outNameId, double nSigTai
 
   // Including tail window
   TBox* win = new TBox(hAsymMCSmeared_->GetXaxis()->GetBinLowEdge(tailStartBin_),0.,
-		       hAsymMCSmeared_->GetXaxis()->GetBinUpEdge(tailEndBin_),10.);
+ 		       min(1.,hAsymMCSmeared_->GetXaxis()->GetBinUpEdge(tailEndBin_)),10.);
   win->SetLineWidth(1);
   win->SetFillStyle(3444);
   win->SetLineColor(kRed);
   win->SetFillColor(win->GetLineColor());
-
+  
   TLegend* legWin = util::LabelFactory::createLegendCol(3,LEG_WIDTH);
   legWin->AddEntry(hAsymData_,"Data","P");
   legWin->AddEntry(hAsymMCSmeared_,"Reweighted MC","F");
@@ -1799,7 +1803,7 @@ void printWindowBorders(const std::vector<EtaPtBin*> &bins, const sampleTools::B
   std::cout << "\n\n\n***  Window Borders  ***\n\n";
 
   std::cout << "\\begin{tabular}[ht]{cccccc}\n\\hline\n";
-  std::cout << "$|\\eta|$ & $\\ptave \\,(\\gevnospace)$ & $A_{0} - A_{1}$ & $\\frac{A_{0}-A_{1}}{\\sigma(\\pti{3} = 0.05)}$ & $\\int^{n_{1}}_{n_{0}}\\mathcal{G}$ & $\\fasymmc(\\pti{3} = 0.05)$ \\\\ \n\\hline\n";
+  std::cout << "$|\\eta|$ & $\\ptave \\,(\\gevnospace)$ & $A_{0} - A_{1}$ & $A_{0}/\\sigma - A_{1}/\\sigma$ & $\\int^{A_{1}}_{A_{0}}\\mathcal{G}$ & $\\fasymmc(\\pti{3} = 0.05)$ \\\\ \n\\hline\n";
   for(EtaPtBinConstIt it = bins.begin(); it != bins.end(); ++it) {
     EtaPtBin* bin = *it;
     double min = bin->tailWindowMin();
@@ -1811,9 +1815,9 @@ void printWindowBorders(const std::vector<EtaPtBin*> &bins, const sampleTools::B
     double fAsymErr = bin->fTailMCSmearedErr(0);
 
     printBin(bin->etaBin(),bin->ptBin(),adm);
-    std::cout << std::setprecision(4) << " & $" << min << " - " << max << "$ & $";
+    std::cout << std::setprecision(3) << " & $" << min << " - " << max << "$ & $";
     std::cout << min/sigSmear << " - " << max/sigSmear << "$ & $";
-    std::cout << fGauss << "$ & $" << fAsym << " \\pm " << fAsymErr << "$ \\\\" << std::endl;
+    std::cout << std::setprecision(4) << fGauss << "$ & $" << fAsym << " \\pm " << fAsymErr << "$ \\\\" << std::endl;
     if( bin->ptBin() == adm->nPtBins(bin->etaBin())-1 ) std::cout << "\\hline\n";
   }
   std::cout << "  \\end{tabular}\n\n";
