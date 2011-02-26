@@ -1,4 +1,4 @@
-// $Id: PlotMaker.h,v 1.4 2011/02/21 18:25:46 mschrode Exp $
+// $Id: PlotMaker.h,v 1.5 2011/02/25 19:50:21 mschrode Exp $
 
 #ifndef PLOT_MAKER_H
 #define PLOT_MAKER_H
@@ -76,6 +76,7 @@ namespace resolutionFit {
 
     OutputManager* out_;
     LabelMaker* labelMk_;
+    TString title_;
 
     TString histFileName(const TString &id, const EtaBin* etaBin, SampleLabel label1, SampleLabel label2, FitResult::Type type) const;
     TString histFileName(const TString &id, const EtaBin* etaBin, SampleLabel sampleLabel, FitResult::Type type) const;
@@ -85,8 +86,10 @@ namespace resolutionFit {
     TString histFileName(const TString &id, const PtBin* ptBin, const Sample* sample, unsigned int ptSoftBinIdx) const;
     TString histFileName(const TString &id, const PtBin* ptBin, SampleLabel label1, SampleLabel label2, FitResult::Type type, unsigned int ptSoftBinIdx) const;
 
-    int markerStyleExtrapolatedResolution(Sample::Type type) const;
-    int markerStyleCorrectedResolution(Sample::Type type) const;
+    int color(Sample::Type type) const;
+    int markerStyle(Sample::Type type) const;
+    void setStyle(Sample::Type type, TH1* &h) const;
+    void setStyle(Sample::Type type, TGraphAsymmErrors* &g) const;
   };
 }
 #endif

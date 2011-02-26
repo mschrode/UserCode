@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.46 2011/02/25 19:50:21 mschrode Exp $
+// $Id: run.cc,v 1.47 2011/02/26 17:55:50 mschrode Exp $
 
 #include <iostream>
 
@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
    //cmd->addFitResult(FitResult::PtAsym);
 
    // Samples to be compared
-   //   cmd->compareSamples("Data","PYTHIA MC");
+   cmd->compareSamples("Data","PYTHIA MC");
 
    // Systematic uncertainties
    cmd->addUncertaintyFromVariedSample("JEC",1.,"PYTHIA MC",FitResult::FullMaxLikeRel,"PYTHIA MC JES-","PYTHIA MC JES+",14);

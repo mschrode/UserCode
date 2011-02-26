@@ -1,4 +1,4 @@
-// $Id: Sample.h,v 1.4 2011/02/21 18:25:46 mschrode Exp $
+// $Id: Sample.h,v 1.5 2011/02/25 19:50:21 mschrode Exp $
 
 #ifndef SAMPLE_H
 #define SAMPLE_H
@@ -32,8 +32,8 @@ namespace resolutionFit {
 
     TString label() const { return label_; }
 
-    TH1* histPtAsym(unsigned int ptSoftBin) const { return setStyle(meas_.at(ptSoftBin)->histPtAsym()); }
-    TH1* histPtGen(unsigned int ptSoftBin) const { return setStyle(meas_.at(ptSoftBin)->histPtGen()); }
+    TH1* histPtAsym(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histPtAsym(); }
+    TH1* histPtGen(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histPtGen(); }
     TH1* histPdfPtTrue(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histPdfPtTrue(); }
 
     bool addFitResult(FitResult::Type type);
@@ -53,12 +53,6 @@ namespace resolutionFit {
     double extrapolatedStatUncert(FitResult::Type type) const;
     double extrapolatedSystUncert(FitResult::Type type) const;
 
-    int markerStyle() const { return markerStyle_; }
-    int color() const { return color_; }
-   
-    TH1* setStyle(TH1* h) const;
-    TGraphAsymmErrors* setStyle(TGraphAsymmErrors* g) const;
-
 
   protected:
     typedef std::map<FitResult::Type,FitResult*> FitResultMap;
@@ -69,9 +63,6 @@ namespace resolutionFit {
 
     Meas meas_;
     FitResultMap fitResult_;
-
-    int markerStyle_;
-    int color_;
 
     bool findFitResult(FitResult::Type type, FitResult* &fitResult) const;
   };

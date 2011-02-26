@@ -74,28 +74,6 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------
-  TH1* Sample::setStyle(TH1* h) const {
-    h->SetMarkerStyle(markerStyle_);
-    h->SetMarkerColor(color_);
-    h->SetLineColor(color_);
-    h->SetTitle("");
-
-    return h;
-  }
-
-
-  // -------------------------------------------------------------------
-  TGraphAsymmErrors* Sample::setStyle(TGraphAsymmErrors* g) const {
-    g->SetMarkerStyle(markerStyle_);
-    g->SetMarkerColor(color_);
-    g->SetLineColor(color_);
-    g->SetTitle("");
-
-    return g;
-  }
-
-
-  // -------------------------------------------------------------------
   void Sample::ptSoft(std::vector<double> &ptSoftVals) const {
     ptSoftVals.clear();
     for(unsigned int ptSoftBin = 0; ptSoftBin < nPtSoftBins(); ++ptSoftBin) {
@@ -213,9 +191,6 @@ namespace resolutionFit {
   // -------------------------------------------------------------------
   DataSample::DataSample(const TString &label, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, unsigned int verbosity)
     : Sample(label,fileNames,ptSoft,histNameSuffix,verbosity) {
-    // hard-code style for now
-    markerStyle_ = 20;
-    color_ = kRed;
   }
 
 
@@ -223,8 +198,5 @@ namespace resolutionFit {
   // -------------------------------------------------------------------
   MCSample::MCSample(const TString &label, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, unsigned int verbosity)
     : Sample(label,fileNames,ptSoft,histNameSuffix,verbosity) {
-    // hard-code style for now
-    markerStyle_ = 24;
-    color_ = kBlack;  
   }
 }
