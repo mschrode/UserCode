@@ -1,4 +1,4 @@
-// $Id: CommanderCool.cc,v 1.2 2011/02/18 18:42:22 mschrode Exp $
+// $Id: CommanderCool.cc,v 1.3 2011/02/25 19:50:21 mschrode Exp $
 
 #include <iomanip>
 #include <iostream>
@@ -117,6 +117,26 @@ namespace resolutionFit {
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
       if( !((*it)->addPLIUncertainty(nominalSample,type,color)) ) {
 	std::cerr << "ERROR adding particle level imbalance uncertainty" << std::endl;
+	exit(1);
+      }
+    }
+  }
+
+
+  void CommanderCool::addMCClosureUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color) {
+    for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
+      if( !((*it)-> addMCClosureUncertainty(nominalSample,type,color)) ) {
+	std::cerr << "ERROR adding MC closure uncertainty" << std::endl;
+	exit(1);
+      }
+    }
+  }
+   
+
+  void CommanderCool::addUncertaintyFromVariedSample(const TString &uncertaintyLabel, double fraction, const SampleLabel &nominalSample, FitResult::Type type, const TString &variedSampleDown, const TString &variedSampleUp, int color) {
+    for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
+      if( !((*it)->addUncertaintyFromVariedSample(uncertaintyLabel,fraction,nominalSample,type,variedSampleDown,variedSampleUp,color)) ) {
+	std::cerr << "ERROR adding '" << uncertaintyLabel << "' uncertainty" << std::endl;
 	exit(1);
       }
     }

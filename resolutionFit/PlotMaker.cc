@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.4 2011/02/21 18:25:46 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.5 2011/02/25 19:50:21 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -813,13 +813,13 @@ namespace resolutionFit {
 	     // and total uncertainty
 	     std::vector<TGraphAsymmErrors*> bands;
 	     TPaveText* label = labelMk_->etaBin(sampleLabel,etaBin->etaBin());
-	     TLegend* leg = util::LabelFactory::createLegendColWithOffset(uncert->nComponents()+1,labelMk_->start(),label->GetSize());
+	     TLegend* leg = util::LabelFactory::createLegendColWithOffset(uncert->nComponents()+1,-labelMk_->start(),label->GetSize());
 	     // Add total uncertainty
 	     bands.push_back(uncert->relUncertSteps());
 	     for(SystUncertIt it = uncert->componentsBegin(); it != uncert->componentsEnd(); ++it) {
 	       // Add components
-	       bands.push_back(it->second->relUncertSteps());
-	       leg->AddEntry(bands.back(),it->second->label(),"F");
+	       bands.push_back((*it)->relUncertSteps());
+	       leg->AddEntry(bands.back(),(*it)->label(),"F");
 	     }
 	     leg->AddEntry(bands.front(),uncert->label(),"F");
 
@@ -845,7 +845,7 @@ namespace resolutionFit {
  	     leg->Draw("same");
 	     out_->logx();
 	     out_->saveCurrentPad(histFileName("RelativeSystematicUncertainty",etaBin,sampleLabel,fitResType));
-	     std::cout << "BLA" << std::endl;
+
 	     for(std::vector<TGraphAsymmErrors*>::iterator it = bands.begin();
 		 it != bands.end(); ++it) {
 	       delete *it;

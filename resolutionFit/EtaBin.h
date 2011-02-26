@@ -1,4 +1,4 @@
-// $Id: EtaBin.h,v 1.3 2011/02/21 18:25:46 mschrode Exp $
+// $Id: EtaBin.h,v 1.4 2011/02/25 19:50:21 mschrode Exp $
 
 #ifndef ETA_BIN_H
 #define ETA_BIN_H
@@ -52,6 +52,7 @@ namespace resolutionFit {
     double correctedResolutionStatUncert(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
     double pli(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
     double mcTruthResolution(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
+    double relativeMCClosure(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
 
     TF1* mcTruthResoFunc(const TString &name) const { return mcTruthReso_->func(name); }
     TF1* pliFunc(const TString &name) const { return pli_->func(name); }
@@ -62,8 +63,8 @@ namespace resolutionFit {
 
     bool addExtrapolationUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color);
     bool addPLIUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color);
-/*     bool addClosureUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color); */
-/*     bool addUncertaintyFromVariedSample(const TString &uncertaintyLabel, double fraction, const SampleLabel &nominalSample, FitResult::Type type, const TString &variedSampleDown, const TString &variedSampleUp, int color); */
+    bool addMCClosureUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color);
+    bool addUncertaintyFromVariedSample(const TString &uncertaintyLabel, double fraction, const SampleLabel &nominalSample, FitResult::Type type, const TString &variedSampleDown, const TString &variedSampleUp, int color);
 
     bool compareSamples(const SampleLabel &label1, const SampleLabel &label2);
 

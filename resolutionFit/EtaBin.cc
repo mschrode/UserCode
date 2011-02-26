@@ -1,4 +1,4 @@
-// $Id: EtaBin.cc,v 1.2 2011/02/18 18:42:22 mschrode Exp $
+// $Id: EtaBin.cc,v 1.3 2011/02/25 19:50:21 mschrode Exp $
 
 #include <iostream>
 
@@ -184,6 +184,54 @@ namespace resolutionFit{
 
 
   // -------------------------------------------------------------------------------------
+  bool EtaBin::addMCClosureUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color) {
+    SystematicUncertainty* uncert = findSystematicUncertainty(nominalSample,type);
+    
+    TString label = "MC Closure";
+    if( !(uncert->hasComponent(label)) ) {
+      std::vector<double> ptMean;
+      std::vector<double> ptMin;
+      std::vector<double> ptMax;
+      std::vector<double> relUncert;
+      for(unsigned int i = 0; i < par_->nPtBins(etaBin()); ++i) {
+ 	ptMean.push_back(meanPt(nominalSample,type,i));
+ 	ptMin.push_back(par_->ptMin(etaBin(),i));
+ 	ptMax.push_back(par_->ptMax(etaBin(),i));
+	relUncert.push_back(0.5*std::abs(1.-relativeMCClosure(nominalSample,type,i)));
+      }
+      uncert->addComponent(label,color,nominalSample,type,ptMean,ptMin,ptMax,relUncert,relUncert);
+    }
+    
+    return true;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  bool EtaBin::addUncertaintyFromVariedSample(const TString &uncertaintyLabel, double fraction, const SampleLabel &nominalSample, FitResult::Type type, const TString &variedSampleDown, const TString &variedSampleUp, int color) {
+    SystematicUncertainty* uncert = findSystematicUncertainty(nominalSample,type);
+    
+    if( !(uncert->hasComponent(uncertaintyLabel)) ) {
+      std::vector<double> ptMean;
+      std::vector<double> ptMin;
+      std::vector<double> ptMax;
+      std::vector<double> relUncert;
+      for(unsigned int i = 0; i < par_->nPtBins(etaBin()); ++i) {
+ 	ptMean.push_back(meanPt(nominalSample,type,i));
+ 	ptMin.push_back(par_->ptMin(etaBin(),i));
+ 	ptMax.push_back(par_->ptMax(etaBin(),i));
+	double res = correctedResolution(nominalSample,type,i);
+	double resDown = correctedResolution(variedSampleDown,type,i);
+	double resUp = correctedResolution(variedSampleUp,type,i);
+	relUncert.push_back(fraction*0.5*(std::abs((resDown-res)/res)+std::abs((resUp-res)/res)));
+      }
+      uncert->addComponent(uncertaintyLabel,color,nominalSample,type,ptMean,ptMin,ptMax,relUncert,relUncert);
+    }
+    
+    return true;
+  }
+
+
+  // -------------------------------------------------------------------------------------
   bool EtaBin::compareSamples(const SampleLabel &label1, const SampleLabel &label2) {
     if( sampleTypes_.find(label1) != sampleTypes_.end() &&
 	sampleTypes_.find(label2) != sampleTypes_.end() ) {
@@ -319,5 +367,17 @@ namespace resolutionFit{
   // -------------------------------------------------------------------------------------
   double EtaBin::correctedResolutionStatUncert(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const {
     return extrapolatedStatUncert(label,type,ptBinIdx);
+  }
+
+
+  //! Returns MCTruth / Measurement
+  // -------------------------------------------------------------------------------------
+  double EtaBin::relativeMCClosure(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const {
+    double meas = correctedResolution(label,type,ptBinIdx);
+    double truth = mcTruthResolution(label,type,ptBinIdx);
+    double result = 0.;
+    if( meas > 0. ) result = truth/meas;
+
+    return result;
   }
 }

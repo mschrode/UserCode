@@ -1,4 +1,4 @@
-// $Id: Extrapolation.cc,v 1.3 2011/02/21 18:25:46 mschrode Exp $
+// $Id: Extrapolation.cc,v 1.4 2011/02/25 19:50:21 mschrode Exp $
 
 #include "Extrapolation.h"
 
@@ -30,14 +30,14 @@ namespace resolutionFit {
 						 &(ptSoftUncert.front()),&(ptSoftUncert.front()),
 						 &(uncerts.front()),&(uncerts.front()));
 
-    int nPointsToDelete = 0;
-    for(int i = 0; i < g->GetN(); ++i) {
-      if( g->GetX()[i]*meanPt_ < 6. ) nPointsToDelete++;
-    }
-    for(int i = 0; i < nPointsToDelete; ++i) {
-      g->RemovePoint(0);
-    }
-    if( nPointsToDelete ) std::cout << "Deleted " << nPointsToDelete << " points: " << g->GetN() << std::endl;
+//     int nPointsToDelete = 0;
+//     for(int i = 0; i < g->GetN(); ++i) {
+//       if( g->GetX()[i]*meanPt_ < 6. ) nPointsToDelete++;
+//     }
+//     for(int i = 0; i < nPointsToDelete; ++i) {
+//       g->RemovePoint(0);
+//     }
+//     if( nPointsToDelete ) std::cout << "Deleted " << nPointsToDelete << " points: " << g->GetN() << std::endl;
 
     TString name = "LinearExtrapolation";
     name += NUM_EXTRAPOLATION_FUNCTIONS;
