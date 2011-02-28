@@ -1,5 +1,6 @@
-// $Id: EtaBin.cc,v 1.3 2011/02/25 19:50:21 mschrode Exp $
+// $Id: EtaBin.cc,v 1.4 2011/02/26 17:55:50 mschrode Exp $
 
+#include <algorithm>
 #include <iostream>
 
 #include "EtaBin.h"
@@ -258,6 +259,40 @@ namespace resolutionFit{
 
 
   // -------------------------------------------------------------------------------------
+  void EtaBin::fitPLI(const TString &label, const TString &baseFileName, ResolutionFunction::Type type) {
+
+    // Add Samples containing ptGen asymmetry histograms
+    // They will per default have the correct FitResult::Type PtGenAsym
+    for(std::vector<PtBin*>::iterator it = ptBins_.begin(); it != ptBins_.end(); ++it) {
+      if( !((*it)->addMCTruthSample(label,baseFileName)) ) {
+	std::cerr << "ERROR in EtaBin::fitPLI(): Error adding MCTruth Sample '" << label << "'" << std::endl;
+	exit(1);
+      }
+    }
+
+    // Create graph of extrapolated ptGen asymmetry width
+    std::vector<double> pt;
+    std::vector<double> ptErr;
+    std::vector<double> res;
+    std::vector<double> resStatErr;
+    for(PtBinIt ptBinIt = ptBinsBegin(); ptBinIt != ptBinsEnd(); ++ptBinIt) {
+      const Sample* sample = (*ptBinIt)->mcTruthSample();
+      pt.push_back(sample->meanPt(FitResult::PtGenAsym));
+      ptErr.push_back(0.);
+      res.push_back(sample->extrapolatedValue(FitResult::PtGenAsym));
+      resStatErr.push_back(sample->extrapolatedStatUncert(FitResult::PtGenAsym));
+    }
+    TGraphAsymmErrors* g = new TGraphAsymmErrors(pt.size(),&(pt.front()),&(res.front()),
+						 &(ptErr.front()),&(ptErr.front()),
+						 &(resStatErr.front()),&(resStatErr.front()));
+
+    // Fit new PLI from extrapolated ptGen asymmetry width
+    delete pli_;
+    pli_ = fitResolution(g,type);
+  }
+
+
+  // -------------------------------------------------------------------------------------
   void EtaBin::setPLI(ResolutionFunction* pli) { 
     delete pli_;
     pli_ = pli;
@@ -378,6 +413,82 @@ namespace resolutionFit{
     double result = 0.;
     if( meas > 0. ) result = truth/meas;
 
+    return result;
+  }
+
+
+  //! Create graph of extrapolated resolution
+  // -------------------------------------------------------------------------------------
+  TGraphAsymmErrors* EtaBin::extrapolatedResolution(const SampleLabel &label, FitResult::Type type) const {
+    std::vector<double> pt;
+    std::vector<double> ptErr;
+    std::vector<double> res;
+    std::vector<double> resStatErr;
+    for(PtBinIt ptBinIt = ptBinsBegin(); ptBinIt != ptBinsEnd(); ++ptBinIt) {
+      unsigned int ptBinIdx = (*ptBinIt)->ptBin();
+      pt.push_back(meanPt(label,type,ptBinIdx));
+      ptErr.push_back(0.);
+      res.push_back(extrapolatedValue(label,type,ptBinIdx));
+      resStatErr.push_back(extrapolatedStatUncert(label,type,ptBinIdx));
+    }
+
+    return new TGraphAsymmErrors(pt.size(),&(pt.front()),&(res.front()),&(ptErr.front()),&(ptErr.front()),
+				 &(resStatErr.front()),&(resStatErr.front()));
+  }
+
+
+
+  //! Create graph of extrapolated and PLI-corrected resolution
+  // -------------------------------------------------------------------------------------
+  TGraphAsymmErrors* EtaBin::correctedResolution(const SampleLabel &label, FitResult::Type type) const {
+    std::vector<double> pt;
+    std::vector<double> ptErr;
+    std::vector<double> res;
+    std::vector<double> resStatErr;
+    for(PtBinIt ptBinIt = ptBinsBegin(); ptBinIt != ptBinsEnd(); ++ptBinIt) {
+      unsigned int ptBinIdx = (*ptBinIt)->ptBin();
+      pt.push_back(meanPt(label,type,ptBinIdx));
+      ptErr.push_back(0.);
+      res.push_back(correctedResolution(label,type,ptBinIdx));
+      resStatErr.push_back(correctedResolutionStatUncert(label,type,ptBinIdx));
+    }
+
+    return new TGraphAsymmErrors(pt.size(),&(pt.front()),&(res.front()),&(ptErr.front()),&(ptErr.front()),
+				 &(resStatErr.front()),&(resStatErr.front()));
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  ResolutionFunction* EtaBin::fitResolution(const TGraphAsymmErrors* g, ResolutionFunction::Type type) const {
+
+    TGraphAsymmErrors* gc = static_cast<TGraphAsymmErrors*>(g->Clone());
+
+    std::vector<double> param;
+    // Min and max pt
+    param.push_back(*std::min_element(gc->GetX(),gc->GetX()+gc->GetN()));
+    param.push_back(*std::max_element(gc->GetX(),gc->GetX()+gc->GetN()));
+    // Choose typical start values
+    if( type == ResolutionFunction::NSC ) {
+      param.push_back(4.);
+      param.push_back(1.);
+      param.push_back(0.03);
+    } else if( type == ResolutionFunction::ModifiedNSC ) {
+      param.push_back(4.);
+      param.push_back(0.7);
+      param.push_back(0.);
+      param.push_back(0.2);
+    }
+    ResolutionFunction* f = ResolutionFunction::createResolutionFunction(type,param);
+
+    // Get TF1 to fit
+    TF1* fit = f->func("tmp");
+    if( type == ResolutionFunction::ModifiedNSC ) fit->FixParameter(2,0.);
+    gc->Fit(fit,"0BR");
+    ResolutionFunction* result = ResolutionFunction::createResolutionFunction(type,fit);
+    delete f;
+    delete fit;
+    delete gc;
+    
     return result;
   }
 }

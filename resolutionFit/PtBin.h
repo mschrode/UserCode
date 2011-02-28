@@ -31,6 +31,8 @@ namespace resolutionFit {
     MCSampleIt mcSamplesBegin() const { return mcSamples_.begin(); }
     MCSampleIt mcSamplesEnd() const { return mcSamples_.end(); }
     const Sample* findSample(SampleLabel label) const;
+    bool hasMCTruthSample() const { return mcTruthSample_; }
+    const Sample* mcTruthSample() const { return mcTruthSample_; }
     
     bool addDataSample(const TString &label, const TString &baseFileName) {
       return addSample(Sample::Data,label,baseFileName);
@@ -38,6 +40,7 @@ namespace resolutionFit {
     bool addMCSample(const TString &label, const TString &baseFileName) {
       return addSample(Sample::MC,label,baseFileName);
     }
+    bool addMCTruthSample(const TString &label, const TString &baseFileName);
     bool addFitResult(FitResult::Type type);
     
 
@@ -48,6 +51,7 @@ namespace resolutionFit {
 
     DataSamples dataSamples_;
     MCSamples mcSamples_;
+    Sample* mcTruthSample_;
     Samples samples_;
 
     bool addSample(Sample::Type type, const TString &label, const TString &baseFileName);

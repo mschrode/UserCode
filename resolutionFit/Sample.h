@@ -1,4 +1,4 @@
-// $Id: Sample.h,v 1.5 2011/02/25 19:50:21 mschrode Exp $
+// $Id: Sample.h,v 1.6 2011/02/26 19:01:13 mschrode Exp $
 
 #ifndef SAMPLE_H
 #define SAMPLE_H
@@ -33,6 +33,7 @@ namespace resolutionFit {
     TString label() const { return label_; }
 
     TH1* histPtAsym(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histPtAsym(); }
+    TH1* histPtGenAsym(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histPtGenAsym(); }
     TH1* histPtGen(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histPtGen(); }
     TH1* histPdfPtTrue(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histPdfPtTrue(); }
 
@@ -118,5 +119,13 @@ namespace resolutionFit {
   typedef std::map<SampleLabel,MCSample*>::const_iterator MCSampleIt;
 
 
+
+  // -------------------------------------------------------------------------------------
+  class MCTruthSample : public Sample {
+  public:
+    MCTruthSample(const TString &label, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, unsigned int verbosity = 0);
+    
+    Sample::Type type() const { return MCTruth; }
+  };
 }
 #endif

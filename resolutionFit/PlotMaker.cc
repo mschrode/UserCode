@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.6 2011/02/26 17:55:50 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.7 2011/02/26 19:01:13 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -56,6 +56,7 @@ namespace resolutionFit {
     // Loop over SampleLabels
     for(SampleTypeIt sTIt = etaBins_.front()->sampleTypesBegin();
 	sTIt != etaBins_.front()->sampleTypesEnd(); ++sTIt) {
+      
       SampleLabel sampleLabel = sTIt->first;
       if( par_->verbosity() > 1 ) std::cout << "  " << sampleLabel << std::endl;
       
@@ -90,8 +91,8 @@ namespace resolutionFit {
 	      std::vector<TString> labels;
 
 	      // Loop over FitResultTypes
-	      for(FitResultTypeIt rIt = etaBins_.front()->fitResultTypesBegin(); 
-		  rIt != etaBins_.front()->fitResultTypesEnd(); ++rIt) {
+	      for(FitResultTypeIt rIt = etaBin->fitResultTypesBegin();
+		  rIt != etaBin->fitResultTypesEnd(); ++rIt) {
 
 		double sigma = sample->fittedValue(*rIt,ptSoftBinIdx)/sqrt(2.);
 		fits.push_back(new TF1("AsymmetryFit_"+FitResult::toString(*rIt),"gaus",-1.,1.));
@@ -545,6 +546,180 @@ namespace resolutionFit {
   }
 
 
+  // -------------------------------------------------------------------------------------
+  void PlotMaker::plotParticleLevelImbalance() const {
+    if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotAsymmetry(): Entering" << std::endl;
+    if( etaBins_.front()->hasMCTruthSample() ) {
+
+      std::cout << "Plotting particle level imabalance control plots" << std::endl;
+
+      const double asymMax = 0.29;
+
+      // +++++ PtGenAsymmetry per bin ++++++++++++++++++++++++++++++++++++++++++++++++
+
+      // Loop over ptSoft bins
+      std::cout << "  PtGen asymmetry" << std::endl;
+      for(unsigned int ptSoftBinIdx = 0; ptSoftBinIdx < par_->nPtSoftBins(); ++ptSoftBinIdx) {
+	if( par_->verbosity() > 1 ) std::cout << "    PtSoftBin " << ptSoftBinIdx << std::endl;
+	
+	// Loop over eta bins
+	for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+	  const EtaBin* etaBin = *etaBinIt;
+	  
+	  out_->newPage("PtGenAsymmetry");
+	  
+	  // Loop over pt bins
+	  for(PtBinIt ptBinIt = etaBin->ptBinsBegin(); ptBinIt != etaBin->ptBinsEnd(); ++ptBinIt) {
+	    const PtBin* ptBin = *ptBinIt;
+	    if( par_->verbosity() > 1 ) std::cout << "      " << ptBin->toTString() << std::endl;
+	    
+	    const Sample* sample = ptBin->mcTruthSample();
+	      
+	    // PtGenAsymmetry distribution
+	    TH1* hPtGenAsym = sample->histPtGenAsym(ptSoftBinIdx);
+	    util::HistOps::setAxisTitles(hPtGenAsym,"p^{gen}_{T} Asymmetry","","events");
+	    hPtGenAsym->SetTitle(title_);
+	    hPtGenAsym->GetXaxis()->SetRangeUser(-asymMax,asymMax);
+	    hPtGenAsym->SetMarkerStyle(24);
+	    hPtGenAsym->SetMarkerColor(kBlack);
+	    hPtGenAsym->SetLineColor(hPtGenAsym->GetMarkerColor());
+	    hPtGenAsym->SetLineWidth(1);
+	      
+	    // Labels
+	    TPaveText* label = labelMk_->ptSoftBin(sample->label(),etaBin->etaBin(),ptBin->ptBin(),ptSoftBinIdx);
+	    
+	    // Draw
+	    util::HistOps::setYRange(hPtGenAsym,label->GetSize()+1);
+	    out_->nextMultiPad(sample->label()+": PLIPtGenAsym "+ptBin->toTString()+", PtSoftBin "+util::toTString(ptSoftBinIdx));
+	    hPtGenAsym->Draw("PE1");
+	    label->Draw("same");
+	    out_->saveCurrentPad(histFileName("PLIPtGenAsym",ptBin,sample,ptSoftBinIdx));
+	      
+	    delete hPtGenAsym;
+	    delete label;
+	  } // End of loop over pt bins
+	} // End of loop over eta bins
+      } // End of loop over ptSoft bins
+
+
+      // +++++ PtGen spectra per bin ++++++++++++++++++++++++++++++++++++++++++++++++
+
+      // Loop over ptSoft bins
+      std::cout << "  PtGen spectra" << std::endl;
+      for(unsigned int ptSoftBinIdx = 0; ptSoftBinIdx < par_->nPtSoftBins(); ++ptSoftBinIdx) {
+	if( par_->verbosity() > 1 ) std::cout << "    PtSoftBin " << ptSoftBinIdx << std::endl;
+	
+	// Loop over eta bins
+	for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+	  const EtaBin* etaBin = *etaBinIt;
+	  
+	  out_->newPage("PtGenSpectra");
+	  
+	  // Loop over pt bins
+	  for(PtBinIt ptBinIt = etaBin->ptBinsBegin(); ptBinIt != etaBin->ptBinsEnd(); ++ptBinIt) {
+	    const PtBin* ptBin = *ptBinIt;
+	    if( par_->verbosity() > 1 ) std::cout << "      " << ptBin->toTString() << std::endl;
+	    
+	    const Sample* sample = ptBin->mcTruthSample();
+	      
+	    // PtGen distribution
+	    TH1* hPtGen = sample->histPtGen(ptSoftBinIdx);
+	    util::HistOps::setAxisTitles(hPtGen,"p^{gen}_{T}","GeV","events");
+	    hPtGen->SetTitle(title_);
+	    hPtGen->SetMarkerStyle(24);
+	    hPtGen->SetMarkerColor(kBlack);
+	    hPtGen->SetLineColor(hPtGen->GetMarkerColor());
+	    hPtGen->SetLineWidth(1);
+	      
+	    // Labels
+	    TPaveText* label = labelMk_->ptSoftBin(sample->label(),etaBin->etaBin(),ptBin->ptBin(),ptSoftBinIdx);
+	    
+	    // Draw
+	    util::HistOps::setYRange(hPtGen,label->GetSize()+1);
+	    out_->nextMultiPad(sample->label()+": PLIPtGenSpectrum "+ptBin->toTString()+", PtSoftBin "+util::toTString(ptSoftBinIdx));
+	    hPtGen->Draw("PE1");
+	    label->Draw("same");
+	    out_->saveCurrentPad(histFileName("PLIPtGenSpectrum",ptBin,sample,ptSoftBinIdx));
+	      
+	    delete hPtGen;
+	    delete label;
+	  } // End of loop over pt bins
+	} // End of loop over eta bins
+      } // End of loop over ptSoft bins
+
+
+
+      // +++++ PtGenAsym Extrapolation +++++++++++++++++++++++++++++++++++++++++++++
+      
+      // Loop over eta and pt bins
+      std::cout << "  Extrapolation" << std::endl;
+      for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+	const EtaBin* etaBin = *etaBinIt;
+	out_->newPage("PtGenExtrapolation");
+      
+	for(PtBinIt ptBinIt = etaBin->ptBinsBegin(); ptBinIt != etaBin->ptBinsEnd(); ++ptBinIt) {
+	const PtBin* ptBin = *ptBinIt;
+	if( par_->verbosity() > 1 ) std::cout << "  " << ptBin->toTString() << std::endl;
+
+	const Sample* sample = ptBin->mcTruthSample();
+	
+	// Graph of fitted resolutions
+	std::vector<double> val;
+	std::vector<double> uncert;
+	sample->values(FitResult::PtGenAsym,val,uncert);
+	std::vector<double> ptSoftx;
+	sample->ptSoft(ptSoftx);
+	std::vector<double> ptSoftxUncert(ptSoftx.size(),0.);
+	       
+	TGraphAsymmErrors* gVals = 
+	  new TGraphAsymmErrors(ptSoftx.size(),&(ptSoftx.front()),&(val.front()),
+				&(ptSoftxUncert.front()),&(ptSoftxUncert.front()),
+				&(uncert.front()),&(uncert.front()));
+	gVals->SetMarkerStyle(24);
+	       
+	// Extrapolation function
+	TF1* fit = sample->extrapolationFunction(FitResult::PtGenAsym,"ExtrapolationForPlotFitRange");
+	fit->SetLineColor(kRed);
+	TF1* extra = static_cast<TF1*>(fit->Clone("ExtrapolationForPlotPlotRange"));
+	extra->SetRange(0.,1.4*ptSoftx.back());
+	extra->SetLineStyle(2);
+	       
+	// Create frame
+	TH1* hFrame = new TH1D("PlotMaker::plotParticleLevelImbalance::hFrame","",
+			       1000,0.,1.4*par_->ptSoftMax(par_->nPtSoftBins()-1));
+	util::HistOps::setAxisTitles(hFrame,"p^{gen}_{3,T} / #LTp^{gen}_{T}#GT","","#sqrt{2}#upoint#sigma(p^{gen} Asymmetry) / #LTp^{gen}_{T}#GT");
+	hFrame->GetYaxis()->SetRangeUser(0.,0.19);
+	       
+	// Labels
+	TPaveText* label = labelMk_->ptBin(sample->label(),etaBin->etaBin(),ptBin->ptBin());
+	TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,labelMk_->start(),label->GetSize());
+	leg->AddEntry(gVals,"#sqrt{2}#upoint#sigma(p^{gen} Asymmetry)","P");
+	leg->AddEntry(fit,"Extrapolation","L");
+	       
+	// Linear scale
+	out_->nextMultiPad(sample->label()+": PLI PtGen Asymmetry Extrapolation "+ptBin->toTString());
+	hFrame->Draw();
+	gVals->Draw("PE1same");
+	extra->Draw("same");
+	fit->Draw("same");
+	label->Draw("same");
+	leg->Draw("same");
+	out_->saveCurrentPad(histFileName("PLIPtGenAsymExtrapolation",ptBin,sample,FitResult::PtGenAsym));
+	
+	delete gVals;
+	delete extra;
+	delete fit;
+	delete hFrame;
+	delete label;
+	delete leg;
+	} // End of loop over pt bins
+      } // End of loop over eta bins
+
+    } // End if hasMCTruthSample()
+
+    if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotAsymmetry(): Leaving" << std::endl;
+  }
+
 
   // -------------------------------------------------------------------------------------
   void PlotMaker::plotPtGenSpectra() const {
@@ -628,34 +803,11 @@ namespace resolutionFit {
 	  Sample::Type sampleType = sTIt->second;
 	  if( par_->verbosity() > 1 ) std::cout << "      " << sampleLabel << std::endl;
 
-	  // Create graphs of extrapolated resolution
-	  // and corrected for PLI
-	  std::vector<double> pt;
-	  std::vector<double> ptErr;
-	  std::vector<double> res;
-	  std::vector<double> resStatErr;
-	  std::vector<double> resPLICorr;
-	  std::vector<double> resPLICorrStatErr;
-	  for(PtBinIt ptBinIt = etaBin->ptBinsBegin(); ptBinIt != etaBin->ptBinsEnd(); ++ptBinIt) {
-	    unsigned int ptBinIdx = (*ptBinIt)->ptBin();
-	    pt.push_back(etaBin->meanPt(sampleLabel,fitResType,ptBinIdx));
-	    ptErr.push_back(0.);
-	    res.push_back(etaBin->extrapolatedValue(sampleLabel,fitResType,ptBinIdx));
-	    resStatErr.push_back(etaBin->extrapolatedStatUncert(sampleLabel,fitResType,ptBinIdx));
-	    resPLICorr.push_back(etaBin->correctedResolution(sampleLabel,fitResType,ptBinIdx));
-	    resPLICorrStatErr.push_back(etaBin->correctedResolutionStatUncert(sampleLabel,fitResType,ptBinIdx));
-	  }
-
-	  TGraphAsymmErrors* gRes = 
-	    new TGraphAsymmErrors(pt.size(),&(pt.front()),&(res.front()),&(ptErr.front()),&(ptErr.front()),
-				  &(resStatErr.front()),&(resStatErr.front()));
+	  TGraphAsymmErrors* gRes = etaBin->extrapolatedResolution(sampleLabel,fitResType);
 	  setStyle(sampleType,gRes);
 	  gRes->SetMarkerStyle(27);
 
-	  TGraphAsymmErrors* gResCorr = 
-	    new TGraphAsymmErrors(pt.size(),&(pt.front()),&(resPLICorr.front()),
-				  &(ptErr.front()),&(ptErr.front()),
-				  &(resPLICorrStatErr.front()),&(resPLICorrStatErr.front()));
+	  TGraphAsymmErrors* gResCorr = etaBin->correctedResolution(sampleLabel,fitResType);
 	  setStyle(sampleType,gResCorr);
 
 	  // MC truth resolution function
@@ -667,6 +819,7 @@ namespace resolutionFit {
 
 	  // PLI function
 	  TF1* pli = etaBin->pliFunc("PLI_Eta"+util::toTString(etaBinIdx));
+	  pli->SetRange(xMinPt_,xMaxPt_);
 	  pli->SetLineColor(kGreen);
 	  pli->SetLineStyle(2);
 
@@ -734,34 +887,10 @@ namespace resolutionFit {
 	  SampleLabel sLabel2 = (*sCIt)->label2();
 
 	  // Create graphs of extrapolated resolution corrected for PLI
-	  std::vector<double> pt1;
-	  std::vector<double> ptErr1;
-	  std::vector<double> resCorr1;
-	  std::vector<double> resCorrStatErr1;
-	  std::vector<double> pt2;
-	  std::vector<double> ptErr2;
-	  std::vector<double> resCorr2;
-	  std::vector<double> resCorrStatErr2;
-	  for(PtBinIt ptBinIt = etaBin->ptBinsBegin(); ptBinIt != etaBin->ptBinsEnd(); ++ptBinIt) {
-	    unsigned int ptBinIdx = (*ptBinIt)->ptBin();
-	    pt1.push_back(etaBin->meanPt(sLabel1,fitResType,ptBinIdx));
-	    ptErr1.push_back(0.);
-	    resCorr1.push_back(etaBin->correctedResolution(sLabel1,fitResType,ptBinIdx));
-	    resCorrStatErr1.push_back(etaBin->correctedResolutionStatUncert(sLabel1,fitResType,ptBinIdx));
-
-	    pt2.push_back(etaBin->meanPt(sLabel2,fitResType,ptBinIdx));
-	    ptErr2.push_back(0.);
-	    resCorr2.push_back(etaBin->correctedResolution(sLabel2,fitResType,ptBinIdx));
-	    resCorrStatErr2.push_back(etaBin->correctedResolutionStatUncert(sLabel2,fitResType,ptBinIdx));
-	  }
-	  TGraphAsymmErrors* gRes1 = new TGraphAsymmErrors(pt1.size(),&(pt1.front()),&(resCorr1.front()),
-							   &(ptErr1.front()),&(ptErr1.front()),
-							   &(resCorrStatErr1.front()),&(resCorrStatErr1.front()));
+	  TGraphAsymmErrors* gRes1 = etaBin->correctedResolution(sLabel1,fitResType);
 	  setStyle(etaBin->sampleType(sLabel1),gRes1);
 
-	  TGraphAsymmErrors* gRes2 = new TGraphAsymmErrors(pt2.size(),&(pt2.front()),&(resCorr2.front()),
-							   &(ptErr1.front()),&(ptErr2.front()),
-							   &(resCorrStatErr2.front()),&(resCorrStatErr2.front()));
+	  TGraphAsymmErrors* gRes2 = etaBin->correctedResolution(sLabel2,fitResType);
 	  setStyle(etaBin->sampleType(sLabel2),gRes2);
 
 	  TGraphAsymmErrors* gRatio = util::HistOps::createRatioGraph(gRes1,gRes2);
@@ -1075,7 +1204,7 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::LabelMaker::ptSoft() const { 
-    return "p^{rel}_{||,3}";
+    return "p^{rel}_{T,3}";
   }
 
 

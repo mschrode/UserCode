@@ -1,4 +1,4 @@
-// $Id: ResolutionFunction.h,v 1.1 2011/02/15 18:22:25 mschrode Exp $
+// $Id: ResolutionFunction.h,v 1.2 2011/02/18 18:42:22 mschrode Exp $
 
 #ifndef RESOLUTION_FUNCTION_H
 #define RESOLUTION_FUNCTION_H
@@ -14,7 +14,8 @@ namespace resolutionFit {
   class ResolutionFunction {
   public:
     enum Type { NSC, ModifiedNSC };
-    
+
+    static ResolutionFunction* createResolutionFunction(Type type, const TF1* f);
     static ResolutionFunction* createResolutionFunction(Type type, std::vector<double> &param);
 
     virtual ~ResolutionFunction();

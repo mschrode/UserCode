@@ -1,4 +1,4 @@
-// $Id: CommanderCool.cc,v 1.3 2011/02/25 19:50:21 mschrode Exp $
+// $Id: CommanderCool.cc,v 1.4 2011/02/26 17:55:50 mschrode Exp $
 
 #include <iomanip>
 #include <iostream>
@@ -47,6 +47,20 @@ namespace resolutionFit {
   }
 
 
+  void CommanderCool::fitPLI(const TString &label, const TString &baseFileName, ResolutionFunction::Type type) {
+    if( par_->verbosity() > 0 ) std::cout << "CommanderCool::fitPLI: Fitting PLI" << std::endl;
+
+    if( !isConsistentInputName(baseFileName) ) {
+      std::cerr << "WARNING in CommanderCool::fitPLI(): name of file contains a jet type string different than the current type '" << JetProperties::toString(par_->jetType()) << "'" << std::endl;
+      exit(1);
+    }
+
+    for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
+      (*it)->fitPLI(label,baseFileName,type);
+    }
+  }
+
+
   void CommanderCool::setPLI(const TString &fileName, ResolutionFunction::Type type) {
     if( par_->verbosity() > 0 ) std::cout << "CommanderCool::setPLI: Setting Particle Level Imbalance from config file '" << fileName << "'" << std::endl;
 
@@ -80,7 +94,7 @@ namespace resolutionFit {
 
   void CommanderCool::addMCSample(const TString &label, const TString &baseFileName) {
     if( !isConsistentInputName(baseFileName) ) {
-      std::cerr << "WARNING in CommanderCool::addDataSample(): name of file contains a jet type string different than the current type '" << JetProperties::toString(par_->jetType()) << "'" << std::endl;
+      std::cerr << "WARNING in CommanderCool::addMCSample(): name of file contains a jet type string different than the current type '" << JetProperties::toString(par_->jetType()) << "'" << std::endl;
       exit(1);
     }
 
@@ -91,6 +105,7 @@ namespace resolutionFit {
       }
     }
   }
+
 
 
   void CommanderCool::addFitResult(FitResult::Type type) {

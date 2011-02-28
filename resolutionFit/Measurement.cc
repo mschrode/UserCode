@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: Measurement.cc,v 1.1 2011/02/15 18:22:25 mschrode Exp $
 
 #include "Measurement.h"
 
@@ -16,6 +16,18 @@ namespace resolutionFit {
   // -------------------------------------------------------------------
   Measurement::Measurement(const TString &fileName, const TString &histNameSuffix, double ptSoft, unsigned int verbosity)
     : histNameSuffix_(histNameSuffix), ptSoft_(ptSoft), verbosity_(verbosity) {
+    init(fileName,true);
+  }
+
+  // -------------------------------------------------------------------
+  Measurement::Measurement(const TString &fileName, const TString &histNameSuffix, double ptSoft, bool hasFittedParameters, unsigned int verbosity)
+    : histNameSuffix_(histNameSuffix), ptSoft_(ptSoft), verbosity_(verbosity) {
+    init(fileName,hasFittedParameters);
+  }
+  
+
+  // -------------------------------------------------------------------
+  void Measurement::init(const TString &fileName, bool hasFittedParameters) {
 
     // Histograms to be read from file
     hists_[("hPtGen"+histNameSuffix_)] = 0;
@@ -40,10 +52,9 @@ namespace resolutionFit {
     hists_[("hEta"+histNameSuffix_)] = 0;
     hists_[("hDeltaPhi12"+histNameSuffix_)] = 0;
     hists_[("hDeltaPtJet12"+histNameSuffix_)] = 0;
-
-
+    
     // Parse file
-    if( !parse(fileName) ) exit(-1);
+    if( !parse(fileName,hasFittedParameters) ) exit(-1);
 
     // Calculate mean pt values
     if( verbosity_ == 2 ) std::cout << "Setting mean pt values" << std::endl;
@@ -88,7 +99,7 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------
-  bool Measurement::parse(const TString &fileName) {
+  bool Measurement::parse(const TString &fileName, bool hasFittedParameters) {
     bool statusIsGood = true;
     if( verbosity_ == 2 ) std::cout << "(Measurement) Parsing file '" << fileName << "'" << std::endl;
     
@@ -102,24 +113,31 @@ namespace resolutionFit {
 
 
     if( statusIsGood ) {
-      // Read fitted values and statistical uncertainties from file
-      if( verbosity_ == 2 ) std::cout << "  Getting fitted values... " << std::endl;
-      TH1 *h = 0;
-      file.GetObject("hAbsoluteParameters"+histNameSuffix_,h);
-      if( !h ) {
-	std::cerr << "  ERROR: 'hAbsoluteParameters' not found." << std::endl;
-	statusIsGood = false;
-      } else {
-	h->SetDirectory(0);
-	for(int i = 0; i < h->GetNbinsX(); i++) {
-	  values_.push_back(h->GetBinContent(1+i));
-	  statUncert_.push_back(h->GetBinError(1+i));
-	  if( verbosity_ == 2 ) {
-	    std::cout << "  Value " << i << ": " << values_.back() << std::flush;
-	    std::cout << "  Value: " << values_.back() << std::flush;
-	    std::cout << " +/- " << statUncert_.back() << std::endl;
+      if( hasFittedParameters ) {
+	// Read fitted values and statistical uncertainties from file
+	if( verbosity_ == 2 ) std::cout << "  Getting fitted values... " << std::endl;
+	TH1 *h = 0;
+	file.GetObject("hAbsoluteParameters"+histNameSuffix_,h);
+	if( !h ) {
+	  std::cerr << "  ERROR: 'hAbsoluteParameters' not found." << std::endl;
+	  statusIsGood = false;
+	} else {
+	  h->SetDirectory(0);
+	  for(int i = 0; i < h->GetNbinsX(); i++) {
+	    values_.push_back(h->GetBinContent(1+i));
+	    statUncert_.push_back(h->GetBinError(1+i));
+	    if( verbosity_ == 2 ) {
+	      std::cout << "  Value " << i << ": " << values_.back() << std::flush;
+	      std::cout << "  Value: " << values_.back() << std::flush;
+	      std::cout << " +/- " << statUncert_.back() << std::endl;
+	    }
 	  }
 	}
+      } else {
+	// Set default value
+	if( verbosity_ == 2 ) std::cout << "  Setting default fitted values... " << std::endl;
+	values_.push_back(0.);
+	statUncert_.push_back(0.);
       }
 
       // Read histograms from file

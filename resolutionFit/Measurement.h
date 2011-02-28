@@ -1,4 +1,4 @@
-// $Id: Measurement.h,v 1.2 2011/02/17 13:42:32 mschrode Exp $
+// $Id: Measurement.h,v 1.3 2011/02/21 18:25:46 mschrode Exp $
 
 #ifndef MEASUREMENT_H
 #define MEASUREMENT_H
@@ -16,6 +16,8 @@ namespace resolutionFit {
   class Measurement {
   public:
     Measurement(const TString &fileName, const TString &histNameSuffix, double ptSoft, unsigned int verbosity = 0);
+    Measurement(const TString &fileName, const TString &histNameSuffix, double ptSoft, bool hasFittedParameters, unsigned int verbosity = 0);
+
     ~Measurement();
 
     double ptSoft() const { return ptSoft_; }
@@ -33,6 +35,7 @@ namespace resolutionFit {
     TH1* histPdfPtAsym() const { return getClone("hFitPtAsym"); }
     TH1* histPdfPtTrue() const { return getClone("hTruthPDF"); }
     TH1* histPtAsym() const { return getClone("hPtAsym"); }
+    TH1* histPtGenAsym() const { return getClone("hPtGenAsym"); }
     TH1* histPtGen() const { return getClone("hPtGen"); }
 
 
@@ -58,7 +61,8 @@ namespace resolutionFit {
     double meanPdfPtTrueUncert_;	//! Uncertainty on mean value of ptTrue pdf
 
     TH1* getClone(const TString &name) const;
-    bool parse(const TString &fileName);
+    void init(const TString &fileName, bool hasFittedParameters);
+    bool parse(const TString &fileName, bool hasFittedParameters);
     void setMean(const TString &name, double &mean, double &uncert);
   };
 

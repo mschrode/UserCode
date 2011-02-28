@@ -1,4 +1,4 @@
-// $Id: EtaBin.h,v 1.4 2011/02/25 19:50:21 mschrode Exp $
+// $Id: EtaBin.h,v 1.5 2011/02/26 17:55:50 mschrode Exp $
 
 #ifndef ETA_BIN_H
 #define ETA_BIN_H
@@ -6,6 +6,8 @@
 #include <set>
 #include <vector>
 
+#include "TF1.h"
+#include "TGraphAsymmErrors.h"
 #include "TString.h"
 
 #include "FitResult.h"
@@ -42,6 +44,7 @@ namespace resolutionFit {
     ComparedSamplesIt comparedSamplesEnd() const { return compSamples_.end(); }
     bool hasSystematicUncertainty(const SampleLabel &label, FitResult::Type type) const;
     bool findSystematicUncertainty(const SampleLabel &label, FitResult::Type type, const SystematicUncertainty* &uncert) const;
+    bool hasMCTruthSample() const { return ptBins_.front()->hasMCTruthSample(); }
 
     double meanPt(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
     double meanPtStatUncert(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
@@ -54,6 +57,8 @@ namespace resolutionFit {
     double mcTruthResolution(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
     double relativeMCClosure(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
 
+    TGraphAsymmErrors* extrapolatedResolution(const SampleLabel &label, FitResult::Type type) const;
+    TGraphAsymmErrors* correctedResolution(const SampleLabel &label, FitResult::Type type) const;
     TF1* mcTruthResoFunc(const TString &name) const { return mcTruthReso_->func(name); }
     TF1* pliFunc(const TString &name) const { return pli_->func(name); }
 
@@ -69,6 +74,7 @@ namespace resolutionFit {
     bool compareSamples(const SampleLabel &label1, const SampleLabel &label2);
 
     void setMCTruthResolution(ResolutionFunction* mcTruthReso);
+    void fitPLI(const TString &label, const TString &baseFileName, ResolutionFunction::Type type);
     void setPLI(ResolutionFunction* pli);
     
 
@@ -81,11 +87,12 @@ namespace resolutionFit {
     SampleTypes sampleTypes_;    
     ComparedSamples compSamples_;
     std::set<SystematicUncertainty*> systUncerts_;
-
+    
     ResolutionFunction* mcTruthReso_;
     ResolutionFunction* pli_;
 
     SystematicUncertainty* findSystematicUncertainty(const SampleLabel &label, FitResult::Type type);
+    ResolutionFunction* fitResolution(const TGraphAsymmErrors* g, ResolutionFunction::Type type) const;
   };
 
   typedef std::vector<EtaBin*> EtaBins;

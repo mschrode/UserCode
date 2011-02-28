@@ -1,4 +1,4 @@
-// $Id: PlotMaker.h,v 1.5 2011/02/25 19:50:21 mschrode Exp $
+// $Id: PlotMaker.h,v 1.6 2011/02/26 19:01:13 mschrode Exp $
 
 #ifndef PLOT_MAKER_H
 #define PLOT_MAKER_H
@@ -25,6 +25,7 @@ namespace resolutionFit {
     void makeAllPlots() const {
       plotAsymmetry();
       plotExtrapolation();
+      plotParticleLevelImbalance();
       plotPtGenSpectra();
       plotResolution();
       plotSystematicUncertainties();
@@ -33,6 +34,7 @@ namespace resolutionFit {
 
     void plotAsymmetry() const;
     void plotExtrapolation() const;
+    void plotParticleLevelImbalance() const;
     void plotPtGenSpectra() const;
     void plotResolution() const;
     void plotSystematicUncertainties() const;

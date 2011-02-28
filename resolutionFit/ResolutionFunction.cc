@@ -1,8 +1,21 @@
-// $Id: ResolutionFunction.cc,v 1.1 2011/02/15 18:22:25 mschrode Exp $
+// $Id: ResolutionFunction.cc,v 1.2 2011/02/18 18:42:22 mschrode Exp $
 
 #include "ResolutionFunction.h"
 
 namespace resolutionFit {
+
+  // -------------------------------------------------------------------------------------
+  ResolutionFunction* ResolutionFunction::createResolutionFunction(Type type, const TF1* f) {
+    std::vector<double> param;
+    param.push_back(f->GetXmin());
+    param.push_back(f->GetXmax());
+    for(unsigned int i = 0; i < f->GetNpar(); ++i) {
+      param.push_back(f->GetParameter(i));
+    }
+
+    return createResolutionFunction(type,param);
+  }
+
 
   // -------------------------------------------------------------------------------------
   ResolutionFunction* ResolutionFunction::createResolutionFunction(Type type, std::vector<double> &param) {
