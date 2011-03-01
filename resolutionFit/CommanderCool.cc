@@ -1,4 +1,4 @@
-// $Id: CommanderCool.cc,v 1.4 2011/02/26 17:55:50 mschrode Exp $
+// $Id: CommanderCool.cc,v 1.5 2011/02/28 10:53:15 mschrode Exp $
 
 #include <iomanip>
 #include <iostream>
@@ -168,6 +168,13 @@ namespace resolutionFit {
   }
 
 
+  void CommanderCool::fitKValues(FitResult::Type type) {
+    for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
+      (*it)->fitKValue(type);
+    }
+  }
+
+
   void CommanderCool::printSetup() const {
     std::cout << "\n\n++++++ Setup of CommanderCool ++++++++++++++++++++++++" << std::endl;
 
@@ -219,6 +226,38 @@ namespace resolutionFit {
     }
 
     std::cout << "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n" << std::endl;
+
+
+    for(FitResultTypeIt rIt = etaBins_.front()->fitResultTypesBegin();
+	rIt != etaBins_.front()->fitResultTypesEnd(); ++rIt) {
+      FitResult::Type fitResType = *rIt;
+      
+      for(ComparedSamplesIt sCIt = etaBins_.front()->comparedSamplesBegin();
+	  sCIt != etaBins_.front()->comparedSamplesEnd(); ++sCIt) {
+	SampleLabel sLabel1 = (*sCIt)->label1();
+	SampleLabel sLabel2 = (*sCIt)->label2();
+	
+	if( etaBins_.front()->hasKValue(sLabel1,sLabel2,fitResType) ) {
+	  std::cout << "\n\n++++++ " << sLabel1 << " / " << sLabel2 << " ratio +++++++++++++++++++++++++++++\n" << std::endl;
+
+	  std::cout.setf(std::ios::fixed,std::ios::floatfield);
+	  
+	  for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+	    const EtaBin* etaBin = *etaBinIt;
+
+	    std::cout << std::setprecision(0) << "   " << etaBin->toString() << ": \t";
+	    std::cout << std::setprecision(3) << etaBin->kValue(sLabel1,sLabel2,fitResType) << " +/- ";
+	    std::cout << std::setprecision(4) << etaBin->kStat(sLabel1,sLabel2,fitResType) << " -";
+	    std::cout << std::setprecision(4) << etaBin->kSystDown(sLabel1,sLabel2,fitResType) << " +";
+	    std::cout << std::setprecision(4) << etaBin->kSystUp(sLabel1,sLabel2,fitResType) << " (-";
+	    std::cout << std::setprecision(4) << etaBin->kTotalDown(sLabel1,sLabel2,fitResType) << " +";
+	    std::cout << std::setprecision(4) << etaBin->kTotalUp(sLabel1,sLabel2,fitResType) << ")" << std::endl;
+
+	  }
+	  std::cout << "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n" << std::endl;
+	}
+      }
+    }
   }
 
 

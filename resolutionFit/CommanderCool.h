@@ -1,4 +1,4 @@
-// $Id: CommanderCool.h,v 1.5 2011/02/26 17:55:50 mschrode Exp $
+// $Id: CommanderCool.h,v 1.6 2011/02/28 10:53:15 mschrode Exp $
 
 #ifndef COMMANDER_COOL_H
 #define COMMANDER_COOL_H
@@ -36,6 +36,7 @@ namespace resolutionFit {
     void addMCClosureUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color);
     void addUncertaintyFromVariedSample(const TString &uncertaintyLabel, double fraction, const SampleLabel &nominalSample, FitResult::Type type, const TString &variedSampleDown, const TString &variedSampleUp, int color);
     void compareSamples(const SampleLabel &label1, const SampleLabel &label2);
+    void fitKValues(FitResult::Type type);
 
     void printSetup() const;
     void printResult() const;

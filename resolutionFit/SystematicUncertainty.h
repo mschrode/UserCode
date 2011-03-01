@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: SystematicUncertainty.h,v 1.1 2011/02/28 10:53:05 mschrode Exp $
 
 #ifndef SYSTEMATIC_UNCERTAINTY_H
 #define SYSTEMATIC_UNCERTAINTY_H
@@ -28,7 +28,11 @@ namespace resolutionFit {
     TString label() const { return label_; }
     FitResult::Type fitResultType() const { return fitResultType_; }
     SampleLabel nominalSampleLabel() const { return sampleLabel_; }
+    int color() const { return color_; }
 
+    unsigned int nSteps() const { return ptMean_.size(); }
+    double relUncertDown(unsigned int i) const { return relUncertDown_.at(i); }
+    double relUncertUp(unsigned int i) const { return relUncertUp_.at(i); }
     TGraphAsymmErrors* relUncertSteps() const;
 
     bool isCombined() const { return components_.size(); }

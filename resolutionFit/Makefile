@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.15 2011/02/21 18:25:46 mschrode Exp $
+# $Id: Makefile,v 1.16 2011/02/25 19:50:21 mschrode Exp $
 
 ROOTLIBS   = $(shell root-config --libs) -lMinuit
 ROOTCFLAGS = $(shell root-config --cflags)
@@ -32,7 +32,7 @@ CommanderCool.o: CommanderCool.h CommanderCool.cc EtaBin.h FitResult.h Resolutio
 Extrapolation.o: Extrapolation.h Extrapolation.cc
 	g++ $(CFLAG) -c Extrapolation.cc	
 
-EtaBin.o: EtaBin.h EtaBin.cc FitResult.h Parameters.h PtBin.h ResolutionFunction.h Sample.h SystematicUncertainty.h
+EtaBin.o: EtaBin.h EtaBin.cc FitResult.h Parameters.h PtBin.h ResolutionFunction.h Sample.h SystematicUncertainty.h $(UTIL)
 	g++ $(CFLAG) -c EtaBin.cc	
 
 FitResult.o: FitResult.h FitResult.cc Extrapolation.h Measurement.h $(UTIL)

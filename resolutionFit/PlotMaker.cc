@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.7 2011/02/26 19:01:13 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.8 2011/02/28 10:53:15 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -9,6 +9,7 @@
 #include "TF1.h"
 #include "TGraphAsymmErrors.h"
 #include "TH1.h"
+#include "TPad.h"
 
 #include "FitResult.h"
 #include "SystematicUncertainty.h"
@@ -166,8 +167,8 @@ namespace resolutionFit {
 	      // Loop over to-be-compare Samples
 	      for(ComparedSamplesIt sCIt = etaBin->comparedSamplesBegin();
 		  sCIt != etaBin->comparedSamplesEnd(); ++sCIt) {
-		SampleLabel sLabel1 = (*sCIt)->label1();
-		SampleLabel sLabel2 = (*sCIt)->label2();
+ 		SampleLabel sLabel1 = (*sCIt)->label1();
+ 		SampleLabel sLabel2 = (*sCIt)->label2();
 		const Sample* sample1 = ptBin->findSample(sLabel1);
 		const Sample* sample2 = ptBin->findSample(sLabel2);
 
@@ -715,6 +716,77 @@ namespace resolutionFit {
 	} // End of loop over pt bins
       } // End of loop over eta bins
 
+
+      // +++++ Fitted PLI vs ptGenAve +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      
+      // Loop over eta and pt bins
+      std::cout << "  PLI fit" << std::endl;
+      for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+ 	const EtaBin* etaBin = *etaBinIt;
+ 	out_->newPage("PLIFit");
+	  
+	// Create graph of extrapolated ptGen asymmetry width
+	std::vector<double> pt;
+	std::vector<double> ptErr;
+	std::vector<double> res;
+	std::vector<double> resStatErr;
+	for(PtBinIt ptBinIt = etaBin->ptBinsBegin(); ptBinIt != etaBin->ptBinsEnd(); ++ptBinIt) {
+	  const Sample* sample = (*ptBinIt)->mcTruthSample();
+	  pt.push_back(sample->meanPt(FitResult::PtGenAsym));
+	  ptErr.push_back(0.);
+	  res.push_back(sample->extrapolatedValue(FitResult::PtGenAsym));
+	  resStatErr.push_back(sample->extrapolatedStatUncert(FitResult::PtGenAsym));
+	}
+	TGraphAsymmErrors* gPLI = new TGraphAsymmErrors(pt.size(),&(pt.front()),&(res.front()),
+							&(ptErr.front()),&(ptErr.front()),
+							&(resStatErr.front()),&(resStatErr.front()));
+	gPLI->SetMarkerStyle(24);
+	
+	// Fitted PLI function
+	TF1* pli = etaBin->pliFunc("PLI_Eta"+util::toTString(etaBin->etaBin()));
+	pli->SetRange(xMinPt_,xMaxPt_);
+	pli->SetLineColor(kGreen);
+	pli->SetLineStyle(2);
+	
+	// Ratio of measurement and fit
+	TGraphAsymmErrors* gRatio = util::HistOps::createRatioGraph(gPLI,pli);
+	
+	// Create frames for main and ratio plots
+	TH1* hFrameMain = out_->mainFrame(xMinPt_,xMaxPt_,yMinExtraRes_,0.109,"#sigma / #LTp^{gen}_{T}#GT");
+	hFrameMain->GetXaxis()->SetMoreLogLabels();
+	hFrameMain->GetXaxis()->SetNoExponent();
+	
+	TH1* hFrameRatio = out_->ratioFrame(hFrameMain,"#LTp^{gen}_{T}#GT","GeV",yMinResRatio_,yMaxResRatio_);
+	hFrameRatio->GetXaxis()->SetMoreLogLabels();
+	hFrameRatio->GetXaxis()->SetNoExponent();
+	
+	// Labels
+	TPaveText* label = labelMk_->etaBin(etaBin->mcTruthSampleLabel(),etaBin->etaBin());
+	TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,labelMk_->start(),label->GetSize());
+	leg->AddEntry(gPLI,"Particle Level Imbalance","P");
+	leg->AddEntry(pli,"Fit","L");
+	
+	out_->nextMainPad(etaBin->mcTruthSampleLabel()+": PLI fit "+etaBin->toString());
+	hFrameMain->Draw();
+	gPLI->Draw("PE1same");
+	pli->Draw("same");
+	label->Draw("same");
+	leg->Draw("same");
+	out_->nextRatioPad();
+	hFrameRatio->Draw();
+	gRatio->Draw("PE1same");
+	out_->logx();
+	out_->saveCurrentPad(histFileName("PLIFit",etaBin,etaBin->mcTruthSampleLabel(),FitResult::PtGenAsym));
+	
+	delete gPLI;
+	delete gRatio;
+	delete pli;
+	delete hFrameMain;
+	delete hFrameRatio;
+	delete label;
+	delete leg;
+      } // End of loop over eta bins
+      
     } // End if hasMCTruthSample()
 
     if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotAsymmetry(): Leaving" << std::endl;
@@ -778,6 +850,88 @@ namespace resolutionFit {
   }
 
 
+  // -------------------------------------------------------------------------------------
+  void PlotMaker::plotPtSpectra() const {
+    if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotPtSpectra(): Entering" << std::endl;
+    std::cout << "Plotting pt spectra" << std::endl;
+
+    // +++++ Pt spectra per bin ++++++++++++++++++++++++++++++++++++++++++++++
+
+    // Loop over SampleLabels
+    for(SampleTypeIt sTIt = etaBins_.front()->sampleTypesBegin();
+	sTIt != etaBins_.front()->sampleTypesEnd(); ++sTIt) {
+      
+      SampleLabel sampleLabel = sTIt->first;
+      if( par_->verbosity() > 1 ) std::cout << "  " << sampleLabel << std::endl;
+      
+      // Loop over distributions
+      for(unsigned int distIdx = 0; distIdx < 4; ++distIdx) {
+
+	// Loop over ptSoft bins
+	for(unsigned int ptSoftBinIdx = 0; ptSoftBinIdx < par_->nPtSoftBins(); ++ptSoftBinIdx) {
+	  if( par_->verbosity() > 1 ) std::cout << "    PtSoftBin " << ptSoftBinIdx << std::endl;
+	  
+	  // Loop over eta bins
+	  for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+	    const EtaBin* etaBin = *etaBinIt;
+	    
+	    if( distIdx == 0 ) out_->newPage("PtAveSpectrum");
+	    else if( distIdx == 1 ) out_->newPage("Pt1Spectrum");
+	    else if( distIdx == 1 ) out_->newPage("Pt2Spectrum");
+	    else if( distIdx == 1 ) out_->newPage("Pt3Spectrum");
+	    
+	    // Loop over pt bins
+	    for(PtBinIt ptBinIt = etaBin->ptBinsBegin(); ptBinIt != etaBin->ptBinsEnd(); ++ptBinIt) {
+	      const PtBin* ptBin = *ptBinIt;
+	      if( par_->verbosity() > 1 ) std::cout << "      " << ptBin->toTString() << std::endl;
+	    
+	      // Loop over Samples and select current one (by sampleLabel)
+	      for(SampleIt sIt = ptBin->samplesBegin(); sIt != ptBin->samplesEnd(); ++sIt) {
+		const Sample* sample = sIt->second;
+		if( sample->label() != sampleLabel ) continue;
+	      
+		// Spectrum
+		TH1* h = 0;
+		if( distIdx == 0 ) {
+		  h = sample->histPtAve(ptSoftBinIdx);
+		  util::HistOps::setAxisTitles(h,"p^{ave}_{T}","GeV","events");
+		} else if( distIdx == 1 ) {
+		  h = sample->histPt1(ptSoftBinIdx);
+		  util::HistOps::setAxisTitles(h,"p_{T,1}","GeV","events");
+		} else if( distIdx == 2 ) {
+		  h = sample->histPt2(ptSoftBinIdx);
+		  util::HistOps::setAxisTitles(h,"p_{T,2}","GeV","events");
+		} else if( distIdx == 3 ) {
+		  h = sample->histPt3(ptSoftBinIdx);
+		  util::HistOps::setAxisTitles(h,"p_{T,3}","GeV","events");
+		}
+		//h->GetXaxis()->SetRangeUser(-asymMax,asymMax);
+		setStyle(sample->type(),h);
+	      
+		// Labels
+		TPaveText* label = labelMk_->ptSoftBin(sample->label(),etaBin->etaBin(),ptBin->ptBin(),ptSoftBinIdx);
+	    
+		util::HistOps::setYRange(h,label->GetSize()+1);
+		out_->nextMultiPad(sample->label()+": Spectrum "+ptBin->toTString()+", PtSoftBin "+util::toTString(ptSoftBinIdx));
+		h->Draw("PE1");
+		label->Draw("same");
+		if( distIdx == 0 ) out_->saveCurrentPad(histFileName("PtAve",ptBin,sample,ptSoftBinIdx));
+		else if( distIdx == 1 ) out_->saveCurrentPad(histFileName("PtJet1",ptBin,sample,ptSoftBinIdx));
+		else if( distIdx == 2 ) out_->saveCurrentPad(histFileName("PtJet2",ptBin,sample,ptSoftBinIdx));
+		else if( distIdx == 3 ) out_->saveCurrentPad(histFileName("PtJet3",ptBin,sample,ptSoftBinIdx));
+
+		delete h;
+		delete label;
+	      } // End of loop over Samples
+	    } // End of loop over pt bins
+	  } // End of loop over eta bins
+	} // End of loop over ptSoft bins
+      } // End of loop over SampleLabels
+    } // End of loop over spectra
+
+    if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotPtSpectra(): Leaving" << std::endl;
+  }
+
 
   // -------------------------------------------------------------------------------------
   void PlotMaker::plotResolution() const {
@@ -825,6 +979,7 @@ namespace resolutionFit {
 
 	  // Create frames for main and ratio plots
 	  TH1* hFrameMain = out_->mainFrame(xMinPt_,xMaxPt_,yMinExtraRes_,yMaxExtraRes_,"#sigma / p^{ref}_{T}");
+	  hFrameMain->SetTitle(title_);
 	  hFrameMain->GetXaxis()->SetMoreLogLabels();
 	  hFrameMain->GetXaxis()->SetNoExponent();
 
@@ -868,8 +1023,8 @@ namespace resolutionFit {
 
 
 
-      // +++++ Sample comparison ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-      // Loop over eta bins
+    // +++++ Sample comparison ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    // Loop over eta bins
     for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
       const EtaBin* etaBin = *etaBinIt;
       const unsigned int etaBinIdx = etaBin->etaBin();
@@ -897,10 +1052,13 @@ namespace resolutionFit {
 
 	  // Create frames for main and ratio plots
 	  TH1* hFrameMain = out_->mainFrame(xMinPt_,xMaxPt_,yMinExtraRes_,yMaxExtraRes_,"#sigma / p^{ref}_{T}");
+	  hFrameMain->SetTitle(title_);
 	  hFrameMain->GetXaxis()->SetMoreLogLabels();
 	  hFrameMain->GetXaxis()->SetNoExponent();
 
 	  TH1* hFrameRatio = out_->ratioFrame(hFrameMain,"p^{ref}_{T}","GeV",yMinResRatio_,yMaxResRatio_);
+	  hFrameRatio->GetXaxis()->SetMoreLogLabels();
+	  hFrameRatio->GetXaxis()->SetNoExponent();
 	     
 	  // Labels
 	  TPaveText* label = labelMk_->etaBin(etaBin->etaBin());
@@ -930,8 +1088,174 @@ namespace resolutionFit {
 	} // End of loop over SampleLabels
       } // End of loop over FitResultTypes
     } // End of loop over eta bins
-     
+
     if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotResolution(): Leaving" << std::endl;
+  }
+
+
+
+  // -------------------------------------------------------------------------------------
+  void PlotMaker::plotScaledMCTruth() const {
+    if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotScaledMCTruth(): Entering" << std::endl;
+    std::cout << "Plotting scaled MC truth" << std::endl;
+    out_->newPage("MCTruthScaling");
+
+
+    // +++++ Sample comparison (ratios) +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    // Loop over eta bins
+    for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+      const EtaBin* etaBin = *etaBinIt;
+      const unsigned int etaBinIdx = etaBin->etaBin();
+      if( par_->verbosity() > 1 ) std::cout << "  Eta " << etaBinIdx << std::endl;
+
+      // Loop over FitResultTypes
+      for(FitResultTypeIt rIt = etaBin->fitResultTypesBegin(); rIt != etaBin->fitResultTypesEnd(); ++rIt) {
+	FitResult::Type fitResType = *rIt;
+	if( par_->verbosity() > 1 ) std::cout << "    " << FitResult::toString(fitResType) << std::endl;
+
+	// Loop over to-be-compare Samples
+	for(ComparedSamplesIt sCIt = etaBin->comparedSamplesBegin();
+	    sCIt != etaBin->comparedSamplesEnd(); ++sCIt) {
+	  SampleLabel sLabel1 = (*sCIt)->label1();
+	  SampleLabel sLabel2 = (*sCIt)->label2();
+
+	  if( etaBin->hasKValue(sLabel1,sLabel2,fitResType) ) {
+
+	    // Data-MC ratio (k-Value) with statistical und systematic uncertainty
+	    TGraphAsymmErrors* gRatio = etaBin->ratioGraph(sLabel1,sLabel2,fitResType);
+	    setStyle(etaBin->sampleType(sLabel1),gRatio);
+	    TF1* kValueLine = etaBin->kValueLine(sLabel1,sLabel2,fitResType,"kValueLine",xMinPt_,xMaxPt_);
+	    TGraphAsymmErrors* kStatBand = etaBin->kValueStatBand(sLabel1,sLabel2,fitResType,xMinPt_,xMaxPt_);
+	    TGraphAsymmErrors* kSystBand = etaBin->kValueSystBand(sLabel1,sLabel2,fitResType,xMinPt_,xMaxPt_);
+	    
+	    // Create frame
+	    TH1* hFrame = util::HistOps::createRatioFrame(xMinPt_,xMaxPt_,0.71,1.89,"p^{ref}_{T} (GeV)","#sigma("+sLabel1+") / #sigma("+sLabel2+")");
+	    hFrame->SetTitle(title_);
+	    hFrame->GetXaxis()->SetMoreLogLabels();
+	    hFrame->GetXaxis()->SetNoExponent();
+	     
+	    // Labels
+	    TPaveText* label = labelMk_->etaBin(etaBin->etaBin());
+	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,-labelMk_->start(),label->GetSize());
+	    leg->AddEntry(gRatio,"Measurement","P");
+	    leg->AddEntry(kValueLine,"Fit","L");
+	    leg->AddEntry(kStatBand,"Statistical Uncertainty","F");
+	    leg->AddEntry(kSystBand,"Systematic Uncertainty","F");
+
+	    out_->nextPad(sLabel1+"Over"+sLabel2+": Resolution "+etaBin->toString());
+	    hFrame->Draw();
+	    kSystBand->Draw("E2same");
+	    kStatBand->Draw("E2same");
+	    kValueLine->Draw("same");
+	    gRatio->Draw("PE1same");
+	    hFrame->Draw("same");
+	    label->Draw("same");
+	    leg->Draw("same");
+	    out_->logx();
+	    gPad->RedrawAxis();
+	    out_->saveCurrentPad(histFileName("ResolutionRatio",etaBin,sLabel1,sLabel2,fitResType));
+
+	    delete gRatio;
+	    delete kValueLine;
+	    delete kStatBand;
+	    delete hFrame;
+	    delete label;
+	    delete leg;
+	  } // End if hasKValue
+	} // End of loop over SampleLabels
+      } // End of loop over FitResultTypes
+    } // End of loop over eta bins
+
+
+
+    // +++++ Sample comparison (scaled MC truth) +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    // Loop over eta bins
+    for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+      const EtaBin* etaBin = *etaBinIt;
+      const unsigned int etaBinIdx = etaBin->etaBin();
+      if( par_->verbosity() > 1 ) std::cout << "  Eta " << etaBinIdx << std::endl;
+
+      // Loop over FitResultTypes
+      for(FitResultTypeIt rIt = etaBin->fitResultTypesBegin(); rIt != etaBin->fitResultTypesEnd(); ++rIt) {
+	FitResult::Type fitResType = *rIt;
+	if( par_->verbosity() > 1 ) std::cout << "    " << FitResult::toString(fitResType) << std::endl;
+
+	// Loop over to-be-compare Samples
+	for(ComparedSamplesIt sCIt = etaBin->comparedSamplesBegin();
+	    sCIt != etaBin->comparedSamplesEnd(); ++sCIt) {
+	  SampleLabel sLabel1 = (*sCIt)->label1();
+	  SampleLabel sLabel2 = (*sCIt)->label2();
+
+	  if( etaBin->hasKValue(sLabel1,sLabel2,fitResType) ) {
+
+	    // MC truth for comparison
+	    TF1* mcTruth = etaBin->mcTruthResoFunc("MCTruthResoFunc");
+	    mcTruth->SetLineColor(kRed);
+	    mcTruth->SetLineStyle(2);
+
+	    // Scaled MC truth and uncertainty bands
+	    TF1* scaledMCT = etaBin->scaledMCTruthResoFunc("scaledMCTruthResoFunc");
+	    scaledMCT->SetLineColor(kRed);
+	    TGraphAsymmErrors* scaledMCTBand = etaBin->scaledMCTruthUncertaintyBand();
+	    TGraphAsymmErrors* scaledMCTRatioBand = etaBin->scaledMCTruthRatioBand();
+
+	    // Bias corrected measurement and ratio to scaled MC truth
+	    TGraphAsymmErrors* biasCorrRes = etaBin->biasCorrectedResolution(sLabel1,sLabel2,fitResType);
+	    setStyle(etaBin->sampleType(sLabel1),biasCorrRes);
+	    TGraphAsymmErrors* biasCorrResRatio = util::HistOps::createRatioGraph(biasCorrRes,scaledMCT);
+
+	    // Labels
+	    TPaveText* label = labelMk_->etaBin(etaBin->etaBin());
+	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,labelMk_->start(),label->GetSize());
+	    leg->AddEntry(biasCorrRes,"Bias Corrected "+sLabel1,"P");
+	    leg->AddEntry(scaledMCT,"Scaled MC Truth","L");
+	    leg->AddEntry(scaledMCTBand,"Systematic Uncertainty","F");
+	    leg->AddEntry(mcTruth,"MC Truth","L");
+
+	    // Create frames for main and ratio plots
+	    TH1* hFrameMain = out_->mainFrame(xMinPt_,xMaxPt_,yMinExtraRes_,yMaxExtraRes_,"#sigma / p^{ref}_{T}");
+	    hFrameMain->SetTitle(title_);
+	    hFrameMain->GetXaxis()->SetMoreLogLabels();
+	    hFrameMain->GetXaxis()->SetNoExponent();
+
+	    TH1* hFrameRatio = out_->ratioFrame(hFrameMain,"p^{ref}_{T}","GeV",yMinResRatio_,yMaxResRatio_);
+	    hFrameRatio->GetXaxis()->SetMoreLogLabels();
+	    hFrameRatio->GetXaxis()->SetNoExponent();
+	     
+	    out_->nextMainPad("Bias-corrected "+sLabel1+" vs scaled MC truth "+etaBin->toString());
+	    hFrameMain->Draw();
+	    scaledMCTBand->Draw("E3same");
+	    mcTruth->Draw("same");
+	    scaledMCT->Draw("same");
+	    biasCorrRes->Draw("PE1same");
+	    label->Draw("same");
+	    leg->Draw("same");
+	    gPad->RedrawAxis();
+	    out_->nextRatioPad();
+	    hFrameRatio->Draw();
+	    scaledMCTRatioBand->Draw("E3same");
+	    hFrameRatio->Draw("same");
+	    biasCorrResRatio->Draw("PE1same");
+	    out_->logx();
+	    gPad->RedrawAxis();
+	    out_->saveCurrentPad(histFileName("ScaledMCTruthResolution",etaBin,sLabel1,fitResType));
+
+	    delete biasCorrRes;
+	    delete biasCorrResRatio;
+	    delete mcTruth;
+	    delete scaledMCT;
+	    delete scaledMCTBand;
+	    delete scaledMCTRatioBand;
+	    delete label;
+	    delete leg;
+	    delete hFrameMain;
+	    delete hFrameRatio;
+	  } // End if hasKValue
+	} // End of loop over SampleLabels
+      } // End of loop over FitResultTypes
+    } // End of loop over eta bins
+     
+    if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotScaledMCTruth(): Leaving" << std::endl;
   }
 
 

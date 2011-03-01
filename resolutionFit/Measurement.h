@@ -1,4 +1,4 @@
-// $Id: Measurement.h,v 1.3 2011/02/21 18:25:46 mschrode Exp $
+// $Id: Measurement.h,v 1.4 2011/02/28 10:53:15 mschrode Exp $
 
 #ifndef MEASUREMENT_H
 #define MEASUREMENT_H
@@ -37,6 +37,10 @@ namespace resolutionFit {
     TH1* histPtAsym() const { return getClone("hPtAsym"); }
     TH1* histPtGenAsym() const { return getClone("hPtGenAsym"); }
     TH1* histPtGen() const { return getClone("hPtGen"); }
+    TH1* histPtAve() const { return getClone("hPtAveAbs"); }
+    TH1* histPt1() const { return getClone("hPtJet1"); }
+    TH1* histPt2() const { return getClone("hPtJet2"); }
+    TH1* histPt3() const { return getClone("hPtJet3"); }
 
 
   private:

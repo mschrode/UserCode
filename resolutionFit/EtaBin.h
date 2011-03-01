@@ -1,8 +1,9 @@
-// $Id: EtaBin.h,v 1.5 2011/02/26 17:55:50 mschrode Exp $
+// $Id: EtaBin.h,v 1.6 2011/02/28 10:53:15 mschrode Exp $
 
 #ifndef ETA_BIN_H
 #define ETA_BIN_H
 
+#include <map>
 #include <set>
 #include <vector>
 
@@ -45,6 +46,7 @@ namespace resolutionFit {
     bool hasSystematicUncertainty(const SampleLabel &label, FitResult::Type type) const;
     bool findSystematicUncertainty(const SampleLabel &label, FitResult::Type type, const SystematicUncertainty* &uncert) const;
     bool hasMCTruthSample() const { return ptBins_.front()->hasMCTruthSample(); }
+    SampleLabel mcTruthSampleLabel() const { return ptBins_.front()->mcTruthSample()->label(); }
 
     double meanPt(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
     double meanPtStatUncert(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
@@ -56,11 +58,29 @@ namespace resolutionFit {
     double pli(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
     double mcTruthResolution(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
     double relativeMCClosure(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
+    TGraphAsymmErrors* biasCorrectedResolution(const SampleLabel &label1, const SampleLabel &label2, FitResult::Type type) const;
 
     TGraphAsymmErrors* extrapolatedResolution(const SampleLabel &label, FitResult::Type type) const;
     TGraphAsymmErrors* correctedResolution(const SampleLabel &label, FitResult::Type type) const;
     TF1* mcTruthResoFunc(const TString &name) const { return mcTruthReso_->func(name); }
     TF1* pliFunc(const TString &name) const { return pli_->func(name); }
+
+    TF1* scaledMCTruthResoFunc(const TString &name) const { return scaledMCTruthReso_->func(name); }
+    TGraphAsymmErrors* scaledMCTruthUncertaintyBand() const;
+    TGraphAsymmErrors* scaledMCTruthRatioBand() const;
+
+    bool hasKValue(const SampleLabel &label1, const SampleLabel &label2, FitResult::Type type) const;
+    double kValue(const SampleLabel &label1, const SampleLabel &label2, FitResult::Type type) const { return kVal_; }
+    double kStat(const SampleLabel &label1, const SampleLabel &label2, FitResult::Type type) const { return kValStat_; }
+    double kSystDown(const SampleLabel &label1, const SampleLabel &label2, FitResult::Type type) const { return kValSystDown_; }
+    double kSystUp(const SampleLabel &label1, const SampleLabel &label2, FitResult::Type type) const { return kValSystUp_; }
+    double kTotalDown(const SampleLabel &label1, const SampleLabel &label2, FitResult::Type type) const { return kValTotalDown_; }
+    double kTotalUp(const SampleLabel &label1, const SampleLabel &label2, FitResult::Type type) const { return kValTotalUp_; }
+    TF1* kValueLine(const SampleLabel &label1, const SampleLabel &label2, FitResult::Type type, const TString &name, double xMin, double xMax) const;
+    TGraphAsymmErrors* kValueStatBand(const SampleLabel &label1, const SampleLabel &label2, FitResult::Type type, double xMin, double xMax) const;
+    TGraphAsymmErrors* kValueSystBand(const SampleLabel &label1, const SampleLabel &label2, FitResult::Type type, double xMin, double xMax) const;
+
+    TGraphAsymmErrors* ratioGraph(const SampleLabel &label1, const SampleLabel &label2, FitResult::Type type) const;
 
     bool addDataSample(const TString &label, const TString &baseFileName);
     bool addMCSample(const TString &label, const TString &baseFileName);
@@ -72,6 +92,7 @@ namespace resolutionFit {
     bool addUncertaintyFromVariedSample(const TString &uncertaintyLabel, double fraction, const SampleLabel &nominalSample, FitResult::Type type, const TString &variedSampleDown, const TString &variedSampleUp, int color);
 
     bool compareSamples(const SampleLabel &label1, const SampleLabel &label2);
+    void fitKValue(FitResult::Type type);
 
     void setMCTruthResolution(ResolutionFunction* mcTruthReso);
     void fitPLI(const TString &label, const TString &baseFileName, ResolutionFunction::Type type);
@@ -89,7 +110,21 @@ namespace resolutionFit {
     std::set<SystematicUncertainty*> systUncerts_;
     
     ResolutionFunction* mcTruthReso_;
+    ResolutionFunction* scaledMCTruthReso_;
     ResolutionFunction* pli_;
+
+    // Ratios of resolution of different samples
+/*     std::map<SampleLabelPair,double> kVal_;  */
+/*     std::map<SampleLabelPair,double> kValStat_;  */
+/*     std::map<SampleLabelPair,double> kValSyst_;  */
+
+    FitResult::Type kValType_;
+    double kVal_; 
+    double kValStat_; 
+    double kValSystDown_; 
+    double kValSystUp_; 
+    double kValTotalDown_; 
+    double kValTotalUp_; 
 
     SystematicUncertainty* findSystematicUncertainty(const SampleLabel &label, FitResult::Type type);
     ResolutionFunction* fitResolution(const TGraphAsymmErrors* g, ResolutionFunction::Type type) const;

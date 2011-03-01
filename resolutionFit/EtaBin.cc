@@ -1,7 +1,9 @@
-// $Id: EtaBin.cc,v 1.4 2011/02/26 17:55:50 mschrode Exp $
+// $Id: EtaBin.cc,v 1.5 2011/02/28 10:53:15 mschrode Exp $
 
 #include <algorithm>
 #include <iostream>
+
+#include "../util/HistOps.h"
 
 #include "EtaBin.h"
 
@@ -14,8 +16,14 @@ namespace resolutionFit{
     for(unsigned int i = 0; i < nPtBins; ++i) {
       ptBins_.push_back(new PtBin(etaBin_,i,par));
     }
-    mcTruthReso_ = new ResolutionFunctionModifiedNSC(0.,1.,0.,1.,0.,0.);
-    pli_ = new ResolutionFunctionModifiedNSC(0.,1.,0.,1.,0.,0.);
+    mcTruthReso_ = new ResolutionFunctionModifiedNSC(0.,1.,0.,1.,0.,0.,0.,0.);
+    scaledMCTruthReso_ = new ResolutionFunctionModifiedNSC(0.,1.,0.,1.,0.,0.,0.,0.);
+    pli_ = new ResolutionFunctionModifiedNSC(0.,1.,0.,1.,0.,0.,0.,0.);
+
+    kVal_ = 1.;
+    kValStat_ = 0.;
+    kValSystDown_ = 0.;
+    kValSystUp_ = 0.;
   }
 
 
@@ -29,6 +37,7 @@ namespace resolutionFit{
     }
     delete pli_;
     delete mcTruthReso_;
+    delete scaledMCTruthReso_;
   }
 
 
@@ -247,6 +256,125 @@ namespace resolutionFit{
 
 
   // -------------------------------------------------------------------------------------
+  void EtaBin::fitKValue(FitResult::Type type) {
+    if( nComparedSamples() == 1 ) {
+      const SampleLabelPair* slp = *(compSamples_.begin());
+      TGraphAsymmErrors* g1 = correctedResolution(slp->label1(),type);
+      TGraphAsymmErrors* g2 = correctedResolution(slp->label2(),type);
+      TGraphAsymmErrors* g = util::HistOps::createRatioGraph(g1,g2);
+
+      TF1* fit = new TF1("fit","pol0",(*std::min_element(g->GetX(),g->GetX()+g->GetN()))-1.,(*std::max_element(g->GetX(),g->GetX()+g->GetN()))+1);
+      g->Fit(fit,"0QR");
+      kVal_ = fit->GetParameter(0);
+      kValStat_ = fit->GetParError(0);
+
+      const SystematicUncertainty* systUncert = 0;
+      if( findSystematicUncertainty(slp->label2(),type,systUncert) ) {
+	TGraphAsymmErrors* gDown = static_cast<TGraphAsymmErrors*>(g->Clone());
+	TGraphAsymmErrors* gUp = static_cast<TGraphAsymmErrors*>(g->Clone());
+	for(int i = 0; i < g->GetN(); ++i) {
+	  gDown->SetPoint(i,gDown->GetX()[i],gDown->GetY()[i]-systUncert->relUncertDown(i));
+	  gUp->SetPoint(i,gUp->GetX()[i],gUp->GetY()[i]+systUncert->relUncertUp(i));
+	}
+	gDown->Fit(fit,"0QR");
+	kValSystDown_ = std::abs(kVal_-fit->GetParameter(0));
+	gUp->Fit(fit,"0QR");
+	kValSystUp_ = std::abs(kVal_-fit->GetParameter(0));
+	delete gDown;
+	delete gUp;
+      } else {
+	kValSystDown_ = 0.;
+	kValSystUp_ = 0.;
+      }
+
+      kValTotalDown_ = sqrt( kValStat_*kValStat_ + kValSystDown_*kValSystDown_ );
+      kValTotalUp_ = sqrt( kValStat_*kValStat_ + kValSystUp_*kValSystUp_ );
+
+      scaledMCTruthReso_ = ResolutionFunction::createScaledResolutionFunction(mcTruthReso_,kVal_,kValTotalDown_,kValTotalUp_);
+
+      kValType_ = type;
+
+      delete g1;
+      delete g2;
+      delete g;
+      delete fit;
+    }
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  bool EtaBin::hasKValue(const SampleLabel &label1, const SampleLabel &label2, FitResult::Type type) const {
+    const SampleLabelPair* slp = *compSamples_.begin();
+    return ( nComparedSamples() == 1 && slp->label1() == label1 && slp->label2() == label2 && type == kValType_ );
+  }
+
+
+  // Return ratio graph
+  // -------------------------------------------------------------------------------------
+  TGraphAsymmErrors* EtaBin::ratioGraph(const SampleLabel &label1, const SampleLabel &label2, FitResult::Type type) const {
+    TGraphAsymmErrors* g1 = correctedResolution(label1,type);
+    TGraphAsymmErrors* g2 = correctedResolution(label2,type);
+    TGraphAsymmErrors* g = util::HistOps::createRatioGraph(g1,g2);
+    delete g1;
+    delete g2;
+
+    return g;
+  }
+
+
+  // Return TF1 of fitted kValue
+  // -------------------------------------------------------------------------------------
+  TF1* EtaBin::kValueLine(const SampleLabel &label1, const SampleLabel &label2, FitResult::Type type, const TString &name, double xMin, double xMax) const {
+    double kVal = kValue(label1,label2,type);
+    double kStatErr = kStat(label1,label2,type);
+    TF1* kValueLine = new TF1(name,"pol0",xMin,xMax);
+    kValueLine->SetLineWidth(1);
+    kValueLine->SetLineColor(28);
+    kValueLine->SetParameter(0,kVal);
+    kValueLine->SetParError(0,kStatErr);
+
+    return kValueLine;
+  }
+
+
+  // Return band of statistical uncertainty of fitted kValue
+  // -------------------------------------------------------------------------------------
+  TGraphAsymmErrors* EtaBin::kValueStatBand(const SampleLabel &label1, const SampleLabel &label2, FitResult::Type type, double xMin, double xMax) const {
+    double kVal = kValue(label1,label2,type);
+    double kStatErr = kStat(label1,label2,type);
+    double x = 0.5*(xMin+xMax);
+    double xe = std::abs(x-xMin);
+    TGraphAsymmErrors* kStatBand = new TGraphAsymmErrors(1,&x,&kVal,&xe,&xe,&kStatErr,&kStatErr);
+    kStatBand->SetFillStyle(3013);
+    kStatBand->SetFillColor(28);
+    kStatBand->SetLineColor(kStatBand->GetFillColor());
+
+    return kStatBand;
+  }
+
+
+  // Return band of systematic of fitted kValue
+  // -------------------------------------------------------------------------------------
+  TGraphAsymmErrors* EtaBin::kValueSystBand(const SampleLabel &label1, const SampleLabel &label2, FitResult::Type type, double xMin, double xMax) const {
+    double kVal = kValue(label1,label2,type);
+    double kSystErrDown = kSystDown(label1,label2,type);
+    double kSystErrUp = kSystUp(label1,label2,type);
+    double x = 0.5*(xMin+xMax);
+    double xe = std::abs(x-xMin);
+    TGraphAsymmErrors* kSystBand = new TGraphAsymmErrors(1,&x,&kVal,&xe,&xe,&kSystErrDown,&kSystErrUp);
+    kSystBand->SetFillStyle(1001);
+    kSystBand->SetFillColor(kYellow);
+    const SystematicUncertainty* uncert = 0;
+    if( findSystematicUncertainty(label2,type,uncert) ) {
+      kSystBand->SetFillColor(uncert->color());
+    }
+    kSystBand->SetLineColor(kSystBand->GetFillColor());
+
+    return kSystBand;
+  }
+
+
+  // -------------------------------------------------------------------------------------
   Sample::Type EtaBin::sampleType(const SampleLabel &label) const {
     SampleTypeIt it = sampleTypes_.find(label);
     if( it == sampleTypes_.end() ) {
@@ -458,6 +586,20 @@ namespace resolutionFit{
   }
 
 
+  //! Return graph of bias corrected measurement
+  //! - label1: Sample which is corrected
+  //! - label2: Sample from which the bias is determined
+  // -------------------------------------------------------------------------------------
+  TGraphAsymmErrors* EtaBin::biasCorrectedResolution(const SampleLabel &label1, const SampleLabel &label2, FitResult::Type type) const {
+    TGraphAsymmErrors* g = correctedResolution(label1,type);
+    for(unsigned int i = 0; i < g->GetN(); ++i) {
+      g->SetPoint(i,g->GetX()[i],g->GetY()[i]*relativeMCClosure(label2,type,i));
+    }
+
+    return g;
+  }
+
+
   // -------------------------------------------------------------------------------------
   ResolutionFunction* EtaBin::fitResolution(const TGraphAsymmErrors* g, ResolutionFunction::Type type) const {
 
@@ -490,5 +632,57 @@ namespace resolutionFit{
     delete gc;
     
     return result;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  TGraphAsymmErrors* EtaBin::scaledMCTruthUncertaintyBand() const {
+    int n = 1000;
+    double dx = (scaledMCTruthReso_->ptMax()-scaledMCTruthReso_->ptMin())/n;
+    std::vector<double> x;
+    std::vector<double> xe;
+    std::vector<double> y;
+    std::vector<double> yed;
+    std::vector<double> yeu;
+    for(int i = 0; i < n; ++i) {
+      x.push_back(scaledMCTruthReso_->ptMin()+(i+0.5)*dx);
+      xe.push_back(0.);
+      y.push_back(scaledMCTruthReso_->val(x.back()));
+      yed.push_back(scaledMCTruthReso_->uncertDown(x.back()));
+      yeu.push_back(scaledMCTruthReso_->uncertUp(x.back()));
+    }
+    TGraphAsymmErrors* g = new TGraphAsymmErrors(x.size(),&(x.front()),&(y.front()),
+						 &(xe.front()),&(xe.front()),&(yed.front()),&(yeu.front()));
+    g->SetFillStyle(1001);
+    g->SetFillColor(5);
+    g->SetLineColor(g->GetFillColor());
+
+    return g;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  TGraphAsymmErrors* EtaBin::scaledMCTruthRatioBand() const {
+    int n = 1000;
+    double dx = (scaledMCTruthReso_->ptMax()-scaledMCTruthReso_->ptMin())/n;
+    std::vector<double> x;
+    std::vector<double> xe;
+    std::vector<double> y;
+    std::vector<double> yed;
+    std::vector<double> yeu;
+    for(int i = 0; i < n; ++i) {
+      x.push_back(scaledMCTruthReso_->ptMin()+(i+0.5)*dx);
+      xe.push_back(0.);
+      y.push_back(1.);
+      yed.push_back(scaledMCTruthReso_->relUncertDown(x.back()));
+      yeu.push_back(scaledMCTruthReso_->relUncertUp(x.back()));
+    }
+    TGraphAsymmErrors* g = new TGraphAsymmErrors(x.size(),&(x.front()),&(y.front()),
+						 &(xe.front()),&(xe.front()),&(yed.front()),&(yeu.front()));
+    g->SetFillStyle(1001);
+    g->SetFillColor(5);
+    g->SetLineColor(g->GetFillColor());
+
+    return g;
   }
 }

@@ -1,4 +1,4 @@
-// $Id: Sample.h,v 1.6 2011/02/26 19:01:13 mschrode Exp $
+// $Id: Sample.h,v 1.7 2011/02/28 10:53:15 mschrode Exp $
 
 #ifndef SAMPLE_H
 #define SAMPLE_H
@@ -36,6 +36,10 @@ namespace resolutionFit {
     TH1* histPtGenAsym(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histPtGenAsym(); }
     TH1* histPtGen(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histPtGen(); }
     TH1* histPdfPtTrue(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histPdfPtTrue(); }
+    TH1* histPtAve(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histPtAve(); }
+    TH1* histPt1(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histPt1(); }
+    TH1* histPt2(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histPt2(); }
+    TH1* histPt3(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histPt3(); }
 
     bool addFitResult(FitResult::Type type);
     void addSystematicUncertainty(FitResult::Type type, const TString &label, double variedValue, double fraction);
@@ -79,6 +83,15 @@ namespace resolutionFit {
   public:
     SampleLabelPair(const SampleLabel &label1, const SampleLabel &label2)
       : label1_(label1), label2_(label2) {}    
+
+    bool operator==(const SampleLabelPair &other) const {
+      return ( (this->label1() == other.label1()) && (this->label2() == other.label2()) );
+    }
+    bool operator<(const SampleLabelPair &other) const {
+      TString thisLabel = this->label1()+this->label2();
+      TString otherLabel = other.label1()+other.label2();
+      return thisLabel < otherLabel;
+    }
 
     SampleLabel label1() const { return label1_; }
     SampleLabel label2() const { return label2_; }
