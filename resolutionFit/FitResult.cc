@@ -1,4 +1,4 @@
-// $Id: FitResult.cc,v 1.5 2011/02/28 10:53:15 mschrode Exp $
+// $Id: FitResult.cc,v 1.6 2011/03/02 11:55:51 mschrode Exp $
 
 #include "FitResult.h"
 
@@ -157,6 +157,18 @@ namespace resolutionFit {
     extrapolatedStatUncert_ = extrapolation_->GetParError(0);
 
     return result;
+  }
+
+
+  // -------------------------------------------------------------------------------------  
+  void FitResultMaxLikeKSoftRel::setKSoftFit(const TF1* fit) {
+    if( kSoftFit_ ) delete kSoftFit_;
+    TString name = extrapolation_->GetName();
+    name += "_KSoftFit";
+    kSoftFit_ = static_cast<TF1*>(fit->Clone(name));
+    
+    double sigFirstPointInFit = 2.*(extrapolatedSystUncert_ + 0.5*extrapolatedValue_);
+    extrapolatedSystUncert_ = 0.5*std::abs(sigFirstPointInFit-value(workingPointBin_));
   }
 
 

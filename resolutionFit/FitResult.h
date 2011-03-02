@@ -1,4 +1,4 @@
-// $Id: FitResult.h,v 1.5 2011/02/28 10:53:15 mschrode Exp $
+// $Id: FitResult.h,v 1.6 2011/03/02 11:55:51 mschrode Exp $
 
 #ifndef FIT_RESULT_H
 #define FIT_RESULT_H
@@ -44,7 +44,7 @@ namespace resolutionFit {
     double kSoftSlopeStatUncert() const;
     TF1* kSoftFit(const TString &name) const { return static_cast<TF1*>(kSoftFit_->Clone(name)); }
 
-    void setKSoftFit(const TF1* fit);
+    virtual void setKSoftFit(const TF1* fit);
 
     virtual bool init() = 0;
 
@@ -79,6 +79,7 @@ namespace resolutionFit {
     FitResult::Type fitResultType() const { return FitResult::MaxLikeKSoftRel; }
 
     virtual double extrapolatedValue() const { return value(workingPointBin_)*kSoftFit_->Eval(meanPt()); }
+    virtual void setKSoftFit(const TF1* fit);
 
     bool init();
 

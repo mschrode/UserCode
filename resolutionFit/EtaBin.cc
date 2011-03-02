@@ -1,4 +1,4 @@
-// $Id: EtaBin.cc,v 1.6 2011/03/01 16:52:41 mschrode Exp $
+// $Id: EtaBin.cc,v 1.7 2011/03/02 11:55:51 mschrode Exp $
 
 #include <algorithm>
 #include <iostream>
@@ -117,11 +117,12 @@ namespace resolutionFit{
     TGraphAsymmErrors* g = kSoftSlope(label,type);
     double min = *std::min_element(g->GetX(),g->GetX()+g->GetN());
     double max = *std::max_element(g->GetX(),g->GetX()+g->GetN());
+
     TF1* fit = new TF1(name,"[0] + [1]*log(x/100.) + [2]*sq(log(x/100.)) + [3]*log(x/100.)*log(x/100.)*log(x/100.)",min,max);
     fit->SetParameter(0,1.);
-    fit->SetParameter(1,0.);
-    fit->SetParameter(2,0.);
-    fit->SetParameter(3,0.);
+    for(int i = 1; i < fit->GetNpar(); ++i) {
+      fit->SetParameter(i,0.);
+    }
     fit->SetLineWidth(1);
     g->Fit(fit,"0QR");
     
@@ -142,12 +143,6 @@ namespace resolutionFit{
       ptErr.push_back(0.);
       slope.push_back(sample->kSoftSlope(type));
       slopeErr.push_back(sample->kSoftSlopeStatUncert(type));
-
-//       if( sample->type() == Sample::Data ) {
-//  	slopeErr.push_back(sample->kSoftSlopeStatUncert(type));
-//       } else {
-//  	slopeErr.push_back(0.02);
-//       }
     }
 	  
     return new TGraphAsymmErrors(pt.size(),&(pt.front()),&(slope.front()),
