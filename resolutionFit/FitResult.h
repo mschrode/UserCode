@@ -1,4 +1,4 @@
-// $Id: FitResult.h,v 1.4 2011/02/25 19:50:21 mschrode Exp $
+// $Id: FitResult.h,v 1.5 2011/02/28 10:53:15 mschrode Exp $
 
 #ifndef FIT_RESULT_H
 #define FIT_RESULT_H
@@ -19,7 +19,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   class FitResult {
   public:
-    enum Type { FullMaxLikeRel, FullMaxLikeAbs, SimpleMaxLike, PtAsym, PtGenAsym };
+    enum Type { MaxLikeKSoftRel, FullMaxLikeRel, FullMaxLikeAbs, SimpleMaxLike, PtAsym, PtGenAsym };
 
     static bool validType(Type type);
     static FitResult* createFitResult(Type type, const std::vector<Measurement*> &meas, unsigned int verbosity);
@@ -37,9 +37,14 @@ namespace resolutionFit {
     double statUncert(unsigned int ptSoftBin) const { return statUncerts_.at(ptSoftBin); }
     TF1* extrapolationFunction(const TString &name) const {
       return static_cast<TF1*>(extrapolation_->Clone(name)); }
-    double extrapolatedValue() const { return extrapolatedValue_; }
+    virtual double extrapolatedValue() const { return extrapolatedValue_; }
     double extrapolatedStatUncert() const { return extrapolatedStatUncert_; }
     double extrapolatedSystUncert() const { return extrapolatedSystUncert_; }
+    double kSoftSlope() const;
+    double kSoftSlopeStatUncert() const;
+    TF1* kSoftFit(const TString &name) const { return static_cast<TF1*>(kSoftFit_->Clone(name)); }
+
+    void setKSoftFit(const TF1* fit);
 
     virtual bool init() = 0;
 
@@ -47,6 +52,7 @@ namespace resolutionFit {
   protected:
     const std::vector<Measurement*> meas_;
     const unsigned int verbosity_;
+    const unsigned int workingPointBin_;
 
     double meanPt_;
     double meanPtUncert_;
@@ -57,10 +63,28 @@ namespace resolutionFit {
     double extrapolatedStatUncert_;
     double extrapolatedSystUncert_;
     TF1* extrapolation_;
+    TF1* kSoftFit_;
   };
 
   typedef std::set<FitResult::Type> FitResultTypes;
   typedef std::set<FitResult::Type>::const_iterator FitResultTypeIt;
+
+
+
+  // -------------------------------------------------------------------------------------
+  class FitResultMaxLikeKSoftRel : public FitResult {
+  public:
+    FitResultMaxLikeKSoftRel(const std::vector<Measurement*> meas, unsigned int verbosity);
+
+    FitResult::Type fitResultType() const { return FitResult::MaxLikeKSoftRel; }
+
+    virtual double extrapolatedValue() const { return value(workingPointBin_)*kSoftFit_->Eval(meanPt()); }
+
+    bool init();
+
+  private:
+    bool extrapolate();
+  };
 
 
   

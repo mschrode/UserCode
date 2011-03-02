@@ -42,6 +42,7 @@ namespace resolutionFit {
     }
     bool addMCTruthSample(const TString &label, const TString &baseFileName);
     bool addFitResult(FitResult::Type type);
+    bool setKSoftFit(const SampleLabel &label, FitResult::Type type, const TF1* fit);
     
 
   private:

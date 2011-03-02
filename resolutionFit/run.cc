@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.49 2011/02/28 10:53:15 mschrode Exp $
+// $Id: run.cc,v 1.50 2011/03/01 16:52:42 mschrode Exp $
 
 #include <iostream>
 
@@ -20,6 +20,7 @@ int main(int argc, char *argv[]) {
    par->setJetProperties(JetProperties::AK5,JetProperties::Calo);
 
    TString pathToFitResults = "~/results/ResolutionFit/Pt3Cuts/";
+   FitResult::Type nominalFitResType = FitResult::MaxLikeKSoftRel;
 
    CommanderCool* cmd = new CommanderCool(par);
 
@@ -43,19 +44,18 @@ int main(int argc, char *argv[]) {
    cmd->addMCSample("PYTHIA MC Spec-","~/results/ResolutionFit/Note/ResFitThres_Calo_MCFall10_SpectrumDown");
    cmd->addMCSample("PYTHIA MC Spec+","~/results/ResolutionFit/Note/ResFitThres_Calo_MCFall10_SpectrumUp");
 
-   cmd->addFitResult(FitResult::FullMaxLikeRel);
-   //cmd->addFitResult(FitResult::PtAsym);
+   cmd->addFitResult(nominalFitResType);
 
    // Systematic uncertainties
-   cmd->addUncertaintyFromVariedSample("JEC",1.,"PYTHIA MC",FitResult::FullMaxLikeRel,"PYTHIA MC JES-","PYTHIA MC JES+",14);
-   //cmd->addMCClosureUncertainty("PYTHIA MC",FitResult::FullMaxLikeRel,46);
-   cmd->addExtrapolationUncertainty("PYTHIA MC",FitResult::FullMaxLikeRel,7);
-   cmd->addUncertaintyFromVariedSample("Spectrum",1.,"PYTHIA MC",FitResult::FullMaxLikeRel,"PYTHIA MC Spec-","PYTHIA MC Spec+",38);
-   cmd->addPLIUncertainty("PYTHIA MC",FitResult::FullMaxLikeRel,8);
+   cmd->addUncertaintyFromVariedSample("JEC",1.,"PYTHIA MC",nominalFitResType,"PYTHIA MC JES-","PYTHIA MC JES+",14);
+   //cmd->addMCClosureUncertainty("PYTHIA MC",nominalFitResType,46);
+   cmd->addExtrapolationUncertainty("PYTHIA MC",nominalFitResType,7);
+   cmd->addUncertaintyFromVariedSample("Spectrum",1.,"PYTHIA MC",nominalFitResType,"PYTHIA MC Spec-","PYTHIA MC Spec+",38);
+   cmd->addPLIUncertainty("PYTHIA MC",nominalFitResType,8);
 
    // Samples to be compared
    cmd->compareSamples("Data","PYTHIA MC");
-   cmd->fitKValues(FitResult::FullMaxLikeRel);
+   cmd->fitKValues(nominalFitResType);
 
 
     // Output

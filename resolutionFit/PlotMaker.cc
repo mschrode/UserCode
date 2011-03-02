@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.8 2011/02/28 10:53:15 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.9 2011/03/01 16:52:41 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -1256,6 +1256,71 @@ namespace resolutionFit {
     } // End of loop over eta bins
      
     if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotScaledMCTruth(): Leaving" << std::endl;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  void PlotMaker::plotSlopes() const {
+    if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotSlopes(): Entering" << std::endl;
+    std::cout << "Plotting extrapolation slopes" << std::endl;
+     
+    // +++++ Slopes per Sample ++++++++++++++++++++++++++++++++++++++
+    out_->newPage("Slope");
+
+    unsigned int workingPointPtSoftIdx = 3;
+
+    // Loop over eta bins
+    for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+      const EtaBin* etaBin = *etaBinIt;
+      const unsigned int etaBinIdx = etaBin->etaBin();
+      if( par_->verbosity() > 1 ) std::cout << "  Eta " << etaBinIdx << std::endl;
+
+      // Loop over FitResultTypes
+      for(FitResultTypeIt rIt = etaBin->fitResultTypesBegin(); rIt != etaBin->fitResultTypesEnd(); ++rIt) {
+	FitResult::Type fitResType = *rIt;
+	if( par_->verbosity() > 1 ) std::cout << "    " << FitResult::toString(fitResType) << std::endl;
+
+	// Loop over SampleLabels
+	for(SampleTypeIt sTIt = etaBin->sampleTypesBegin(); sTIt != etaBin->sampleTypesEnd(); ++sTIt) {
+	  SampleLabel sampleLabel = sTIt->first;
+	  Sample::Type sampleType = sTIt->second;
+	  if( par_->verbosity() > 1 ) std::cout << "      " << sampleLabel << std::endl;
+
+	  // Graph of kSoft slopes
+	  TGraphAsymmErrors* gSlope = etaBin->kSoftSlope(sampleLabel,fitResType);
+	  setStyle(sampleType,gSlope);
+
+	  // kSoft fitting function
+	  TF1* fit = etaBin->kSoftFit(sampleLabel,*rIt,"PlotMaker::plotSlopes::KSoftFit");
+	  fit->SetLineColor(kRed);
+
+	  // Frame
+	  TH1* hFrame = new TH1D("hFrame",title_+";p^{ref}_{T} (GeV);#sigma(p^{rel}_{T} = 0) / #sigma(p^{rel}_{T} = "+util::toTString(par_->ptSoftMax(workingPointPtSoftIdx))+")",1000,xMinPt_,xMaxPt_);
+	  hFrame->GetYaxis()->SetRangeUser(0.61,1.29);
+	  hFrame->GetXaxis()->SetMoreLogLabels();
+	  hFrame->GetXaxis()->SetNoExponent();
+	     
+	  // Labels
+	  TPaveText* label = labelMk_->etaBin(sampleLabel,etaBin->etaBin());
+
+	  out_->nextMultiPad(sampleLabel+": Slope "+etaBin->toString());
+	  hFrame->Draw();
+	  gSlope->Draw("PE1same");
+	  fit->Draw("same");
+	  label->Draw("same");
+	  out_->logx();
+	  out_->saveCurrentPad(histFileName("Slope",etaBin,sampleLabel,fitResType));
+
+	  delete gSlope;
+	  delete fit;
+	  delete hFrame;
+	  delete label;
+	} // End of loop over SampleLabels
+      } // End of loop over FitResultTypes
+    } // End of loop over eta bins
+
+
+    if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotSlopes(): Leaving" << std::endl;
   }
 
 

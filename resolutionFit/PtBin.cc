@@ -87,6 +87,20 @@ namespace resolutionFit{
 
 
   // -------------------------------------------------------------------------------------
+  bool PtBin::setKSoftFit(const SampleLabel &label, FitResult::Type type, const TF1* fit) {
+    bool result = true;
+    SampleIt it = samples_.find(label);
+    if( it != samples_.end() ) {
+      result = it->second->setKSoftFit(type,fit);
+    } else {
+      result = false;
+    }
+
+    return result;
+  }
+
+
+  // -------------------------------------------------------------------------------------
   TString PtBin::toTString() const {
     TString str = "(Eta ";
     str += etaBin(); 

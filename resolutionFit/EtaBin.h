@@ -1,4 +1,4 @@
-// $Id: EtaBin.h,v 1.6 2011/02/28 10:53:15 mschrode Exp $
+// $Id: EtaBin.h,v 1.7 2011/03/01 16:52:41 mschrode Exp $
 
 #ifndef ETA_BIN_H
 #define ETA_BIN_H
@@ -50,6 +50,10 @@ namespace resolutionFit {
 
     double meanPt(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
     double meanPtStatUncert(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
+    double fittedValue(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx, unsigned int ptSoftIdx) const;
+    double fittedStatUncert(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx, unsigned int ptSoftIdx) const;
+    TGraphAsymmErrors* kSoftSlope(const SampleLabel &label, FitResult::Type type) const;
+    TF1* kSoftFit(const SampleLabel &label, FitResult::Type type, const TString &name) const;
     double extrapolatedValue(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
     double extrapolatedStatUncert(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
     double extrapolatedSystUncert(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx) const;
@@ -127,6 +131,7 @@ namespace resolutionFit {
     double kValTotalUp_; 
 
     SystematicUncertainty* findSystematicUncertainty(const SampleLabel &label, FitResult::Type type);
+    TF1* fitKSoftSlope(const TString &name, const SampleLabel &label, FitResult::Type type) const;
     ResolutionFunction* fitResolution(const TGraphAsymmErrors* g, ResolutionFunction::Type type) const;
   };
 

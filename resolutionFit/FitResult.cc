@@ -1,4 +1,4 @@
-// $Id: FitResult.cc,v 1.4 2011/02/25 19:50:21 mschrode Exp $
+// $Id: FitResult.cc,v 1.5 2011/02/28 10:53:15 mschrode Exp $
 
 #include "FitResult.h"
 
@@ -12,7 +12,7 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------------------------
   bool FitResult::validType(Type type) {
-    if( type != FullMaxLikeRel && type != FullMaxLikeAbs && type != PtAsym && type != PtGenAsym ) {
+    if( type != MaxLikeKSoftRel && type != FullMaxLikeRel && type != FullMaxLikeAbs && type != PtAsym && type != PtGenAsym ) {
       std::cerr << "ERROR in FitResult::validType(): Unknown type '" << type << "'" << std::endl;
       exit(1);
     }
@@ -25,7 +25,9 @@ namespace resolutionFit {
   FitResult* FitResult::createFitResult(Type type, const std::vector<Measurement*> &meas, unsigned int verbosity) {
     FitResult* fr = 0;
     if( validType(type) ) {
-      if( type == FullMaxLikeRel ) {
+      if( type == MaxLikeKSoftRel ) {
+	fr = new FitResultMaxLikeKSoftRel(meas,verbosity);
+      } else if( type == FullMaxLikeRel ) {
 	fr = new FitResultFullMaxLikeRel(meas,verbosity);
       } else if( type == FullMaxLikeAbs ) {
 	fr = new FitResultFullMaxLikeAbs(meas,verbosity);
@@ -48,7 +50,8 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------  
   TString FitResult::toString(FitResult::Type type) {
     TString str = "Undefined";
-    if( type == FullMaxLikeRel ) str = "FullMaxLikeRel";
+    if( type == MaxLikeKSoftRel ) str = "MaxLikeKSoftRel";
+    else if( type == FullMaxLikeRel ) str = "FullMaxLikeRel";
     else if( type == FullMaxLikeAbs ) str = "FullMaxLikeAbs";
     else if( type == SimpleMaxLike ) str = "SimpleMaxLike";
     else if( type == PtAsym ) str = "PtAsym";
@@ -60,16 +63,103 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------------------------  
   FitResult::FitResult(const Meas &meas, unsigned int verbosity)
-    : meas_(meas), verbosity_(verbosity) {
+    : meas_(meas), verbosity_(verbosity), workingPointBin_(3) {
 
     extrapolation_ = 0;
+    kSoftFit_ = 0;
   }
 
 
   // -------------------------------------------------------------------------------------  
   FitResult::~FitResult() {
     if( extrapolation_ ) delete extrapolation_;
+    if( kSoftFit_ ) delete kSoftFit_;
   }
+
+
+  // -------------------------------------------------------------------------------------  
+  double FitResult::kSoftSlope() const {
+    double yWP = value(workingPointBin_);
+    double yEx = extrapolatedValue_;
+    
+    return yWP != 0. ? yEx/yWP : 0.;
+  }
+
+
+  // -------------------------------------------------------------------------------------  
+  double FitResult::kSoftSlopeStatUncert() const {
+    double yWP = value(workingPointBin_);
+    double yEx = extrapolatedValue_;
+    double yWPErr = statUncert(workingPointBin_);
+    double yExErr = extrapolatedStatUncert_;
+    double err2 = 0.;
+    if( yWPErr > 0. && yExErr > 0. ) {
+      err2 = yExErr*yExErr/yWP/yWP;
+      err2 += yEx*yEx*yExErr*yExErr/yWP/yWP/yWP/yWP;
+    }
+
+    return sqrt(err2);
+  }
+
+
+  // -------------------------------------------------------------------------------------  
+  void FitResult::setKSoftFit(const TF1* fit) {
+    if( kSoftFit_ ) delete kSoftFit_;
+    TString name = extrapolation_->GetName();
+    name += "_KSoftFit";
+    kSoftFit_ = static_cast<TF1*>(fit->Clone(name));
+  }
+
+
+
+
+  // -------------------------------------------------------------------------------------  
+  FitResultMaxLikeKSoftRel::FitResultMaxLikeKSoftRel(const Meas meas, unsigned int verbosity)
+    : FitResult(meas,verbosity) { }
+
+
+  // -------------------------------------------------------------------------------------  
+  bool FitResultMaxLikeKSoftRel::init() {
+    values_.clear();
+    statUncerts_.clear();
+    ptSoft_.clear();
+
+    // Set ptSoft cut values and find smalles ptSoft for meanPt
+    double ptSoftSmall = 1000.;
+    for(MeasIt it = meas_.begin() ; it != meas_.end(); ++it) {
+      ptSoft_.push_back((*it)->ptSoft());
+      if( (*it)->ptSoft() < ptSoftSmall ) {
+	ptSoftSmall = (*it)->ptSoft();
+	
+	std::cout << "FitResultMaxLikeKSoftRel::storeResult(): TODO MeanPt from spectrum convoluted with extrapolated *sigma*!" << std::endl;
+	meanPt_ = (*it)->meanPdfPtTrue();
+	meanPtUncert_ = (*it)->meanPdfPtTrueUncert();
+      }
+    }
+
+    // Set fitted values
+    for(MeasIt it = meas_.begin(); it != meas_.end(); ++it) {
+      values_.push_back((*it)->fittedValue(0)/meanPt_);
+      statUncerts_.push_back((*it)->fittedUncert(0)/meanPt_);
+    }
+    
+    // Perform extrapolation
+    return extrapolate();
+  }
+
+
+  // -------------------------------------------------------------------------------------  
+  bool FitResultMaxLikeKSoftRel::extrapolate() {
+    if( verbosity_ == 1 ) std::cout << "Extrapolating" << std::endl;
+    Extrapolation extra(meanPt_);
+    bool result = extra(ptSoft_,values_,statUncerts_,extrapolation_,extrapolatedSystUncert_);
+    extrapolatedValue_ = extrapolation_->GetParameter(0);
+    extrapolatedStatUncert_ = extrapolation_->GetParError(0);
+
+    return result;
+  }
+
+
 
 
 

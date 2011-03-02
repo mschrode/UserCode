@@ -1,4 +1,4 @@
-// $Id: EtaBin.cc,v 1.5 2011/02/28 10:53:15 mschrode Exp $
+// $Id: EtaBin.cc,v 1.6 2011/03/01 16:52:41 mschrode Exp $
 
 #include <algorithm>
 #include <iostream>
@@ -79,13 +79,86 @@ namespace resolutionFit{
   // -------------------------------------------------------------------------------------
   bool EtaBin::addFitResult(FitResult::Type type) {
     bool result = true;
+
+    // Add FitResult object to samples and perform extrapolation
     for(std::vector<PtBin*>::iterator it = ptBins_.begin(); it != ptBins_.end(); ++it) {
       bool status = (*it)->addFitResult(type);
       result = result && status;
     }
+
+    // Perfom kSoft fits
+    std::map<SampleLabel,TF1*> kSoftFits;
+    for(SampleTypeIt sTIt = sampleTypesBegin(); sTIt != sampleTypesEnd(); ++sTIt) {
+      TString name = "kSoftFit"+sTIt->first;
+      kSoftFits[sTIt->first] = fitKSoftSlope(name,sTIt->first,type);
+    }
+
+    // Add kSoft fits to FitResult for each sample
+    for(std::map<SampleLabel,TF1*>::const_iterator sIt = kSoftFits.begin();
+	sIt != kSoftFits.end(); ++sIt) {
+      for(std::vector<PtBin*>::iterator ptIt = ptBins_.begin(); ptIt != ptBins_.end(); ++ptIt) {
+	bool status = (*ptIt)->setKSoftFit(sIt->first,type,sIt->second);
+	result = result && status;
+      }
+    }
+    for(std::map<SampleLabel,TF1*>::iterator it = kSoftFits.begin();
+	it != kSoftFits.end(); ++it) {
+      delete it->second;
+    }
+    
     fitResultTypes_.insert(type);
 
     return result;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  TF1* EtaBin::fitKSoftSlope(const TString &name, const SampleLabel &label, FitResult::Type type) const {
+    TGraphAsymmErrors* g = kSoftSlope(label,type);
+    double min = *std::min_element(g->GetX(),g->GetX()+g->GetN());
+    double max = *std::max_element(g->GetX(),g->GetX()+g->GetN());
+    TF1* fit = new TF1(name,"[0] + [1]*log(x/100.) + [2]*sq(log(x/100.)) + [3]*log(x/100.)*log(x/100.)*log(x/100.)",min,max);
+    fit->SetParameter(0,1.);
+    fit->SetParameter(1,0.);
+    fit->SetParameter(2,0.);
+    fit->SetParameter(3,0.);
+    fit->SetLineWidth(1);
+    g->Fit(fit,"0QR");
+    
+    return fit;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  TGraphAsymmErrors* EtaBin::kSoftSlope(const SampleLabel &label, FitResult::Type type) const {
+
+    std::vector<double> pt;
+    std::vector<double> ptErr;
+    std::vector<double> slope;
+    std::vector<double> slopeErr;
+    for(PtBinIt ptBinIt = ptBins_.begin(); ptBinIt != ptBins_.end(); ++ptBinIt) {
+      const Sample* sample = (*ptBinIt)->findSample(label);
+      pt.push_back(sample->meanPt(type));
+      ptErr.push_back(0.);
+      slope.push_back(sample->kSoftSlope(type));
+      slopeErr.push_back(sample->kSoftSlopeStatUncert(type));
+
+//       if( sample->type() == Sample::Data ) {
+//  	slopeErr.push_back(sample->kSoftSlopeStatUncert(type));
+//       } else {
+//  	slopeErr.push_back(0.02);
+//       }
+    }
+	  
+    return new TGraphAsymmErrors(pt.size(),&(pt.front()),&(slope.front()),
+				 &(ptErr.front()),&(ptErr.front()),
+				 &(slopeErr.front()),&(slopeErr.front()));
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  TF1* EtaBin::kSoftFit(const SampleLabel &label, FitResult::Type type, const TString &name) const {
+    return ptBins_.front()->findSample(label)->kSoftFit(type,name);
   }
 
 
@@ -454,6 +527,34 @@ namespace resolutionFit{
     for(PtBinIt ptBinIt = ptBins_.begin(); ptBinIt != ptBins_.end(); ++ptBinIt) {
       if( (*ptBinIt)->ptBin() == ptBinIdx ) {
 	result = (*ptBinIt)->findSample(label)->meanPtStatUncert(type);
+	break;
+      }
+    }
+
+    return result;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  double EtaBin::fittedValue(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx, unsigned int ptSoftIdx) const {
+    double result = 0.;
+    for(PtBinIt ptBinIt = ptBins_.begin(); ptBinIt != ptBins_.end(); ++ptBinIt) {
+      if( (*ptBinIt)->ptBin() == ptBinIdx ) {
+	result = (*ptBinIt)->findSample(label)->fittedValue(type,ptSoftIdx);
+	break;
+      }
+    }
+
+    return result;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  double EtaBin::fittedStatUncert(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx, unsigned int ptSoftIdx) const {
+    double result = 0.;
+    for(PtBinIt ptBinIt = ptBins_.begin(); ptBinIt != ptBins_.end(); ++ptBinIt) {
+      if( (*ptBinIt)->ptBin() == ptBinIdx ) {
+	result = (*ptBinIt)->findSample(label)->fittedUncert(type,ptSoftIdx);
 	break;
       }
     }

@@ -69,6 +69,27 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------
+  bool Sample::setKSoftFit(FitResult::Type type, const TF1* fit) {
+    bool result = true;
+    FitResult* fr = 0;
+    if( findFitResult(type,fr) ) fr->setKSoftFit(fit);
+    else result = false;
+
+    return result;
+  }
+
+
+  // -------------------------------------------------------------------
+  TF1* Sample::kSoftFit(FitResult::Type type, const TString &name) const {
+    TF1* result = 0;
+    FitResult* fr = 0;
+    if( findFitResult(type,fr) ) result = fr->kSoftFit(name);
+    
+    return result;
+  }
+
+
+  // -------------------------------------------------------------------
   void Sample::ptSoft(std::vector<double> &ptSoftVals) const {
     ptSoftVals.clear();
     for(unsigned int ptSoftBin = 0; ptSoftBin < nPtSoftBins(); ++ptSoftBin) {
@@ -123,6 +144,26 @@ namespace resolutionFit {
     double result = 0.;
     FitResult* fr = 0;
     if( findFitResult(type,fr) ) result = fr->statUncert(ptSoftBin);
+    
+    return result;
+  }
+
+
+  // -------------------------------------------------------------------
+  double Sample::kSoftSlope(FitResult::Type type) const {
+    double result = 0.;
+    FitResult* fr = 0;
+    if( findFitResult(type,fr) ) result = fr->kSoftSlope();
+    
+    return result;
+  }
+
+
+  // -------------------------------------------------------------------
+  double Sample::kSoftSlopeStatUncert(FitResult::Type type) const {
+    double result = 0.;
+    FitResult* fr = 0;
+    if( findFitResult(type,fr) ) result = fr->kSoftSlopeStatUncert();
     
     return result;
   }

@@ -1,4 +1,4 @@
-// $Id: Sample.h,v 1.7 2011/02/28 10:53:15 mschrode Exp $
+// $Id: Sample.h,v 1.8 2011/03/01 16:52:41 mschrode Exp $
 
 #ifndef SAMPLE_H
 #define SAMPLE_H
@@ -42,6 +42,7 @@ namespace resolutionFit {
     TH1* histPt3(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histPt3(); }
 
     bool addFitResult(FitResult::Type type);
+    bool setKSoftFit(FitResult::Type type, const TF1* fit);
     void addSystematicUncertainty(FitResult::Type type, const TString &label, double variedValue, double fraction);
     void addSystematicUncertainty(FitResult::Type type, const TString &label, double variedValueDown, double variedValueUp, double fraction);
 
@@ -53,6 +54,9 @@ namespace resolutionFit {
     void values(FitResult::Type type, std::vector<double> &val, std::vector<double> &uncert) const;
     double fittedValue(FitResult::Type type, unsigned int ptSoftBin) const;
     double fittedUncert(FitResult::Type type, unsigned int ptSoftBin) const;
+    double kSoftSlope(FitResult::Type type) const;
+    double kSoftSlopeStatUncert(FitResult::Type type) const;
+    TF1* kSoftFit(FitResult::Type type, const TString &name) const;
     TF1* extrapolationFunction(FitResult::Type type, const TString &name) const;
     double extrapolatedValue(FitResult::Type type) const;
     double extrapolatedStatUncert(FitResult::Type type) const;
