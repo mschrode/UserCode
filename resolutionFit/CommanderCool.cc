@@ -1,4 +1,4 @@
-// $Id: CommanderCool.cc,v 1.5 2011/02/28 10:53:15 mschrode Exp $
+// $Id: CommanderCool.cc,v 1.6 2011/03/01 16:52:41 mschrode Exp $
 
 #include <iomanip>
 #include <iostream>
@@ -245,13 +245,13 @@ namespace resolutionFit {
 	  for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
 	    const EtaBin* etaBin = *etaBinIt;
 
-	    std::cout << std::setprecision(0) << "   " << etaBin->toString() << ": \t";
-	    std::cout << std::setprecision(3) << etaBin->kValue(sLabel1,sLabel2,fitResType) << " +/- ";
-	    std::cout << std::setprecision(4) << etaBin->kStat(sLabel1,sLabel2,fitResType) << " -";
-	    std::cout << std::setprecision(4) << etaBin->kSystDown(sLabel1,sLabel2,fitResType) << " +";
-	    std::cout << std::setprecision(4) << etaBin->kSystUp(sLabel1,sLabel2,fitResType) << " (-";
+	    std::cout << std::setprecision(0) << "   " << etaBin->toString() << ": \t$ ";
+	    std::cout << std::setprecision(3) << etaBin->kValue(sLabel1,sLabel2,fitResType) << " \\pm ";
+	    std::cout << std::setprecision(4) << etaBin->kStat(sLabel1,sLabel2,fitResType) << " _{-";
+	    std::cout << std::setprecision(4) << etaBin->kSystDown(sLabel1,sLabel2,fitResType) << "} ^{+";
+	    std::cout << std::setprecision(4) << etaBin->kSystUp(sLabel1,sLabel2,fitResType) << "} (-";
 	    std::cout << std::setprecision(4) << etaBin->kTotalDown(sLabel1,sLabel2,fitResType) << " +";
-	    std::cout << std::setprecision(4) << etaBin->kTotalUp(sLabel1,sLabel2,fitResType) << ")" << std::endl;
+	    std::cout << std::setprecision(4) << etaBin->kTotalUp(sLabel1,sLabel2,fitResType) << ") $" << std::endl;
 
 	  }
 	  std::cout << "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n" << std::endl;
@@ -259,6 +259,72 @@ namespace resolutionFit {
       }
     }
   }
+
+
+  // For combination with photon+jet data
+  void CommanderCool::printRatioToCombinationFormat() const {
+    std::cout << "\n\n++++++ Combination Format +++++++++++++++++++++++++++++\n" << std::endl;
+
+    for(FitResultTypeIt rIt = etaBins_.front()->fitResultTypesBegin();
+	rIt != etaBins_.front()->fitResultTypesEnd(); ++rIt) {
+      FitResult::Type fitResType = *rIt;
+      
+      for(ComparedSamplesIt sCIt = etaBins_.front()->comparedSamplesBegin();
+	  sCIt != etaBins_.front()->comparedSamplesEnd(); ++sCIt) {
+	SampleLabel sLabel1 = (*sCIt)->label1();
+	SampleLabel sLabel2 = (*sCIt)->label2();
+
+	if( etaBins_.front()->hasKValue(sLabel1,sLabel2,fitResType) ) {
+	  for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
+	    const EtaBin* etaBin = *it;
+	    TGraphAsymmErrors* g = etaBin->ratioGraph(sLabel1,sLabel2,fitResType);
+
+	    std::cout << std::setprecision(1) << std::flush;
+	    std::cout << "\n\n#Eta " << par_->etaMin(etaBin->etaBin()) << " -- " << par_->etaMax(etaBin->etaBin()) << std::endl;
+	    std::cout << std::setprecision(5) << std::flush;
+	    std::cout << "MeanPt:" << std::flush;
+	    for(unsigned int i = 0; i < g->GetN(); ++i) {
+	      std::cout << "  " << g->GetX()[i] << std::flush;
+	    }
+	    std::cout << "\nMeanPtError:" << std::flush;
+	    for(unsigned int i = 0; i < g->GetN(); ++i) {
+	      std::cout << "  " << g->GetEXhigh()[i] << std::flush;
+	    }
+	    std::cout << "\nRatio:" << std::flush;
+	    for(unsigned int i = 0; i < g->GetN(); ++i) {
+	      std::cout << "  " << g->GetY()[i] << std::flush;
+	    }
+	    std::cout << "\nRatioError:" << std::flush;
+	    for(unsigned int i = 0; i < g->GetN(); ++i) {
+	      std::cout << "  " << g->GetEYhigh()[i] << std::flush;
+	    }
+	    
+	    const SystematicUncertainty* un = 0;
+	    if( etaBin->findSystematicUncertainty(sLabel2,fitResType,un) ) {
+	      std::cout << "\nSystJESUp:" << std::flush;
+	      for(unsigned int i = 0; i < g->GetN(); ++i) {
+		std::cout << "  " << g->GetY()[i]*un->relUncertUp(i) << std::flush;
+	      }
+	      std::cout << "\nSystJESDown:" << std::flush;
+	      for(unsigned int i = 0; i < g->GetN(); ++i) {
+		std::cout << "  " << g->GetY()[i]*un->relUncertDown(i) << std::flush;
+	      }
+	      std::cout << "\nSystOtherUp:" << std::flush;
+	      for(unsigned int i = 0; i < g->GetN(); ++i) {
+		std::cout << "  " << g->GetY()[i]*un->relUncertUp(i) << std::flush;
+	      }
+	      std::cout << "\nSystOtherDown:" << std::flush;
+	      for(unsigned int i = 0; i < g->GetN(); ++i) {
+		std::cout << "  " << g->GetY()[i]*un->relUncertDown(i) << std::flush;
+	      }
+	      std::cout << std::endl;
+	    }
+	  }
+	}
+      }
+    }
+  }
+
 
 
   bool CommanderCool::isConsistentInputName(const TString &name) const {

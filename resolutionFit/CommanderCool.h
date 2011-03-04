@@ -1,4 +1,4 @@
-// $Id: CommanderCool.h,v 1.6 2011/02/28 10:53:15 mschrode Exp $
+// $Id: CommanderCool.h,v 1.7 2011/03/01 16:52:41 mschrode Exp $
 
 #ifndef COMMANDER_COOL_H
 #define COMMANDER_COOL_H
@@ -40,6 +40,7 @@ namespace resolutionFit {
 
     void printSetup() const;
     void printResult() const;
+    void printRatioToCombinationFormat() const;
     void makeAllPlots() const { plotMaker_->makeAllPlots(); }
 
 

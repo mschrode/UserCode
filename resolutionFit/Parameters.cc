@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: Parameters.cc,v 1.28 2011/02/18 18:42:22 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -32,6 +32,8 @@ namespace resolutionFit {
   void Parameters::setJetProperties(JetProperties::Algo algo, JetProperties::Type type) {
     jetAlgo_ = algo;
     jetType_ = type;
+
+    id_ += "_"+JetProperties::toString(type);
   }
 
 

@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: Parameters.h,v 1.26 2011/02/18 18:42:22 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -70,14 +70,14 @@ namespace resolutionFit {
     TString ptSoftFileNameTag(unsigned int ptSoftBin) const { return "_PtSoft"+util::toTString(ptSoftBin+1); }
     TString fileNameEnding() const { return ".root"; }
 
-    OutputManager::Mode outMode() const { return OutputManager::PSAllInOne; }
-    //OutputManager::Mode outMode() const { return OutputManager::EPSSingleFiles; }
+    //OutputManager::Mode outMode() const { return OutputManager::PSAllInOne; }
+    OutputManager::Mode outMode() const { return OutputManager::EPSSingleFiles; }
     TString outFilePrefix() const { return id_; }
       
 
   private:
     const unsigned int verbosity_;
-    const TString id_;
+    TString id_;
 
     JetProperties::Algo jetAlgo_;
     JetProperties::Type jetType_;

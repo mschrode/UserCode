@@ -1,4 +1,4 @@
-// $Id: EtaBin.cc,v 1.7 2011/03/02 11:55:51 mschrode Exp $
+// $Id: EtaBin.cc,v 1.8 2011/03/02 16:06:01 mschrode Exp $
 
 #include <algorithm>
 #include <iostream>
@@ -651,7 +651,7 @@ namespace resolutionFit{
     for(PtBinIt ptBinIt = ptBinsBegin(); ptBinIt != ptBinsEnd(); ++ptBinIt) {
       unsigned int ptBinIdx = (*ptBinIt)->ptBin();
       pt.push_back(meanPt(label,type,ptBinIdx));
-      ptErr.push_back(0.);
+      ptErr.push_back(meanPtStatUncert(label,type,ptBinIdx));
       res.push_back(extrapolatedValue(label,type,ptBinIdx));
       resStatErr.push_back(extrapolatedStatUncert(label,type,ptBinIdx));
     }
@@ -672,7 +672,7 @@ namespace resolutionFit{
     for(PtBinIt ptBinIt = ptBinsBegin(); ptBinIt != ptBinsEnd(); ++ptBinIt) {
       unsigned int ptBinIdx = (*ptBinIt)->ptBin();
       pt.push_back(meanPt(label,type,ptBinIdx));
-      ptErr.push_back(0.);
+      ptErr.push_back(meanPtStatUncert(label,type,ptBinIdx));
       res.push_back(correctedResolution(label,type,ptBinIdx));
       resStatErr.push_back(correctedResolutionStatUncert(label,type,ptBinIdx));
     }

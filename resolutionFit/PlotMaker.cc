@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.9 2011/03/01 16:52:41 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.10 2011/03/02 11:55:51 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -34,7 +34,15 @@ namespace resolutionFit {
     // Style
     labelMk_ = new LabelMaker(par_);
 
-    title_ = "";
+    if( true ) {
+      gStyle->SetTitleAlign(13);
+      gStyle->SetTitleFontSize(0.1);
+      gStyle->SetTitleX(0.7);
+      gStyle->SetTitleH(0.038);
+      title_ = "CMS preliminary";
+    } else {
+      title_ = "";
+    }
   }
 
 
@@ -288,25 +296,26 @@ namespace resolutionFit {
 	      extra->SetLineStyle(2);
 	       
 	      // Create frame
-	      TH1* hFrame = new TH1D("PlotMaker::plotExtrapolation::hFrame","",
+	      TH1* hFrame = new TH1D("PlotMaker::plotExtrapolation::hFrame",title_,
 				     1000,0.,1.4*par_->ptSoftMax(par_->nPtSoftBins()-1));
 	      util::HistOps::setAxisTitles(hFrame,labelMk_->ptSoft(),"","#sigma / p^{ref}_{T}");
 	      hFrame->GetYaxis()->SetRangeUser(0.8*val.front(),1.3*val.back());
 	       
 	      // Labels
 	      TPaveText* label = labelMk_->ptBin(sample->label(),etaBin->etaBin(),ptBin->ptBin());
-	      TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,labelMk_->start(),label->GetSize());
-	      leg->AddEntry(gVals,labelMk_->label(*rIt),"P");
+	      TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,-labelMk_->start(),label->GetSize());
+	      //leg->AddEntry(gVals,labelMk_->label(*rIt),"P");
+	      leg->AddEntry(gVals,"Fitted Resolution","P");
 	      leg->AddEntry(fit,"Extrapolation","L");
 	       
 	      // Linear scale
 	      out_->nextMultiPad(sample->label()+": Extrapolation "+ptBin->toTString());
 	      hFrame->Draw();
+	      label->Draw("same");
+	      leg->Draw("same");
 	      gVals->Draw("PE1same");
 	      extra->Draw("same");
 	      fit->Draw("same");
-	      label->Draw("same");
-	      leg->Draw("same");
 	      out_->saveCurrentPad(histFileName("Extrapolation",ptBin,sample,*rIt));
 	       
 	      delete gVals;
@@ -352,7 +361,7 @@ namespace resolutionFit {
 
 	    // Labels
 	    TPaveText* label = labelMk_->ptBin(etaBin->etaBin(),ptBin->ptBin());
-	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,labelMk_->start(),label->GetSize());
+	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,-labelMk_->start(),label->GetSize());
 
 	    // Loop over to-be-compare Samples
 	    for(ComparedSamplesIt sCIt = etaBin->comparedSamplesBegin();
@@ -387,24 +396,24 @@ namespace resolutionFit {
 	      setStyle(sample2->type(),gVals2);
 
 	      // Extrapolation functions
-	      fit1 = sample1->extrapolationFunction(*rIt,"Extrapolation_"+((sLabel1).ReplaceAll(" ","_"))+"_FitRange");
+	      fit1 = sample1->extrapolationFunction(*rIt,"Extrapolation_"+sLabel1+"_FitRange");
 	      fit1->SetLineColor(gVals1->GetMarkerColor());
-	      extra1 = static_cast<TF1*>(fit1->Clone("Extrapolation_"+((sLabel1).ReplaceAll(" ","_"))+"_PlotRange"));
+	      extra1 = static_cast<TF1*>(fit1->Clone("Extrapolation_"+sLabel1+"_PlotRange"));
 	      extra1->SetRange(0.,1.4*ptSoftx.back());
 	      extra1->SetLineStyle(2);
 
-	      fit2 = sample2->extrapolationFunction(*rIt,"Extrapolation_"+((sLabel2).ReplaceAll(" ","_"))+"_FitRange");
+	      fit2 = sample2->extrapolationFunction(*rIt,"Extrapolation_"+sLabel2+"_FitRange");
 	      fit2->SetLineColor(gVals2->GetMarkerColor());
-	      extra2 = static_cast<TF1*>(fit2->Clone("Extrapolation_"+((sLabel2).ReplaceAll(" ","_"))+"_PlotRange"));
+	      extra2 = static_cast<TF1*>(fit2->Clone("Extrapolation_"+sLabel2+"_PlotRange"));
 	      extra2->SetRange(0.,1.4*ptSoftx.back());
 	      extra2->SetLineStyle(2);
 
-	      leg->AddEntry(gVals1,sLabel1,"P");
-	      leg->AddEntry(gVals2,sLabel2,"P");
+	      leg->AddEntry(gVals1,"Extrapolation ("+sLabel1+")","PL");
+	      leg->AddEntry(gVals2,"Extrapolation ("+sLabel2+")","PL");
 	    } // End of loop over Samples
 	   
 	      // Create frame
-	    TH1* hFrame = new TH1D("PlotMaker::plotExtrapolation::hFrame","",
+	    TH1* hFrame = new TH1D("PlotMaker::plotExtrapolation::hFrame",title_,
 				   1000,0.,1.4*par_->ptSoftMax(par_->nPtSoftBins()-1));
 	    util::HistOps::setAxisTitles(hFrame,labelMk_->ptSoft(),"","#sigma / p^{ref}_{T}");
 	    hFrame->GetYaxis()->SetRangeUser(0.8*std::min(gVals1->GetY()[0],gVals2->GetY()[1]),
@@ -413,14 +422,14 @@ namespace resolutionFit {
 	    // Linear scale
 	    out_->nextMultiPad("Sample comparison: Extrapolation "+ptBin->toTString());
 	    hFrame->Draw();
+	    label->Draw("same");
+	    leg->Draw("same");
 	    gVals1->Draw("PE1same");
 	    extra1->Draw("same");
 	    fit1->Draw("same");
 	    gVals2->Draw("PE1same");
 	    extra2->Draw("same");
 	    fit2->Draw("same");
-	    label->Draw("same");
-	    leg->Draw("same");
 	    out_->saveCurrentPad(histFileName("Extrapolation",ptBin,*rIt));
 	 
 	    delete gVals1;
@@ -505,7 +514,7 @@ namespace resolutionFit {
 	     
 	   
 		// Create frame
-	      TH1* hFrame = new TH1D("PlotMaker::plotExtrapolation::hFrame","",
+	      TH1* hFrame = new TH1D("PlotMaker::plotExtrapolation::hFrame",title_,
 				     1000,0.,1.4*par_->ptSoftMax(par_->nPtSoftBins()-1));
 	      util::HistOps::setAxisTitles(hFrame,labelMk_->ptSoft(),"","#sigma / p^{ref}_{T}");
 	      hFrame->GetYaxis()->SetRangeUser(0.8*valMin,1.3*valMax);
@@ -686,7 +695,7 @@ namespace resolutionFit {
 	extra->SetLineStyle(2);
 	       
 	// Create frame
-	TH1* hFrame = new TH1D("PlotMaker::plotParticleLevelImbalance::hFrame","",
+	TH1* hFrame = new TH1D("PlotMaker::plotParticleLevelImbalance::hFrame",title_,
 			       1000,0.,1.4*par_->ptSoftMax(par_->nPtSoftBins()-1));
 	util::HistOps::setAxisTitles(hFrame,"p^{gen}_{3,T} / #LTp^{gen}_{T}#GT","","#sqrt{2}#upoint#sigma(p^{gen} Asymmetry) / #LTp^{gen}_{T}#GT");
 	hFrame->GetYaxis()->SetRangeUser(0.,0.19);
@@ -801,6 +810,7 @@ namespace resolutionFit {
     // Loop over eta and pt bins
     for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
       const EtaBin* etaBin = *etaBinIt;
+
       out_->newPage("PtGenSpectrum");
 
       for(PtBinIt ptBinIt = (*etaBinIt)->ptBinsBegin(); ptBinIt != (*etaBinIt)->ptBinsEnd(); ++ptBinIt) {
@@ -827,7 +837,7 @@ namespace resolutionFit {
 	    TPaveText* label = labelMk_->ptSoftBin(sample->label(),etaBin->etaBin(),ptBin->ptBin(),ptSoftBinIdx);
 	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,labelMk_->start(),label->GetSize());
 	    leg->AddEntry(hPtGen,"Generated Spectrum","P");
-	    leg->AddEntry(hPdf,"Assumed Spectrum #tilde{f}","L");
+	    leg->AddEntry(hPdf,"Assumed Spectrum f","L");
 	    
 	    // Linear scale
 	    util::HistOps::setYRange(hPtGen,label->GetSize()+leg->GetNRows()+1);
@@ -990,7 +1000,8 @@ namespace resolutionFit {
 	  // Labels
 	  TPaveText* label = labelMk_->etaBin(sampleLabel,etaBin->etaBin());
 	  TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,labelMk_->start(),label->GetSize());
-	  leg->AddEntry(gRes,"Resolution ("+FitResult::toString(fitResType)+")","P");
+	  //	  leg->AddEntry(gRes,"Resolution ("+FitResult::toString(fitResType)+")","P");
+	  leg->AddEntry(gRes,"Resolution (Extrapolated)","P");
 	  leg->AddEntry(pli,"Particle Level Imbalance (PLI)","L");
 	  leg->AddEntry(gResCorr,"Resolution (PLI Corrected)","P");
 	  leg->AddEntry(mcTruth,"Resolution (MC Truth)","L");
@@ -1368,7 +1379,7 @@ namespace resolutionFit {
 	    leg->AddEntry(bands.front(),uncert->label(),"F");
 
 	    // Create frame
-	    TH1* hFrame = new TH1D("hFrame","",1000,xMinPt_,xMaxPt_);
+	    TH1* hFrame = new TH1D("hFrame",title_,1000,xMinPt_,xMaxPt_);
 	    hFrame->GetXaxis()->SetMoreLogLabels();
 	    hFrame->GetXaxis()->SetNoExponent();
 	    for(int bin = 1; bin <= hFrame->GetNbinsX(); ++bin) {
@@ -1409,20 +1420,20 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::histFileName(const TString &id, const EtaBin* etaBin, SampleLabel label1, SampleLabel label2, FitResult::Type type) const {
-    return par_->outFilePrefix()+"_"+id+"_"+(label1.ReplaceAll(" ","_"))+"_vs_"+(label2.ReplaceAll(" ","_"))+FitResult::toString(type)+"_EtaBin"+util::toTString(etaBin->etaBin())+".eps";
+    return par_->outFilePrefix()+"_"+id+"_"+(label1.ReplaceAll(" ",""))+"_vs_"+(label2.ReplaceAll(" ",""))+FitResult::toString(type)+"_EtaBin"+util::toTString(etaBin->etaBin())+".eps";
   }
 
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::histFileName(const TString &id, const EtaBin* etaBin, SampleLabel sampleLabel, FitResult::Type type) const {
-    return par_->outFilePrefix()+"_"+id+"_"+(sampleLabel.ReplaceAll(" ","_"))+"_"+FitResult::toString(type)+"_EtaBin"+util::toTString(etaBin->etaBin())+".eps";
+    return par_->outFilePrefix()+"_"+id+"_"+(sampleLabel.ReplaceAll(" ",""))+"_"+FitResult::toString(type)+"_EtaBin"+util::toTString(etaBin->etaBin())+".eps";
   }
 
 
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::histFileName(const TString &id, const PtBin* ptBin, const Sample* sample, FitResult::Type type) const {
-    return par_->outFilePrefix()+"_"+id+"_"+((sample->label()).ReplaceAll(" ","_"))+"_"+FitResult::toString(type)+"_EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+".eps";
+    return par_->outFilePrefix()+"_"+id+"_"+((sample->label()).ReplaceAll(" ",""))+"_"+FitResult::toString(type)+"_EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+".eps";
   }
 
 
@@ -1434,19 +1445,19 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::histFileName(const TString &id, const PtBin* ptBin, const Sample* sample) const {
-    return par_->outFilePrefix()+"_"+id+"_AllTypes_"+((sample->label()).ReplaceAll(" ","_"))+"_EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+".eps";
+    return par_->outFilePrefix()+"_"+id+"_AllTypes_"+((sample->label()).ReplaceAll(" ",""))+"_EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+".eps";
   }
 
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::histFileName(const TString &id, const PtBin* ptBin, const Sample* sample, unsigned int ptSoftBinIdx) const {
-    return par_->outFilePrefix()+"_"+id+"_"+((sample->label()).ReplaceAll(" ","_"))+"_EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+"_PtSoftBin"+util::toTString(ptSoftBinIdx)+".eps";
+    return par_->outFilePrefix()+"_"+id+"_"+((sample->label()).ReplaceAll(" ",""))+"_EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+"_PtSoftBin"+util::toTString(ptSoftBinIdx)+".eps";
   }
 
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::histFileName(const TString &id, const PtBin* ptBin, SampleLabel label1, SampleLabel label2, FitResult::Type type, unsigned int ptSoftBinIdx) const {
-    return par_->outFilePrefix()+"_"+id+"_"+(label1.ReplaceAll(" ","_"))+"_vs_"+(label2.ReplaceAll(" ","_"))+"_"+FitResult::toString(type)+"_EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+"_PtSoftBin"+util::toTString(ptSoftBinIdx)+".eps";
+    return par_->outFilePrefix()+"_"+id+"_"+(label1.ReplaceAll(" ",""))+"_vs_"+(label2.ReplaceAll(" ",""))+"_"+FitResult::toString(type)+"_EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+"_PtSoftBin"+util::toTString(ptSoftBinIdx)+".eps";
   }
 
 
