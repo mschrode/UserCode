@@ -1,7 +1,8 @@
-// $Id: Measurement.cc,v 1.1 2011/02/15 18:22:25 mschrode Exp $
+// $Id: Measurement.cc,v 1.2 2011/02/28 10:53:15 mschrode Exp $
 
 #include "Measurement.h"
 
+#include <cmath>
 #include <iostream>
 
 #include "TFile.h"
@@ -125,7 +126,7 @@ namespace resolutionFit {
 	  h->SetDirectory(0);
 	  for(int i = 0; i < h->GetNbinsX(); i++) {
 	    values_.push_back(h->GetBinContent(1+i));
-	    statUncert_.push_back(h->GetBinError(1+i));
+	    statUncert_.push_back(sqrt(2.)*h->GetBinError(1+i)); // Correct for wrong factor 2 in likelihood for LVMINI
 	    if( verbosity_ == 2 ) {
 	      std::cout << "  Value " << i << ": " << values_.back() << std::flush;
 	      std::cout << "  Value: " << values_.back() << std::flush;
