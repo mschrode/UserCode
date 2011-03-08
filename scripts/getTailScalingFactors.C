@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.23 2011/02/25 10:07:35 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.24 2011/02/25 16:08:02 mschrode Exp $
 
 #define UTILS_AS_HEADER_FILE
 
@@ -38,7 +38,7 @@ const double PT3PLOTMAX = 0.29;
 const TString FASYM = "f_{asym}";
 const TString FASYMMC = "f^{mc}_{asym}";
 const TString FASYMDATA = "f^{data}_{asym}";
-const bool SHOW_HEADER = false;
+const bool SHOW_HEADER = true;
 const TString HEADER = SHOW_HEADER ? "CMS preliminary" : "";
 const TString LUMI_LABEL = "#sqrt{s} = 7 TeV,  L = 36 pb^{ -1}";
 
@@ -76,7 +76,7 @@ public:
 
   double coreScalingFactor() const { return coreScalingFactor_; }
   double sigma() const { return sig_; }
-  double sigmaSmeared() { return sigSmeared_; }
+  double sigmaSmeared() const { return sigSmeared_; }
 
   double fTailData() const { return fNData_; }
   double fTailDataErr() const { return fNDataErr_; }
@@ -157,7 +157,7 @@ public:
   double tailWindowEffMin() const { return tailWindowEffMin_; }
   double tailWindowEffMax() const { return tailWindowEffMax_; }
   double sigma(int i) const { return pt3Bins_.at(i)->sigma(); }
-  double sigmaSmeared(int i) { return pt3Bins_.at(i)->sigmaSmeared(); }
+  double sigmaSmeared(int i) const { return pt3Bins_.at(i)->sigmaSmeared(); }
 
   double fTailMCSmeared(int i) const { return pt3Bins_.at(i)->fTailMCSmeared(); }
   double fTailMCSmearedErr(int i) const { return pt3Bins_.at(i)->fTailMCSmearedErr(); }
@@ -404,17 +404,17 @@ void getTailScalingFactors() {
   for(unsigned int etaBin = 0; etaBin < nEtaBins; ++etaBin) {
 
     TH1* hPtAveMeanData = new TH1D("hPtAveMeanData_Eta"+util::toTString(etaBin),
-				   HEADER+";p^{ave}_{T} Bin Idx;<p^{ave}_{T}> (GeV)",
+				   HEADER+";p^{ave}_{T} Bin Idx;<p^{ave}_{T}> (GeV/c)",
 				   binAdm->nPtBins(etaBin),-0.5,binAdm->nPtBins(etaBin)-0.5);
     hPtAveMeanData->SetMarkerStyle(20);
 
     TH1* hDelta = new TH1D("hDelta_Eta"+util::toTString(etaBin),
-			   HEADER+";p^{ave}_{T} (GeV);#Delta = f^{Data}_{Asym}(0) - f^{MC}_{Asym}(0)",
+			   HEADER+";p^{ave}_{T} (GeV/c);#Delta = f^{Data}_{Asym}(0) - f^{MC}_{Asym}(0)",
 			   binAdm->nPtBins(etaBin),&(binAdm->ptBinEdges(etaBin).front()));
     hDelta->SetMarkerStyle(20);
 
     TH1* hScale = new TH1D("hScale_Eta"+util::toTString(etaBin),
-			   HEADER+";p^{ave}_{T} (GeV);(f^{Data}_{Asym}(0) - f^{MC}_{Asym}(0)) / f^{MC}_{Asym}(0)",
+			   HEADER+";p^{ave}_{T} (GeV/c);(f^{Data}_{Asym}(0) - f^{MC}_{Asym}(0)) / f^{MC}_{Asym}(0)",
 			   binAdm->nPtBins(etaBin),&(binAdm->ptBinEdges(etaBin).front()));
     hScale->SetMarkerStyle(20);
 
@@ -553,7 +553,7 @@ EtaPtBin::EtaPtBin(unsigned int etaBin, unsigned int ptBin, double nSigCore, dou
   binLabel_->AddText(LUMI_LABEL);
   binLabel_->AddText(jetLabel_);
   binLabel_->AddText(util::toTString(binAdm_->etaMin(etaBin_))+" < |#eta| < "+util::toTString(binAdm_->etaMax(etaBin_)));
-  binLabel_->AddText(util::toTString(binAdm_->ptMin(etaBin_,ptBin_))+" < p^{ave}_{T} < "+util::toTString(binAdm_->ptMax(etaBin_,ptBin_))+" GeV");
+  binLabel_->AddText(util::toTString(binAdm_->ptMin(etaBin_,ptBin_))+" < p^{ave}_{T} < "+util::toTString(binAdm_->ptMax(etaBin_,ptBin_))+" GeV/c");
 }
 
 
@@ -643,7 +643,7 @@ void EtaPtBin::plotExtrapolation(const TString &outNameId) const {
   leg->AddEntry(fExData_,"Extrapolation Data","L");
   leg->AddEntry(gFTailMC_,"Asymmetry MC","P");
   leg->AddEntry(fExMC_,"Extrapolation MC","L");
-  leg->AddEntry(gFTailMCGauss_,"Gaussian","P");
+  leg->AddEntry(gFTailMCGauss_,"Asymmetry Gauss","P");
 
   can->cd();
   hFrame->Draw();
@@ -927,7 +927,7 @@ void EtaPtBin::extrapolate(double minPt3Data, bool fixDataShape, bool useExtrapo
 					 &(pt3e.front()),&(pt3e.front()),
 					 &(ne.front()),&(ne.front()));
   gFTailMCGauss_->SetMarkerStyle(27);
-  gFTailMCGauss_->SetMarkerColor(kGreen);
+  gFTailMCGauss_->SetMarkerColor(8);
   gFTailMCGauss_->SetLineColor(gFTailMCGauss_->GetMarkerColor());
 
 
@@ -1323,7 +1323,7 @@ void Pt3Bin::initBinLabel(const sampleTools::BinningAdmin* adm, const TString &j
   binLabel_->AddText(LUMI_LABEL);
   binLabel_->AddText(jetLabel);
   binLabel_->AddText(util::toTString(adm->etaMin(etaBin_))+" < |#eta| < "+util::toTString(adm->etaMax(etaBin_)));
-  binLabel_->AddText(util::toTString(adm->ptMin(etaBin_,ptBin_))+" < p^{ave}_{T} < "+util::toTString(adm->ptMax(etaBin_,ptBin_))+" GeV");
+  binLabel_->AddText(util::toTString(adm->ptMin(etaBin_,ptBin_))+" < p^{ave}_{T} < "+util::toTString(adm->ptMax(etaBin_,ptBin_))+" GeV/c");
   if( !isMCTruth ) binLabel_->AddText(util::toTString(adm->ptSoftMin(pt3Bin_))+" < p^{rel}_{T,3} < "+util::toTString(adm->ptSoftMax(pt3Bin_)));
 }
 
@@ -1543,22 +1543,36 @@ void Pt3Bin::plotAsymmetryDataMCSmeared(const TString &outNameId, double nSigTai
   arr->SetLineColor(kRed);
   arr->SetArrowSize(0.05);
   arr->SetAngle(30);
+
+  // Gaussian contribution
+  TF1* gauss = new TF1("gauss","gaus",0.,1.);
+  gauss->SetParameter(0,1./sqrt(2.*M_PI)/sigmaSmeared());
+  gauss->SetParameter(1,0.);
+  gauss->SetParameter(2,sigmaSmeared());
+  gauss->SetLineWidth(2);
+  gauss->SetLineColor(8);
+  gauss->SetFillStyle(3004);
+  gauss->SetFillColor(gauss->GetLineColor());
+  gauss->SetRange(hAsymMCSmeared_->GetXaxis()->GetBinLowEdge(tailStartBin_),gauss->GetX(3E-5,0.,1.));
   
-  TLegend* legWin = util::LabelFactory::createLegendCol(3,LEG_WIDTH);
+  TLegend* legWin = util::LabelFactory::createLegendCol(4,LEG_WIDTH);
   legWin->AddEntry(hAsymData_,"Data","P");
   legWin->AddEntry(hAsymMCSmeared_,"Reweighted MC","F");
   if( nSigTailEnd < 50. ) legWin->AddEntry(win,util::toTString(nSigTailStart)+" - "+util::toTString(nSigTailEnd)+" #sigma Window","F");
   else legWin->AddEntry(win,"> "+util::toTString(nSigTailStart)+" #sigma Window","L");
+  legWin->AddEntry(gauss,"Asymmetry Gauss","F");
 
   hAsymMCSmeared_->GetXaxis()->SetRangeUser(0.,1.);
   can->cd();
   hAsymMCSmeared_->Draw("HISTE");
+  gauss->Draw("same");
   hAsymData_->Draw("PE1same");
   win->Draw("same");
   arr->Draw();			// Arrow not drawn if option "same" called!
   binLabel_->Draw("same");
   legWin->Draw("same");
   can->SetLogy(1);
+  gPad->RedrawAxis();
   can->SaveAs(outNameId+"PtSmearAsymTail.eps","eps");
   delete legWin;
   delete arr;
@@ -2058,6 +2072,7 @@ void plotFinalResult(int windowIdx = 0) {
     // Read nominal scaling factors
     histName = "hScaleFrame_Eta"+util::toTString(etaBin);
     TH1* hScaleFrame = util::FileOps::readTH1(fileNamePrefix+"_PF.root",histName,histName);
+    hScaleFrame->GetXaxis()->SetTitle("p^{ave}_{T} (GeV/c)");
     histName = "hScale_Eta"+util::toTString(etaBin);
     TH1* hScaleNom = util::FileOps::readTH1(fileNamePrefix+"_PF.root",histName,histName+"_Nominal");
 
