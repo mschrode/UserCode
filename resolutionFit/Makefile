@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.16 2011/02/25 19:50:21 mschrode Exp $
+# $Id: Makefile,v 1.17 2011/03/01 16:52:42 mschrode Exp $
 
 ROOTLIBS   = $(shell root-config --libs) -lMinuit
 ROOTCFLAGS = $(shell root-config --cflags)
@@ -15,7 +15,7 @@ OBJ     = Binning.o BinningAdmin.o CommanderCool.o Extrapolation.o EtaBin.o FitR
 
 run: $(OBJ)	
 	g++ $(OBJ) $(LFLAG) -o run
-	@echo 'Done. Type "./run" to plot everything about jet energy resolutions.'
+	@echo -e 'Done.\n\n   Type "./run" and let Commander Cool plot everything about jet energy resolutions.\n\n'
 
 utils.o: $(UTIL) $(UTILDIR)/utils.cc
 	g++ $(CFLAG) -c  $(UTILDIR)/utils.cc

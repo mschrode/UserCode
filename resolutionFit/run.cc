@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.52 2011/03/02 16:06:01 mschrode Exp $
+// $Id: run.cc,v 1.53 2011/03/04 09:35:54 mschrode Exp $
 
 #include <iostream>
 
@@ -15,11 +15,14 @@ using namespace resolutionFit;
 
 int main(int argc, char *argv[]) {
 
-  util::StyleSettings::paper();
+  //util::StyleSettings::paper();
+  util::StyleSettings::presentationNoTitle();
+  gStyle->SetPadTopMargin(0.06);
+  gStyle->SetPadRightMargin(0.05);
   gErrorIgnoreLevel = 1001;        // Do not print ROOT message if eps file has been created
 
   Parameters* par = new Parameters("Res_Nov4","config/BinningAdminPt3.cfg",0);
-  par->setJetProperties(JetProperties::AK5,JetProperties::PF);
+  par->setJetProperties(JetProperties::AK5,JetProperties::Calo);
 
   TString pathToFitResults = "~/results/ResolutionFit/Pt3Cuts/";
   //TString pathToFitResults = "~/results/ResolutionFit/BinsHauke/";
@@ -57,23 +60,21 @@ int main(int argc, char *argv[]) {
 //    cmd->addMCSample("PYTHIA MC",pathToFitResults+"ResFitThres_BarrelHauke_"+jetTypeStr+"_MCFall10");
 //    cmd->addDataSample("Data",pathToFitResults+"ResFitThres_BarrelHauke_"+jetTypeStr+"_Data");
 
-
-//    cmd->addMCSample("PYTHIA MC","~/results/ResolutionFit/Note/ResFitThres_"+jetTypeStr+"_MCFall10");
-//    cmd->addDataSample("Data","~/results/ResolutionFit/Note/ResFitThres_"+jetTypeStr+"_Data");
-
-//    cmd->addMCSample("PYTHIA MC JES-","~/results/ResolutionFit/Note/ResFitThres_"+jetTypeStr+"_MCFall10_JESDown5");
-//    cmd->addMCSample("PYTHIA MC JES+","~/results/ResolutionFit/Note/ResFitThres_"+jetTypeStr+"_MCFall10_JESUp5");
-//    cmd->addMCSample("PYTHIA MC Spec-","~/results/ResolutionFit/Note/ResFitThres_"+jetTypeStr+"_MCFall10_SpectrumDown");
-//    cmd->addMCSample("PYTHIA MC Spec+","~/results/ResolutionFit/Note/ResFitThres_"+jetTypeStr+"_MCFall10_SpectrumUp");
-
    cmd->addFitResult(nominalFitResType);
 
    // Systematic uncertainties
-   cmd->addUncertaintyFromVariedSample("JEC",1.,"PYTHIA MC",nominalFitResType,"JES Down","JES Up",14);
-   //cmd->addMCClosureUncertainty("PYTHIA MC",nominalFitResType,38);
-   cmd->addExtrapolationUncertainty("PYTHIA MC",nominalFitResType,7);
-   cmd->addUncertaintyFromVariedSample("Spectrum",1.,"PYTHIA MC",nominalFitResType,"Spec Down","Spec Up",46);
-   cmd->addPLIUncertainty("PYTHIA MC",nominalFitResType,8);
+   if( par->jetType() == JetProperties::Calo ) {
+     cmd->addUncertaintyFromVariedSample("Jet Energy Scale",1.,"PYTHIA MC",nominalFitResType,"JES Down","JES Up",14);
+     //cmd->addMCClosureUncertainty("PYTHIA MC",nominalFitResType,38);
+     cmd->addExtrapolationUncertainty("PYTHIA MC",nominalFitResType,7);
+     cmd->addUncertaintyFromVariedSample("Spectrum",1.,"PYTHIA MC",nominalFitResType,"Spec Down","Spec Up",46);
+     cmd->addPLIUncertainty("PYTHIA MC",nominalFitResType,8);
+   } else {
+     cmd->addExtrapolationUncertainty("PYTHIA MC",nominalFitResType,7);
+     cmd->addPLIUncertainty("PYTHIA MC",nominalFitResType,8);
+     cmd->addUncertaintyFromVariedSample("Jet Energy Scale",1.,"PYTHIA MC",nominalFitResType,"JES Down","JES Up",14);
+     cmd->addUncertaintyFromVariedSample("Spectrum",1.,"PYTHIA MC",nominalFitResType,"Spec Down","Spec Up",46);
+   }
 
    // Samples to be compared
    cmd->compareSamples("Data","PYTHIA MC");
@@ -85,7 +86,7 @@ int main(int argc, char *argv[]) {
    cmd->printSetup();
    cmd->makeAllPlots();
    cmd->printResult();
-   cmd->printRatioToCombinationFormat();
+   //cmd->printRatioToCombinationFormat();
 
    delete cmd;
    delete par;

@@ -1,4 +1,4 @@
-// $Id: PlotMaker.h,v 1.9 2011/03/02 11:55:51 mschrode Exp $
+// $Id: PlotMaker.h,v 1.10 2011/03/02 16:06:01 mschrode Exp $
 
 #ifndef PLOT_MAKER_H
 #define PLOT_MAKER_H
@@ -23,10 +23,10 @@ namespace resolutionFit {
     ~PlotMaker();
 
     void makeAllPlots() const {
-      //plotAsymmetry();
+      //      plotAsymmetry();
       //plotPtSpectra();
       plotExtrapolation();
-      plotSlopes();
+      //plotSlopes();
       plotPtGenSpectra();
       //plotParticleLevelImbalance();
       plotResolution();
@@ -51,7 +51,7 @@ namespace resolutionFit {
     public:
       LabelMaker(const Parameters* par);
 
-      double start() const { return 0.75; }
+      double start() const;
 
       TPaveText* ptSoftBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int ptSoftBinIdx) const;
       TPaveText* ptSoftBin(unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int ptSoftBinIdx) const;
@@ -85,6 +85,8 @@ namespace resolutionFit {
     OutputManager* out_;
     LabelMaker* labelMk_;
     TString title_;
+    double markerSize_;
+    int lineWidth_;
 
     TString histFileName(const TString &id, const EtaBin* etaBin, SampleLabel label1, SampleLabel label2, FitResult::Type type) const;
     TString histFileName(const TString &id, const EtaBin* etaBin, SampleLabel sampleLabel, FitResult::Type type) const;

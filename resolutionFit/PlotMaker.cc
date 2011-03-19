@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.10 2011/03/02 11:55:51 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.11 2011/03/04 09:35:54 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -26,7 +26,10 @@ namespace resolutionFit {
   PlotMaker::PlotMaker(const Parameters *par, const EtaBins &etaBins)
     : par_(par), etaBins_(etaBins),
       xMinPt_(40.), xMaxPt_(1100.),
-      yMinExtraRes_(1E-3), yMaxExtraRes_(0.38), yMinResRatio_(0.74), yMaxResRatio_(1.26) {
+      yMinExtraRes_(1E-3),
+      yMaxExtraRes_(util::StyleSettings::style() == util::StyleSettings::Presentation ? 0.47 : 0.38),
+      yMinResRatio_(0.74),
+      yMaxResRatio_(1.26) {
 
     // Output manager
     out_ = OutputManager::createOutputManager(par_->outMode(),par_->outFilePrefix());
@@ -34,12 +37,27 @@ namespace resolutionFit {
     // Style
     labelMk_ = new LabelMaker(par_);
 
+    lineWidth_ = 1;
+    markerSize_ = 1.;
+    if( util::StyleSettings::style() == util::StyleSettings::Presentation ) {
+      lineWidth_ = 3;
+      markerSize_ = 1.5;
+    }
+      
+
     if( true ) {
-      gStyle->SetTitleAlign(13);
-      gStyle->SetTitleFontSize(0.1);
-      gStyle->SetTitleX(0.7);
-      gStyle->SetTitleH(0.038);
       title_ = "CMS preliminary";
+//       // For paper-style
+//       gStyle->SetTitleAlign(13);
+//       gStyle->SetTitleFontSize(0.1);
+//       gStyle->SetTitleX(0.7);
+//       gStyle->SetTitleH(0.038);
+
+      // For presentation-style
+      gStyle->SetTitleAlign(13);
+      gStyle->SetTitleFontSize(0.15);
+      gStyle->SetTitleX(0.67);
+      gStyle->SetTitleH(0.041);
     } else {
       title_ = "";
     }
@@ -91,7 +109,7 @@ namespace resolutionFit {
 	      
 	      // Asymmetry distribution
 	      TH1* hPtAsym = sample->histPtAsym(ptSoftBinIdx);
-	      util::HistOps::setAxisTitles(hPtAsym,"Asymmetry","","events");
+	      util::HistOps::setAxisTitles(hPtAsym,"Asymmetry","","events",true);
 	      hPtAsym->GetXaxis()->SetRangeUser(-asymMax,asymMax);
 	      setStyle(sample->type(),hPtAsym);
 	      
@@ -126,14 +144,15 @@ namespace resolutionFit {
 		leg->AddEntry(fits.at(i),labels.at(i),"L");
 	      }
 	    
-	      util::HistOps::setYRange(hPtAsym,label->GetSize()+leg->GetNRows()+1);
+	      //util::HistOps::setYRange(hPtAsym,label->GetSize()+leg->GetNRows()+1);
+	      util::HistOps::setYRange(hPtAsym,label->GetSize()+1);
 	      out_->nextMultiPad(sample->label()+": PtAsym "+ptBin->toTString()+", PtSoftBin "+util::toTString(ptSoftBinIdx));
 	      hPtAsym->Draw("PE1");
 	      for(unsigned int i = 0; i < fits.size(); ++i) {
-		fits.at(i)->Draw("same");
+		//fits.at(i)->Draw("same");
 	      }
 	      label->Draw("same");
-	      leg->Draw("same");
+	      //leg->Draw("same");
 	      out_->saveCurrentPad(histFileName("PtAsym",ptBin,sample,ptSoftBinIdx));
 
 	      delete hPtAsym;
@@ -146,6 +165,75 @@ namespace resolutionFit {
 	  } // End of loop over pt bins
 	} // End of loop over eta bins
       } // End of loop over ptSoft bins
+    } // End of loop over SampleLabels
+
+
+
+    // +++++ Asymmetry plots per bin for different pt3 ++++++++++++++++++++++++++++++
+
+    // Loop over SampleLabels
+    for(SampleTypeIt sTIt = etaBins_.front()->sampleTypesBegin();
+	sTIt != etaBins_.front()->sampleTypesEnd(); ++sTIt) {
+      
+      SampleLabel sampleLabel = sTIt->first;
+      if( par_->verbosity() > 1 ) std::cout << "  " << sampleLabel << std::endl;
+      
+      // Loop over eta bins
+      for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+	const EtaBin* etaBin = *etaBinIt;
+	
+	out_->newPage("Asymmetry");
+	
+	// Loop over pt bins
+	for(PtBinIt ptBinIt = etaBin->ptBinsBegin(); ptBinIt != etaBin->ptBinsEnd(); ++ptBinIt) {
+	  const PtBin* ptBin = *ptBinIt;
+	  if( par_->verbosity() > 1 ) std::cout << "    " << ptBin->toTString() << std::endl;
+	    
+	  // Loop over Samples and select current one (by sampleLabel)
+	  for(SampleIt sIt = ptBin->samplesBegin(); sIt != ptBin->samplesEnd(); ++sIt) {
+	    const Sample* sample = sIt->second;
+	    if( sample->label() != sampleLabel ) continue;
+
+	    // Asymmetry distribution for different ptSoft
+	    std::vector<TH1*> hPtAsyms;
+	    std::vector<TString> labels;
+	    unsigned int step = (par_->nPtSoftBins() > 3 ? 2 : 1);
+	    for(unsigned int ptSoftBinIdx = 0; ptSoftBinIdx < par_->nPtSoftBins(); ptSoftBinIdx += step) {
+	      hPtAsyms.push_back(sample->histPtAsym(ptSoftBinIdx));
+	      labels.push_back(labelMk_->ptSoftRange(ptSoftBinIdx));
+	    }
+
+	    // Labels and style
+	    TPaveText* label = labelMk_->ptBin(sample->label(),etaBin->etaBin(),ptBin->ptBin());
+	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(labels.size(),-0.35,label->GetSize());
+
+	    for(unsigned int i = 0; i < hPtAsyms.size(); ++i) {
+	      util::HistOps::setAxisTitles(hPtAsyms.at(i),"Asymmetry","","events",true);
+	      hPtAsyms.at(i)->GetXaxis()->SetRangeUser(-asymMax,asymMax);
+	      setStyle(sample->type(),hPtAsyms.at(i));
+	      hPtAsyms.at(i)->SetLineColor(util::StyleSettings::color(i));
+	      util::HistOps::setYRange(hPtAsyms.at(i),label->GetSize()+1);
+	      leg->AddEntry(hPtAsyms.at(i),labels.at(i),"L");
+	    }
+
+	    out_->nextMultiPad(sample->label()+": PtAsym "+ptBin->toTString());
+	    hPtAsyms.front()->Draw("HIST");
+	    for(unsigned int i = 1; i < hPtAsyms.size(); ++i) {
+	      hPtAsyms.at(i)->Draw("HISTsame");
+	    }
+	    label->Draw("same");
+	    leg->Draw("same");
+	    gPad->RedrawAxis();
+	    out_->saveCurrentPad(histFileName("PtAsym",ptBin,sample));
+	    
+	    for(unsigned int i = 0; i < hPtAsyms.size(); ++i) {
+	      delete hPtAsyms.at(i);
+	    }
+	    delete label;
+	    delete leg;
+	  } // End of loop over Samples
+	} // End of loop over pt bins
+      } // End of loop over eta bins
     } // End of loop over SampleLabels
 
 
@@ -291,6 +379,7 @@ namespace resolutionFit {
 	      // Extrapolation function
 	      TF1* fit = sample->extrapolationFunction(*rIt,"ExtrapolationForPlotFitRange");
 	      fit->SetLineColor(kRed);
+	      fit->SetLineWidth(lineWidth_);
 	      TF1* extra = static_cast<TF1*>(fit->Clone("ExtrapolationForPlotPlotRange"));
 	      extra->SetRange(0.,1.4*ptSoftx.back());
 	      extra->SetLineStyle(2);
@@ -299,7 +388,7 @@ namespace resolutionFit {
 	      TH1* hFrame = new TH1D("PlotMaker::plotExtrapolation::hFrame",title_,
 				     1000,0.,1.4*par_->ptSoftMax(par_->nPtSoftBins()-1));
 	      util::HistOps::setAxisTitles(hFrame,labelMk_->ptSoft(),"","#sigma / p^{ref}_{T}");
-	      hFrame->GetYaxis()->SetRangeUser(0.8*val.front(),1.3*val.back());
+	      hFrame->GetYaxis()->SetRangeUser(0.8*val.front(),1.5*val.back());
 	       
 	      // Labels
 	      TPaveText* label = labelMk_->ptBin(sample->label(),etaBin->etaBin(),ptBin->ptBin());
@@ -398,12 +487,14 @@ namespace resolutionFit {
 	      // Extrapolation functions
 	      fit1 = sample1->extrapolationFunction(*rIt,"Extrapolation_"+sLabel1+"_FitRange");
 	      fit1->SetLineColor(gVals1->GetMarkerColor());
+	      fit1->SetLineWidth(lineWidth_);
 	      extra1 = static_cast<TF1*>(fit1->Clone("Extrapolation_"+sLabel1+"_PlotRange"));
 	      extra1->SetRange(0.,1.4*ptSoftx.back());
 	      extra1->SetLineStyle(2);
 
 	      fit2 = sample2->extrapolationFunction(*rIt,"Extrapolation_"+sLabel2+"_FitRange");
 	      fit2->SetLineColor(gVals2->GetMarkerColor());
+	      fit2->SetLineWidth(lineWidth_);
 	      extra2 = static_cast<TF1*>(fit2->Clone("Extrapolation_"+sLabel2+"_PlotRange"));
 	      extra2->SetRange(0.,1.4*ptSoftx.back());
 	      extra2->SetLineStyle(2);
@@ -417,7 +508,7 @@ namespace resolutionFit {
 				   1000,0.,1.4*par_->ptSoftMax(par_->nPtSoftBins()-1));
 	    util::HistOps::setAxisTitles(hFrame,labelMk_->ptSoft(),"","#sigma / p^{ref}_{T}");
 	    hFrame->GetYaxis()->SetRangeUser(0.8*std::min(gVals1->GetY()[0],gVals2->GetY()[1]),
-					     1.3*std::max(gVals1->GetY()[gVals1->GetN()-1],gVals2->GetY()[gVals2->GetN()-1]));
+					     1.5*std::max(gVals1->GetY()[gVals1->GetN()-1],gVals2->GetY()[gVals2->GetN()-1]));
 	     
 	    // Linear scale
 	    out_->nextMultiPad("Sample comparison: Extrapolation "+ptBin->toTString());
@@ -832,6 +923,7 @@ namespace resolutionFit {
 
 	    TH1* hPdf = sample->histPdfPtTrue(ptSoftBinIdx);
 	    hPdf->SetLineColor(kRed);
+	    hPdf->SetLineWidth(lineWidth_);
 	    
 	    // Labels
 	    TPaveText* label = labelMk_->ptSoftBin(sample->label(),etaBin->etaBin(),ptBin->ptBin(),ptSoftBinIdx);
@@ -846,6 +938,7 @@ namespace resolutionFit {
 	    hPdf->Draw("Lsame");
 	    label->Draw("same");
 	    leg->Draw("same");
+	    gPad->RedrawAxis();
 	    out_->saveCurrentPad(histFileName("PtGen",ptBin,sample,ptSoftBinIdx));
 	    
 	    delete hPtGen;
@@ -977,6 +1070,7 @@ namespace resolutionFit {
 	  // MC truth resolution function
 	  TF1* mcTruth = etaBin->mcTruthResoFunc("MCTruthReso_Eta"+util::toTString(etaBinIdx));
 	  mcTruth->SetLineColor(kRed);
+	  mcTruth->SetLineWidth(lineWidth_);
 
 	  // Ratio of measurement and mc truth
 	  TGraphAsymmErrors* gRatio = util::HistOps::createRatioGraph(gResCorr,mcTruth);
@@ -986,6 +1080,7 @@ namespace resolutionFit {
 	  pli->SetRange(xMinPt_,xMaxPt_);
 	  pli->SetLineColor(kGreen);
 	  pli->SetLineStyle(2);
+	  pli->SetLineWidth(lineWidth_);
 
 	  // Create frames for main and ratio plots
 	  TH1* hFrameMain = out_->mainFrame(xMinPt_,xMaxPt_,yMinExtraRes_,yMaxExtraRes_,"#sigma / p^{ref}_{T}");
@@ -996,11 +1091,11 @@ namespace resolutionFit {
 	  TH1* hFrameRatio = out_->ratioFrame(hFrameMain,"p^{ref}_{T}","GeV",yMinResRatio_,yMaxResRatio_);
 	  hFrameRatio->GetXaxis()->SetMoreLogLabels();
 	  hFrameRatio->GetXaxis()->SetNoExponent();
+	  hFrameRatio->SetLineWidth(2);
 	     
 	  // Labels
 	  TPaveText* label = labelMk_->etaBin(sampleLabel,etaBin->etaBin());
 	  TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,labelMk_->start(),label->GetSize());
-	  //	  leg->AddEntry(gRes,"Resolution ("+FitResult::toString(fitResType)+")","P");
 	  leg->AddEntry(gRes,"Resolution (Extrapolated)","P");
 	  leg->AddEntry(pli,"Particle Level Imbalance (PLI)","L");
 	  leg->AddEntry(gResCorr,"Resolution (PLI Corrected)","P");
@@ -1015,7 +1110,7 @@ namespace resolutionFit {
 	  label->Draw("same");
 	  leg->Draw("same");
 	  out_->nextRatioPad();
-	  hFrameRatio->Draw();
+	  hFrameRatio->Draw("][");
 	  gRatio->Draw("PE1same");
 	  out_->logx();
 	  out_->saveCurrentPad(histFileName("Resolution",etaBin,sampleLabel,fitResType));
@@ -1070,6 +1165,7 @@ namespace resolutionFit {
 	  TH1* hFrameRatio = out_->ratioFrame(hFrameMain,"p^{ref}_{T}","GeV",yMinResRatio_,yMaxResRatio_);
 	  hFrameRatio->GetXaxis()->SetMoreLogLabels();
 	  hFrameRatio->GetXaxis()->SetNoExponent();
+	  hFrameRatio->SetLineWidth(lineWidth_);
 	     
 	  // Labels
 	  TPaveText* label = labelMk_->etaBin(etaBin->etaBin());
@@ -1084,7 +1180,7 @@ namespace resolutionFit {
 	  label->Draw("same");
 	  leg->Draw("same");
 	  out_->nextRatioPad();
-	  hFrameRatio->Draw();
+	  hFrameRatio->Draw("][");
 	  gRatio->Draw("PE1same");
 	  out_->logx();
 	  out_->saveCurrentPad(histFileName("Resolution",etaBin,sLabel1,sLabel2,fitResType));
@@ -1136,7 +1232,9 @@ namespace resolutionFit {
 	    TGraphAsymmErrors* gRatio = etaBin->ratioGraph(sLabel1,sLabel2,fitResType);
 	    setStyle(etaBin->sampleType(sLabel1),gRatio);
 	    TF1* kValueLine = etaBin->kValueLine(sLabel1,sLabel2,fitResType,"kValueLine",xMinPt_,xMaxPt_);
+	    kValueLine->SetLineWidth(lineWidth_);
 	    TGraphAsymmErrors* kStatBand = etaBin->kValueStatBand(sLabel1,sLabel2,fitResType,xMinPt_,xMaxPt_);
+	    kStatBand->SetLineWidth(lineWidth_);
 	    TGraphAsymmErrors* kSystBand = etaBin->kValueSystBand(sLabel1,sLabel2,fitResType,xMinPt_,xMaxPt_);
 	    
 	    // Create frame
@@ -1144,22 +1242,23 @@ namespace resolutionFit {
 	    hFrame->SetTitle(title_);
 	    hFrame->GetXaxis()->SetMoreLogLabels();
 	    hFrame->GetXaxis()->SetNoExponent();
+	    hFrame->SetLineWidth(lineWidth_);
 	     
 	    // Labels
 	    TPaveText* label = labelMk_->etaBin(etaBin->etaBin());
-	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,-labelMk_->start(),label->GetSize());
+	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,-std::min(0.8,labelMk_->start()),label->GetSize());
 	    leg->AddEntry(gRatio,"Measurement","P");
 	    leg->AddEntry(kValueLine,"Fit","L");
 	    leg->AddEntry(kStatBand,"Statistical Uncertainty","F");
 	    leg->AddEntry(kSystBand,"Systematic Uncertainty","F");
 
 	    out_->nextPad(sLabel1+"Over"+sLabel2+": Resolution "+etaBin->toString());
-	    hFrame->Draw();
+	    hFrame->Draw("][");
 	    kSystBand->Draw("E2same");
 	    kStatBand->Draw("E2same");
 	    kValueLine->Draw("same");
 	    gRatio->Draw("PE1same");
-	    hFrame->Draw("same");
+	    hFrame->Draw("][same");
 	    label->Draw("same");
 	    leg->Draw("same");
 	    out_->logx();
@@ -1203,10 +1302,12 @@ namespace resolutionFit {
 	    TF1* mcTruth = etaBin->mcTruthResoFunc("MCTruthResoFunc");
 	    mcTruth->SetLineColor(kRed);
 	    mcTruth->SetLineStyle(2);
+	    mcTruth->SetLineWidth(lineWidth_);
 
 	    // Scaled MC truth and uncertainty bands
 	    TF1* scaledMCT = etaBin->scaledMCTruthResoFunc("scaledMCTruthResoFunc");
 	    scaledMCT->SetLineColor(kRed);
+	    scaledMCT->SetLineWidth(lineWidth_);
 	    TGraphAsymmErrors* scaledMCTBand = etaBin->scaledMCTruthUncertaintyBand();
 	    TGraphAsymmErrors* scaledMCTRatioBand = etaBin->scaledMCTruthRatioBand();
 
@@ -1214,10 +1315,11 @@ namespace resolutionFit {
 	    TGraphAsymmErrors* biasCorrRes = etaBin->biasCorrectedResolution(sLabel1,sLabel2,fitResType);
 	    setStyle(etaBin->sampleType(sLabel1),biasCorrRes);
 	    TGraphAsymmErrors* biasCorrResRatio = util::HistOps::createRatioGraph(biasCorrRes,scaledMCT);
+	    setStyle(etaBin->sampleType(sLabel1),biasCorrResRatio);
 
 	    // Labels
 	    TPaveText* label = labelMk_->etaBin(etaBin->etaBin());
-	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,labelMk_->start(),label->GetSize());
+	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,std::min(0.85,labelMk_->start()),label->GetSize());
 	    leg->AddEntry(biasCorrRes,"Bias Corrected "+sLabel1,"P");
 	    leg->AddEntry(scaledMCT,"Scaled MC Truth","L");
 	    leg->AddEntry(scaledMCTBand,"Systematic Uncertainty","F");
@@ -1232,6 +1334,7 @@ namespace resolutionFit {
 	    TH1* hFrameRatio = out_->ratioFrame(hFrameMain,"p^{ref}_{T}","GeV",yMinResRatio_,yMaxResRatio_);
 	    hFrameRatio->GetXaxis()->SetMoreLogLabels();
 	    hFrameRatio->GetXaxis()->SetNoExponent();
+	    hFrameRatio->SetLineWidth(lineWidth_);
 	     
 	    out_->nextMainPad("Bias-corrected "+sLabel1+" vs scaled MC truth "+etaBin->toString());
 	    hFrameMain->Draw();
@@ -1243,9 +1346,9 @@ namespace resolutionFit {
 	    leg->Draw("same");
 	    gPad->RedrawAxis();
 	    out_->nextRatioPad();
-	    hFrameRatio->Draw();
+	    hFrameRatio->Draw("][");
 	    scaledMCTRatioBand->Draw("E3same");
-	    hFrameRatio->Draw("same");
+	    hFrameRatio->Draw("][same");
 	    biasCorrResRatio->Draw("PE1same");
 	    out_->logx();
 	    gPad->RedrawAxis();
@@ -1368,7 +1471,7 @@ namespace resolutionFit {
 	    // and total uncertainty
 	    std::vector<TGraphAsymmErrors*> bands;
 	    TPaveText* label = labelMk_->etaBin(sampleLabel,etaBin->etaBin());
-	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(uncert->nComponents()+1,-labelMk_->start(),label->GetSize());
+	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(uncert->nComponents()+1,-0.88*labelMk_->start(),label->GetSize());
 	    // Add total uncertainty
 	    bands.push_back(uncert->relUncertSteps());
 	    for(SystUncertIt it = uncert->componentsBegin(); it != uncert->componentsEnd(); ++it) {
@@ -1385,17 +1488,18 @@ namespace resolutionFit {
 	    for(int bin = 1; bin <= hFrame->GetNbinsX(); ++bin) {
 	      hFrame->SetBinContent(bin,0.);
 	    }
+	    hFrame->SetLineWidth(lineWidth_);
 	    hFrame->SetLineStyle(2);
-	    hFrame->GetYaxis()->SetRangeUser(-0.39,0.89);
+	    hFrame->GetYaxis()->SetRangeUser(-0.32,0.96);
 	    util::HistOps::setAxisTitles(hFrame,"p^{ref}_{T}","GeV","Relative Uncertainty");
 	     
 	    out_->nextPad(sampleLabel+": Systematic uncertainties "+etaBin->toString());
-	    hFrame->Draw();
+	    hFrame->Draw("][");
 	    for(std::vector<TGraphAsymmErrors*>::iterator it = bands.begin();
 		it != bands.end(); ++it) {
 	      (*it)->Draw("E2same");
 	    }
-	    hFrame->Draw("same");
+	    hFrame->Draw("][same");
 	    label->Draw("same");
 	    leg->Draw("same");
 	    out_->logx();
@@ -1445,7 +1549,7 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::histFileName(const TString &id, const PtBin* ptBin, const Sample* sample) const {
-    return par_->outFilePrefix()+"_"+id+"_AllTypes_"+((sample->label()).ReplaceAll(" ",""))+"_EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+".eps";
+    return par_->outFilePrefix()+"_"+id+"_"+((sample->label()).ReplaceAll(" ",""))+"_EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+".eps";
   }
 
 
@@ -1467,6 +1571,8 @@ namespace resolutionFit {
     h->SetMarkerColor(color(type));
     h->SetLineColor(h->GetMarkerColor());
     h->SetTitle(title_);
+    h->SetLineWidth(lineWidth_);
+    h->SetMarkerSize(markerSize_);
   }
 
 
@@ -1476,6 +1582,8 @@ namespace resolutionFit {
     g->SetMarkerColor(color(type));
     g->SetLineColor(g->GetMarkerColor());
     g->SetTitle(title_);
+    g->SetLineWidth(lineWidth_);
+    g->SetMarkerSize(markerSize_);
   }
 
 
@@ -1503,6 +1611,15 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   PlotMaker::LabelMaker::LabelMaker(const Parameters* par)
     : par_(par) {}
+
+
+  // -------------------------------------------------------------------------------------
+  double PlotMaker::LabelMaker::start() const {
+    double result = 0.75;
+    if( util::StyleSettings::style() == util::StyleSettings::Presentation ) result = 1.;
+
+    return result;
+  }
 
 
   // -------------------------------------------------------------------------------------

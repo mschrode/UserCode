@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: varyMCTruthSpectrum.C,v 1.4 2011/02/17 13:42:49 mschrode Exp $
 
 #define UTILS_AS_HEADER_FILE
 
@@ -80,7 +80,8 @@ void varyMCTruthSpectrum(const TString &name) {
 
 
 void plotSpectra() {
-  util::StyleSettings::paperNoTitle();
+  //util::StyleSettings::paperNoTitle();
+  util::StyleSettings::presentationNoTitle();
 
   std::vector<TString> fileNames;
   fileNames.push_back("~/Kalibri_new/input/Kalibri_DijetSpectrum_Pt0020-1500_Eta00-11.root");
@@ -96,8 +97,10 @@ void plotSpectra() {
   etaBins.push_back(2.3);
   etaBins.push_back(5.0);
 
-  TLegend* leg = util::LabelFactory::createLegendCol(hPtGen.size(),0.4);
-  for(unsigned int i = 0; i < hPtGen.size(); ++i) {
+  //  TLegend* leg = util::LabelFactory::createLegendCol(hPtGen.size(),0.4);
+  TLegend* leg = util::LabelFactory::createLegendColWithOffset(1,0.8,2);
+  //for(unsigned int i = 0; i < hPtGen.size(); ++i) {
+  for(unsigned int i = 0; i < 1; ++i) {
     hPtGen[i]->UseCurrentStyle();
     hPtGen[i]->SetTitle("");
     hPtGen[i]->GetXaxis()->SetRangeUser(20.,1500.);
@@ -105,22 +108,22 @@ void plotSpectra() {
     hPtGen[i]->GetXaxis()->SetTitle("p^{gen}_{T} (GeV)");
     hPtGen[i]->GetYaxis()->SetRangeUser(3E-14,8.);
     hPtGen[i]->GetYaxis()->SetTitle("Probability");
-    hPtGen[i]->SetLineWidth(1);
+    hPtGen[i]->SetLineWidth(3);
     hPtGen[i]->SetLineColor(util::StyleSettings::color(i));
 
     leg->AddEntry(hPtGen[i],util::toTString(etaBins.at(i))+" < |#eta| < "+util::toTString(etaBins.at(i+1)),"L");
   }
 
-  TPaveText* label = util::LabelFactory::createPaveText(2,-0.55);
-  label->AddText("CMS Simulation, #sqrt{s} = 7 TeV");
-  label->AddText("Anti-k_{T} (d=0.5) Gen Jets");
+  TPaveText* label = util::LabelFactory::createPaveText(2,0.8);
+  label->AddText("PYTHIA MC, #sqrt{s} = 7 TeV");
+  label->AddText("Anti-k_{T} (R=0.5) Gen Jets");
 
   TCanvas* can = new TCanvas("can","Dijet Spectrum",500,500);
   can->cd();
-  hPtGen.back()->Draw("HISTL");
-  for(int i = static_cast<int>(hPtGen.size()-2); i >= 0;  i--) {
-    hPtGen[i]->Draw("HISTLsame");
-  }
+  hPtGen.front()->Draw("HISTL");
+//   for(int i = static_cast<int>(hPtGen.size()-2); i >= 0;  i--) {
+//     hPtGen[i]->Draw("HISTLsame");
+//   }
   label->Draw("same");
   leg->Draw("same");
   can->SetLogy();

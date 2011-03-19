@@ -1,4 +1,4 @@
-// $Id: EtaBin.cc,v 1.8 2011/03/02 16:06:01 mschrode Exp $
+// $Id: EtaBin.cc,v 1.9 2011/03/04 09:35:54 mschrode Exp $
 
 #include <algorithm>
 #include <iostream>
@@ -397,7 +397,7 @@ namespace resolutionFit{
     double kStatErr = kStat(label1,label2,type);
     TF1* kValueLine = new TF1(name,"pol0",xMin,xMax);
     kValueLine->SetLineWidth(1);
-    kValueLine->SetLineColor(28);
+    kValueLine->SetLineColor(kBlack);
     kValueLine->SetParameter(0,kVal);
     kValueLine->SetParError(0,kStatErr);
 
@@ -413,7 +413,8 @@ namespace resolutionFit{
     double x = 0.5*(xMin+xMax);
     double xe = std::abs(x-xMin);
     TGraphAsymmErrors* kStatBand = new TGraphAsymmErrors(1,&x,&kVal,&xe,&xe,&kStatErr,&kStatErr);
-    kStatBand->SetFillStyle(3013);
+    //kStatBand->SetFillStyle(3013);
+    kStatBand->SetFillStyle(1001);
     kStatBand->SetFillColor(28);
     kStatBand->SetLineColor(kStatBand->GetFillColor());
 
