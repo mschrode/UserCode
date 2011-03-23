@@ -1,4 +1,5 @@
 #include <cassert>
+#include <cmath>
 #include <iostream>
 #include <vector>
 
@@ -38,35 +39,68 @@ void getCombinedRatio(unsigned int etaBin, double ptMin, double ptMax, TF1* &fRa
   std::vector<double> uncertTotalD;
   std::vector<double> uncertTotalU;
 
-  ratio.push_back(1.048);
-  ratio.push_back(1.058);
-  ratio.push_back(0.983);
-  ratio.push_back(1.110);
+//   // 2010-12-31
+//   ratio.push_back(1.048);
+//   ratio.push_back(1.058);
+//   ratio.push_back(0.983);
+//   ratio.push_back(1.110);
 
-  stat.push_back(0.012);
-  stat.push_back(0.021);
-  stat.push_back(0.032);
-  stat.push_back(0.043);
+//   stat.push_back(0.012);
+//   stat.push_back(0.021);
+//   stat.push_back(0.032);
+//   stat.push_back(0.043);
 
-  uncertOtherD.push_back(0.007);
-  uncertOtherD.push_back(0.006);
-  uncertOtherD.push_back(0.010);
-  uncertOtherD.push_back(0.016);  
+//   uncertOtherD.push_back(0.007);
+//   uncertOtherD.push_back(0.006);
+//   uncertOtherD.push_back(0.010);
+//   uncertOtherD.push_back(0.016);  
 			 
-  uncertOtherU.push_back(0.008);
-  uncertOtherU.push_back(0.007);
-  uncertOtherU.push_back(0.011);
-  uncertOtherU.push_back(0.018);
+//   uncertOtherU.push_back(0.008);
+//   uncertOtherU.push_back(0.007);
+//   uncertOtherU.push_back(0.011);
+//   uncertOtherU.push_back(0.018);
 
-  uncertJESD.push_back(0.035);
-  uncertJESD.push_back(0.040);
-  uncertJESD.push_back(0.050);
-  uncertJESD.push_back(0.088);
+//   uncertJESD.push_back(0.035);
+//   uncertJESD.push_back(0.040);
+//   uncertJESD.push_back(0.050);
+//   uncertJESD.push_back(0.088);
 
-  uncertJESU.push_back(0.031);
-  uncertJESU.push_back(0.033);
-  uncertJESU.push_back(0.052);
-  uncertJESU.push_back(0.064);
+//   uncertJESU.push_back(0.031);
+//   uncertJESU.push_back(0.033);
+//   uncertJESU.push_back(0.052);
+//   uncertJESU.push_back(0.064);
+
+
+  // 2011-03-03
+  ratio.push_back(1.06621);
+  ratio.push_back(1.16675);
+  ratio.push_back(1.08772);
+  ratio.push_back(1.17224);
+  
+  stat.push_back(0.00654984);
+  stat.push_back(0.0161794);
+  stat.push_back(0.0252353);
+  stat.push_back(0.038656);
+  
+  uncertOtherD.push_back(0.0291134);
+  uncertOtherD.push_back(0.029887);
+  uncertOtherD.push_back(0.045277);
+  uncertOtherD.push_back(0.0455763);  
+  
+  uncertOtherU.push_back(0.0275251);
+  uncertOtherU.push_back(0.024335);
+  uncertOtherU.push_back(0.0490106);
+  uncertOtherU.push_back(0.046487);
+  
+  uncertJESD.push_back(0.0210994);
+  uncertJESD.push_back(0.0191421);
+  uncertJESD.push_back(0.0234846);
+  uncertJESD.push_back(0.13327);
+  
+  uncertJESU.push_back(0.0217332);
+  uncertJESU.push_back(0.019671);
+  uncertJESU.push_back(0.0248322);
+  uncertJESU.push_back(0.112174);
 
   for(size_t i = 0; i < uncertJESU.size(); ++i) {
     uncertTotalD.push_back( sqrt( uncertJESD.at(i)*uncertJESD.at(i) + 
@@ -158,9 +192,9 @@ TGraphAsymmErrors* getPoints(const TString &fileName, const TString &mode, doubl
 
 
 
-void plotCombinedResolution(const TString fileNameBase = "results/GaussCoreCombined_2010-12-31") {
+void plotCombinedResolution(const TString fileNameBase = "results/GaussCoreCombined_2011-03-03") {
 
-  bool showTitle = true;
+  bool showTitle = false;
   TString title = "";
   if( showTitle ) {
     util::StyleSettings::paper();
@@ -191,7 +225,7 @@ void plotCombinedResolution(const TString fileNameBase = "results/GaussCoreCombi
   std::vector<double> systVsEtaD;
 
   TH1* hRatioVsEta = new TH1D("hRatioVsEta",title+";|#eta|;#sigma(Data) / #sigma(MC)",etaBins.size()-1,&(etaBins.front()));
-  hRatioVsEta->GetYaxis()->SetRangeUser(0.51,1.69);
+  hRatioVsEta->GetYaxis()->SetRangeUser(0.71,1.89);
   hRatioVsEta->SetMarkerStyle(20);
 
   for(unsigned int etaBin = 0; etaBin < 4; ++etaBin) {
