@@ -1,4 +1,4 @@
-// $Id$
+// $Id: EventCounter.cc,v 1.2 2011/02/02 18:37:12 mschrode Exp $
 
 #include "TH1D.h"
 #include "TString.h"
@@ -25,7 +25,7 @@ EventCounter::EventCounter(const edm::ParameterSet& iConfig) {
   TString name = iConfig.getParameter<std::string>("FilterName");
 
   edm::Service<TFileService> fs;
-  hNumEvts_ = fs->make<TH1D>("NumEvts"+name,"Numer of events after '"+name+"' filter",1,0.,1.);
+  hNumEvts_ = fs->make<TH1D>("NumEvts","# events passing '"+name+"' filter",1,0.,1.);
 }
 
 
