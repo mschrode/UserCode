@@ -14,7 +14,7 @@ public:
   CutFlow(const TString &fileName);
   ~CutFlow();
 
-  void print() const;
+  void print(bool latex = false, int prescision = 5) const;
 
   void addCut(const TString &moduleName, const TString &description);
 
@@ -114,23 +114,39 @@ void CutFlow::efficiencyBayes(double nTotal, double nPassed, double &eff, double
 
 
 
-void CutFlow::print() const {
+void CutFlow::print(bool latex, int prescision) const {
   int width = 15;
   for(std::vector<Cut*>::const_iterator it = cuts_.begin(); it != cuts_.end(); ++it) {
     while( (*it)->description().Length() > width ) width += 2;
   }
-  std::cout << "\n\n**********************************************************************************************\n";
-  std::cout << std::setw(width) << "Cut     ";
-  std::cout << " : ";
-  std::cout << std::setw(10) << "# passed ";
-  std::cout << " : ";
-  std::cout << std::setw(10) << "Eff   ";
-  std::cout << " : ";
-  std::cout << std::setw(34) << "Eff Bayes                \n";
-  std::cout << "----------------------------------------------------------------------------------------------\n";
+  if( latex ) {
+    std::cout << "\n\n\\begin{tabular}{rrrr}\n\\hline\n";
+    std::cout << std::setw(width) << "Cut     ";
+    std::cout << " & ";
+    std::cout << std::setw(10) << "$N(\\text{passed})$";
+    std::cout << " & ";
+    std::cout << std::setw(10) << "$\epsilon(\\text{binomial})$";
+    std::cout << " & ";
+    std::cout << std::setw(34) << "$\epsilon(\\text{bayesian})$ \\\\ \n";
+  } else {
+    std::cout << "\n\n**********************************************************************************************\n";
+    std::cout << std::setw(width) << "Cut     ";
+    std::cout << " : ";
+    std::cout << std::setw(10) << "# passed ";
+    std::cout << " : ";
+    std::cout << std::setw(10) << "Eff   ";
+    std::cout << " : ";
+    std::cout << std::setw(34) << "Eff Bayes                \n";
+    std::cout << "----------------------------------------------------------------------------------------------\n";
+  }
   for(size_t i = 0; i < cuts_.size(); ++i) {
-    std::cout << std::setw(width) << cuts_.at(i)->description() << " : ";
-    std::cout << std::setw(10) << cuts_.at(i)->nPassed() << " : ";
+    if( latex ) {
+      std::cout << std::setw(width) << "\\texttt{" << cuts_.at(i)->description() << "} & $";
+      std::cout << std::setw(10) << cuts_.at(i)->nPassed() << "$ & $";
+    } else {
+      std::cout << std::setw(width) << cuts_.at(i)->description() << " : ";
+      std::cout << std::setw(10) << cuts_.at(i)->nPassed() << " : ";
+    }
     if( i > 0 ) {
       double nTotal = cuts_.at(i-1)->nPassed();
       double nPassed = cuts_.at(i)->nPassed();
@@ -138,22 +154,30 @@ void CutFlow::print() const {
       double eff = 0.;
       double effErrDown = 0.;
       double effErrUp = 0.;
-      efficiencyBayes(nTotal,nPassed,eff,effErrDown,effErrUp);
-      
-      std::cout << std::setw(10) << efficiencySimple(nTotal,nPassed) << " : ";
-      std::cout << std::setw(10) << eff << " -" << effErrDown << " +" << effErrUp;
+      //efficiencyBayes(nTotal,nPassed,eff,effErrDown,effErrUp);
+
+      if( latex ) {
+	std::cout.precision(prescision);
+	std::cout << std::setw(10) << std::fixed <<  efficiencySimple(nTotal,nPassed) << "$ & $";
+	std::cout << std::setw(10) << eff << "^{+" << effErrUp << "_{-" << effErrDown << "}";
+      } else {
+	std::cout << std::setw(10) << efficiencySimple(nTotal,nPassed) << " : ";
+	std::cout << std::setw(10) << eff << " -" << effErrDown << " +" << effErrUp;
+      }
     }
+    if( latex ) std::cout << " \\\\";
     std::cout << std::endl;
   }
-  std::cout << "**********************************************************************************************\n\n\n";
+  if( !latex) std::cout << "**********************************************************************************************";
+  std::cout << "\n\n\n";
 }
 
 
 
 
-void CreateCutFlow() {
+void CreateCutFlow(const TString &fileName, bool latex = false, int precision = 5) {
 
-  CutFlow* cf = new CutFlow("EventCounters.root");
+  CutFlow* cf = new CutFlow(fileName);
   cf->addCut("EvtCntTotal","Total");
   cf->addCut("EvtCntHLT","HLT_DiJetAve trigger");
   cf->addCut("EvtCntTPBE","TP+BE filter");
@@ -169,7 +193,7 @@ void CreateCutFlow() {
   cf->addCut("EvtCntPFMuon","PF muon filter");
   cf->addCut("EvtCntPFElectron","PF electron filter");
 
-  cf->print();
+  cf->print(latex,precision);
 }
 
 
