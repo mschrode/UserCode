@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: computeTriggerEfficiencies.C,v 1.1 2010/11/03 15:10:46 mschrode Exp $
 
 #include <algorithm>
 #include <fstream>
@@ -14,6 +14,7 @@
 #include "TPaveText.h"
 #include "TString.h"
 
+#define UTILS_AS_HEADER_FILE
 #include "../util/utils.h"
 #include "../util/HistOps.h"
 #include "../util/LabelFactory.h"
@@ -51,6 +52,22 @@ TChain *createTChain(const TString &fileListName) {
 void computeTriggerEfficiences(const TString &fileNames, int runStart, int runEnd, double lumi, const TString &tagTrigger, const TString &probeTrigger, unsigned int nBins, double minPtAve, double maxPtAve, int nEvts = -1) {
   util::StyleSettings::presentationNoTitle();
 
+  TString jetType = "";
+  TString jetLabel = "";
+  if( fileNames.Contains("AK5") ) {
+    jetType += "AK5";
+    jetLabel += "AK5";
+  }
+  if( fileNames.Contains("PF") ) {
+    jetType += "PF";
+    jetLabel += " PF";
+  } else if( fileNames.Contains("Calo") ) {
+    jetType += "Calo";
+    jetLabel += " Calo";
+  }
+  jetLabel += " Jets";
+
+
   std::cout << "Creating histograms...\n";
   // Event counts
   TH1 *hFrameU = util::HistOps::createRatioFrame(minPtAve,maxPtAve,0.,1.4,"Uncorrected p^{ave}_{T} (GeV)",probeTrigger+" Efficiency");
@@ -58,9 +75,17 @@ void computeTriggerEfficiences(const TString &fileNames, int runStart, int runEn
   TH1 *hPassU = util::HistOps::createTH1D("hPassU",nBins,minPtAve,maxPtAve,"Uncorrected p^{ave}_{T}","GeV","events");
   hPassU->SetLineColor(kRed);
 
-  double minPtAveCorr = 1.5*minPtAve;
-  double maxPtAveCorr = 1.5*maxPtAve;
-  TH1 *hFrame = util::HistOps::createRatioFrame(minPtAveCorr,maxPtAveCorr,0.,1.4,"p^{ave}_{T} (GeV)",probeTrigger+" Efficiency");
+  double minPtAveCorr = minPtAve;
+  double maxPtAveCorr = maxPtAve;
+  if( jetType.Contains("Calo") ) {
+    minPtAveCorr *= 1.5;
+    maxPtAveCorr *= 1.5;
+  } else if( jetType.Contains("PF") ) {
+    minPtAveCorr *= 1.2;
+    maxPtAveCorr *= 1.2;
+  }
+
+  TH1 *hFrame = util::HistOps::createRatioFrame(minPtAveCorr,maxPtAveCorr,0.001,1.59,"p^{ave}_{T} (GeV)",probeTrigger+" Efficiency");
   TH1 *hTotal = util::HistOps::createTH1D("hTotal",nBins,minPtAveCorr,maxPtAveCorr,"p^{ave}_{T}","GeV","events");
   TH1 *hPass = util::HistOps::createTH1D("hPass",nBins,minPtAveCorr,maxPtAveCorr,"p^{ave}_{T}","GeV","events");
 
@@ -168,18 +193,25 @@ void computeTriggerEfficiences(const TString &fileNames, int runStart, int runEn
   std::cout << "\\texttt{" << probeTrigger << "} & " << ptAve99U << " & " << ptAve99 << " \\\\ \n";
 
   // Label efficiency
-  TPaveText *label = util::LabelFactory::createPaveText(2);
-  label->AddText("Runs "+util::toTString(runStart)+" - "+util::toTString(runEnd));
-  label->AddText("Tag trigger "+tagTrigger+" ("+util::toTString(lumi)+"/pb)");
+  TPaveText *label = util::LabelFactory::createPaveText(3);
+  label->AddText(jetLabel+", Runs "+util::toTString(runStart)+" - "+util::toTString(runEnd));
+  if( lumi > 0. ) label->AddText("Tag trigger "+tagTrigger+" ("+util::toTString(lumi)+"/pb)");
+  else label->AddText("Tag trigger "+tagTrigger);
 
-  TString outNamePrefix = "Efficiency_"+probeTrigger+"_"+util::toTString(runStart)+"-"+util::toTString(runEnd)+"_";
+  TPaveText *labelU = static_cast<TPaveText*>(label->Clone());
+  label->AddText("p^{ave}_{T}(#epsilon > 99%) = "+util::toTString(ptAve99)+" GeV");
+  label->GetLine(2)->SetTextColor(lPtAve99->GetLineColor());
+  labelU->AddText("p^{ave}_{T}(#epsilon > 99%) = "+util::toTString(ptAve99U)+" GeV");
+  labelU->GetLine(2)->SetTextColor(lPtAve99->GetLineColor());
+
+  TString outNamePrefix = "Efficiency_"+jetType+"_"+probeTrigger+"_"+util::toTString(runStart)+"-"+util::toTString(runEnd)+"_";
 
   TCanvas *canEffU = new TCanvas("canEffU","EffU",500,500);
   canEffU->cd();
   hFrameU->Draw();
   gEffU->Draw("PE1same");
   lPtAve99U->Draw("same");
-  label->Draw("same");
+  labelU->Draw("same");
   canEffU->SaveAs(outNamePrefix+"Uncorrected.eps","eps");
 
   TCanvas *canEff = new TCanvas("canEff","Eff",500,500);
