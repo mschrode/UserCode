@@ -1,4 +1,4 @@
-// $Id: Binning.h,v 1.3 2010/11/28 22:48:26 mschrode Exp $
+// $Id: Binning.h,v 1.4 2010/12/30 13:47:49 mschrode Exp $
 
 #ifndef BINNING_H
 #define BINNING_H
@@ -17,41 +17,41 @@ namespace sampleTools {
   class Binning {
 
   public:
-    inline Binning();
-    inline Binning(const std::vector<double> &etaBinEdges, const std::vector<double> &ptBinEdges);
-    inline Binning(const std::vector<double> &etaBinEdges, const std::vector< std::vector<double> > &ptBinEdges);
-    inline Binning(const TString &fileName);
+    Binning();
+    Binning(const std::vector<double> &etaBinEdges, const std::vector<double> &ptBinEdges);
+    Binning(const std::vector<double> &etaBinEdges, const std::vector< std::vector<double> > &ptBinEdges);
+    Binning(const TString &fileName);
     
-    inline unsigned int nEtaBins() const { return etaBinEdges_.size()-1; }
-    inline unsigned int nPtBins(unsigned int etaBin = 0) const { return ptBinEdges_.at(etaBin).size()-1; }
+    unsigned int nEtaBins() const { return etaBinEdges_.size()-1; }
+    unsigned int nPtBins(unsigned int etaBin = 0) const { return ptBinEdges_.at(etaBin).size()-1; }
 
-    inline double etaMin(unsigned int etaBin) const { return etaBinEdges_.at(etaBin); }
-    inline double etaMax(unsigned int etaBin) const { return etaBinEdges_.at(etaBin+1); }
-    inline double etaEdge(unsigned int etaBinEdge) const { return etaBinEdges_.at(etaBinEdge); }
-    inline double ptMin(unsigned int etaBin) const { return ptBinEdges_.at(etaBin).front(); }
-    inline double ptMax(unsigned int etaBin) const { return ptBinEdges_.at(etaBin).back(); }
-    inline double ptMin(unsigned int etaBin, unsigned int ptBin) const { return ptBinEdges_.at(etaBin).at(ptBin); }
-    inline double ptMax(unsigned int etaBin, unsigned int ptBin) const { return ptBinEdges_.at(etaBin).at(ptBin+1); }
-    inline double ptEdge(unsigned int etaBin, unsigned int ptBinEdge) const { return ptBinEdges_.at(etaBin).at(ptBinEdge); }
-    inline const std::vector<double> ptBinEdges(unsigned int etaBin) const { return ptBinEdges_.at(etaBin); }
-    inline const std::vector<double> ptBinEdgesInt(unsigned int etaBin) const;
+    double etaMin(unsigned int etaBin) const { return etaBinEdges_.at(etaBin); }
+    double etaMax(unsigned int etaBin) const { return etaBinEdges_.at(etaBin+1); }
+    double etaEdge(unsigned int etaBinEdge) const { return etaBinEdges_.at(etaBinEdge); }
+    double ptMin(unsigned int etaBin) const { return ptBinEdges_.at(etaBin).front(); }
+    double ptMax(unsigned int etaBin) const { return ptBinEdges_.at(etaBin).back(); }
+    double ptMin(unsigned int etaBin, unsigned int ptBin) const { return ptBinEdges_.at(etaBin).at(ptBin); }
+    double ptMax(unsigned int etaBin, unsigned int ptBin) const { return ptBinEdges_.at(etaBin).at(ptBin+1); }
+    double ptEdge(unsigned int etaBin, unsigned int ptBinEdge) const { return ptBinEdges_.at(etaBin).at(ptBinEdge); }
+    const std::vector<double> ptBinEdges(unsigned int etaBin) const { return ptBinEdges_.at(etaBin); }
+    const std::vector<double> ptBinEdgesInt(unsigned int etaBin) const;
     
-    inline bool findEtaBin(double eta, unsigned int &etaBin) const { return findBin(std::abs(eta),etaBinEdges_,etaBin); }
-    inline bool findSameEtaBin(double eta1, double eta2, unsigned int &etaBin) const;
-    inline bool findPtBin(double pt, unsigned int &ptBin) const { return findPtBin(pt,0,ptBin); }
-    inline bool findPtBin(double pt, unsigned int etaBin, unsigned int &ptBin) const { return findBin(pt,ptBinEdges_.at(etaBin),ptBin); }
-    inline bool findEtaPtBins(double eta, double pt, unsigned int &etaBin, unsigned int &ptBin) const;
+    bool findEtaBin(double eta, unsigned int &etaBin) const { return findBin(std::abs(eta),etaBinEdges_,etaBin); }
+    bool findSameEtaBin(double eta1, double eta2, unsigned int &etaBin) const;
+    bool findPtBin(double pt, unsigned int &ptBin) const { return findPtBin(pt,0,ptBin); }
+    bool findPtBin(double pt, unsigned int etaBin, unsigned int &ptBin) const { return findBin(pt,ptBinEdges_.at(etaBin),ptBin); }
+    bool findEtaPtBins(double eta, double pt, unsigned int &etaBin, unsigned int &ptBin) const;
 
-    inline void print() const;
-    inline void printLaTeX() const;
+    void print() const;
+    void printLaTeX() const;
 
 
   private:
     std::vector<double> etaBinEdges_;
     std::vector< std::vector<double> > ptBinEdges_;
     
-    inline bool findBin(double x, const std::vector<double> &binEdges, unsigned int &bin) const;
-    inline bool isSane() const;
+    bool findBin(double x, const std::vector<double> &binEdges, unsigned int &bin) const;
+    bool isSane() const;
   };
 
 
