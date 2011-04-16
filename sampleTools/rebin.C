@@ -1,4 +1,4 @@
-// $Id: rebin.C,v 1.1 2011/01/13 14:35:38 mschrode Exp $
+// $Id: rebin.C,v 1.2 2011/01/14 20:21:12 mschrode Exp $
 
 #include <cassert>
 #include <iostream>
@@ -62,7 +62,7 @@ void rebin(const TString &inFile, const TString &outFile, bool addToExistingFile
 
       std::cout << "ok" << std::endl;
     }
-    bool hasPtSoftBinning = !hist.Contains("MCTruth");
+    bool hasPtSoftBinning = true;//!hist.Contains("MCTruth");
     unsigned int nPtSoftBins = 1;
     if( hasPtSoftBinning ) nPtSoftBins = admin->nPtSoftBins();
     for(unsigned int ptSoftBin = 0; ptSoftBin < nPtSoftBins; ++ptSoftBin) {
@@ -76,8 +76,9 @@ void rebin(const TString &inFile, const TString &outFile, bool addToExistingFile
       // Read histograms from file
       TString histName = "";
       if( hist == "AbsAsym" ) histName = "hPtAbsAsym_Eta"+util::toTString(etaBin)+"_Pt";
-      else if( hist == "MCTruth" ) histName = "hRespMeasAbs_";
-      else if( hist == "SymMCTruth" ) histName = "hRespSymAbs_";
+      else if( hist == "MCTruth" ) histName = "hRespMeasAbs_Eta"+util::toTString(etaBin)+"_Pt";
+      else if( hist == "SymMCTruth" ) histName = "hRespSymAbs_Eta"+util::toTString(etaBin)+"_Pt";
+      else if( hist == "PtAve" ) histName = "hPtAveCombined_Eta"+util::toTString(etaBin)+"_Pt";
       else {
 	std::cout << "Unknown histogram name '" << hist << "'" << std::endl;
 	exit(0);
