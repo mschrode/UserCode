@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.29 2011/01/17 15:23:56 mschrode Exp $
+// $Id: HistOps.h,v 1.30 2011/02/17 13:27:45 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.29 2011/01/17 15:23:56 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.30 2011/02/17 13:27:45 mschrode Exp $
   class HistOps
   {
   public:
@@ -130,7 +130,7 @@ namespace util
       double labelHeight = util::LabelFactory::lineHeight()*(1+nLabelLines) + util::LabelFactory::labelTopOffset();
       if( logMin > 0. ) {
 	min = logMin;
-	max = pow((log10(max) - log10(min)*0.7*labelHeight/padHeight)/(1.-0.7*labelHeight/padHeight),10.);
+	max = pow((log10(max) - log10(min)*0.1*labelHeight/padHeight)/(1.-0.1*labelHeight/padHeight),10.);
       } else {
 	max = (max - min*labelHeight/padHeight)/(1.-labelHeight/padHeight);
       }

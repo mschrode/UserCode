@@ -1,11 +1,13 @@
-// $Id: FileOps.h,v 1.7 2010/12/27 13:31:17 mschrode Exp $
+// $Id: FileOps.h,v 1.8 2011/02/17 13:27:45 mschrode Exp $
 
 #ifndef FileOps_h
 #define FileOps_h
 
+#include <fstream>
 #include <iostream>
 #include <vector>
 
+#include "TChain.h"
 #include "TF1.h"
 #include "TFile.h"
 #include "TGraph.h"
@@ -28,6 +30,7 @@ namespace util
     static util::HistVec readTH1(const std::vector<TString> &fileNames, const TString &histName, const TString &newHistName = "");
     static util::HistVec readHistVec(const TString &fileName, const TString &histName, const TString &newHistName = "");
     static std::vector<TF1*> readTF1Vec(const TString &fileName, const TString &fName, const TString &newFName = "");
+    static TChain* createTChain(const TString &fileName, unsigned int verbosity = 1);
   };
 
 
@@ -163,6 +166,51 @@ namespace util
     if( v.size() == 0 ) std::cerr << "WARNING in util::FileOps::readTF1Vec(): No TF1 read!\n";
     
     return v;
+  }
+
+
+
+  //! Create TChain from input root files. The root
+  //! files are expected to contain a TTree "DiJetTree".
+  //! There are two possible input options:
+  //!
+  //! 1) 'fileName' specifies a single root file; it ends
+  //!    with '.root';
+  //! 2) 'fileName' contains a list of root file names.
+  // --------------------------------------------------
+  TChain* FileOps::createTChain(const TString &fileName, unsigned int verbosity) {
+    if( verbosity >= 1 ) std::cout << "Creating TChain" << std::endl;
+
+    TChain* chain = new TChain("DiJetTree"); 
+    
+    // Option 1: single root file
+    if( fileName.EndsWith(".root") ) {
+      if( verbosity >= 1 ) std::cout << "  Adding 'DiJetTree' from file '" << fileName << "'" << std::endl;
+      chain->Add(fileName);
+    }
+    // Option 2: list of root files
+    else {
+      if( verbosity >= 1 ) std::cout << "  Opening files from list '" << fileName << "'" << std::endl;
+      std::ifstream filelist;
+      filelist.open(fileName);
+      int nOpenedFiles = 0;
+      if( filelist.is_open() ) {
+	TString name = "";
+	while( !filelist.eof() ) {
+	  filelist >> name;
+	  if( filelist.eof() ) break;
+	  if( verbosity >= 1 ) std::cout << "  Adding 'DiJetTree' from file '" << name << "'" << std::endl;
+	  chain->Add(name);
+	  nOpenedFiles++;
+	}
+      } else {
+	std::cerr << "ERROR opening file '" << fileName << "'\n";
+	exit(1);
+      }
+      filelist.close();
+    }
+    
+    return chain;
   }
 }
 #endif
