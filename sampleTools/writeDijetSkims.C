@@ -1,4 +1,19 @@
-// $Id: writeDijetSkims.C,v 1.2 2010/11/27 23:56:12 mschrode Exp $
+// $Id: writeDijetSkims.C,v 1.3 2011/04/16 10:07:01 mschrode Exp $
+//
+// Skim Kalibri ntuples as input for resolution fit.
+// At this pre-selection
+//  1) data events are selected from fully efficient trigger
+//     paths;
+//  2) jets are ordered in L1*L2*L3 corrected pt. A new branch
+//     'L2L3CorrJetColJetIdx' is included into the ntuple, storing
+//     for each jet (ordered in raw pt) the index of this jet
+//     in the corresponding collection of corrected jet pt;
+//  3) dijet events are selected by requiring |DeltaPhi(1,2)| > 2.7;
+//  4) the leading two jets are required to pass the loose jet id.
+// Then, events are sorted into bins of eta and ptAve as specified
+// by an input config file. Per eta and ptAve bin, a separate file
+// is created.
+
 
 #include <algorithm>
 #include <cassert>
@@ -16,27 +31,8 @@
 #include "TVector2.h"
 
 #include "BinningAdmin.h"
-
-
-
-// --------------------------------------------------
-class JetIndex {
-public:
-  JetIndex(unsigned int idx, double pt) : idx_(idx), pt_(pt) {};
-  const unsigned int idx_;
-  const double pt_;
-  // For sorting jets in pt
-  static bool ptGreaterThan(const JetIndex *idx1, const JetIndex *idx2) {
-    // check for 0
-    if(idx1 == 0) {
-      return idx2 != 0;
-    } else if (idx2 == 0) {
-      return false;
-    } else {
-      return idx1->pt_ > idx2->pt_;
-    }
-  }
-};
+#define UTILS_AS_HEADER_FILE
+#include "../util/utils.h"
 
 
 
@@ -74,18 +70,18 @@ void writeDijetSkims() {
   // ++++ Set parameters +++++++++++++++++++++++++++++++++++++++
 
   const int nEvts = -100;
-  const TString config = "input/BinningAdmin4.cfg";
-  const TString inFileListName = "input/Kalibri_MCSpring11_QCDFlatPythiaPU_AK5Calo";
-  const bool isData = false;
-  const unsigned int maxHltThres = 15;
+  const TString config = "BinningAdmin.cfg";
+  const TString inFileListName = "input/Analysis2011/Kalibri_Run2011A-PromptReco-v2_163337-163869_AK5PF";
+  const bool isData = true;
+  const unsigned int maxHltThres = 175;
   const double minDeltaPhi = 2.7;
 
 
 
-  // ++++ Checks and follow-up parameter +++++++++++++++++++++++
+  // ++++ Checks and follow-up parameters ++++++++++++++++++++++
 
   // Prepare name of output files  
-  TString outFilePrefix = "~/lustre/KalibriDiJetSkims_QCD_Pt_15to3000_TuneZ2_Flat_7TeV_pythia6-Spring11-PU_S1_START311/KalibriDiJetSkims";
+  TString outFilePrefix = "~/lustre/Analysis2011/KalibriSkims_Jet_Run2011A-PromptReco-v2_163337-163869_v2/KalibriSkim";
   if( inFileListName.Contains("Calo") ) outFilePrefix += "_Calo";
   else if( inFileListName.Contains("PF") ) outFilePrefix += "_PF";  
   else if( inFileListName.Contains("JPT") ) outFilePrefix += "_JPT";  
@@ -118,9 +114,6 @@ void writeDijetSkims() {
 
   // Open Kalibri ntuples
   TChain *oldChain = createTChain(inFileListName);
-
-  //TChain *oldChain = new TChain("DiJetTree");
-  //oldChain->Add("QCD_Pt_15to3000_TuneZ2_Flat_7TeV_pythia6job_0_ak5Calo.root");
   
   // Deactivate branches not needed
   oldChain->SetBranchStatus("Track*",0);
@@ -139,14 +132,18 @@ void writeDijetSkims() {
   float jetPt[maxNJet];
   float jetEta[maxNJet];
   float jetPhi[maxNJet];
+  float jetCorrL1[maxNJet];
   float jetCorrL2L3[maxNJet];
   bool jetID[maxNJet];
-  bool hltDiJetAve15U = false;
-  bool hltDiJetAve30U = false;
-  bool hltDiJetAve50U = false;
-  bool hltDiJetAve70U = false;
-  bool hltDiJetAve100U = false;
-  bool hltDiJetAve140U = false;
+  bool hlt30 = false;
+  bool hlt60 = false;
+  bool hlt80 = false;
+  bool hlt110 = false;
+  bool hlt150 = false;
+  bool hlt190 = false;
+  bool hlt240 = false;
+  bool hlt300 = false;
+  bool hlt370 = false;
 
   // Get other elements written to tree
   Float_t         JetEt[maxNJet];   //[NobjJet]
@@ -184,8 +181,8 @@ void writeDijetSkims() {
   Float_t         GenJetColInvE[maxNJet];   //[NobjGenJet]
   Float_t         GenJetColAuxE[maxNJet];   //[NobjGenJet]
   Int_t           GenJetColJetIdx[maxNJet];   //[NobjGenJet]
-  Int_t           VtxN;
-  Int_t           PUMCNumVtx;
+  Int_t           VtxN = 0;
+  Int_t           PUMCNumVtx = 0;
 
 
   // Set branch addresses
@@ -193,14 +190,20 @@ void writeDijetSkims() {
   oldChain->SetBranchAddress("JetPt",jetPt);
   oldChain->SetBranchAddress("JetEta",jetEta);
   oldChain->SetBranchAddress("JetPhi",jetPhi);
+  oldChain->SetBranchAddress("JetCorrL1",jetCorrL1);
+  oldChain->SetBranchAddress("JetCorrL2",JetCorrL2);
+  oldChain->SetBranchAddress("JetCorrL3",JetCorrL3);
   oldChain->SetBranchAddress("JetCorrL2L3",jetCorrL2L3);
   oldChain->SetBranchAddress("JetIDLoose",jetID);
-  oldChain->SetBranchAddress("HltDiJetAve15U",&hltDiJetAve15U);
-  oldChain->SetBranchAddress("HltDiJetAve30U",&hltDiJetAve30U);
-  oldChain->SetBranchAddress("HltDiJetAve50U",&hltDiJetAve50U);
-  oldChain->SetBranchAddress("HltDiJetAve70U",&hltDiJetAve70U);
-  oldChain->SetBranchAddress("HltDiJetAve100U",&hltDiJetAve100U);
-  oldChain->SetBranchAddress("HltDiJetAve140U",&hltDiJetAve140U);
+  oldChain->SetBranchAddress("HltDiJetAve30",&hlt30);
+  oldChain->SetBranchAddress("HltDiJetAve60",&hlt60);
+  oldChain->SetBranchAddress("HltDiJetAve80",&hlt80);
+  oldChain->SetBranchAddress("HltDiJetAve110",&hlt110);
+  oldChain->SetBranchAddress("HltDiJetAve150",&hlt150);
+  oldChain->SetBranchAddress("HltDiJetAve190",&hlt190);
+  oldChain->SetBranchAddress("HltDiJetAve240",&hlt240);
+  oldChain->SetBranchAddress("HltDiJetAve300",&hlt300);
+  oldChain->SetBranchAddress("HltDiJetAve370",&hlt370);
   oldChain->SetBranchAddress("JetEt", JetEt);
   oldChain->SetBranchAddress("JetE", JetE);
   oldChain->SetBranchAddress("JetN90Hits", JetN90Hits);
@@ -212,8 +215,6 @@ void writeDijetSkims() {
   oldChain->SetBranchAddress("JetEtWeightedSigmaPhi", JetEtWeightedSigmaPhi);
   oldChain->SetBranchAddress("JetEtWeightedSigmaEta", JetEtWeightedSigmaEta);
   oldChain->SetBranchAddress("JetCorrZSP", JetCorrZSP);
-  oldChain->SetBranchAddress("JetCorrL2", JetCorrL2);
-  oldChain->SetBranchAddress("JetCorrL3", JetCorrL3);
   oldChain->SetBranchAddress("JetCorrJPT", JetCorrJPT);
   oldChain->SetBranchAddress("JetCorrL2L3JPT", JetCorrL2L3JPT);
   oldChain->SetBranchAddress("JetCorrL4JW", JetCorrL4JW);
@@ -258,7 +259,7 @@ void writeDijetSkims() {
   }
 
   // Add branch with indices of jets ordered by
-  // L2L3 corrected pt to new tree
+  // corrected pt to new tree
   int corrJetIdx[maxNJet];
   for(int j = 0; j < maxNJet; ++j) {
     corrJetIdx[j] = -1;
@@ -266,11 +267,20 @@ void writeDijetSkims() {
   for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
     for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
       newTrees[etaBin][ptBin]->Branch("L2L3CorrJetColJetIdx",corrJetIdx,"L2L3CorrJetColJetIdx[NobjJet]/I");
+//       newTrees[etaBin][ptBin]->Branch("HltDiJetAve30",&hlt30,"HltDiJetAve30/O");
+//       newTrees[etaBin][ptBin]->Branch("HltDiJetAve60",&hlt60,"HltDiJetAve60/O");
+//       newTrees[etaBin][ptBin]->Branch("HltDiJetAve80",&hlt80,"HltDiJetAve80/O");
+//       newTrees[etaBin][ptBin]->Branch("HltDiJetAve110",&hlt110,"HltDiJetAve110/O");
+//       newTrees[etaBin][ptBin]->Branch("HltDiJetAve150",&hlt150,"HltDiJetAve150/O");
+//       newTrees[etaBin][ptBin]->Branch("HltDiJetAve190",&hlt190,"HltDiJetAve190/O");
+//       newTrees[etaBin][ptBin]->Branch("HltDiJetAve240",&hlt240,"HltDiJetAve240/O");
+//       newTrees[etaBin][ptBin]->Branch("HltDiJetAve300",&hlt300,"HltDiJetAve300/O");
+//       newTrees[etaBin][ptBin]->Branch("HltDiJetAve370",&hlt370,"HltDiJetAve370/O");
     }
   }
 
-  // Struct for jet ordering
-  std::vector<JetIndex*> jIdx(maxNJet);
+  // Container for jet ordering
+  util::JetIndexCol corrJets;
 
 
 
@@ -287,9 +297,6 @@ void writeDijetSkims() {
 
     oldChain->GetEntry(i);
 
-// //     std::cout << "WARNING: Redefining to gen-jet ordering!" << std::endl;
-    //nObjJet = NobjGenJet;
-
     if( nObjJet > maxNJet ) {
       std::cerr << "WARNING: nObjJet = " << nObjJet << " > " << maxNJet << ". Skipping event.\n";
       ++nMaxNJet;
@@ -303,61 +310,63 @@ void writeDijetSkims() {
 
     if( isData ) {
       // HLT cuts
-      if( maxHltThres == 15 && !(hltDiJetAve15U) ) {
+      if( maxHltThres == 30 && !(hlt30) ) {
 	++nHlt;
  	continue;
-      } else if( maxHltThres == 30 && !(hltDiJetAve15U || hltDiJetAve30U) ) {
+      } else if( maxHltThres == 60 && !(hlt30 || hlt60) ) {
 	++nHlt;
  	continue;
-      } else if( maxHltThres == 50 && !(hltDiJetAve15U || hltDiJetAve30U || hltDiJetAve50U) ) {
+      } else if( maxHltThres == 80 && !(hlt30 || hlt60 || hlt80) ) {
 	++nHlt;
  	continue;
-      } else if( maxHltThres == 70 && !(hltDiJetAve15U || hltDiJetAve30U || hltDiJetAve50U || hltDiJetAve70U) ) {
+      } else if( maxHltThres == 110 && !(hlt30 || hlt60 || hlt80 || hlt110) ) {
 	++nHlt;
  	continue;
-      } else if( maxHltThres == 100 && !(hltDiJetAve15U || hltDiJetAve30U || hltDiJetAve50U || hltDiJetAve70U || hltDiJetAve100U) ) {
+      } else if( maxHltThres == 150 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150) ) {
 	++nHlt;
  	continue;
-      } else if( maxHltThres == 140 && !(hltDiJetAve15U || hltDiJetAve30U || hltDiJetAve50U || hltDiJetAve70U || hltDiJetAve100U || hltDiJetAve140U) ) {
+      } else if( maxHltThres == 190 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150 || hlt190) ) {
+	++nHlt;
+ 	continue;
+      } else if( maxHltThres == 240 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150 || hlt190 || hlt240) ) {
+	++nHlt;
+ 	continue;
+      } else if( maxHltThres == 300 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150 || hlt190 || hlt240 || hlt300) ) {
+	++nHlt;
+ 	continue;
+      } else if( maxHltThres == 370 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150 || hlt190 || hlt240 || hlt300 || hlt370) ) {
 	++nHlt;
  	continue;
       }
     }
 
-    // Order L2L3 corrected jets
+    // Order corrected jets
+    corrJets.clear();
     for(int j = 0; j < nObjJet; ++j) {
-      // Vary JES
-      //jetCorrL2L3[j] = 0.95*jetCorrL2L3[j];
-      jIdx[j] = new JetIndex(j,jetPt[j]*jetCorrL2L3[j]);
+      corrJets.add(j,jetCorrL1[j]*jetCorrL2L3[j]*jetPt[j]);
     }
-    std::sort(jIdx.begin(),jIdx.begin()+nObjJet,JetIndex::ptGreaterThan);
+    corrJets.sort();
+
+    // Set branch corrected jet indices
     for(int j = 0; j < nObjJet; ++j) {
-      corrJetIdx[j] = jIdx[j]->idx_;
+      corrJetIdx[j] = corrJets(j);
     }
-    for(int j = 0; j < nObjJet; ++j) {
-      delete jIdx[j];
-    }
+
     
-//     // Order in ptGen
-//     for(int j = 0; j < NobjGenJet; ++j) {
-//       corrJetIdx[j] = GenJetColJetIdx[j];
-//     }
-    
-    if( std::abs(TVector2::Phi_mpi_pi(jetPhi[corrJetIdx[0]]-jetPhi[corrJetIdx[1]])) < minDeltaPhi ) {
+    // Dijet selection
+    if( std::abs(TVector2::Phi_mpi_pi(jetPhi[corrJets(0)]-jetPhi[corrJets(1)])) < minDeltaPhi ) {
       ++nDeltaPhi;
       continue;
     }
-  
-    if( !jetID[corrJetIdx[0]] || !jetID[corrJetIdx[1]] ) {
+    else if( !jetID[corrJets(0)] || !jetID[corrJets(1)] ) {
       ++nJetID;
       continue;
     }
 
     // Find eta and pt bin
     unsigned int etaBin = 1000;
-    if( binAdmin.findSameEtaBin(jetEta[corrJetIdx[0]],jetEta[corrJetIdx[1]],etaBin) ) {
-      double ptAve = 0.5*(jetCorrL2L3[corrJetIdx[0]]*jetPt[corrJetIdx[0]]+jetCorrL2L3[corrJetIdx[1]]*jetPt[corrJetIdx[1]]);
-      //double ptAve = 0.5*(GenJetColPt[0]+GenJetColPt[1]);
+    if( binAdmin.findSameEtaBin(jetEta[corrJets(0)],jetEta[corrJets(1)],etaBin) ) {
+      double ptAve = 0.5*(corrJets.pt(0)+corrJets.pt(1));
       unsigned int ptAveBin = 1000;
       if( binAdmin.findPtBin(hlt,ptAve,etaBin,ptAveBin) ) {
   	ptAveBin -= binAdmin.hltMinPtBin(hlt,etaBin);

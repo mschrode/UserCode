@@ -1,4 +1,4 @@
-// $Id: Binning.h,v 1.4 2010/12/30 13:47:49 mschrode Exp $
+// $Id: Binning.h,v 1.5 2011/04/16 10:05:29 mschrode Exp $
 
 #ifndef BINNING_H
 #define BINNING_H
@@ -18,8 +18,8 @@ namespace sampleTools {
 
   public:
     Binning();
-    Binning(const std::vector<double> &etaBinEdges, const std::vector<double> &ptBinEdges);
-    Binning(const std::vector<double> &etaBinEdges, const std::vector< std::vector<double> > &ptBinEdges);
+    Binning(const std::vector<double> &etaEdges, const std::vector<double> &ptEdges);
+    Binning(const std::vector<double> &etaEdges, const std::vector< std::vector<double> > &ptEdges);
     Binning(const TString &fileName);
     
     unsigned int nEtaBins() const { return etaBinEdges_.size()-1; }
@@ -75,9 +75,9 @@ namespace sampleTools {
   //! Constructor for 'rectangular' binning i.e. same
   //! pt bins per eta bin
   // -------------------------------------------------------------------------------------
-  Binning::Binning(const std::vector<double> &etaBinEdges, const std::vector<double> &ptBinEdges) {
-    etaBinEdges_ = etaBinEdges;
-    ptBinEdges_.push_back(ptBinEdges);
+  Binning::Binning(const std::vector<double> &etaEdges, const std::vector<double> &ptEdges) {
+    etaBinEdges_ = etaEdges;
+    ptBinEdges_.push_back(ptEdges);
 
     assert( isSane() );
   }
@@ -87,9 +87,9 @@ namespace sampleTools {
   //! Constructor for general binning i.e. different
   //! pt bins per eta bin
   // -------------------------------------------------------------------------------------
-  Binning::Binning(const std::vector<double> &etaBinEdges, const std::vector< std::vector<double> > &ptBinEdges) {
-    etaBinEdges_ = etaBinEdges;
-    ptBinEdges_ = ptBinEdges;
+  Binning::Binning(const std::vector<double> &etaEdges, const std::vector< std::vector<double> > &ptEdges) {
+    etaBinEdges_ = etaEdges;
+    ptBinEdges_ = ptEdges;
 
     assert( isSane() );
   }
@@ -214,18 +214,18 @@ namespace sampleTools {
   // -------------------------------------------------------------------------------------
   const std::vector<double> Binning::ptBinEdgesInt(unsigned int etaBin) const {
     // Should be done in a smarter way
-    std::vector<double> ptBinEdgesInt;
-    ptBinEdgesInt.push_back(ptMin(etaBin));
+    std::vector<double> ptEdgesInt;
+    ptEdgesInt.push_back(ptMin(etaBin));
     if( nPtBins(etaBin) > 4  && nPtBins(etaBin) < 13 ) {
-      ptBinEdgesInt.push_back(ptMax(etaBin,3));
+      ptEdgesInt.push_back(ptMax(etaBin,3));
     } else {
-      ptBinEdgesInt.push_back(ptMax(etaBin,2));
-      ptBinEdgesInt.push_back(ptMax(etaBin,5));
-      ptBinEdgesInt.push_back(ptMax(etaBin,8));
+      ptEdgesInt.push_back(ptMax(etaBin,2));
+      ptEdgesInt.push_back(ptMax(etaBin,5));
+      ptEdgesInt.push_back(ptMax(etaBin,8));
     }    
-    ptBinEdgesInt.push_back(ptMax(etaBin));
+    ptEdgesInt.push_back(ptMax(etaBin));
     
-    return ptBinEdgesInt;
+    return ptEdgesInt;
   }
 
 

@@ -1,4 +1,4 @@
-// $Id: BinningAdmin.h,v 1.4 2010/11/28 22:48:26 mschrode Exp $
+// $Id: BinningAdmin.h,v 1.5 2010/12/30 13:47:49 mschrode Exp $
 
 #ifndef BINNING_ADMIN_H
 #define BINNING_ADMIN_H
@@ -85,7 +85,7 @@ namespace sampleTools {
 
     class PtBinRange {
     public: 
-      inline PtBinRange(unsigned int minPtBin, unsigned int maxPtBin) : minPtBin_(minPtBin), maxPtBin_(maxPtBin) {};
+      inline PtBinRange(unsigned int minBin, unsigned int maxBin) : minPtBin_(minBin), maxPtBin_(maxBin) {};
 
       inline unsigned int minPtBin() const { return minPtBin_; }
       inline unsigned int maxPtBin() const { return maxPtBin_; }
@@ -98,7 +98,7 @@ namespace sampleTools {
 
     class HltMaxInfo {
     public:
-      inline HltMaxInfo(double turnOn, double lumi) : turnOn_(turnOn), lumi_(lumi) {};
+      inline HltMaxInfo(double hltTurnOn, double hltLumi) : turnOn_(hltTurnOn), lumi_(hltLumi) {};
       inline ~HltMaxInfo() {
 	for(std::map<unsigned int,PtBinRange*>::iterator it = etaPtBins_.begin();
 	    it != etaPtBins_.end(); ++it) {
@@ -107,14 +107,14 @@ namespace sampleTools {
 	etaPtBins_.clear();
       }
 
-      inline void addEtaPtBinRange(unsigned int etaBin, unsigned int minPtBin, unsigned int maxPtBin) {
-	etaPtBins_[etaBin] = new PtBinRange(minPtBin,maxPtBin);
+      inline void addEtaPtBinRange(unsigned int etaBinIdx, unsigned int minPtBinIdx, unsigned int maxPtBinIdx) {
+	etaPtBins_[etaBinIdx] = new PtBinRange(minPtBinIdx,maxPtBinIdx);
       }
-      inline void setPtMaxBin(unsigned int etaBin, unsigned int maxPtBin) {
-	std::map<unsigned int,PtBinRange*>::iterator it = etaPtBins_.find(etaBin);
+      inline void setPtMaxBin(unsigned int etaBinIdx, unsigned int maxPtBinIdx) {
+	std::map<unsigned int,PtBinRange*>::iterator it = etaPtBins_.find(etaBinIdx);
 	if( it != etaPtBins_.end() ) {
 	  PtBinRange* range = it->second;
-	  it->second = new PtBinRange(range->minPtBin(),maxPtBin);
+	  it->second = new PtBinRange(range->minPtBin(),maxPtBinIdx);
 	  delete range;
 	}
       }
@@ -319,12 +319,25 @@ namespace sampleTools {
   // -------------------------------------------------------------------------------------
   TString BinningAdmin::triggerName(double thres) const {
     TString hlt;
-    if( thres == 15 ) hlt = "HLT_DiJetAve15U";
-    else if( thres == 30 ) hlt = "HLT_DiJetAve30U";
-    else if( thres == 50 ) hlt = "HLT_DiJetAve50U";
-    else if( thres == 70 ) hlt = "HLT_DiJetAve70U";
-    else if( thres == 100 ) hlt = "HLT_DiJetAve100U";
-    else if( thres == 140 ) hlt = "HLT_DiJetAve140U";
+    
+/*     // 2010  */
+/*     if( thres == 15 ) hlt = "HLT_DiJetAve15U"; */
+/*     else if( thres == 30 ) hlt = "HLT_DiJetAve30U"; */
+/*     else if( thres == 50 ) hlt = "HLT_DiJetAve50U"; */
+/*     else if( thres == 70 ) hlt = "HLT_DiJetAve70U"; */
+/*     else if( thres == 100 ) hlt = "HLT_DiJetAve100U"; */
+/*     else if( thres == 140 ) hlt = "HLT_DiJetAve140U"; */
+
+    // 2011
+    if( thres == 30 ) hlt = "HLT_DiJetAve30";
+    else if( thres == 60 ) hlt = "HLT_DiJetAve60";
+    else if( thres == 80 ) hlt = "HLT_DiJetAve80";
+    else if( thres == 110 ) hlt = "HLT_DiJetAve110";
+    else if( thres == 150 ) hlt = "HLT_DiJetAve150";
+    else if( thres == 190 ) hlt = "HLT_DiJetAve190";
+    else if( thres == 240 ) hlt = "HLT_DiJetAve240";
+    else if( thres == 300 ) hlt = "HLT_DiJetAve300";
+    else if( thres == 370 ) hlt = "HLT_DiJetAve370";
 
     return hltInfos_.find(hlt) != hltInfos_.end() ? hlt : "none";
   }
