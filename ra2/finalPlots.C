@@ -8,6 +8,7 @@
 #include "TString.h"
 #include "TStyle.h"
 
+#define UTILS_AS_HEADER_FILE
 #include "../util/utils.h"
 #include "../util/HistOps.h"
 #include "../util/FileOps.h"
@@ -66,6 +67,7 @@ void compareDistribution(const TString &fileNameData, const std::vector<TString>
   canData->cd();
   hData->Draw("PE");
   lab->Draw("same");
+  leg->Draw("same");
   canData->SetLogy();
   canData->SaveAs(uid+"_Data.eps","eps");
 
@@ -92,6 +94,8 @@ void finalPlots() {
 
   TString path = "/afs/naf.desy.de/user/m/mschrode/lustre/RA2/FinalPlots";
   TString fileNameData = path+"/Data/FinalPlots_Data_HTPromptReco_V2_2011-05-13.root";
+  //TString fileNameData = path+"/Data/FinalPlots_Data_HT_Run2011A_PromptReco_V3TEST_2011-05-18.root";
+
   std::vector<TString> fileNamesMC;
   std::vector<TString> labelsMC;
 
@@ -112,13 +116,13 @@ void finalPlots() {
   // Baseline selection
   compareDistribution(fileNameData,fileNamesMC,labelsMC,"BaselinePlot/HTHT","RA2FinalPlots_V2_BaseLine_HT","H_{T} (GeV)",2150,"Events",191.,350.,150.);
   compareDistribution(fileNameData,fileNamesMC,labelsMC,"BaselinePlot/MHTMHT","RA2FinalPlots_V2_BaseLine_MHT","#slash{H}_{T} (GeV)",950,"Events",191.,350.,150.);
-   // High MHT
-   compareDistribution(fileNameData,fileNamesMC,labelsMC,"FinalMHT250Plot/HTHT","RA2FinalPlots_V2_HighMHT_HT","H_{T} (GeV)",2150,"Events",191.,350.,250.);
-   compareDistribution(fileNameData,fileNamesMC,labelsMC,"FinalMHT250Plot/MHTMHT","RA2FinalPlots_V2_HighMHT_MHT","#slash{H}_{T} (GeV)",950,"Events",191.,350.,250.);
-   // High HT
-   compareDistribution(fileNameData,fileNamesMC,labelsMC,"FinalHT500Plot/HTHT","RA2FinalPlots_V2_HighHT_HT","H_{T} (GeV)",2150,"Events",191.,500.,150.);
-   compareDistribution(fileNameData,fileNamesMC,labelsMC,"FinalHT500Plot/MHTMHT","RA2FinalPlots_V2_HighHT_MHT","#slash{H}_{T} (GeV)",950,"Events",191.,500.,150.);
-
-//   compareDistribution(fileNameData,fileNamesMC,labelsMC,"FinalPlot/HTHT","RA2FinalPlots_V3TEST_BaseLine_HT","H_{T} (GeV)",2150,"Events",191);
-//   compareDistribution(fileNameData,fileNamesMC,labelsMC,"FinalPlot/MHTMHT","RA2FinalPlots_V3TEST_BaseLine_MHT","#slash{H}_{T} (GeV)",950,"Events",191);
+  // High MHT
+  compareDistribution(fileNameData,fileNamesMC,labelsMC,"FinalMHT250Plot/HTHT","RA2FinalPlots_V2_HighMHT_HT","H_{T} (GeV)",2150,"Events",191.,350.,250.);
+  compareDistribution(fileNameData,fileNamesMC,labelsMC,"FinalMHT250Plot/MHTMHT","RA2FinalPlots_V2_HighMHT_MHT","#slash{H}_{T} (GeV)",950,"Events",191.,350.,250.);
+  // High HT
+  compareDistribution(fileNameData,fileNamesMC,labelsMC,"FinalHT500Plot/HTHT","RA2FinalPlots_V2_HighHT_HT","H_{T} (GeV)",2150,"Events",191.,500.,150.);
+  compareDistribution(fileNameData,fileNamesMC,labelsMC,"FinalHT500Plot/MHTMHT","RA2FinalPlots_V2_HighHT_MHT","#slash{H}_{T} (GeV)",950,"Events",191.,500.,150.);
+  
+//   compareDistribution(fileNameData,fileNamesMC,labelsMC,"FinalPlot/HTHT","RA2FinalPlots_V3TEST_BaseLine_HT","H_{T} (GeV)",2150,"Events",191,350.,150.);
+//   compareDistribution(fileNameData,fileNamesMC,labelsMC,"FinalPlot/MHTMHT","RA2FinalPlots_V3TEST_BaseLine_MHT","#slash{H}_{T} (GeV)",950,"Events",191,350.,150.);
 }
