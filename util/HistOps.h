@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.31 2011/05/17 16:36:43 mschrode Exp $
+// $Id: HistOps.h,v 1.32 2011/05/20 09:48:57 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.31 2011/05/17 16:36:43 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.32 2011/05/20 09:48:57 mschrode Exp $
   class HistOps
   {
   public:
@@ -226,7 +226,7 @@ namespace util
       if( yTitle == "jets" || yTitle == "events" || yTitle == "Jets" || yTitle == "Events" ) {
 	if( yTitle == "jets" || yTitle == "Jets" )        yAxisTitle += "Jets";
 	else if( yTitle == "events" || yTitle == "Events" ) yAxisTitle += "Events";
-	yAxisTitle += (" / "+util::toTString(h->GetBinWidth(1),3));
+	if( h->GetBinWidth(1) != 1. ) yAxisTitle += (" / "+util::toTString(h->GetBinWidth(1),3));
 	if( xUnit.Length() ) yAxisTitle += " "+xUnit;
       } else {
 	yAxisTitle = yTitle;

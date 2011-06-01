@@ -1,4 +1,4 @@
-// $Id: FileOps.h,v 1.8 2011/02/17 13:27:45 mschrode Exp $
+// $Id: FileOps.h,v 1.9 2011/05/17 16:36:43 mschrode Exp $
 
 #ifndef FileOps_h
 #define FileOps_h
@@ -30,7 +30,7 @@ namespace util
     static util::HistVec readTH1(const std::vector<TString> &fileNames, const TString &histName, const TString &newHistName = "");
     static util::HistVec readHistVec(const TString &fileName, const TString &histName, const TString &newHistName = "");
     static std::vector<TF1*> readTF1Vec(const TString &fileName, const TString &fName, const TString &newFName = "");
-    static TChain* createTChain(const TString &fileName, unsigned int verbosity = 1);
+    static TChain* createTChain(const TString &fileName, const TString &treeName = "", unsigned int verbosity = 1);
   };
 
 
@@ -178,14 +178,15 @@ namespace util
   //!    with '.root';
   //! 2) 'fileName' contains a list of root file names.
   // --------------------------------------------------
-  TChain* FileOps::createTChain(const TString &fileName, unsigned int verbosity) {
+  TChain* FileOps::createTChain(const TString &fileName, const TString &treeName, unsigned int verbosity) {
     if( verbosity >= 1 ) std::cout << "Creating TChain" << std::endl;
 
-    TChain* chain = new TChain("DiJetTree"); 
+    TString tree = (treeName=="" ? "DiJetTree" : treeName);
+    TChain* chain = new TChain(tree); 
     
     // Option 1: single root file
     if( fileName.EndsWith(".root") ) {
-      if( verbosity >= 1 ) std::cout << "  Adding 'DiJetTree' from file '" << fileName << "'" << std::endl;
+      if( verbosity >= 1 ) std::cout << "  Adding '" << tree << "' from file '" << fileName << "'" << std::endl;
       chain->Add(fileName);
     }
     // Option 2: list of root files
@@ -199,7 +200,7 @@ namespace util
 	while( !filelist.eof() ) {
 	  filelist >> name;
 	  if( filelist.eof() ) break;
-	  if( verbosity >= 1 ) std::cout << "  Adding 'DiJetTree' from file '" << name << "'" << std::endl;
+	  if( verbosity >= 1 ) std::cout << "  Adding '" << tree << "' from file '" << name << "'" << std::endl;
 	  chain->Add(name);
 	  nOpenedFiles++;
 	}
