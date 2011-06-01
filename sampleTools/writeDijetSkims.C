@@ -1,4 +1,4 @@
-// $Id: writeDijetSkims.C,v 1.3 2011/04/16 10:07:01 mschrode Exp $
+// $Id: writeDijetSkims.C,v 1.4 2011/05/20 10:00:07 mschrode Exp $
 //
 // Skim Kalibri ntuples as input for resolution fit.
 // At this pre-selection
@@ -23,7 +23,9 @@
 #include <vector>
 
 #include "TCanvas.h"
+#include "TBranch.h"
 #include "TChain.h"
+#include "TChainElement.h"
 #include "TFile.h"
 #include "TH1.h"
 #include "TROOT.h"
@@ -64,31 +66,36 @@ TChain *createTChain(const TString &fileListName) {
 
 
 // --------------------------------------------------
-void writeDijetSkims() {
+void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
 
 
   // ++++ Set parameters +++++++++++++++++++++++++++++++++++++++
 
   const int nEvts = -100;
   const TString config = "BinningAdmin.cfg";
-  const TString inFileListName = "input/Analysis2011/Kalibri_Run2011A-PromptReco-v2_163337-163869_AK5PF";
-  const bool isData = true;
-  const unsigned int maxHltThres = 175;
+  const TString inFileListName = "input/Analysis2011/Kalibri_MCSummer11_QCDFlat_PUS3_L1FastJet_AK5Calo";
+  //const bool isData = true;
+  //  const unsigned int maxHltThres = 175;
   const double minDeltaPhi = 2.7;
+  const unsigned int minRunNumber = 163337;
 
 
 
   // ++++ Checks and follow-up parameters ++++++++++++++++++++++
 
   // Prepare name of output files  
-  TString outFilePrefix = "~/lustre/Analysis2011/KalibriSkims_Jet_Run2011A-PromptReco-v2_163337-163869_v2/KalibriSkim";
+  TString outFilePrefix = "~/lustre/Analysis2011/KalibriDiJetSkims_QCD_Pt-15to3000_TuneD6T_Flat_7TeV-pythia6_Summer11-PU_S3_START42_V11-v2/KalibriSkim";
   if( inFileListName.Contains("Calo") ) outFilePrefix += "_Calo";
   else if( inFileListName.Contains("PF") ) outFilePrefix += "_PF";  
   else if( inFileListName.Contains("JPT") ) outFilePrefix += "_JPT";  
 
+  if( inFileListName.Contains("L1Offset") ) outFilePrefix += "_L1Offset";
+  else if( inFileListName.Contains("L1FastJet") ) outFilePrefix += "_L1FastJet";
+
   if( isData ) outFilePrefix += "_Data";
   else if( inFileListName.Contains("Fall10") ) outFilePrefix += "_MCFall10";  
   else if( inFileListName.Contains("Spring11") ) outFilePrefix += "_MCSpring11";  
+  else if( inFileListName.Contains("Summer11") ) outFilePrefix += "_MCSummer11";  
   else outFilePrefix += "_MC";  
 
 
@@ -99,6 +106,7 @@ void writeDijetSkims() {
   binAdmin.printBinning();
   if( isData ) binAdmin.print(hlt);
   
+  unsigned int nNewTrig = 0;
   unsigned int nMaxNJet = 0;
   unsigned int nDijets = 0;
   unsigned int nHlt = 0;
@@ -133,7 +141,7 @@ void writeDijetSkims() {
   float jetEta[maxNJet];
   float jetPhi[maxNJet];
   float jetCorrL1[maxNJet];
-  float jetCorrL2L3[maxNJet];
+  float jetCorrL2L3[maxNJet];	// Should contain L2*L3*LResidual, starting from L1 corrected pt
   bool jetID[maxNJet];
   bool hlt30 = false;
   bool hlt60 = false;
@@ -146,6 +154,10 @@ void writeDijetSkims() {
   bool hlt370 = false;
 
   // Get other elements written to tree
+  UInt_t          RunNumber;
+  UInt_t          LumiBlockNumber;
+  UInt_t          EventNumber;
+  Int_t           NobjTow;
   Float_t         JetEt[maxNJet];   //[NobjJet]
   Float_t         JetE[maxNJet];   //[NobjJet]
   Int_t           JetN90Hits[maxNJet];   //[NobjJet]
@@ -186,6 +198,10 @@ void writeDijetSkims() {
 
 
   // Set branch addresses
+  oldChain->SetBranchAddress("RunNumber", &RunNumber);
+  oldChain->SetBranchAddress("LumiBlockNumber", &LumiBlockNumber);
+  oldChain->SetBranchAddress("EventNumber", &EventNumber);
+  oldChain->SetBranchAddress("NobjTow",&NobjTow);
   oldChain->SetBranchAddress("NobjJet",&nObjJet);
   oldChain->SetBranchAddress("JetPt",jetPt);
   oldChain->SetBranchAddress("JetEta",jetEta);
@@ -194,7 +210,6 @@ void writeDijetSkims() {
   oldChain->SetBranchAddress("JetCorrL2",JetCorrL2);
   oldChain->SetBranchAddress("JetCorrL3",JetCorrL3);
   oldChain->SetBranchAddress("JetCorrL2L3",jetCorrL2L3);
-  oldChain->SetBranchAddress("JetIDLoose",jetID);
   oldChain->SetBranchAddress("HltDiJetAve30",&hlt30);
   oldChain->SetBranchAddress("HltDiJetAve60",&hlt60);
   oldChain->SetBranchAddress("HltDiJetAve80",&hlt80);
@@ -211,6 +226,7 @@ void writeDijetSkims() {
   oldChain->SetBranchAddress("JetEMF", JetEMF);
   oldChain->SetBranchAddress("JetFHPD", JetFHPD);
   oldChain->SetBranchAddress("JetFRBX", JetFRBX);
+  oldChain->SetBranchAddress("JetIDLoose",jetID);
   oldChain->SetBranchAddress("JetIDTight", JetIDTight);
   oldChain->SetBranchAddress("JetEtWeightedSigmaPhi", JetEtWeightedSigmaPhi);
   oldChain->SetBranchAddress("JetEtWeightedSigmaEta", JetEtWeightedSigmaEta);
@@ -309,6 +325,12 @@ void writeDijetSkims() {
     }
 
     if( isData ) {
+      // Use only 2011 runs with new triggers
+      if( RunNumber < minRunNumber ) {
+	++nNewTrig;
+	continue;
+      }
+
       // HLT cuts
       if( maxHltThres == 30 && !(hlt30) ) {
 	++nHlt;
@@ -343,6 +365,8 @@ void writeDijetSkims() {
     // Order corrected jets
     corrJets.clear();
     for(int j = 0; j < nObjJet; ++j) {
+      jetCorrL2L3[j] = JetCorrL2[j]*JetCorrL3[j]; // Remove residual correction due to bug in 42
+
       corrJets.add(j,jetCorrL1[j]*jetCorrL2L3[j]*jetPt[j]);
     }
     corrJets.sort();
@@ -401,6 +425,7 @@ void writeDijetSkims() {
   std::cout << "Done processing " << nEntries << " events from file list '" << inFileListName << "'" << std::endl;
 
   std::cout << "Selected " << std::endl;
+  if( isData ) std::cout << "  " << (nEntries -= nNewTrig ) << " events with run number >= " << minRunNumber << std::endl;
   std::cout << "  " << (nEntries -= nMaxNJet ) << " events with <= " << maxNJet << " jets " << std::endl;
   std::cout << "  " << (nEntries -= nDijets ) << " events with >= 2 jets " << std::endl;
   if( isData ) std::cout << "  " << (nEntries -= nHlt ) << " events passing HLT trigger (max threshold " << maxHltThres << " GeV)" << std::endl;
@@ -427,4 +452,22 @@ void writeDijetSkims() {
     }
   }
   delete oldChain;
+}
+
+
+void writeDijetSkimsData() {
+  std::vector<unsigned int> hltThes;
+  hltThes.push_back(30);
+  hltThes.push_back(60);
+  hltThes.push_back(80);
+  hltThes.push_back(110);
+  hltThes.push_back(150);
+  hltThes.push_back(190);
+  hltThes.push_back(240);
+  hltThes.push_back(300);
+  hltThes.push_back(370);
+  for(std::vector<unsigned int>::const_iterator it = hltThes.begin();
+      it != hltThes.end(); ++it) {
+    writeDijetSkims(true,*it);
+  }
 }
