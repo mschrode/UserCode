@@ -1,10 +1,13 @@
+// $ Id: $
+
 #include <iostream>
 #include <vector>
 
 #include "TCanvas.h"
-#include "TFile.h"
+#include "TChain.h"
 #include "TH1.h"
 #include "THStack.h"
+#include "TPad.h"
 #include "TString.h"
 #include "TStyle.h"
 
@@ -16,7 +19,43 @@
 #include "../util/StyleSettings.h"
 
 
-void compareDistribution(const TString &fileNameData, const std::vector<TString> &fileNamesMC, const std::vector<TString> &labelsMC, const TString &histName, const TString &uid, const TString &xTitle, double xMax, const TString &yTitle, double lumi, double minHT, double minMHT) {
+class EventProvenance {
+public:
+  EventProvenance(unsigned int runNumber, unsigned int lumiBlockNumber, unsigned int eventNumber)
+    : runNumber_(runNumber), lumiBlockNumber_(lumiBlockNumber), eventNumber_(eventNumber) {};
+
+  bool operator<(const EventProvenance &rhs) const {
+    bool lt = false;
+    if( runNumber_ < rhs.runNumber_ ) {
+      lt = true;
+    } else if( runNumber_ > rhs.runNumber_ ) {
+      lt = false;
+    } else {
+      if( lumiBlockNumber_ < rhs.lumiBlockNumber_ ) {
+	lt = true;
+      } else if( lumiBlockNumber_ > rhs.lumiBlockNumber_ ) {
+	lt = false;
+      } else {
+	if( eventNumber_ < rhs.eventNumber_ ) {
+	  lt = true;
+	}
+      }
+    }
+
+    return lt;
+  }
+
+  void print() const {
+    std::cout << runNumber_ << " \t: " << lumiBlockNumber_ << " \t: " << eventNumber_ << std::endl;
+  }
+
+  unsigned int runNumber_;
+  unsigned int lumiBlockNumber_;
+  unsigned int eventNumber_;
+};
+
+
+void compareDataAndPrediction(const TString &fileNameData, const std::vector<TString> &fileNamesMC, const std::vector<TString> &labelsMC, const TString &histName, const TString &uid, const TString &xTitle, double xMax, const TString &yTitle, double lumi, double minHT, double minMHT) {
   if( fileNamesMC.size() != labelsMC.size() ) {
     std::cerr << "ERROR: Number of MC labels does not match number of files!" << std::endl;
     exit(1);
@@ -34,7 +73,7 @@ void compareDistribution(const TString &fileNameData, const std::vector<TString>
   hData->GetYaxis()->SetTitle(yTitle);
   util::HistOps::setYRange(hData,1,3E-1);
 
-  // The MC background prediction
+  // The background prediction
   THStack* hMCBgrs = new THStack(uid+"_MCBgrs","");
   std::vector<TH1*> hMCs;
   std::vector<TString> entriesMC;
@@ -87,14 +126,82 @@ void compareDistribution(const TString &fileNameData, const std::vector<TString>
 }
 
 
+void compareDistributions(const std::vector<TString> &fileNames, const std::vector<TString> &labels, const TString &histName, const TString &uid, const TString &xTitle, double xMax, const TString &yTitle, double lumi, double minHT, double minMHT) {
+  if( fileNames.size() != labels.size() ) {
+    std::cerr << "ERROR: Number of labels does not match number of files!" << std::endl;
+    exit(1);
+  }
+  
+  std::vector<TH1*> hDists;
+  std::vector<TString> entries;
+  for(unsigned int i = 0; i != fileNames.size(); ++i) {
+    TH1* h = util::FileOps::readTH1(fileNames.at(i),fileNames.at(i)+":///"+histName,uid+"_"+util::toTString(i));
+    h->SetTitle("");
+    h->UseCurrentStyle();
+    //h->Rebin(4);
+    h->SetNdivisions(505);
+    h->GetXaxis()->SetRange(1,h->FindBin(xMax));
+    h->GetXaxis()->SetTitle(xTitle);
+    h->GetYaxis()->SetTitle(yTitle);
+    util::HistOps::setYRange(h,1,3E-1);
+    h->SetLineColor(1+i);
+    h->SetLineWidth(2);
+    hDists.push_back(h);
+    entries.push_back(labels.at(i)+": N = "+util::toTString(h->Integral(),0));
+  }
+
+  TPaveText* lab = util::LabelFactory::createPaveText(1);
+  lab->AddText("L = "+util::toTString(lumi)+" pb^{-1},  H_{T} > "+util::toTString(minHT)+" GeV,  #slash{H}_{T} > "+util::toTString(minMHT)+" GeV");
+
+  TLegend* leg = util::LabelFactory::createLegendColWithOffset(labels.size(),0.8,1);
+  for(int i = static_cast<int>(entries.size()-1); i >= 0; --i) {
+    leg->AddEntry(hDists.at(i),entries.at(i),"L");
+  }
+
+  TCanvas* can = new TCanvas(uid+"can",uid,550,550);
+  can->cd();
+  hDists.front()->Draw("HIST");
+  for(size_t i = 1; i < hDists.size(); ++i) {
+    hDists.at(i)->Draw("HISTsame");
+  }
+  lab->Draw("same");
+  leg->Draw("same");
+  can->SetLogy();
+  gPad->RedrawAxis();
+  can->SaveAs(uid+".eps","eps");
+}
+
+
+void printEventProvenance(const TString &fileName, const TString &dir, const TString &outFileName) {
+  TChain* chain = util::FileOps::createTChain(fileName,fileName+":///"+dir+"/Provenance");
+  unsigned int runNumber = 0;
+  unsigned int lumiBlockNumber = 0;
+  unsigned int eventNumber = 0;
+  chain->SetBranchAddress("RunNumber",&runNumber);
+  chain->SetBranchAddress("LumiBlockNumber",&lumiBlockNumber);
+  chain->SetBranchAddress("EventNumber",&eventNumber);
+  std::vector<EventProvenance> evtPr;
+  for(int i = 0; i < chain->GetEntries(); ++i) {
+    chain->GetEntry(i);
+    evtPr.push_back(EventProvenance(runNumber,lumiBlockNumber,eventNumber));
+  }
+  std::sort(evtPr.begin(),evtPr.end());
+  for(std::vector<EventProvenance>::const_iterator it = evtPr.begin();
+      it != evtPr.end(); ++it) {
+    it->print();
+  }
+
+  delete chain;
+}
+
+
 
 
 void finalPlots() {
   util::StyleSettings::presentationNoTitle();
 
   TString path = "/afs/naf.desy.de/user/m/mschrode/lustre/RA2/FinalPlots";
-  TString fileNameData = path+"/Data/FinalPlots_Data_HTPromptReco_V2_2011-05-13.root";
-  //TString fileNameData = path+"/Data/FinalPlots_Data_HT_Run2011A_PromptReco_V3TEST_2011-05-18.root";
+  TString fileNameData = path+"/Data/FinalPlots_Data_HT_Run2011A_PromptReco_V3TEST_2011-05-18.root";
 
   std::vector<TString> fileNamesMC;
   std::vector<TString> labelsMC;
@@ -113,16 +220,23 @@ void finalPlots() {
   labelsMC.push_back("Z#nu#bar{#nu}+Jets");
 
 
-  // Baseline selection
-  compareDistribution(fileNameData,fileNamesMC,labelsMC,"BaselinePlot/HTHT","RA2FinalPlots_V2_BaseLine_HT","H_{T} (GeV)",2150,"Events",191.,350.,150.);
-  compareDistribution(fileNameData,fileNamesMC,labelsMC,"BaselinePlot/MHTMHT","RA2FinalPlots_V2_BaseLine_MHT","#slash{H}_{T} (GeV)",950,"Events",191.,350.,150.);
-  // High MHT
-  compareDistribution(fileNameData,fileNamesMC,labelsMC,"FinalMHT250Plot/HTHT","RA2FinalPlots_V2_HighMHT_HT","H_{T} (GeV)",2150,"Events",191.,350.,250.);
-  compareDistribution(fileNameData,fileNamesMC,labelsMC,"FinalMHT250Plot/MHTMHT","RA2FinalPlots_V2_HighMHT_MHT","#slash{H}_{T} (GeV)",950,"Events",191.,350.,250.);
-  // High HT
-  compareDistribution(fileNameData,fileNamesMC,labelsMC,"FinalHT500Plot/HTHT","RA2FinalPlots_V2_HighHT_HT","H_{T} (GeV)",2150,"Events",191.,500.,150.);
-  compareDistribution(fileNameData,fileNamesMC,labelsMC,"FinalHT500Plot/MHTMHT","RA2FinalPlots_V2_HighHT_MHT","#slash{H}_{T} (GeV)",950,"Events",191.,500.,150.);
-  
-//   compareDistribution(fileNameData,fileNamesMC,labelsMC,"FinalPlot/HTHT","RA2FinalPlots_V3TEST_BaseLine_HT","H_{T} (GeV)",2150,"Events",191,350.,150.);
-//   compareDistribution(fileNameData,fileNamesMC,labelsMC,"FinalPlot/MHTMHT","RA2FinalPlots_V3TEST_BaseLine_MHT","#slash{H}_{T} (GeV)",950,"Events",191,350.,150.);
+//   // Baseline selection
+//   compareDistribution(fileNameData,fileNamesMC,labelsMC,"BaselinePlot/HTHT","RA2FinalPlots_V2_BaseLine_HT","H_{T} (GeV)",2150,"Events",191.,350.,150.);
+//   compareDistribution(fileNameData,fileNamesMC,labelsMC,"BaselinePlot/MHTMHT","RA2FinalPlots_V2_BaseLine_MHT","#slash{H}_{T} (GeV)",950,"Events",191.,350.,150.);
+//   // High MHT
+//   compareDistribution(fileNameData,fileNamesMC,labelsMC,"FinalMHT250Plot/HTHT","RA2FinalPlots_V2_HighMHT_HT","H_{T} (GeV)",2150,"Events",191.,350.,250.);
+//   compareDistribution(fileNameData,fileNamesMC,labelsMC,"FinalMHT250Plot/MHTMHT","RA2FinalPlots_V2_HighMHT_MHT","#slash{H}_{T} (GeV)",950,"Events",191.,350.,250.);
+//   // High HT
+//   compareDistribution(fileNameData,fileNamesMC,labelsMC,"FinalHT500Plot/HTHT","RA2FinalPlots_V2_HighHT_HT","H_{T} (GeV)",2150,"Events",191.,500.,150.);
+//   compareDistribution(fileNameData,fileNamesMC,labelsMC,"FinalHT500Plot/MHTMHT","RA2FinalPlots_V2_HighHT_MHT","#slash{H}_{T} (GeV)",950,"Events",191.,500.,150.);
+
+
+  std::vector<TString> files;
+  std::vector<TString> labels;
+  files.push_back(path+"/Data/FinalPlots_Data_HT_Run2011A_May10ReReco_V4.root");
+  labels.push_back("No TP+BE filter");
+  files.push_back(path+"/Data/FinalPlots_Data_HT_Run2011A_May10ReReco_V4_TPBEFilter.root");
+  labels.push_back("TP+BE filter");
+  compareDistributions(files,labels,"BaselinePlot/HTHT","RA2TPBEFilterImpact_V4_BaseLine_HT","H_{T} (GeV)",2150,"Events",204.2,350.,150.);
+  compareDistributions(files,labels,"BaselinePlot/MHTMHT","RA2TPBEFilterImpact_V4_BaseLine_MHT","#slash{H}_{T} (GeV)",950,"Events",204.2,350.,150.);
 }
