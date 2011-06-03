@@ -1,4 +1,4 @@
-// $Id: writeConfigFiles.C,v 1.1 2010/11/28 13:50:17 mschrode Exp $
+// $Id: writeConfigFiles.C,v 1.2 2010/12/29 11:29:19 mschrode Exp $
 
 #include <iostream>
 #include <fstream>
@@ -19,7 +19,7 @@
 //! written. The relevant steering parameters (e.g.
 //! cuts on pt) are adjusted to the current bin but
 //! other parameters are taken from the skeleton.
-void writeConfigFiles(const TString &binningConfig, const TString &skeleton, const TString ntuplePrefix, const TString &outFilePrefix, bool isMC) {
+void writeConfigFiles(const TString &binningConfig, const TString &skeleton, const TString ntuplePrefix, const TString &spectrumPrefix, const TString &outFilePrefix, bool isMC) {
 
   sampleTools::BinningAdmin binAdmin(binningConfig);
   binAdmin.printBinning();
@@ -39,7 +39,8 @@ void writeConfigFiles(const TString &binningConfig, const TString &skeleton, con
 	  exit(1);
 	}
 
-	// Prepare output file
+	// Prepare i/o files
+	TString spectrumFileName = spectrumPrefix+"_Eta"+util::toTString(etaBin)+".root";
 	TString outFileName = outFilePrefix+"_Eta"+util::toTString(etaBin)+"_Pt"+util::toTString(ptBin)+"_PtSoft"+util::toTString(ptSoftBin)+".cfg";
 	std::cout << "Writing file " << outFileName << "... " << std::flush;
 	std::ofstream outFile(outFileName.Data());
@@ -52,7 +53,9 @@ void writeConfigFiles(const TString &binningConfig, const TString &skeleton, con
 	    if( util::ConfigParser::noComment(line) ) {
 	      size_t pos;
 	      std::string tag = util::ConfigParser::getTag(line,"=",pos);
- 	      if( tag == "Et min cut on dijet" )
+	      if( tag == "jet spectrum" ) 
+		outFile << tag << " = " << spectrumFileName << std::endl;
+ 	      else if( tag == "Et min cut on dijet" )
  		outFile << tag << " = " << binAdmin.ptMin(etaBin,ptBin) << std::endl;
  	      else if( tag == "Et max cut on dijet" )
  		outFile << tag << " = " << binAdmin.ptMax(etaBin,ptBin) << std::endl;
@@ -66,9 +69,13 @@ void writeConfigFiles(const TString &binningConfig, const TString &skeleton, con
 		outFile << tag << " = " << binAdmin.ptSoftMax(ptSoftBin) << std::endl;
 	      else if( tag == "Di-Jet input file" ) 
 		outFile << tag << " = " << (ntuplePrefix+"_Eta"+util::toTString(etaBin)+"_Pt"+util::toTString(ptBin)+".root") << std::endl;
+	      else if( tag == "Di-Jet weight" ) {
+		if( isMC ) outFile << tag << " = -1 # Use weight from ntuple" << std::endl;
+		else outFile << tag << " = 1 # Data has event weight 1" << std::endl;
+	      } 
 	      else if( tag == "Di-Jet weight relative to ntuple weight" ) {
 		if( isMC ) outFile << tag << " = " << binAdmin.hltLumi(etaBin,ptBin) << std::endl;
-		else outFile << tag << " = 1." << std::endl;
+		else outFile << "# " << tag << " = 1." << std::endl;
 	      }
 	      else if( tag == "create plots" )
 		outFile << tag << " = true" << std::endl;
