@@ -1,4 +1,4 @@
-// $Id: combineBins.C,v 1.1 2010/11/28 13:50:03 mschrode Exp $
+// $Id: combineBins.C,v 1.2 2010/11/28 22:13:25 mschrode Exp $
 
 //! Combine Kalibri output histograms from different
 //! eta, pt, and ptSoft bins
@@ -130,8 +130,11 @@ bool setHistNames(const TString &type) {
     namesBinnedHists_.push_back("hPtAveAbs_0");
     namesBinnedHists_.push_back("hTruthPDF_0");
     namesBinnedHists_.push_back("hRespMeas_0");
+    namesBinnedHists_.push_back("hRespMeasAbs_0");
+    namesBinnedHists_.push_back("hRespSymAbs_0");
     namesBinnedHists_.push_back("hRespFit_0");
     namesBinnedHists_.push_back("hPtAsym_0");
+    namesBinnedHists_.push_back("hPtAbsAsym_0");
     namesBinnedHists_.push_back("hFitPtAsym_0");
     namesBinnedHists_.push_back("hPtGenAsym_0");
     namesBinnedHists_.push_back("hPtJet1_0");
@@ -147,6 +150,9 @@ bool setHistNames(const TString &type) {
     namesBinnedHists_.push_back("hEta_0");
     namesBinnedHists_.push_back("hDeltaPhi12_0");
     namesBinnedHists_.push_back("hDeltaPtJet12_0"); 
+    namesBinnedHists_.push_back("hNumPU_0"); 
+    namesBinnedHists_.push_back("hWeights_0"); 
+    namesBinnedHists_.push_back("hPtAveCombined");
     namesBinnedHists_.push_back("hAbsoluteParameters");
 
     namesCombinedHists_.push_back("hPtAveAbs");  
@@ -186,16 +192,17 @@ void combineBins(const TString &binningConfig, const TString &namePrefix, const 
   // Loop over bins and combine root files
   std::cout << "Looping over bins" << std::endl;
   for(unsigned int ptSoftBin = 0; ptSoftBin < admin.nPtSoftBins(); ++ptSoftBin) {
-    for(unsigned int etaBin = 0; etaBin < 1; ++etaBin) {//admin.nEtaBins(); ++etaBin) {
+    for(unsigned int etaBin = 0; etaBin < 1; ++etaBin) {
+    //for(unsigned int etaBin = 0; etaBin < admin.nEtaBins(); ++etaBin) {
       std::cout << "  Combining files for ptSoft bin " << ptSoftBin << " and eta bin " << etaBin << "... " << std::flush;
       TFile outFile(file+"_Eta"+util::toTString(etaBin)+"_PtSoft"+util::toTString(ptSoftBin)+".root","RECREATE");
 
       util::HistVec combinedHists;
       bool goodCombination = true;
-      for(unsigned int ptBin = 0; ptBin < 3; ++ptBin) {//admin.nPtBins(etaBin); ++ptBin) {
+      for(unsigned int ptBin = 0; ptBin < admin.nPtBins(etaBin); ++ptBin) {
 	util::HistVec binnedHists;
 	TString newNameSuffix = "_Eta"+util::toTString(etaBin)+"_Pt"+util::toTString(ptBin);
-	TString inFileName = path+file+newNameSuffix+"_PtSoft3/jsResponse.root";
+	TString inFileName = path+file+newNameSuffix+"_PtSoft"+util::toTString(ptSoftBin)+"/jsResponse.root";
  	if( getBinnedHists(inFileName,namesBinnedHists_,newNameSuffix,binnedHists) ) {
  	  for(util::HistItConst hIt = binnedHists.begin(); hIt != binnedHists.end(); ++hIt) {
  	    outFile.WriteTObject(*hIt);
