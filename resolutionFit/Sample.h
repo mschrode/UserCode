@@ -1,4 +1,4 @@
-// $Id: Sample.h,v 1.8 2011/03/01 16:52:41 mschrode Exp $
+// $Id: Sample.h,v 1.9 2011/03/02 11:55:51 mschrode Exp $
 
 #ifndef SAMPLE_H
 #define SAMPLE_H
@@ -15,22 +15,31 @@
 #include "FitResult.h"
 #include "Measurement.h"
 
+
 namespace resolutionFit {
+
+  typedef TString SampleLabel;
 
   // -------------------------------------------------------------------------------------
   class Sample {
   public:
-    enum Type { Data, MC, MCTruth };
+    enum Type { Data, MC, MCTruth, NONE };
 
     static bool validType(Type type);
     static TString toString(Type type);
+    static int color(const SampleLabel &label);
+    static int markerStyle(const SampleLabel &label);
+    static Sample::Type type(const SampleLabel &label);
 
-    Sample(const TString &label, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, unsigned int verbosity = 0);
+    Sample(const SampleLabel &label, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, unsigned int verbosity = 0);
     virtual ~Sample();
 
     virtual Sample::Type type() const = 0;
+    virtual double relativeWeightTo(const SampleLabel &other, unsigned int ptSoftBin) const;
 
     TString label() const { return label_; }
+    int color() const { return color(label()); }
+    int markerStyle() const { return markerStyle(label()); }
 
     TH1* histPtAsym(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histPtAsym(); }
     TH1* histPtGenAsym(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histPtGenAsym(); }
@@ -45,13 +54,18 @@ namespace resolutionFit {
     bool setKSoftFit(FitResult::Type type, const TF1* fit);
     void addSystematicUncertainty(FitResult::Type type, const TString &label, double variedValue, double fraction);
     void addSystematicUncertainty(FitResult::Type type, const TString &label, double variedValueDown, double variedValueUp, double fraction);
+    void setRelativeWeightTo(const SampleLabel &other, unsigned int ptSoftBin, double relWeight);
+
 
     unsigned int nPtSoftBins() const { return meas_.size(); }
     double ptSoft(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->ptSoft(); }
     void ptSoft(std::vector<double> &ptSoftVals) const;
     double meanPt(FitResult::Type type) const;
     double meanPtStatUncert(FitResult::Type type) const;
-    void values(FitResult::Type type, std::vector<double> &val, std::vector<double> &uncert) const;
+    void valuesInExtrapolation(FitResult::Type type, std::vector<double> &val, std::vector<double> &uncert) const;
+    void fittedValues(FitResult::Type type, std::vector<double> &val, std::vector<double> &uncert) const;
+    double valueInExtrapolation(FitResult::Type type, unsigned int ptSoftBin) const;
+    double uncertInExtrapolation(FitResult::Type type, unsigned int ptSoftBin) const;
     double fittedValue(FitResult::Type type, unsigned int ptSoftBin) const;
     double fittedUncert(FitResult::Type type, unsigned int ptSoftBin) const;
     double kSoftSlope(FitResult::Type type) const;
@@ -61,9 +75,15 @@ namespace resolutionFit {
     double extrapolatedValue(FitResult::Type type) const;
     double extrapolatedStatUncert(FitResult::Type type) const;
     double extrapolatedSystUncert(FitResult::Type type) const;
+    TString labelQuantityInExtrapolation(FitResult::Type type) const;
+
 
 
   protected:
+    static std::map<TString,int> COLOR;
+    static std::map<TString,int> MARKER_STYLE;
+    static std::map<TString,Sample::Type> TYPE;
+
     typedef std::map<FitResult::Type,FitResult*> FitResultMap;
     typedef std::map<FitResult::Type,FitResult*>::const_iterator FitResultMapIt;
 
@@ -72,11 +92,12 @@ namespace resolutionFit {
 
     Meas meas_;
     FitResultMap fitResult_;
+    std::map <SampleLabel, std::vector<double> > relWeightToOtherSample_;
 
+    int color(unsigned int idx) const;
     bool findFitResult(FitResult::Type type, FitResult* &fitResult) const;
   };
 
-  typedef TString SampleLabel;
   typedef std::map<SampleLabel,Sample::Type> SampleTypes;
   typedef std::map<SampleLabel,Sample::Type>::const_iterator SampleTypeIt;
   typedef std::map<SampleLabel,Sample*> Samples;
@@ -113,9 +134,14 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   class DataSample : public Sample {
   public:
-    DataSample(const TString &label, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, unsigned int verbosity = 0);
+    DataSample(const TString &label, double ptMin, double ptMax, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, const TString &fileNameSpectrum, unsigned int verbosity = 0);
     
     Sample::Type type() const { return Data; }
+    double relativeWeightTo(const SampleLabel &other) const { return 1.; }
+
+
+  private:
+    static unsigned int N_DATA_SAMPLES;
   };
 
   typedef std::map<SampleLabel,DataSample*> DataSamples;
@@ -127,9 +153,13 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   class MCSample : public Sample {
   public:
-    MCSample(const TString &label, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, unsigned int verbosity = 0);
+    MCSample(const TString &label, double ptMin, double ptMax, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, const TString &fileNameSpectrum, unsigned int verbosity = 0);
     
     Sample::Type type() const { return MC; }
+
+
+  private:
+    static unsigned int N_MC_SAMPLES;
   };
 
   typedef std::map<SampleLabel,MCSample*> MCSamples;
@@ -140,9 +170,13 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   class MCTruthSample : public Sample {
   public:
-    MCTruthSample(const TString &label, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, unsigned int verbosity = 0);
+    MCTruthSample(const TString &label, double ptMin, double ptMax, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, unsigned int verbosity = 0);
     
     Sample::Type type() const { return MCTruth; }
+
+
+  private:
+    static unsigned int N_MCTRUTH_SAMPLES;
   };
 }
 #endif

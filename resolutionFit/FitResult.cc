@@ -1,15 +1,20 @@
-// $Id: FitResult.cc,v 1.6 2011/03/02 11:55:51 mschrode Exp $
+// $Id: FitResult.cc,v 1.7 2011/03/02 16:06:01 mschrode Exp $
 
 #include "FitResult.h"
 
 #include <algorithm>
 #include <iostream>
 
+#include "TH1.h"
+#include "TH1D.h"
+
 #include "../util/HistOps.h"
 
 
 namespace resolutionFit {
 
+  unsigned int FitResult::HIST_COUNT = 0;
+  
   // -------------------------------------------------------------------------------------
   bool FitResult::validType(Type type) {
     if( type != MaxLikeKSoftRel && type != FullMaxLikeRel && type != FullMaxLikeAbs && type != PtAsym && type != PtGenAsym ) {
@@ -74,6 +79,24 @@ namespace resolutionFit {
   FitResult::~FitResult() {
     if( extrapolation_ ) delete extrapolation_;
     if( kSoftFit_ ) delete kSoftFit_;
+  }
+
+
+  // -------------------------------------------------------------------------------------  
+  bool FitResult::extrapolate() {
+    if( verbosity_ == 1 ) std::cout << "Extrapolating" << std::endl;
+    Extrapolation extra(minPt(),maxPt());
+    bool result = extra(ptSoft_,values_,statUncerts_,extrapolation_,extrapolatedSystUncert_);
+    extrapolatedValue_ = extrapolation_->GetParameter(0);
+    extrapolatedStatUncert_ = extrapolation_->GetParError(0);
+
+    return result;
+  }
+
+
+  // -------------------------------------------------------------------------------------  
+  TH1* FitResult::spectrum() const {
+    return meas_.front()->histPdfPtTrue();
   }
 
 
@@ -149,18 +172,6 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------  
-  bool FitResultMaxLikeKSoftRel::extrapolate() {
-    if( verbosity_ == 1 ) std::cout << "Extrapolating" << std::endl;
-    Extrapolation extra(meanPt_);
-    bool result = extra(ptSoft_,values_,statUncerts_,extrapolation_,extrapolatedSystUncert_);
-    extrapolatedValue_ = extrapolation_->GetParameter(0);
-    extrapolatedStatUncert_ = extrapolation_->GetParError(0);
-
-    return result;
-  }
-
-
-  // -------------------------------------------------------------------------------------  
   void FitResultMaxLikeKSoftRel::setKSoftFit(const TF1* fit) {
     if( kSoftFit_ ) delete kSoftFit_;
     TString name = extrapolation_->GetName();
@@ -186,18 +197,20 @@ namespace resolutionFit {
     statUncerts_.clear();
     ptSoft_.clear();
 
-    // Set ptSoft cut values and find smalles ptSoft for meanPt
-    double ptSoftSmall = 1000.;
-    for(MeasIt it = meas_.begin() ; it != meas_.end(); ++it) {
-      ptSoft_.push_back((*it)->ptSoft());
-      if( (*it)->ptSoft() < ptSoftSmall ) {
-	ptSoftSmall = (*it)->ptSoft();
-	
-	std::cout << "FitResultFullMaxLike::storeResult(): TODO MeanPt from spectrum convoluted with extrapolated *sigma*!" << std::endl;
-	meanPt_ = (*it)->meanPdfPtTrue();
-	meanPtUncert_ = (*it)->meanPdfPtTrueUncert();
-      }
+    for(size_t i = 0; i < meas_.size(); ++i) {
+      ptSoft_.push_back(meas_.at(i)->ptSoft());
     }
+    std::cout << "FitResultFullMaxLike::storeResult(): TODO MeanPt from spectrum convoluted with extrapolated *sigma*!" << std::endl;
+
+    // Hack specific for Spring11 PF sample
+    size_t i = 0;
+    if( meas_.at(0)->fittedValue(0)/meas_.at(1)->fittedValue(0) > 2. ) {
+      std::cerr << "\nWARNING: Resolution a first point large; using second point.\n" << std::endl;
+      i = 1;
+    }
+    meanPt_ = meas_.at(i)->meanPdfPtTrue();
+    meanPtUncert_ = meas_.at(i)->meanPdfPtTrueUncert();
+
 
     // Set fitted values
     for(MeasIt it = meas_.begin(); it != meas_.end(); ++it) {
@@ -210,24 +223,24 @@ namespace resolutionFit {
   }
 
 
-  // -------------------------------------------------------------------------------------  
-  bool FitResultFullMaxLikeRel::extrapolate() {
-    if( verbosity_ == 1 ) std::cout << "Extrapolating" << std::endl;
-    Extrapolation extra(meanPt_);
-    bool result = extra(ptSoft_,values_,statUncerts_,extrapolation_,extrapolatedSystUncert_);
-    extrapolatedValue_ = extrapolation_->GetParameter(0);
-    extrapolatedStatUncert_ = extrapolation_->GetParError(0);
 
-    return result;
-  }
-
-
-
-
+  //! \brief Extrapolate absolute sigma and convolute extrapolated resolution
+  //! with spectrum to obtain mean pt in each bin
   // -------------------------------------------------------------------------------------  
   FitResultFullMaxLikeAbs::FitResultFullMaxLikeAbs(const Meas meas, unsigned int verbosity)
-    : FitResult(meas,verbosity) { }
+    : FitResult(meas,verbosity) {
+    ++HIST_COUNT;
+    TString name = "FitResultFullMaxLikeAbs::Spectrum::";
+    name += HIST_COUNT;
+    spectrum_ = new TH1D(name,"",5000,0.,3000.);
+  }
   
+
+  // -------------------------------------------------------------------------------------  
+  FitResultFullMaxLikeAbs::~FitResultFullMaxLikeAbs() {
+    delete spectrum_;
+  }
+
 
   // -------------------------------------------------------------------------------------  
   bool FitResultFullMaxLikeAbs::init() {
@@ -239,19 +252,62 @@ namespace resolutionFit {
       ptSoft_.push_back((*it)->ptSoft());
     }
 
+    // Set fitted values, i.e. the absolute resolution, and
+    // perform extrapolation
+    for(MeasIt it = meas_.begin(); it != meas_.end(); ++it) {
+      values_.push_back((*it)->fittedValue(0));
+      statUncerts_.push_back((*it)->fittedUncert(0));
+    }
+    meanPt_ = 1.;
+    meanPtUncert_ = 1.;
 
-// 	meanPt_ = (*it)->meanPdfPtTrue();
-// 	meanPtUncert_ = (*it)->meanPdfPtTrueUncert();
-//       }
-//     }
+    if( extrapolate() ) {
+      // Convolute extrapolated absolute resolution with spectrum
+      spectrum_->Reset();
+      for(int tBin = 1; tBin <= spectrum_->GetNbinsX(); ++tBin) {
+	double ptTrue = spectrum_->GetBinCenter(tBin);
+	// Convolution with cuts on ptAve
+	double s = extrapolatedValue_/sqrt(2.);	// This is still the absolute resolution!
+	double c = sqrt(M_PI/2.)*s*( erf((maxPt()-ptTrue)/s/sqrt(2.)) - erf((minPt()-ptTrue)/s/sqrt(2.)) );
+	double pdf = c*meas_.front()->pdfPtTrue(ptTrue);
+	
+	// Store (un-normalized) truth pdf for
+	// this value of ptTrue in hash table
+	spectrum_->SetBinContent(tBin,pdf);
+      } // End of loop over ptTrue
+      // Normalise values of truth pdf
+      if( spectrum_->Integral() ) spectrum_->Scale(1./spectrum_->Integral("width"));
 
-//     // Set fitted values
-//     for(MeasIt it = meas_.begin(); it != meas_.end(); ++it) {
-//       values_.push_back((*it)->fittedValue(0)/meanPt_);
-//       statUncerts_.push_back((*it)->fittedUncert(0)/meanPt_);
-//     }
+      // Get mean of pttrue spectrum
+      meanPt_ = spectrum_->GetMean();
+      meanPtUncert_ = meas_.front()->meanPdfPtTrueUncert();
+      
+      // Set relative resolution
+      values_.clear();
+      statUncerts_.clear();
+      for(MeasIt it = meas_.begin(); it != meas_.end(); ++it) {
+	values_.push_back((*it)->fittedValue(0)/meanPt_);
+	statUncerts_.push_back((*it)->fittedUncert(0)/meanPt_);
+      }
+      extrapolatedValue_ /= meanPt_;
+      extrapolatedStatUncert_ /= meanPt_;
+      extrapolatedSystUncert_ /= meanPt_;
+    
+      return true;
+    } else {
+      return false;
+    }    
   }
 
+
+  // -------------------------------------------------------------------------------------  
+  TH1* FitResultFullMaxLikeAbs::spectrum() const {
+    ++HIST_COUNT;
+    TString name = "FitResultFullMaxLikeAbs::spectrum::";
+    name += HIST_COUNT;
+
+    return static_cast<TH1*>(spectrum_->Clone(name));
+  }
 
 
 
@@ -297,18 +353,6 @@ namespace resolutionFit {
     
     // Perform extrapolation
     return extrapolate();
-  }
-
-
-  // -------------------------------------------------------------------------------------  
-  bool FitResultPtAsym::extrapolate() {
-    if( verbosity_ == 1 ) std::cout << "Extrapolating" << std::endl;
-    Extrapolation extra(meanPt_);
-    bool result = extra(ptSoft_,values_,statUncerts_,extrapolation_,extrapolatedSystUncert_);
-    extrapolatedValue_ = extrapolation_->GetParameter(0);
-    extrapolatedStatUncert_ = extrapolation_->GetParError(0);
-
-    return result;
   }
 
 
@@ -369,15 +413,5 @@ namespace resolutionFit {
   }
 
 
-  // -------------------------------------------------------------------------------------  
-  bool FitResultPtGenAsym::extrapolate() {
-    if( verbosity_ == 1 ) std::cout << "Extrapolating" << std::endl;
-    Extrapolation extra(meanPt_);
-    bool result = extra(ptSoft_,values_,statUncerts_,extrapolation_,extrapolatedSystUncert_);
-    extrapolatedValue_ = extrapolation_->GetParameter(0);
-    extrapolatedStatUncert_ = extrapolation_->GetParError(0);
-
-    return result;
-  }
 }
 

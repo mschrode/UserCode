@@ -1,4 +1,4 @@
-// $Id: OutputManager.h,v 1.1 2011/02/15 18:22:25 mschrode Exp $
+// $Id: OutputManager.h,v 1.2 2011/02/17 13:42:32 mschrode Exp $
 
 #ifndef OUTPUT_MANAGER_H
 #define OUTPUT_MANAGER_H
@@ -21,6 +21,7 @@ namespace resolutionFit {
     enum Mode { PSAllInOne, EPSSingleFiles };
 
     static OutputManager* createOutputManager(OutputManager::Mode mode, const TString &fileNameBase);
+    static bool isValidMode(Mode mode);
 
     OutputManager(const TString &fileNameBase);
     virtual ~OutputManager();
@@ -36,6 +37,7 @@ namespace resolutionFit {
 
     TH1* mainFrame(double xMin, double xMax, double yMin, double yMax, const TString &yTitle) const {
       return util::HistOps::createRatioTopFrame(xMin,xMax,yMin,yMax,yTitle); }
+    TH1* mainFrame(const TH1* h) const;
     TH1* ratioFrame(const TH1 *h, const TString &xTitle, const TString &xUnit, double yMin, double yMax) const {
       return util::HistOps::createRatioBottomFrame(h,xTitle,xUnit,yMin,yMax); }
 

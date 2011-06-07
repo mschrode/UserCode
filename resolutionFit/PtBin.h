@@ -30,19 +30,21 @@ namespace resolutionFit {
     DataSampleIt dataSamplesEnd() const { return dataSamples_.end(); }
     MCSampleIt mcSamplesBegin() const { return mcSamples_.begin(); }
     MCSampleIt mcSamplesEnd() const { return mcSamples_.end(); }
-    const Sample* findSample(SampleLabel label) const;
+    const Sample* findSample(const SampleLabel &label) const;
     bool hasMCTruthSample() const { return mcTruthSample_; }
     const Sample* mcTruthSample() const { return mcTruthSample_; }
     
-    bool addDataSample(const TString &label, const TString &baseFileName) {
-      return addSample(Sample::Data,label,baseFileName);
+    bool addDataSample(const TString &label, const TString &baseFileName, const TString &baseFileNameSpectrum) {
+      return addSample(Sample::Data,label,baseFileName,baseFileNameSpectrum);
     }
-    bool addMCSample(const TString &label, const TString &baseFileName) {
-      return addSample(Sample::MC,label,baseFileName);
+    bool addMCSample(const TString &label, const TString &baseFileName, const TString &baseFileNameSpectrum) {
+      return addSample(Sample::MC,label,baseFileName,baseFileNameSpectrum);
     }
     bool addMCTruthSample(const TString &label, const TString &baseFileName);
     bool addFitResult(FitResult::Type type);
     bool setKSoftFit(const SampleLabel &label, FitResult::Type type, const TF1* fit);
+
+    void weightSampleRelTo(const SampleLabel &sampleToBeWeighted, const SampleLabel &referenceSample);
     
 
   private:
@@ -55,7 +57,7 @@ namespace resolutionFit {
     Sample* mcTruthSample_;
     Samples samples_;
 
-    bool addSample(Sample::Type type, const TString &label, const TString &baseFileName);
+    bool addSample(Sample::Type type, const TString &label, const TString &baseFileName, const TString &baseFileNameSpectrum);
   };
 
   typedef std::vector<PtBin*> PtBins;

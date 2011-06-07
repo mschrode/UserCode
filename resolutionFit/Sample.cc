@@ -1,9 +1,18 @@
 #include "Sample.h"
 
+#include <cassert>
 #include <iostream>
 
 
 namespace resolutionFit {
+
+  std::map<TString,int> Sample::COLOR;
+  std::map<TString,int> Sample::MARKER_STYLE;
+  std::map<TString,Sample::Type> Sample::TYPE;
+  unsigned int DataSample::N_DATA_SAMPLES = 0;
+  unsigned int MCSample::N_MC_SAMPLES = 0;
+  unsigned int MCTruthSample::N_MCTRUTH_SAMPLES = 0;
+
 
   // -------------------------------------------------------------------
   bool Sample::validType(Type type) {
@@ -30,6 +39,37 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------
+  int Sample::color(const TString &label) {
+    int c = 0;
+    std::map<TString,int>::const_iterator it = COLOR.find(label);
+    if( it != COLOR.end() ) c = it->second;
+    
+    return c;
+  }
+
+
+  // -------------------------------------------------------------------
+  int Sample::markerStyle(const TString &label) {
+    int s = 0;
+    std::map<TString,int>::const_iterator it = MARKER_STYLE.find(label);
+    if( it != MARKER_STYLE.end() ) s = it->second;
+    
+    return s;
+  }
+
+
+  // -------------------------------------------------------------------
+  Sample::Type Sample::type(const TString &label) {
+    Sample::Type t = NONE;
+    std::map<TString,Type>::const_iterator it = TYPE.find(label);
+    if( it != TYPE.end() ) t = it->second;
+    
+    return t;
+  }
+  
+
+
+  // -------------------------------------------------------------------
   Sample::Sample(const TString &label, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, unsigned int verbosity)
     : label_(label), verbosity_(verbosity) {
 
@@ -50,6 +90,32 @@ namespace resolutionFit {
     }
   }
 
+
+
+  // -------------------------------------------------------------------
+  double Sample::relativeWeightTo(const SampleLabel &other, unsigned int ptSoftBin) const {
+    assert( ptSoftBin < nPtSoftBins() );
+    double relWeight = 1.;
+    std::map<SampleLabel,std::vector<double> >::const_iterator it = relWeightToOtherSample_.find(other);
+    if( it != relWeightToOtherSample_.end() ) relWeight = it->second.at(ptSoftBin);
+
+    return relWeight;
+  }
+
+
+
+  // -------------------------------------------------------------------
+  void Sample::setRelativeWeightTo(const SampleLabel &other, unsigned int ptSoftBin, double relWeight) {
+    assert( ptSoftBin < nPtSoftBins() );
+    std::map<SampleLabel,std::vector<double> >::iterator it = relWeightToOtherSample_.find(other);
+    if( it != relWeightToOtherSample_.end() ) {
+      it->second.at(ptSoftBin) = relWeight;
+    } else {
+      std::vector<double> weights(nPtSoftBins(),1.);
+      weights.at(ptSoftBin) = relWeight;
+      relWeightToOtherSample_[other] = weights;
+    }
+  }
 
 
   // -------------------------------------------------------------------
@@ -96,10 +162,25 @@ namespace resolutionFit {
       ptSoftVals.push_back(ptSoft(ptSoftBin));
     }
   }
+
+
+  //! \brief Get y values of points which enter the extrapolation
+  //! These might be absolute or relative resolutions depending on
+  //! the chosen FitResultType. Note also that this is not necessarily
+  //! the same as 'values()', which always returns the relative resolutions. 
+  // -------------------------------------------------------------------
+  void Sample::valuesInExtrapolation(FitResult::Type type, std::vector<double> &val, std::vector<double> &uncert) const {
+    val.clear();
+    uncert.clear();
+    for(unsigned int ptSoftBin = 0; ptSoftBin < nPtSoftBins(); ++ptSoftBin) {
+      val.push_back(valueInExtrapolation(type,ptSoftBin));
+      uncert.push_back(uncertInExtrapolation(type,ptSoftBin));
+    }
+  }
   
   
   // -------------------------------------------------------------------
-  void Sample::values(FitResult::Type type, std::vector<double> &val, std::vector<double> &uncert) const {
+  void Sample::fittedValues(FitResult::Type type, std::vector<double> &val, std::vector<double> &uncert) const {
     val.clear();
     uncert.clear();
     for(unsigned int ptSoftBin = 0; ptSoftBin < nPtSoftBins(); ++ptSoftBin) {
@@ -124,6 +205,26 @@ namespace resolutionFit {
     double result = 0.;
     FitResult* fr = 0;
     if( findFitResult(type,fr) ) result = fr->meanPtUncert();
+    
+    return result;
+  }
+
+
+  // -------------------------------------------------------------------
+  double Sample::valueInExtrapolation(FitResult::Type type, unsigned int ptSoftBin) const {
+    double result = 0.;
+    FitResult* fr = 0;
+    if( findFitResult(type,fr) ) result = fr->valueInExtrapolation(ptSoftBin);
+    
+    return result;
+  }
+
+
+  // -------------------------------------------------------------------
+  double Sample::uncertInExtrapolation(FitResult::Type type, unsigned int ptSoftBin) const {
+    double result = 0.;
+    FitResult* fr = 0;
+    if( findFitResult(type,fr) ) result = fr->statUncertInExtrapolation(ptSoftBin);
     
     return result;
   }
@@ -210,6 +311,16 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------
+  TString Sample::labelQuantityInExtrapolation(FitResult::Type type) const {
+    TString result = "";
+    FitResult* fr = 0;
+    if( findFitResult(type,fr) ) result = fr->labelQuantityInExtrapolation();
+    
+    return result;
+  }
+
+
+  // -------------------------------------------------------------------
   bool Sample::findFitResult(FitResult::Type type, FitResult* &fitResult) const {
     bool result = false;
     FitResultMapIt it = fitResult_.find(type);
@@ -225,36 +336,68 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------
-  DataSample::DataSample(const TString &label, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, unsigned int verbosity)
+  int Sample::color(unsigned int idx) const {
+    int col[6] = { 1, 4, 8, 28, 38, 6 };
+    return (idx>=0 && idx<6) ? col[idx] : 1;
+  }
+
+
+
+  // -------------------------------------------------------------------
+  DataSample::DataSample(const TString &label, double ptMin, double ptMax, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, const TString &fileNameSpectrum, unsigned int verbosity)
     : Sample(label,fileNames,ptSoft,histNameSuffix,verbosity) {
 
     // Read measurements and fitted values from file
     for(unsigned int i = 0; i < ptSoft.size(); ++i) {
-      meas_.push_back(new Measurement(fileNames.at(i),histNameSuffix,ptSoft.at(i),verbosity));
+      meas_.push_back(new Measurement(fileNames.at(i),histNameSuffix,fileNameSpectrum,ptMin,ptMax,ptSoft.at(i),verbosity));
+    }
+
+    // Style
+    if( Sample::type(label) == Sample::NONE ) {
+      TYPE[label] = Sample::Data;
+      MARKER_STYLE[label] = 20 + N_DATA_SAMPLES;
+      COLOR[label] = color(2*N_DATA_SAMPLES);
+      ++N_DATA_SAMPLES;
     }
   }
 
 
 
   // -------------------------------------------------------------------
-  MCSample::MCSample(const TString &label, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, unsigned int verbosity)
+  MCSample::MCSample(const TString &label, double ptMin, double ptMax, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, const TString &fileNameSpectrum, unsigned int verbosity)
     : Sample(label,fileNames,ptSoft,histNameSuffix,verbosity) {
 
     // Read measurements and fitted values from file
     for(unsigned int i = 0; i < ptSoft.size(); ++i) {
-      meas_.push_back(new Measurement(fileNames.at(i),histNameSuffix,ptSoft.at(i),verbosity));
+      meas_.push_back(new Measurement(fileNames.at(i),histNameSuffix,fileNameSpectrum,ptMin,ptMax,ptSoft.at(i),verbosity));
+    }
+
+    // Style
+    if( Sample::type(label) == Sample::NONE ) {
+      TYPE[label] = Sample::MC;
+      MARKER_STYLE[label] = 25 + N_MC_SAMPLES;
+      COLOR[label] = color(1+2*N_MC_SAMPLES);
+      ++N_MC_SAMPLES;
     }
   }
 
 
 
   // -------------------------------------------------------------------
-  MCTruthSample::MCTruthSample(const TString &label, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, unsigned int verbosity)
+  MCTruthSample::MCTruthSample(const TString &label, double ptMin, double ptMax, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, unsigned int verbosity)
     : Sample(label,fileNames,ptSoft,histNameSuffix,verbosity) {
 
     // Read measurements from file
     for(unsigned int i = 0; i < ptSoft.size(); ++i) {
-      meas_.push_back(new Measurement(fileNames.at(i),histNameSuffix,ptSoft.at(i),false,verbosity));
+      meas_.push_back(new Measurement(fileNames.at(i),histNameSuffix,ptMin,ptMax,ptSoft.at(i),verbosity));
+    }
+
+    // Style
+    if( Sample::type(label) == Sample::NONE ) {
+      TYPE[label] = Sample::MCTruth;
+      MARKER_STYLE[label] = 24 + N_MCTRUTH_SAMPLES;
+      COLOR[label] = 2;
+      ++N_MCTRUTH_SAMPLES;
     }
   }
 }

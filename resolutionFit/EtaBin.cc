@@ -1,4 +1,4 @@
-// $Id: EtaBin.cc,v 1.9 2011/03/04 09:35:54 mschrode Exp $
+// $Id: EtaBin.cc,v 1.10 2011/03/19 17:41:03 mschrode Exp $
 
 #include <algorithm>
 #include <iostream>
@@ -51,10 +51,10 @@ namespace resolutionFit{
 
 
   // -------------------------------------------------------------------------------------
-  bool EtaBin::addDataSample(const TString &label, const TString &baseFileName) {
+  bool EtaBin::addDataSample(const TString &label, const TString &baseFileName, const TString &baseFileNameSpectrum) {
     bool result = true;
     for(std::vector<PtBin*>::iterator it = ptBins_.begin(); it != ptBins_.end(); ++it) {
-      bool status = (*it)->addDataSample(label,baseFileName);
+      bool status = (*it)->addDataSample(label,baseFileName,baseFileNameSpectrum);
       result = result && status;
     }
     sampleTypes_[label] = Sample::Data;
@@ -64,10 +64,10 @@ namespace resolutionFit{
 
 
   // -------------------------------------------------------------------------------------
-  bool EtaBin::addMCSample(const TString &label, const TString &baseFileName) {
+  bool EtaBin::addMCSample(const TString &label, const TString &baseFileName, const TString &baseFileNameSpectrum) {
     bool result = true;
     for(std::vector<PtBin*>::iterator it = ptBins_.begin(); it != ptBins_.end(); ++it) {
-      bool status = (*it)->addMCSample(label,baseFileName);
+      bool status = (*it)->addMCSample(label,baseFileName,baseFileNameSpectrum);
       result = result && status;
     }
     sampleTypes_[label] = Sample::MC;
@@ -309,11 +309,19 @@ namespace resolutionFit{
   }
 
 
+
+  // Prepare two samples for comparison:
+  // - store sample labels of to be compared samples. They can be
+  //   referenced in further steps e.g. when calculating scale factors
+  // - compute relative sample weights.
   // -------------------------------------------------------------------------------------
   bool EtaBin::compareSamples(const SampleLabel &label1, const SampleLabel &label2) {
     if( sampleTypes_.find(label1) != sampleTypes_.end() &&
 	sampleTypes_.find(label2) != sampleTypes_.end() ) {
       compSamples_.insert(new SampleLabelPair(label1,label2));
+      for(PtBins::iterator it = ptBins_.begin(); it != ptBins_.end(); ++it) {
+	(*it)->weightSampleRelTo(label2,label1);
+      }
     } else {
       std::cerr << "ERROR in EtaBin::compareSamples(): no samples with label '" << label1 << "' and '" << label2 << "'" << std::endl;
       exit(1);
@@ -619,8 +627,8 @@ namespace resolutionFit{
   double EtaBin::correctedResolution(const SampleLabel &label, FitResult::Type type, unsigned int ptBinIdx, double scalePLI) const {
     double result = extrapolatedValue(label,type,ptBinIdx);
     double plim = scalePLI*pli(label,type,ptBinIdx);
-
-    return sqrt( result*result - plim*plim );
+    double sqDiff = result*result - plim*plim;
+    return sqDiff < 0. ? 0.01 : sqrt(sqDiff);
   }
 
   
@@ -722,7 +730,13 @@ namespace resolutionFit{
     // Get TF1 to fit
     TF1* fit = f->func("tmp");
     if( type == ResolutionFunction::ModifiedNSC ) fit->FixParameter(2,0.);
-    gc->Fit(fit,"0BR");
+    gc->Fit(fit,"0QBR");
+    std::cout << "\nParameters of fitted resolution:\n";
+    std::cout << "  Eta" << etaBin() << ": 10. 1500. ";
+    for(int i = 0; i < fit->GetNpar(); ++i) {
+      std::cout << "  " << fit->GetParameter(i) << std::flush;
+    }
+    std::cout << std::endl;
     ResolutionFunction* result = ResolutionFunction::createResolutionFunction(type,fit);
     delete f;
     delete fit;

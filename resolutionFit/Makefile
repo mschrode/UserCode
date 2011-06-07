@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.17 2011/03/01 16:52:42 mschrode Exp $
+# $Id: Makefile,v 1.18 2011/03/19 17:41:03 mschrode Exp $
 
 ROOTLIBS   = $(shell root-config --libs) -lMinuit
 ROOTCFLAGS = $(shell root-config --cflags)
@@ -62,7 +62,7 @@ Sample.o: Sample.h Sample.cc FitResult.h Measurement.h
 SystematicUncertainty.o: SystematicUncertainty.h SystematicUncertainty.cc FitResult.h Sample.h
 	g++ $(CFLAG) -c SystematicUncertainty.cc	
 
-run.o: run.cc CommanderCool.h FitResult.h Parameters.h ResolutionFunction.h $(UTIL)
+run.o: run.cc CommanderCool.h FitResult.h OutputManager.h Parameters.h ResolutionFunction.h $(UTIL)
 	g++ $(CFLAG) -c run.cc
 
 

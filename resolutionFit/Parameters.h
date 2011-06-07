@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.26 2011/02/18 18:42:22 mschrode Exp $
+// $Id: Parameters.h,v 1.27 2011/03/04 09:35:54 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -34,13 +34,16 @@ namespace resolutionFit {
     ~Parameters();
 
     void setJetProperties(JetProperties::Algo algo, JetProperties::Type type);
+    void setOutMode(OutputManager::Mode mode);
+    void setNEtaBinsUser(unsigned int nBins);
 
     unsigned int verbosity() const { return verbosity_; }
 
     JetProperties::Algo jetAlgo() const { return jetAlgo_; }
     JetProperties::Type jetType() const { return jetType_; }
+    double lumi() const { return 124; }
 
-    unsigned int nEtaBins() const { return binAdm_->nEtaBins(); }
+    unsigned int nEtaBins() const { return nEtaBinsUser_>0 ? nEtaBinsUser_ : binAdm_->nEtaBins(); }
     unsigned int nPtBins(unsigned int etaBin) const { return binAdm_->nPtBins(etaBin); }
     unsigned int nPtSoftBins() const { return binAdm_->nPtSoftBins(); }
     double etaMin(unsigned int etaBin) const { return binAdm_->etaMin(etaBin); }
@@ -65,22 +68,27 @@ namespace resolutionFit {
     TString fileNameSuffix(unsigned int etaBin, unsigned int ptBin, unsigned int ptSoftBin) const {
       return etaFileNameTag(etaBin)+ptSoftFileNameTag(ptSoftBin)+fileNameEnding();
     }
+    TString fileNameSuffix(unsigned int etaBin) const {
+      return etaFileNameTag(etaBin)+fileNameEnding();
+    }
     TString etaFileNameTag(unsigned int etaBin) const { return "_Eta"+util::toTString(etaBin); }
     TString ptFileNameTag(unsigned int ptBin) const { return "_Pt"+util::toTString(ptBin); }
-    TString ptSoftFileNameTag(unsigned int ptSoftBin) const { return "_PtSoft"+util::toTString(ptSoftBin+1); }
+    TString ptSoftFileNameTag(unsigned int ptSoftBin) const { return "_PtSoft"+util::toTString(ptSoftBin); }
     TString fileNameEnding() const { return ".root"; }
 
-    //OutputManager::Mode outMode() const { return OutputManager::PSAllInOne; }
-    OutputManager::Mode outMode() const { return OutputManager::EPSSingleFiles; }
+    OutputManager::Mode outMode() const { return outPutMode_; }
     TString outFilePrefix() const { return id_; }
       
 
   private:
     const unsigned int verbosity_;
+
     TString id_;
+    unsigned int nEtaBinsUser_;
 
     JetProperties::Algo jetAlgo_;
     JetProperties::Type jetType_;
+    OutputManager::Mode outPutMode_;
 
     sampleTools::BinningAdmin* binAdm_;
   };

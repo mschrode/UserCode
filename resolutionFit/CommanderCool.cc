@@ -1,4 +1,4 @@
-// $Id: CommanderCool.cc,v 1.6 2011/03/01 16:52:41 mschrode Exp $
+// $Id: CommanderCool.cc,v 1.7 2011/03/04 09:35:54 mschrode Exp $
 
 #include <iomanip>
 #include <iostream>
@@ -76,14 +76,14 @@ namespace resolutionFit {
 
 
 
-  void CommanderCool::addDataSample(const TString &label, const TString &baseFileName) {
+  void CommanderCool::addDataSample(const TString &label, const TString &baseFileName, const TString &baseFileNameSpectrum) {
     if( !isConsistentInputName(baseFileName) ) {
       std::cerr << "WARNING in CommanderCool::addDataSample(): name of file contains a jet type string different than the current type '" << JetProperties::toString(par_->jetType()) << "'" << std::endl;
       exit(1);
     }
 
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
-      if( !((*it)->addDataSample(label,baseFileName)) ) {
+      if( !((*it)->addDataSample(label,baseFileName,baseFileNameSpectrum)) ) {
 	std::cerr << "ERROR adding DataSample '" << label << "'" << std::endl;
 	exit(1);
       }
@@ -92,14 +92,14 @@ namespace resolutionFit {
 
 
 
-  void CommanderCool::addMCSample(const TString &label, const TString &baseFileName) {
+  void CommanderCool::addMCSample(const TString &label, const TString &baseFileName, const TString &baseFileNameSpectrum) {
     if( !isConsistentInputName(baseFileName) ) {
       std::cerr << "WARNING in CommanderCool::addMCSample(): name of file contains a jet type string different than the current type '" << JetProperties::toString(par_->jetType()) << "'" << std::endl;
       exit(1);
     }
 
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
-      if( !((*it)->addMCSample(label,baseFileName) ) ) {
+      if( !((*it)->addMCSample(label,baseFileName,baseFileNameSpectrum) ) ) {
 	std::cerr << "ERROR adding MCSample '" << label << "'" << std::endl;
 	exit(1);
       }
@@ -191,6 +191,11 @@ namespace resolutionFit {
       }
     }
 
+    std::cout << "\nOutput:" << std::endl;
+    std::cout << "  " << std::flush;
+    if( par_->outMode() == OutputManager::PSAllInOne ) std::cout << "One ps file containing all plots" << std::endl;
+    else if( par_->outMode() == OutputManager::EPSSingleFiles ) std::cout << "One eps file per plot" << std::endl;
+    
     std::cout << "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n" << std::endl;
   }
 

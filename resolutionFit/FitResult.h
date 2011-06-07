@@ -1,4 +1,4 @@
-// $Id: FitResult.h,v 1.6 2011/03/02 11:55:51 mschrode Exp $
+// $Id: FitResult.h,v 1.7 2011/03/02 16:06:01 mschrode Exp $
 
 #ifndef FIT_RESULT_H
 #define FIT_RESULT_H
@@ -13,6 +13,7 @@
 #include "Extrapolation.h"
 #include "Measurement.h"
 
+class TH1;
 
 namespace resolutionFit {
 
@@ -29,10 +30,21 @@ namespace resolutionFit {
     virtual ~FitResult();
 
     virtual FitResult::Type fitResultType() const = 0;
-    
+
+    double minPt() const { return meas_.front()->ptMin(); }
+    double maxPt() const { return meas_.front()->ptMax(); }
     double meanPt() const { return meanPt_; }
     double meanPtUncert() const { return meanPtUncert_; }
     double ptSoft(unsigned int ptSoftBin) const { return ptSoft_.at(ptSoftBin); }
+    virtual TString labelQuantityInExtrapolation() const {
+      return "#sigma / p^{ref}_{T}";
+    }
+    virtual double valueInExtrapolation(unsigned int ptSoftBin) const { 
+      return values_.at(ptSoftBin);
+    }
+    virtual double statUncertInExtrapolation(unsigned int ptSoftBin) const {
+      return values_.at(ptSoftBin);
+    }
     double value(unsigned int ptSoftBin) const { return values_.at(ptSoftBin); }
     double statUncert(unsigned int ptSoftBin) const { return statUncerts_.at(ptSoftBin); }
     TF1* extrapolationFunction(const TString &name) const {
@@ -40,6 +52,7 @@ namespace resolutionFit {
     virtual double extrapolatedValue() const { return extrapolatedValue_; }
     double extrapolatedStatUncert() const { return extrapolatedStatUncert_; }
     double extrapolatedSystUncert() const { return extrapolatedSystUncert_; }
+    virtual TH1* spectrum() const;
     double kSoftSlope() const;
     double kSoftSlopeStatUncert() const;
     TF1* kSoftFit(const TString &name) const { return static_cast<TF1*>(kSoftFit_->Clone(name)); }
@@ -48,8 +61,11 @@ namespace resolutionFit {
 
     virtual bool init() = 0;
 
+
     
   protected:
+    static unsigned int HIST_COUNT;
+
     const std::vector<Measurement*> meas_;
     const unsigned int verbosity_;
     const unsigned int workingPointBin_;
@@ -64,6 +80,8 @@ namespace resolutionFit {
     double extrapolatedSystUncert_;
     TF1* extrapolation_;
     TF1* kSoftFit_;
+
+    bool extrapolate();
   };
 
   typedef std::set<FitResult::Type> FitResultTypes;
@@ -82,9 +100,6 @@ namespace resolutionFit {
     virtual void setKSoftFit(const TF1* fit);
 
     bool init();
-
-  private:
-    bool extrapolate();
   };
 
 
@@ -98,9 +113,6 @@ namespace resolutionFit {
     FitResult::Type fitResultType() const { return FitResult::FullMaxLikeRel; }
 
     bool init();
-
-  private:
-    bool extrapolate();
   };
 
 
@@ -109,10 +121,26 @@ namespace resolutionFit {
   class FitResultFullMaxLikeAbs : public FitResult {
   public:
     FitResultFullMaxLikeAbs(const std::vector<Measurement*> meas, unsigned int verbosity);
+    ~FitResultFullMaxLikeAbs();
 
     FitResult::Type fitResultType() const { return FitResult::FullMaxLikeAbs; }
 
     bool init();
+
+    virtual TString labelQuantityInExtrapolation() const {
+      return "#sigma (GeV)";
+    }
+    double valueInExtrapolation(unsigned int ptSoftBin) const { 
+      return meanPt()*values_.at(ptSoftBin);
+    }
+    double statUncertInExtrapolation(unsigned int ptSoftBin) const {
+      return meanPt()*statUncerts_.at(ptSoftBin);
+    }
+    TH1* spectrum() const;
+
+    
+  private:
+    TH1* spectrum_;
   };
 
 
@@ -125,9 +153,6 @@ namespace resolutionFit {
     FitResult::Type fitResultType() const { return FitResult::PtAsym; }
 
     bool init();
-
-  private:
-    bool extrapolate();
   };
 
 
@@ -140,9 +165,6 @@ namespace resolutionFit {
     FitResult::Type fitResultType() const { return FitResult::PtGenAsym; }
 
     bool init();
-
-  private:
-    bool extrapolate();
   };
 }
 #endif

@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.28 2011/02/18 18:42:22 mschrode Exp $
+// $Id: Parameters.cc,v 1.29 2011/03/04 09:35:54 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -13,6 +13,8 @@ namespace resolutionFit {
 
     jetAlgo_ = JetProperties::AK5;
     jetType_ = JetProperties::Calo;
+    outPutMode_ = OutputManager::PSAllInOne;
+    nEtaBinsUser_ = 0;
 
     // Print binning info
     binAdm_->printBinning();
@@ -36,6 +38,23 @@ namespace resolutionFit {
     id_ += "_"+JetProperties::toString(type);
   }
 
+
+  // -------------------------------------------------------------------------------------
+  void Parameters::setOutMode(OutputManager::Mode mode) {
+    if( OutputManager::isValidMode(mode) ) {
+      outPutMode_ = mode;
+    }
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  void Parameters::setNEtaBinsUser(unsigned int nBins) {
+    if( nBins > binAdm_->nEtaBins() ) {
+      std::cerr << "ERROR: Number of maximum eta bins set by user larger than in config" << std::endl;
+      exit(1);
+    }
+    nEtaBinsUser_ = nBins;
+  }
 
 
   // -------------------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-// $Id: Measurement.cc,v 1.2 2011/02/28 10:53:15 mschrode Exp $
+// $Id: Measurement.cc,v 1.3 2011/03/06 13:18:32 mschrode Exp $
 
 #include "Measurement.h"
 
@@ -15,27 +15,27 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------
-  Measurement::Measurement(const TString &fileName, const TString &histNameSuffix, double ptSoft, unsigned int verbosity)
-    : histNameSuffix_(histNameSuffix), ptSoft_(ptSoft), verbosity_(verbosity) {
-    init(fileName,true);
+  Measurement::Measurement(const TString &fileName, const TString &histNameSuffix, const TString &fileNameSpectrum, double ptMin, double ptMax, double ptSoft, unsigned int verbosity)
+    : histNameSuffix_(histNameSuffix), ptMin_(ptMin), ptMax_(ptMax), ptSoft_(ptSoft), verbosity_(verbosity) {
+    init(fileName,fileNameSpectrum,true);
   }
 
   // -------------------------------------------------------------------
-  Measurement::Measurement(const TString &fileName, const TString &histNameSuffix, double ptSoft, bool hasFittedParameters, unsigned int verbosity)
-    : histNameSuffix_(histNameSuffix), ptSoft_(ptSoft), verbosity_(verbosity) {
-    init(fileName,hasFittedParameters);
+  Measurement::Measurement(const TString &fileName, const TString &histNameSuffix, double ptMin, double ptMax, double ptSoft, unsigned int verbosity)
+    : histNameSuffix_(histNameSuffix), ptMin_(ptMin), ptMax_(ptMax), ptSoft_(ptSoft), verbosity_(verbosity) {
+    init(fileName,"NONE",false);
   }
   
 
   // -------------------------------------------------------------------
-  void Measurement::init(const TString &fileName, bool hasFittedParameters) {
+  void Measurement::init(const TString &fileName, const TString &fileNameSpectrum, bool hasFittedParameters) {
 
     // Histograms to be read from file
     hists_[("hPtGen"+histNameSuffix_)] = 0;
     hists_[("hPtGenJet1"+histNameSuffix_)] = 0;
     hists_[("hPtAveAbs"+histNameSuffix_)] = 0;
     hists_[("hTruthPDF"+histNameSuffix_)] = 0;
-    hists_[("hPtAsym"+histNameSuffix_)] = 0;
+    hists_[("hPtAbsAsym"+histNameSuffix_)] = 0;
     hists_[("hFitPtAsym"+histNameSuffix_)] = 0;
     hists_[("hRespMeas"+histNameSuffix_)] = 0;
     hists_[("hRespFit"+histNameSuffix_)] = 0;
@@ -67,6 +67,30 @@ namespace resolutionFit {
       std::cout << "  meanPtGen_      =  " << meanPtGen_ << std::endl;
       std::cout << "  meanPdfPtTrue_  =  " << meanPdfPtTrue_ << std::endl;
     }
+
+    // Read spectrum; this should be also in Kalibri output in the future
+    if( fileNameSpectrum != "NONE" ) {
+      TFile file(fileNameSpectrum,"READ");
+      if( file.IsZombie() ) {
+	std::cerr << "  ERROR: Error opening file " << fileNameSpectrum << std::endl;
+	exit(1);
+      }
+      hSpectrum_ = 0;
+      file.GetObject("hPtGen",hSpectrum_);
+      if( !hSpectrum_ ) {
+	std::cerr << "  ERROR: 'hPtGen' not found." << std::endl;
+	exit(1);
+      }
+      hSpectrum_->SetDirectory(0);
+      hSpectrum_->UseCurrentStyle();
+      hSpectrum_->SetName("hSpectrum::"+histNameSuffix_);
+      if( hSpectrum_->Integral() ) hSpectrum_->Scale(1./hSpectrum_->Integral("width"));
+    } else {
+      ++HIST_COUNT;
+      TString name = "Measurement::Dummy::";
+      name += HIST_COUNT;
+      hSpectrum_ = new TH1D(name,"",1,0,1);
+    }
   }
 
 
@@ -77,6 +101,7 @@ namespace resolutionFit {
       delete it->second;
     }
     hists_.clear();
+    delete hSpectrum_;
   }
 
 
@@ -108,7 +133,7 @@ namespace resolutionFit {
     if( verbosity_ == 2 ) std::cout << "  Opening file... " << std::endl;
     TFile file(fileName,"READ");
     if( file.IsZombie() ) {
-      std::cerr << "  ERROR: Error opening file." << std::endl;
+      std::cerr << "  ERROR: Error opening file " << fileName << std::endl;
       statusIsGood = false;
     }
 
@@ -126,7 +151,8 @@ namespace resolutionFit {
 	  h->SetDirectory(0);
 	  for(int i = 0; i < h->GetNbinsX(); i++) {
 	    values_.push_back(h->GetBinContent(1+i));
-	    statUncert_.push_back(sqrt(2.)*h->GetBinError(1+i)); // Correct for wrong factor 2 in likelihood for LVMINI
+	    statUncert_.push_back(h->GetBinError(1+i));
+	    
 	    if( verbosity_ == 2 ) {
 	      std::cout << "  Value " << i << ": " << values_.back() << std::flush;
 	      std::cout << "  Value: " << values_.back() << std::flush;
@@ -178,4 +204,9 @@ namespace resolutionFit {
     }
   }
 
+
+  // -------------------------------------------------------------------
+  double Measurement::pdfPtTrue(double pt) const {
+    return hSpectrum_->Interpolate(pt);
+  }
 }

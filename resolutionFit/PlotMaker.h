@@ -1,4 +1,4 @@
-// $Id: PlotMaker.h,v 1.10 2011/03/02 16:06:01 mschrode Exp $
+// $Id: PlotMaker.h,v 1.11 2011/03/19 17:41:03 mschrode Exp $
 
 #ifndef PLOT_MAKER_H
 #define PLOT_MAKER_H
@@ -23,12 +23,13 @@ namespace resolutionFit {
     ~PlotMaker();
 
     void makeAllPlots() const {
-      //      plotAsymmetry();
-      //plotPtSpectra();
+      //plotAsymmetry();
+      plotAsymmetryTails();
+      plotPtSpectra();
       plotExtrapolation();
       //plotSlopes();
       plotPtGenSpectra();
-      //plotParticleLevelImbalance();
+      plotParticleLevelImbalance();
       plotResolution();
       plotScaledMCTruth();
       plotSystematicUncertainties();
@@ -36,7 +37,9 @@ namespace resolutionFit {
 
 
     void plotAsymmetry() const;
+    void plotAsymmetryTails() const;
     void plotExtrapolation() const;
+    void plotMCEventInfo() const;
     void plotParticleLevelImbalance() const;
     void plotPtGenSpectra() const;
     void plotPtSpectra() const;
@@ -66,6 +69,7 @@ namespace resolutionFit {
       TString pt() const;
       TString ptSoft() const;
       TString label(FitResult::Type type) const;
+      TString label(const SampleLabel &label) const;
       
 
     private:
@@ -95,11 +99,14 @@ namespace resolutionFit {
     TString histFileName(const TString &id, const PtBin* ptBin, const Sample* sample) const;
     TString histFileName(const TString &id, const PtBin* ptBin, const Sample* sample, unsigned int ptSoftBinIdx) const;
     TString histFileName(const TString &id, const PtBin* ptBin, SampleLabel label1, SampleLabel label2, FitResult::Type type, unsigned int ptSoftBinIdx) const;
+    TString cleanFileName(TString str) const;
 
-    int color(Sample::Type type) const;
-    int markerStyle(Sample::Type type) const;
-    void setStyle(Sample::Type type, TH1* &h) const;
-    void setStyle(Sample::Type type, TGraphAsymmErrors* &g) const;
+    int color(const SampleLabel &label) const { return Sample::color(label); }
+    int markerStyle(const SampleLabel &label) const { return Sample::markerStyle(label); }
+    void setStyle(const SampleLabel &label, TH1* &h) const;
+    void setStyle(const Sample* s, TH1* &h) const { setStyle(s->label(),h); }
+    void setStyle(const SampleLabel &label, TGraphAsymmErrors* &g) const;
+    void setStyle(const Sample* s, TGraphAsymmErrors* &g) const { setStyle(s->label(), g); }
   };
 }
 #endif

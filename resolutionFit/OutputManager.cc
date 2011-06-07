@@ -1,4 +1,4 @@
-// $Id: OutputManager.cc,v 1.2 2011/02/17 13:42:32 mschrode Exp $
+// $Id: OutputManager.cc,v 1.3 2011/02/18 15:17:04 mschrode Exp $
 
 #include "OutputManager.h"
 
@@ -23,6 +23,18 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------
+  bool OutputManager::isValidMode(Mode mode) {
+    bool result = true;
+    if( mode != PSAllInOne && mode != EPSSingleFiles ) {
+      result = false;
+      std::cerr << "ERROR in OutputManager::isValidMode: Invalid OutputMode" << std::endl;
+    }
+
+    return result;
+  }
+
+
+  // -------------------------------------------------------------------------------------
   OutputManager::OutputManager(const TString &fileNameBase) {
     can_ = new TCanvas("OutputManager:Canvas","",500,500);
     topCan_ = util::HistOps::createRatioTopCanvas();
@@ -38,6 +50,15 @@ namespace resolutionFit {
   }
 
 
+  // -------------------------------------------------------------------------------------
+  TH1* OutputManager::mainFrame(const TH1* h) const {
+    TH1* tmp = util::HistOps::createRatioTopFrame(h);
+    double yMin = 3E-2;
+    double yMax = h->GetMaximum();
+    tmp->GetYaxis()->SetRangeUser(yMin,yMax);
+
+    return tmp;
+  }
 
 
   // -------------------------------------------------------------------------------------
@@ -69,7 +90,6 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   void OutputManagerPSAllInOne::logy() {
     lastPad_->SetLogy(1);
-    if( lastPad_ == topCan_ ) bottomPad_->SetLogy(1);
   }
 
 
@@ -151,7 +171,6 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   void OutputManagerEPSSingleFiles::logy() {
     lastPad_->SetLogy(1);
-    if( lastPad_ == topCan_ ) bottomPad_->SetLogy(1);
   }
 
 
