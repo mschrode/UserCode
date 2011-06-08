@@ -1,4 +1,4 @@
-// $Id: Extrapolation.cc,v 1.8 2011/03/02 16:06:01 mschrode Exp $
+// $Id: Extrapolation.cc,v 1.9 2011/06/07 18:23:31 mschrode Exp $
 
 #include "Extrapolation.h"
 
@@ -105,7 +105,7 @@ namespace resolutionFit {
     if( nPointsToDelete ) {
       std::cout << "Extrapolation in " << bin() << ": Removing " << nPointsToDelete << " points" << std::endl;
       for(int i = 0; i < nPointsToDelete; ++i) {
-	std::cout << "  ptSoftRel = " << g->GetX()[i] << " ("  << g->GetX()[i]*minPt_ << " GeV)" << std::endl;
+	std::cout << "  ptSoftRel = " << g->GetX()[0] << " ("  << g->GetX()[0]*minPt_ << " GeV)" << std::endl;
 	g->RemovePoint(0);
       }
       std::cout << "  " << g->GetN() << " points remaining" << std::endl;
