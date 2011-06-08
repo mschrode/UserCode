@@ -1,0 +1,12 @@
+# MC Truth parameters for modified NSC formula
+# /QCD_Pt-15to3000_TuneD6T_Flat_7TeV_pythia6/Summer11-PU_S3_START42_V11-v2/AODSIM
+# AK5 Jets, L1FastJet, Number of PU events > 9
+# 
+# Eta binning:
+#  0: 0.0 - 0.5
+#  1: 0.5 - 1.1
+#  2: 1.1 - 1.7
+#  3: 1.7 - 2.3
+#  4: 2.3 - 5.0
+
+PFEta0:   10. 1500.   2.61562  0.391609  0  0.35435
