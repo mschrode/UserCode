@@ -1,4 +1,4 @@
-// $Id: Measurement.cc,v 1.3 2011/03/06 13:18:32 mschrode Exp $
+// $Id: Measurement.cc,v 1.4 2011/06/07 18:23:31 mschrode Exp $
 
 #include "Measurement.h"
 
@@ -53,6 +53,8 @@ namespace resolutionFit {
     hists_[("hEta"+histNameSuffix_)] = 0;
     hists_[("hDeltaPhi12"+histNameSuffix_)] = 0;
     hists_[("hDeltaPtJet12"+histNameSuffix_)] = 0;
+    hists_[("hWeights"+histNameSuffix_)] = 0;
+    hists_[("hNumPU"+histNameSuffix_)] = 0;
     
     // Parse file
     if( !parse(fileName,hasFittedParameters) ) exit(-1);
@@ -179,6 +181,7 @@ namespace resolutionFit {
 	} else {
 	  h->SetDirectory(0);
 	  h->UseCurrentStyle();
+	  h->SetTitle("");
 	  it->second = h;
 	  if( verbosity_ == 2 ) std::cout << "   (h->GetName() == '" << h->GetName() << "')... " << std::endl;
 	}

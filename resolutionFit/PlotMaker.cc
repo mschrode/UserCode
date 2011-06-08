@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.14 2011/06/08 06:12:15 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.15 2011/06/08 11:54:36 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -2001,119 +2001,137 @@ namespace resolutionFit {
   // - Number of added PU interactions
   // -------------------------------------------------------------------------------------
   void PlotMaker::plotMCEventInfo() const {
-//     if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotMCEventInfo(): Entering" << std::endl;
-//     std::cout << "Plotting MC event information" << std::endl;
+     if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotMCEventInfo(): Entering" << std::endl;
+     std::cout << "Plotting MC event information" << std::endl;
 
-//     // Loop over eta and pt bins
-//     for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
-//       const EtaBin* etaBin = *etaBinIt;
+     // +++++ MC Weights ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-//       out_->newPage("MCEventWeights");
+     // Loop over eta and pt bins
+     for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+       const EtaBin* etaBin = *etaBinIt;
 
-//       for(PtBinIt ptBinIt = (*etaBinIt)->ptBinsBegin(); ptBinIt != (*etaBinIt)->ptBinsEnd(); ++ptBinIt) {
-// 	const PtBin* ptBin = *ptBinIt;
-// 	if( par_->verbosity() > 1 ) std::cout << "  " << ptBin->toTString() << std::endl;
+       out_->newPage("MCEventWeights");
+
+       for(PtBinIt ptBinIt = (*etaBinIt)->ptBinsBegin(); ptBinIt != (*etaBinIt)->ptBinsEnd(); ++ptBinIt) {
+ 	const PtBin* ptBin = *ptBinIt;
+ 	if( par_->verbosity() > 1 ) std::cout << "  " << ptBin->toTString() << std::endl;
 	
-// 	// Loop over MCSamples in this bin
-// 	for(MCSampleIt sIt = ptBin->mcSamplesBegin(); sIt != ptBin->mcSamplesEnd(); ++sIt) {
-// 	  const MCSample* sample = sIt->second;
-// 	  if( par_->verbosity() > 1 ) std::cout << "    " << sample->label() << std::endl;
+ 	// Loop over MCSamples in this bin
+ 	for(MCSampleIt sIt = ptBin->mcSamplesBegin(); sIt != ptBin->mcSamplesEnd(); ++sIt) {
+ 	  const MCSample* sample = sIt->second;
+ 	  if( par_->verbosity() > 1 ) std::cout << "    " << sample->label() << std::endl;
 	  
-// 	  // Weight distribution for different ptSoft
-// 	  std::vector<TH1*> hWeights;
-// 	  std::vector<TString> labels;
-// 	  unsigned int step = (par_->nPtSoftBins() > 3 ? 2 : 1);
-// 	  for(unsigned int ptSoftBinIdx = 0; ptSoftBinIdx < par_->nPtSoftBins(); ptSoftBinIdx += step) {
-// 	    hWeights.push_back(sample->histPtAsym(ptSoftBinIdx));
-// 	    labels.push_back(labelMk_->ptSoftRange(ptSoftBinIdx));
-// 	  }
+	  // Labels
+	  TPaveText* label = labelMk_->ptBin(sample->label(),etaBin->etaBin(),ptBin->ptBin());
+	  TLegend* leg = util::LabelFactory::createLegendColWithOffset(1+label->GetSize(),labelMk_->start()-0.2,label->GetSize());	    
 
+	  // Weights in different ptSoft bins
+ 	  std::vector<TH1*> hWeights;
+ 	  unsigned int step = (par_->nPtSoftBins() > 3 ? 2 : 1);
+	  unsigned int i = 0;
+ 	  for(unsigned int ptSoftBinIdx = 0; ptSoftBinIdx < par_->nPtSoftBins(); ptSoftBinIdx += step, ++i) {
+	    TH1* h = sample->histMCWeight(ptSoftBinIdx);
+	    setStyle(sample,h);
+	    h->SetLineColor(util::StyleSettings::color(i));
+	    util::HistOps::normHist(h,"width");
+ 	    hWeights.push_back(h);
+ 	    leg->AddEntry(h,labelMk_->ptSoftRange(ptSoftBinIdx),"L");
+ 	  }
 
-// 	  for(unsigned int ptSoftBinIdx = 0; ptSoftBinIdx < sample->nPtSoftBins(); ++ptSoftBinIdx) {
-// 	    if( par_->verbosity() > 1 ) std::cout << "      PtSoftBin " << ptSoftBinIdx << std::endl;
-	    
-// 	    // Get ptGen spectrum and fit from sample and tweak style
-// 	    TH1* hPtGen = sample->histPtGen(ptSoftBinIdx);
+	  // Style
+	  double min = hWeights.back()->GetMinimum(1E-15);
+	  for(std::vector<TH1*>::iterator it = hWeights.begin(); it != hWeights.end(); ++it) {
+	    util::HistOps::setAxisTitles(*it,"Event Weights","","events",true);
+	    (*it)->GetXaxis()->SetRangeUser(0.,1.3);
+	    util::HistOps::setYRange(*it,label->GetSize()+leg->GetNRows()+20,0.05*min);
+	  }
 
-
-
-//     // Loop over SampleLabels
-//     for(SampleTypeIt sTIt = etaBins_.front()->sampleTypesBegin();
-// 	sTIt != etaBins_.front()->sampleTypesEnd(); ++sTIt) {
-      
-//       SampleLabel sampleLabel = sTIt->first;
-//       if( par_->verbosity() > 1 ) std::cout << "  " << sampleLabel << std::endl;
-      
-//       // Loop over distributions
-//       for(unsigned int distIdx = 0; distIdx < 4; ++distIdx) {
-
-// 	// Loop over ptSoft bins
-// 	for(unsigned int ptSoftBinIdx = 0; ptSoftBinIdx < par_->nPtSoftBins(); ++ptSoftBinIdx) {
-// 	  if( par_->verbosity() > 1 ) std::cout << "    PtSoftBin " << ptSoftBinIdx << std::endl;
+	  // Plots
+	  out_->nextMultiPad(sample->label()+": MC Event Weights "+ptBin->toTString());
+	  hWeights.front()->Draw("HIST");
+	  for(std::vector<TH1*>::iterator it = hWeights.begin()+1; it != hWeights.end(); ++it) {
+	    (*it)->Draw("HISTsame");
+	  }
+	  label->Draw("same");
+	  leg->Draw("same");
+	  out_->logy();
+	  gPad->RedrawAxis();
+	  out_->saveCurrentPad(histFileName("MCWeights",ptBin,sample));
 	  
-// 	  // Loop over eta bins
-// 	  for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
-// 	    const EtaBin* etaBin = *etaBinIt;
-	    
-// 	    if( distIdx == 0 ) out_->newPage("PtAveSpectrum");
-// 	    else if( distIdx == 1 ) out_->newPage("Pt1Spectrum");
-// 	    else if( distIdx == 1 ) out_->newPage("Pt2Spectrum");
-// 	    else if( distIdx == 1 ) out_->newPage("Pt3Spectrum");
-	    
-// 	    // Loop over pt bins
-// 	    for(PtBinIt ptBinIt = etaBin->ptBinsBegin(); ptBinIt != etaBin->ptBinsEnd(); ++ptBinIt) {
-// 	      const PtBin* ptBin = *ptBinIt;
-// 	      if( par_->verbosity() > 1 ) std::cout << "      " << ptBin->toTString() << std::endl;
-	    
-// 	      // Loop over Samples and select current one (by sampleLabel)
-// 	      for(SampleIt sIt = ptBin->samplesBegin(); sIt != ptBin->samplesEnd(); ++sIt) {
-// 		const Sample* sample = sIt->second;
-// 		if( sample->label() != sampleLabel ) continue;
-	      
-// 		// Spectrum
-// 		TH1* h = 0;
-// 		if( distIdx == 0 ) {
-// 		  h = sample->histPtAve(ptSoftBinIdx);
-// 		  util::HistOps::setAxisTitles(h,"p^{ave}_{T}","GeV","events");
-// 		} else if( distIdx == 1 ) {
-// 		  h = sample->histPt1(ptSoftBinIdx);
-// 		  util::HistOps::setAxisTitles(h,"p_{T,1}","GeV","events");
-// 		} else if( distIdx == 2 ) {
-// 		  h = sample->histPt2(ptSoftBinIdx);
-// 		  util::HistOps::setAxisTitles(h,"p_{T,2}","GeV","events");
-// 		} else if( distIdx == 3 ) {
-// 		  h = sample->histPt3(ptSoftBinIdx);
-// 		  util::HistOps::setAxisTitles(h,"p_{T,3}","GeV","events");
-		  
-// 		  if( ptSoftBinIdx == 2 && sample->label() == "Data" ) {
-// 		    std::cout << "**** " << ptBin->toTString() << ": " << h->GetMean() << " \\pm " << h->GetMeanError() << std::endl;
-// 		  }
-// 		}
-// 		//h->GetXaxis()->SetRangeUser(-asymMax,asymMax);
-// 		setStyle(sample,h);
-	      
-// 		// Labels
-// 		TPaveText* label = labelMk_->ptSoftBin(sample->label(),etaBin->etaBin(),ptBin->ptBin(),ptSoftBinIdx);
-	    
-// 		util::HistOps::setYRange(h,label->GetSize()+1);
-// 		out_->nextMultiPad(sample->label()+": Spectrum "+ptBin->toTString()+", PtSoftBin "+util::toTString(ptSoftBinIdx));
-// 		h->Draw("HIST");//h->Draw("PE1");
-// 		label->Draw("same");
-// 		if( distIdx == 0 ) out_->saveCurrentPad(histFileName("PtAve",ptBin,sample,ptSoftBinIdx));
-// 		else if( distIdx == 1 ) out_->saveCurrentPad(histFileName("PtJet1",ptBin,sample,ptSoftBinIdx));
-// 		else if( distIdx == 2 ) out_->saveCurrentPad(histFileName("PtJet2",ptBin,sample,ptSoftBinIdx));
-// 		else if( distIdx == 3 ) out_->saveCurrentPad(histFileName("PtJet3",ptBin,sample,ptSoftBinIdx));
+	  for(std::vector<TH1*>::iterator it = hWeights.begin(); it != hWeights.end(); ++it) {
+	    delete *it;
+	  }
+	  delete leg;
+	  delete label;
+	} // End of loop over Samples
+       } // End of loop over pt bins
+     } // End of loop over eta bins
 
-// 		delete h;
-// 		delete label;
-// 	      } // End of loop over Samples
-// 	    } // End of loop over pt bins
-// 	  } // End of loop over eta bins
-// 	} // End of loop over ptSoft bins
-//       } // End of loop over SampleLabels
-//     } // End of loop over spectra
 
-//     if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotPtSpectra(): Leaving" << std::endl;
+
+     // +++++ MC PU Distribution ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+     // Loop over eta and pt bins
+     for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+       const EtaBin* etaBin = *etaBinIt;
+
+       out_->newPage("MCPUDistributions");
+
+       for(PtBinIt ptBinIt = (*etaBinIt)->ptBinsBegin(); ptBinIt != (*etaBinIt)->ptBinsEnd(); ++ptBinIt) {
+ 	const PtBin* ptBin = *ptBinIt;
+ 	if( par_->verbosity() > 1 ) std::cout << "  " << ptBin->toTString() << std::endl;
+	
+ 	// Loop over MCSamples in this bin
+ 	for(MCSampleIt sIt = ptBin->mcSamplesBegin(); sIt != ptBin->mcSamplesEnd(); ++sIt) {
+ 	  const MCSample* sample = sIt->second;
+ 	  if( par_->verbosity() > 1 ) std::cout << "    " << sample->label() << std::endl;
+	  
+	  // Labels
+	  TPaveText* label = labelMk_->ptBin(sample->label(),etaBin->etaBin(),ptBin->ptBin());
+	  TLegend* leg = util::LabelFactory::createLegendColWithOffset(1+label->GetSize(),labelMk_->start()-0.2,label->GetSize());	    
+
+	  // NPU in different ptSoft bins
+ 	  std::vector<TH1*> hNPU;
+ 	  unsigned int step = (par_->nPtSoftBins() > 3 ? 2 : 1);
+	  unsigned int i = 0;
+ 	  for(unsigned int ptSoftBinIdx = 0; ptSoftBinIdx < par_->nPtSoftBins(); ptSoftBinIdx += step, ++i) {
+	    TH1* h = sample->histMCNumPU(ptSoftBinIdx);
+	    setStyle(sample,h);
+	    h->SetLineColor(util::StyleSettings::color(i));
+ 	    hNPU.push_back(h);
+ 	    leg->AddEntry(h,labelMk_->ptSoftRange(ptSoftBinIdx),"L");
+ 	  }
+
+	  // Style
+	  for(std::vector<TH1*>::iterator it = hNPU.begin(); it != hNPU.end(); ++it) {
+	    util::HistOps::normHist(*it,"width");
+	    util::HistOps::setAxisTitles(*it,"N(PU) Interactions","","events",true);
+	    (*it)->GetXaxis()->SetRangeUser(0.,25.);
+	    util::HistOps::setYRange(*it,label->GetSize()+leg->GetNRows()+1);
+	  }
+
+	  // Plots
+	  out_->nextMultiPad(sample->label()+": MC Num PU "+ptBin->toTString());
+	  hNPU.front()->Draw("HIST");
+	  for(std::vector<TH1*>::iterator it = hNPU.begin()+1; it != hNPU.end(); ++it) {
+	    (*it)->Draw("HISTsame");
+	  }
+	  label->Draw("same");
+	  leg->Draw("same");
+	  gPad->RedrawAxis();
+	  out_->saveCurrentPad(histFileName("MCNPU",ptBin,sample));
+	  
+	  for(std::vector<TH1*>::iterator it = hNPU.begin(); it != hNPU.end(); ++it) {
+	    delete *it;
+	  }
+	  delete leg;
+	  delete label;
+	} // End of loop over Samples
+       } // End of loop over pt bins
+     } // End of loop over eta bins
+
+
+     if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotMCEventInfo(): Leaving" << std::endl;
   }
 
 

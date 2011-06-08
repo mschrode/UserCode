@@ -1,4 +1,4 @@
-// $Id: Extrapolation.cc,v 1.9 2011/06/07 18:23:31 mschrode Exp $
+// $Id: Extrapolation.cc,v 1.10 2011/06/08 10:13:30 mschrode Exp $
 
 #include "Extrapolation.h"
 
@@ -30,41 +30,6 @@ namespace resolutionFit {
     fit = new TF1(name,"pol1",g->GetX()[0],g->GetX()[g->GetN()-1]);
     fit->SetLineWidth(1);
     bool fitResult = !(g->Fit(fit,"0QR"));
-    
-//     // Hack
-//     if( fit->GetParameter(1) < 0. ) {
-//       std::cerr << "\nWARNING: Negative slope in pt bin " << minPt_ << " - " << maxPt_ << std::endl;
-//       for(int i = 0; i < g->GetN(); ++i) {
-// 	std::cout << "  " << g->GetX()[i] << "  \t:  " << g->GetY()[i] << std::endl;
-//       }
-      
-//       double meanErr = 0.;
-//       for(int i = 0; i < g->GetN(); ++i) {
-//  	meanErr += g->GetEYhigh()[i];
-//       }
-//       meanErr /= g->GetN();
-//       for(int i = 0; i < g->GetN(); ++i) {
-//  	if( g->GetEYhigh()[i] == 0. ) g->GetEYhigh()[i] = meanErr;
-//       }
-//       fitResult = !(g->Fit(fit,"0QR"));
-      
-//       if( fit->GetParameter(1) > 0. ) {
-//  	std::cerr << "  Cured by setting errors" << std::endl << std::endl;
-//       } 
-     
-//       fit->SetRange(g->GetX()[0],g->GetX()[g->GetN()-1]);
-//     }
-
-    // Hack
-    // specific to high-event points in summer11 l1fastjet ak5pf
-//     if( meanPt_ > 195. && meanPt_ < 220. && g->GetY()[g->GetN()-1] > 0.23 ||
-// 	meanPt_ > 135. && meanPt_ < 175.  ) {
-//       std::cerr << "WARNING: Bug in Summer11 AK5 PF L1FastJet: Removing point at pt = " << meanPt_ << " GeV, pt3rel < " << g->GetX()[g->GetN()-1] << std::endl;
-//       g->RemovePoint(g->GetN()-1);
-//       fit->SetRange(g->GetX()[0],g->GetX()[g->GetN()-1]);
-//       fitResult = !(g->Fit(fit,"0QR"));
-      
-//     }
      
     // Work-around to keep the program running in case of 
     // fitting failure

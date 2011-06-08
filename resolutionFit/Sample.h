@@ -1,4 +1,4 @@
-// $Id: Sample.h,v 1.9 2011/03/02 11:55:51 mschrode Exp $
+// $Id: Sample.h,v 1.10 2011/06/07 18:23:30 mschrode Exp $
 
 #ifndef SAMPLE_H
 #define SAMPLE_H
@@ -49,6 +49,8 @@ namespace resolutionFit {
     TH1* histPt1(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histPt1(); }
     TH1* histPt2(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histPt2(); }
     TH1* histPt3(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histPt3(); }
+    TH1* histMCWeight(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histMCWeight(); }
+    TH1* histMCNumPU(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histMCNumPU(); }
 
     bool addFitResult(FitResult::Type type);
     bool setKSoftFit(FitResult::Type type, const TF1* fit);
