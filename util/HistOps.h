@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.32 2011/05/20 09:48:57 mschrode Exp $
+// $Id: HistOps.h,v 1.33 2011/06/01 12:05:21 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.32 2011/05/20 09:48:57 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.33 2011/06/01 12:05:21 mschrode Exp $
   class HistOps
   {
   public:
@@ -85,6 +85,22 @@ namespace util
 
       return h;
     }
+
+
+    // -------------------------------------------------------------------------------------
+    static TH1* getCumulativeDistributionXToInf(const TH1* h) {
+      TString name = h->GetName();
+      name += "_CumulativeDistributionXToInf";
+      TH1* hc = static_cast<TH1*>(h->Clone(name));
+      hc->Reset();
+      for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
+	hc->SetBinContent(bin,h->Integral(bin,h->GetNbinsX()));
+      }
+      hc->GetYaxis()->SetTitle("Sum x#rightarrow#infty");
+
+      return hc;
+    }
+
 
 
     // -------------------------------------------------------------------------------------
@@ -160,6 +176,7 @@ namespace util
       double min = 0.;
       double max = 0.;
       findYRange(h,nLabelLines,min,max,logMin);
+      if( min < 1. ) min *= 3.;
       h->GetYaxis()->SetRangeUser(min,max);
     }
 
@@ -305,18 +322,18 @@ namespace util
       TH1D *hFrame = 0;
       bool hasConstBinWidth = true;
       for(int bin = 2; bin <= h->GetNbinsX(); ++bin) {
-	if( h->GetBinWidth(bin) != h->GetBinWidth(1) ) {
-	  hasConstBinWidth = false;
-	  break;
-	}
+ 	if( h->GetBinWidth(bin) != h->GetBinWidth(1) ) {
+ 	  hasConstBinWidth = false;
+ 	  break;
+ 	}
       }
       if( hasConstBinWidth ) {
-	hFrame = new TH1D(name,"",10*h->GetNbinsX(),
-			  h->GetXaxis()->GetBinLowEdge(1),
-			  h->GetXaxis()->GetBinUpEdge(h->GetNbinsX()));
+ 	hFrame = new TH1D(name,"",h->GetNbinsX(),
+ 			  h->GetXaxis()->GetBinLowEdge(1),
+ 			  h->GetXaxis()->GetBinUpEdge(h->GetNbinsX()));
       } else {
-	hFrame = new TH1D(name,"",h->GetNbinsX(),
-			  h->GetXaxis()->GetXbins()->GetArray());
+ 	hFrame = new TH1D(name,"",h->GetNbinsX(),
+ 			  h->GetXaxis()->GetXbins()->GetArray());
       }
       hFrame->SetLineStyle(2);
       hFrame->GetYaxis()->SetRangeUser(yMin,yMax);
@@ -935,6 +952,41 @@ namespace util
       return hNew;
     }
     
+    
+
+    // Convolute hOrig of width 'width' with a Gaussian,
+    // such that afterwards hSmeared has a width of 
+    // '(1+scaling) * width'.
+    // --------------------------------------------------
+    static void smearHistogram(const TH1* hOrig, TH1* &hSmeared, double width, double scaling) {
+      double nTotal = hOrig->GetEntries();
+      TString name = hOrig->GetName();
+      name += "Smeared";
+      hSmeared = static_cast<TH1D*>(hOrig->Clone(name));
+      scaling += 1.;
+      if( scaling > 1. ) {
+	scaling = sqrt( scaling*scaling - 1. )*width;
+	hSmeared->Reset();
+	for(int bin = 1; bin <= hOrig->GetNbinsX(); ++bin) {
+	  double entries = hOrig->GetBinContent(bin);
+	  if( entries ) {
+	    double mean = hOrig->GetBinCenter(bin);
+	    for(int i = 1; i <= hSmeared->GetNbinsX(); ++i) {
+	      double min = hSmeared->GetXaxis()->GetBinLowEdge(i);
+	      double max = hSmeared->GetXaxis()->GetBinUpEdge(i);
+	      double weight = entries;
+	      weight *= 0.5*(erf((max-mean)/sqrt(2.)/scaling) - erf((min-mean)/sqrt(2.)/scaling));
+	      hSmeared->Fill(hSmeared->GetBinCenter(i),weight);
+	    }
+	  }
+	}
+	for(int bin = 1; bin <= hSmeared->GetNbinsX(); ++bin) {
+	  hSmeared->SetBinError(bin,sqrt(hSmeared->GetBinContent(bin)/nTotal));
+	}
+      } else {
+	std::cerr << "WARNING in func::smearHistogram(): scaling = " << scaling << std::endl;
+      }
+    }
 
     
   private:
