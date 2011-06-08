@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.12 2011/03/19 17:41:03 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.13 2011/06/07 18:23:31 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -380,7 +380,7 @@ namespace resolutionFit {
 	    double width = 0.;
 	    double widthErr = 1000.;
 	    if( util::HistOps::fitCoreWidth(hAsymMC,2.,width,widthErr) ) {
-	      util::HistOps::smearHistogram(hAsymMC,hAsymMCSmeared,width,);
+	      util::HistOps::smearHistogram(hAsymMC,hAsymMCSmeared,width,0.1);
 	    } else {
 	      util::HistOps::smearHistogram(hAsymMC,hAsymMCSmeared,width,0.);
 	    }
