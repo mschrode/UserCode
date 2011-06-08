@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.13 2011/06/07 18:23:31 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.14 2011/06/08 06:12:15 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -347,6 +347,7 @@ namespace resolutionFit {
       const EtaBin* etaBin = *etaBinIt;
       const unsigned int etaBinIdx = etaBin->etaBin();
       if( par_->verbosity() > 1 ) std::cout << "  Eta " << etaBinIdx << std::endl;
+      bool printOutDone = false;
 
       // Loop over ptSoft bins
       for(unsigned int ptSoftBinIdx = 0; ptSoftBinIdx < par_->nPtSoftBins(); ++ptSoftBinIdx) {
@@ -376,11 +377,20 @@ namespace resolutionFit {
 	    util::HistOps::setAxisTitles(hAsymMC,"Asymmetry","","events");
 
 	    // Smear histogram by data / MC ratio
+	    double kValue = 0.;
+	    if( etaBin->hasKValue(sLabelData,sLabelMC,*(etaBin->fitResultTypesBegin())) ) {
+	      kValue = etaBin->kValue(sLabelData,sLabelMC,*(etaBin->fitResultTypesBegin()));
+	      kValue = std::max(0.,kValue-1.);
+	    }	    
 	    TH1* hAsymMCSmeared = 0;
 	    double width = 0.;
 	    double widthErr = 1000.;
 	    if( util::HistOps::fitCoreWidth(hAsymMC,2.,width,widthErr) ) {
-	      util::HistOps::smearHistogram(hAsymMC,hAsymMCSmeared,width,0.1);
+	      util::HistOps::smearHistogram(hAsymMC,hAsymMCSmeared,width,kValue);
+	      if( !printOutDone ){
+		std::cout << "  Smearing asymmetry in '" << sLabelMC << "' in " << etaBin->toString() << " with k = " << kValue << std::endl;
+		printOutDone = true;
+	      }
 	    } else {
 	      util::HistOps::smearHistogram(hAsymMC,hAsymMCSmeared,width,0.);
 	    }
