@@ -1,3 +1,9 @@
+// $Id: $
+
+// Plot combined resolution from photon+jet and dijet measurements
+// for 2010 SUS and JME analyses.
+
+
 #include <cassert>
 #include <cmath>
 #include <iostream>
