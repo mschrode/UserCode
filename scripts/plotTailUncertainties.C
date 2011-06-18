@@ -1,4 +1,4 @@
-// $Id: plotTailUncertainties.C,v 1.3 2010/12/02 20:16:21 mschrode Exp $
+// $Id: plotTailUncertainties.C,v 1.4 2010/12/03 20:54:51 mschrode Exp $
 
 #include <cmath>
 #include <iostream>
@@ -48,18 +48,18 @@ void plotTailUncertainties() {
   std::cout << "Setting up parameters" << std::endl;
 
   util::StyleSettings::presentationNoTitle();
-  sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("BinningAdmin.cfg");
+  sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("input/BinningAdminTails.cfg");
   
-  TString nomName = "results/Tails_PF_nSCore20_nSTail30_ptSoft20_.root";
+  TString nomName = "results/LeptonVeto/Tails_PF_nSCore20_nSTail30_ptSoft20_.root";
 
 
   std::vector<Variation*> vars;
-  vars.push_back(new Variation("results/Tails_PF_nSCore20_nSTail25_ptSoft20_.root","TailStart25","Tail Start 2.5#sigma"));
-  vars.push_back(new Variation("results/Tails_PF_nSCore20_nSTail35_ptSoft20_.root","TailStart35","Tail Start 3.5#sigma"));
-  vars.push_back(new Variation("results/Tails_PF_nSCore15_nSTail30_ptSoft20_.root","TailStart35","Core 1.5#sigma"));
-  vars.push_back(new Variation("results/Tails_PF_nSCore25_nSTail30_ptSoft20_.root","TailStart35","Core 2.5#sigma"));
-  vars.push_back(new Variation("results/Tails_PF_nSCore20_nSTail30_ptSoft10_.root","TailStart35","p_{T,3} < 0.1#upoint#bar{p^{ave}_{T}}"));
-  vars.push_back(new Variation("results/Tails_PF_nSCore20_nSTail30_ptSoft30_.root","TailStart35","p_{T,3} < 0.3#upoint#bar{p^{ave}_{T}}"));
+  vars.push_back(new Variation("results/LeptonVeto/Tails_PF_nSCore20_nSTail25_ptSoft20_.root","TailStart25","Tail Start 2.5#sigma"));
+  vars.push_back(new Variation("results/LeptonVeto/Tails_PF_nSCore20_nSTail35_ptSoft20_.root","TailStart35","Tail Start 3.5#sigma"));
+  vars.push_back(new Variation("results/LeptonVeto/Tails_PF_nSCore18_nSTail30_ptSoft20_.root","TailStart35","Core 1.8#sigma"));
+  vars.push_back(new Variation("results/LeptonVeto/Tails_PF_nSCore22_nSTail30_ptSoft20_.root","TailStart35","Core 2.2#sigma"));
+  vars.push_back(new Variation("results/LeptonVeto/Tails_PF_nSCore20_nSTail30_ptSoft10_.root","TailStart35","p_{T,3} < 0.1#upoint#bar{p^{ave}_{T}}"));
+  vars.push_back(new Variation("results/LeptonVeto/Tails_PF_nSCore20_nSTail30_ptSoft30_.root","TailStart35","p_{T,3} < 0.3#upoint#bar{p^{ave}_{T}}"));
 
 
   TString outName = "Tails_";
@@ -76,7 +76,7 @@ void plotTailUncertainties() {
 
 
   // Plot variations per eta and pt (integrated) bin
-  for(unsigned int etaBin = 0; etaBin < 1; ++etaBin) {//binAdm->nEtaBins(); ++etaBin) {
+  for(unsigned int etaBin = 0; etaBin < binAdm->nEtaBins(); ++etaBin) {
     std::vector<double> errLow;
     std::vector<double> errHigh;
     for(int ptBin = 1; ptBin <= hScales[etaBin]->GetNbinsX(); ++ptBin) {
@@ -162,6 +162,7 @@ void plotTailUncertainties() {
     hScales[etaBin]->SetMarkerStyle(20);
     hScales[etaBin]->SetYTitle("Scaling Factor");
     hScales[etaBin]->GetYaxis()->SetRangeUser(0.5,2.);
+    hScales[etaBin]->GetXaxis()->SetRange(2,hScales[etaBin]->GetNbinsX());
     hScales[etaBin]->Draw();
     band->Draw("E2same");
     hScales[etaBin]->Draw("PE1same");
@@ -173,28 +174,15 @@ void plotTailUncertainties() {
     can->SetLogx();
     can->SaveAs(outName+"Variations_Eta"+util::toTString(etaBin)+".eps");
 
-    // Sum up systematic and statistical errors
-    TH1* hUp = static_cast<TH1D*>(hScales[etaBin]->Clone("hScaleFactorsIntUp_Eta"+util::toTString(etaBin)));
-    hUp->SetMarkerStyle(1);
-    hUp->Reset();
-    TH1* hDown = static_cast<TH1D*>(hUp->Clone("hScaleFactorsIntDown_Eta"+util::toTString(etaBin)));
     for(int bin = 1; bin <= hScales[etaBin]->GetNbinsX(); ++bin) {
-      double nom = hScales[etaBin]->GetBinContent(bin);
-      double stat = hScales[etaBin]->GetBinError(bin);
-      double eup = band->GetEYhigh()[bin-1];
-      double edo = band->GetEYlow()[bin-1];
-      hUp->SetBinContent(bin,nom+sqrt(stat*stat+eup*eup));
-      hDown->SetBinContent(bin,nom-sqrt(stat*stat+edo*edo));
-    }
-    can->cd();
-    hScales[etaBin]->Draw("P");
-    hUp->Draw("HISTsame");
-    hDown->Draw("HISTsame");    
-    can->SaveAs(outName+"SumErr_Eta"+util::toTString(etaBin)+".eps");
+      double err2up = pow(hScales[etaBin]->GetBinError(bin),2.);
+      err2up += pow(errHigh.at(bin-1),2);
 
-    outFile.WriteTObject(hScales[etaBin]);
-    outFile.WriteTObject(hUp);
-    outFile.WriteTObject(hDown);
+      double err2low = pow(hScales[etaBin]->GetBinError(bin),2.);
+      err2low += pow(errLow.at(bin-1),2);
+
+      std::cout << hScales[etaBin]->GetXaxis()->GetBinLowEdge(bin) << " - " << hScales[etaBin]->GetXaxis()->GetBinUpEdge(bin) << ": " << hScales[etaBin]->GetBinContent(bin) << " +" << sqrt(err2up) << " -" << sqrt(err2low) << std::endl;
+    }
 
     delete leg;
     delete txt;
