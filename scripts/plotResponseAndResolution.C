@@ -1,4 +1,4 @@
-// $Id: plotResponseAndResolution.C,v 1.4 2010/08/28 19:35:09 mschrode Exp $
+// $Id: plotResponseAndResolution.C,v 1.5 2010/12/27 13:29:43 mschrode Exp $
 
 //!  Fit mean response and resolution from
 //!  Kalibri::ControlPlotsJetSmearing
@@ -14,9 +14,9 @@
 #include "TLegend.h"
 #include "TString.h"
 
-#include "/afs/naf.desy.de/user/m/mschrode/UserCode/mschrode/util/HistOps.h"
-#include "/afs/naf.desy.de/user/m/mschrode/UserCode/mschrode/util/LabelFactory.h"
-#include "/afs/naf.desy.de/user/m/mschrode/UserCode/mschrode/util/StyleSettings.h"
+#include "../util/HistOps.h"
+#include "../util/LabelFactory.h"
+#include "../util/StyleSettings.h"
 
 
 unsigned int numHists_ = 0;
