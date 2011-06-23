@@ -1,4 +1,4 @@
-// $Id: writeDijetSkims.C,v 1.4 2011/05/20 10:00:07 mschrode Exp $
+// $Id: writeDijetSkims.C,v 1.5 2011/06/01 20:26:53 mschrode Exp $
 //
 // Skim Kalibri ntuples as input for resolution fit.
 // At this pre-selection
@@ -28,6 +28,9 @@
 #include "TChainElement.h"
 #include "TFile.h"
 #include "TH1.h"
+#include "TH1D.h"
+#include "TH2.h"
+#include "TH2D.h"
 #include "TROOT.h"
 #include "TString.h"
 #include "TVector2.h"
@@ -35,7 +38,8 @@
 #include "BinningAdmin.h"
 #define UTILS_AS_HEADER_FILE
 #include "../util/utils.h"
-
+#include "../util/FileOps.h"
+#include "../util/HistOps.h"
 
 
 // --------------------------------------------------
@@ -64,47 +68,46 @@ TChain *createTChain(const TString &fileListName) {
 }
 
 
+// Generate weights for Flat10 PU scenario for given
+// data PU distribution
+// Code from: https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupReweighting
+// --------------------------------------------------
+std::vector<double> generate_flat10_weights(const TH1* data_npu_estimated) {
+  // see SimGeneral/MixingModule/python/mix_E7TeV_FlatDist10_2011EarlyData_inTimeOnly_cfi.py; copy and paste from there:
+  const double npu_probs[25] = {0.0698146584, 0.0698146584, 0.0698146584,0.0698146584,0.0698146584,0.0698146584,0.0698146584,0.0698146584,0.0698146584,0.0698146584,0.0698146584 /* <-- 10*/,0.0630151648,0.0526654164,0.0402754482,0.0292988928,0.0194384503,0.0122016783,0.007207042,0.004003637,0.0020278322,0.0010739954,0.0004595759,0.0002229748,0.0001028162,4.58337152809607E-05 /* <-- 24 */};
+  std::vector<double> result(25);
+  double s = 0.0;
+  for(int npu=0; npu<25; ++npu) {
+    double npu_estimated = data_npu_estimated->GetBinContent(data_npu_estimated->GetXaxis()->FindBin(npu));                              
+    result[npu] = npu_estimated / npu_probs[npu];
+    s += npu_estimated;
+  }
+  // normalize weights such that the total sum of weights over thw whole sample is 1.0, i.e., sum_i  result[i] * npu_probs[i] should be 1.0 (!)
+  for(int npu=0; npu<25; ++npu) {
+    result[npu] /= s;
+  }
+  return result;
+}
+
+
 
 // --------------------------------------------------
 void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
-
-
+  
+  
   // ++++ Set parameters +++++++++++++++++++++++++++++++++++++++
-
-  const int nEvts = -100;
+  
+  std::cout << "Setting parameters" << std::endl;
+  
+  const TString inFileListName = "input/Analysis2011/Kalibri_MCSummer11_QCDFlat_PythiaZ2_PUS3_L1FastJet_AK5PF";
+  const TString outFilePath = "~/lustre/Analysis2011/KalibriDiJetSkims_QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Summer11-PU_S3_START42_V11-v2__PUDown";
   const TString config = "BinningAdmin.cfg";
-  const TString inFileListName = "input/Analysis2011/Kalibri_MCSummer11_QCDFlat_PUS3_L1FastJet_AK5Calo";
-  //const bool isData = true;
-  //  const unsigned int maxHltThres = 175;
+  const bool writeAllTrees = false;
+  
+  const int nEvts = -1000;
+  const TString outFilePrefix = outFilePath+"/KalibriSkim";
   const double minDeltaPhi = 2.7;
   const unsigned int minRunNumber = 163337;
-
-
-
-  // ++++ Checks and follow-up parameters ++++++++++++++++++++++
-
-  // Prepare name of output files  
-  TString outFilePrefix = "~/lustre/Analysis2011/KalibriDiJetSkims_QCD_Pt-15to3000_TuneD6T_Flat_7TeV-pythia6_Summer11-PU_S3_START42_V11-v2/KalibriSkim";
-  if( inFileListName.Contains("Calo") ) outFilePrefix += "_Calo";
-  else if( inFileListName.Contains("PF") ) outFilePrefix += "_PF";  
-  else if( inFileListName.Contains("JPT") ) outFilePrefix += "_JPT";  
-
-  if( inFileListName.Contains("L1Offset") ) outFilePrefix += "_L1Offset";
-  else if( inFileListName.Contains("L1FastJet") ) outFilePrefix += "_L1FastJet";
-
-  if( isData ) outFilePrefix += "_Data";
-  else if( inFileListName.Contains("Fall10") ) outFilePrefix += "_MCFall10";  
-  else if( inFileListName.Contains("Spring11") ) outFilePrefix += "_MCSpring11";  
-  else if( inFileListName.Contains("Summer11") ) outFilePrefix += "_MCSummer11";  
-  else outFilePrefix += "_MC";  
-
-
-  sampleTools::BinningAdmin binAdmin(config);
-
-  const TString hlt = isData ? binAdmin.triggerName(maxHltThres) : "none";
-
-  binAdmin.printBinning();
-  if( isData ) binAdmin.print(hlt);
   
   unsigned int nNewTrig = 0;
   unsigned int nMaxNJet = 0;
@@ -114,11 +117,106 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
   unsigned int nJetID = 0;
   unsigned int nEta = 0;
   unsigned int nPtAve = 0;
-
+  
+  double wPU = 1.;
+  float wSpec = 1.;
+  
   
 
+  // ++++ Prepare objects ++++++++++++++++++++++++++++++++++++++
 
-  // ++++ Prepare trees and files ++++++++++++++++++++++++++++++
+  std::cout << "Defining binning" << std::endl;
+
+  const sampleTools::BinningAdmin binAdmin(config);
+  const TString hlt = isData ? binAdmin.triggerName(maxHltThres) : "none";
+  binAdmin.printBinning();
+  if( isData ) binAdmin.print(hlt);
+
+  std::vector<double> weightsPU;
+  std::vector<TH2*> hRespVsPtGen; // One entry per eta bin
+  std::vector<TH2*> hRespVsPtGenLog; // One entry per eta bin
+  std::vector<TH2*> hRespVsPtGenLogNoDeltaPhi;
+  std::vector<TH2*> hRespVsPtGenPUReweighted; // One entry per eta bin
+  std::vector<TH2*> hRespVsPtGenLogPUReweighted; // One entry per eta bin
+  std::vector<TH2*> hRespVsPtGenLogPULow; // One entry per eta bin
+  std::vector<TH2*> hRespVsPtGenLogPUHigh; // One entry per eta bin
+  std::vector< std::vector<TH2*> > hRespVsPtGenLogVsPtSoftPUReweighted; // [etaBin][pt3Bin]
+  std::vector< std::vector<TH1*> > hPtGen; // [etaBin][pt3Bin]
+  
+  if( !isData ) {
+    std::cout << "Preparing PU reweighting" << std::endl;
+    
+    TH1* hDataPU = util::FileOps::readTH1("~/Kalibri/input/PUDist_Cert_160404-163869_7TeV_May10ReReco_fitMinus.root","pileup");
+    weightsPU = generate_flat10_weights(hDataPU);
+    
+    
+    std::cout << "Preparing histograms" << std::endl;
+    
+    // MC truth
+    for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
+      TString title = util::toTString(binAdmin.etaMin(etaBin))+" < |#eta| < "+util::toTString(binAdmin.etaMax(etaBin));
+      
+      // Pt binning as for resolution measurement
+      TH2* h = new TH2D("hRespVsPtGen_Eta"+util::toTString(etaBin),title+";p^{gen}_{T} (GeV);Response",
+			binAdmin.nPtBins(etaBin),&(binAdmin.ptBinEdges(etaBin).front()),201,0.,2.);
+      h->SetTitle(title+", |#Delta#Phi|>2.7");
+      h->SetNdivisions(505);
+      h->Sumw2();
+      hRespVsPtGen.push_back(h);
+      hRespVsPtGenPUReweighted.push_back(static_cast<TH2*>(h->Clone("hRespVsPtGenPUReweighted_Eta"+util::toTString(etaBin))));
+      hRespVsPtGenPUReweighted.back()->SetTitle(title+", |#Delta#Phi|>2.7, PU reweighted");
+      
+      // Equidistant log bins
+      std::vector<double> binEdges(35+1);
+      util::HistOps::equidistLogBins(binEdges,binEdges.size()-1,4.,2700.);
+      h = new TH2D("hRespVsPtGenLog_Eta"+util::toTString(etaBin),title,
+		   binEdges.size()-1,&(binEdges.front()),201,0.,2.);
+      h->SetTitle(title+", |#Delta#Phi|>2.7");
+      h->SetNdivisions(505);
+      h->Sumw2();
+      hRespVsPtGenLog.push_back(h);
+
+      hRespVsPtGenLogNoDeltaPhi.push_back(static_cast<TH2*>(h->Clone("hRespVsPtGenLogNoDeltaPhi_Eta"+util::toTString(etaBin))));
+      hRespVsPtGenLogNoDeltaPhi.back()->SetTitle(title);
+      hRespVsPtGenLogPUReweighted.push_back(static_cast<TH2*>(h->Clone("hRespVsPtGenLogPUReweighted_Eta"+util::toTString(etaBin))));
+      hRespVsPtGenLogPUReweighted.back()->SetTitle(title+", |#Delta#Phi|>2.7, PU reweighted");
+      hRespVsPtGenLogPULow.push_back(static_cast<TH2*>(h->Clone("hRespVsPtGenLogPULow_Eta"+util::toTString(etaBin))));
+      hRespVsPtGenLogPULow.back()->SetTitle(title+", |#Delta#Phi|>2.7, low PU");
+      hRespVsPtGenLogPUHigh.push_back(static_cast<TH2*>(h->Clone("hRespVsPtGenLogPUHigh_Eta"+util::toTString(etaBin))));
+      hRespVsPtGenLogPUHigh.back()->SetTitle(title+", |#Delta#Phi|>2.7, high PU");
+      
+      std::vector<TH2*> vtmp;
+      for(unsigned int ptSoftBin = 0; ptSoftBin < binAdmin.nPtSoftBins(); ++ptSoftBin) {
+	title = util::toTString(binAdmin.etaMin(etaBin))+" < |#eta| < "+util::toTString(binAdmin.etaMax(etaBin))+", p^{rel}_{T,3} < "+util::toTString(binAdmin.ptSoftMax(ptSoftBin))+", |#Delta#Phi|>2.7, PU reweighted;p^{gen}_{T} (GeV);Response";
+	
+	h = new TH2D("hRespVsPtGenLogVsPtSoftPUReweighted_Eta"+util::toTString(etaBin)+"_PtSoft"+util::toTString(ptSoftBin),title,binEdges.size()-1,&(binEdges.front()),201,0.,2.);
+	h->SetNdivisions(505);
+	h->Sumw2();
+	vtmp.push_back(h);
+      }
+      hRespVsPtGenLogVsPtSoftPUReweighted.push_back(vtmp);
+    }
+
+
+    // PtGen spectra
+    for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
+      std::vector<TH1*> vtmp;
+      for(unsigned int ptSoftBin = 0; ptSoftBin < binAdmin.nPtSoftBins(); ++ptSoftBin) {
+	TString title = util::toTString(binAdmin.etaMin(etaBin))+" < |#eta| < "+util::toTString(binAdmin.etaMax(etaBin))+", p^{rel}_{T,3} < "+util::toTString(binAdmin.ptSoftMax(ptSoftBin))+";p^{gen}_{T} (GeV);Events";
+
+	TH1* h = new TH1D("hPtGen_Eta"+util::toTString(etaBin)+"_PtSoft"+util::toTString(ptSoftBin),
+			  title,500,0.,2000.);
+	h->GetXaxis()->SetNdivisions(505);
+	h->SetLineWidth(2);
+	h->Sumw2();
+	vtmp.push_back(h);
+      }
+      hPtGen.push_back(vtmp);
+    }
+  }
+
+
+  std::cout << "Preparing trees" << std::endl;
 
   // Open Kalibri ntuples
   TChain *oldChain = createTChain(inFileListName);
@@ -174,6 +272,7 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
   Float_t         JetCorrJPT[maxNJet];   //[NobjJet]
   Float_t         JetCorrL2L3JPT[maxNJet];   //[NobjJet]
   Float_t         JetCorrL4JW[maxNJet];   //[NobjJet]
+  Float_t         JetCorrUncert[maxNJet];
   Int_t           JetIEta[maxNJet];   //[NobjJet]
   Int_t           JetIPhi[maxNJet];   //[NobjJet]
   Float_t         JetGenJetDeltaR[maxNJet];   //[NobjJet]
@@ -195,6 +294,7 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
   Int_t           GenJetColJetIdx[maxNJet];   //[NobjGenJet]
   Int_t           VtxN = 0;
   Int_t           PUMCNumVtx = 0;
+  Float_t         Weight = 1.;
 
 
   // Set branch addresses
@@ -234,6 +334,7 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
   oldChain->SetBranchAddress("JetCorrJPT", JetCorrJPT);
   oldChain->SetBranchAddress("JetCorrL2L3JPT", JetCorrL2L3JPT);
   oldChain->SetBranchAddress("JetCorrL4JW", JetCorrL4JW);
+  oldChain->SetBranchAddress("JetCorrUncert",JetCorrUncert);
   oldChain->SetBranchAddress("JetIEta", JetIEta);
   oldChain->SetBranchAddress("JetIPhi", JetIPhi);
   oldChain->SetBranchAddress("JetGenJetDeltaR", JetGenJetDeltaR);
@@ -255,22 +356,65 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
   oldChain->SetBranchAddress("GenJetColJetIdx", GenJetColJetIdx);
   oldChain->SetBranchAddress("VtxN",&VtxN);
   oldChain->SetBranchAddress("PUMCNumVtx",&PUMCNumVtx);
+  oldChain->SetBranchAddress("Weight",&Weight);
   
 
-  //Create a new file + a clone of old tree in new file per eta and pt bin
-  std::vector< std::vector<TFile*> > newFiles(binAdmin.nEtaBins());
-  std::vector< std::vector<TTree*> > newTrees(binAdmin.nEtaBins());
+  // Create a new file + a clone of old tree in new file
+  // 1) per eta and ptAve bin;
+  // 2) per eta and pt bin;
+  // 3) per etaGen and ptGenAve bin.
+
+  // Prepare files and tress
+  std::vector< std::vector<TFile*> > newFilesEtaPtAve(binAdmin.nEtaBins());
+  std::vector< std::vector<TTree*> > newTreesEtaPtAve(binAdmin.nEtaBins());
+  std::vector< std::vector<TFile*> > newFilesEtaPt(binAdmin.nEtaBins());
+  std::vector< std::vector<TTree*> > newTreesEtaPt(binAdmin.nEtaBins());
+  std::vector< std::vector<TFile*> > newFilesEtaGenPtGenAve(binAdmin.nEtaBins());
+  std::vector< std::vector<TTree*> > newTreesEtaGenPtGenAve(binAdmin.nEtaBins());
+
+  // Prepare name of output files  
+  TString outFileId = "";
+  if( inFileListName.Contains("Calo") ) outFileId += "_Calo";
+  else if( inFileListName.Contains("PF") ) outFileId += "_PF";  
+  else if( inFileListName.Contains("JPT") ) outFileId += "_JPT";  
+
+  if( inFileListName.Contains("L1Offset") ) outFileId += "_L1Offset";
+  else if( inFileListName.Contains("L1FastJet") ) outFileId += "_L1FastJet";
+
+  if( isData ) outFileId += "_Data";
+  else if( inFileListName.Contains("Fall10") ) outFileId += "_MCFall10";  
+  else if( inFileListName.Contains("Spring11") ) outFileId += "_MCSpring11";  
+  else if( inFileListName.Contains("Summer11") ) outFileId += "_MCSummer11";  
+  else outFileId += "_MC";  
+
   for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
-    newFiles[etaBin] = std::vector<TFile*>(binAdmin.nPtBins(hlt,etaBin));
-    newTrees[etaBin] = std::vector<TTree*>(binAdmin.nPtBins(hlt,etaBin));
+    newFilesEtaPtAve[etaBin] = std::vector<TFile*>(binAdmin.nPtBins(hlt,etaBin));
+    newTreesEtaPtAve[etaBin] = std::vector<TTree*>(binAdmin.nPtBins(hlt,etaBin));
+    if( writeAllTrees ) {
+      newFilesEtaPt[etaBin] = std::vector<TFile*>(binAdmin.nPtBins(hlt,etaBin));
+      newTreesEtaPt[etaBin] = std::vector<TTree*>(binAdmin.nPtBins(hlt,etaBin));
+      newFilesEtaGenPtGenAve[etaBin] = std::vector<TFile*>(binAdmin.nPtBins(hlt,etaBin));
+      newTreesEtaGenPtGenAve[etaBin] = std::vector<TTree*>(binAdmin.nPtBins(hlt,etaBin));
+    }
     for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
-      TString name = outFilePrefix+"_Eta";
-      name += etaBin;
-      name += "_Pt";
-      name += (binAdmin.hltMinPtBin(hlt,etaBin)+ptBin);
-      name += ".root";
-      newFiles[etaBin][ptBin] = new TFile(name,"RECREATE");
-      newTrees[etaBin][ptBin] = oldChain->CloneTree(0);
+      TString etaPtId = "_Eta"+util::toTString(etaBin)+"_Pt"+util::toTString((binAdmin.hltMinPtBin(hlt,etaBin)+ptBin));
+      
+      TString name = outFilePrefix+"_PtAveBins"+outFileId+etaPtId+".root";
+      newFilesEtaPtAve[etaBin][ptBin] = new TFile(name,"RECREATE");
+      newTreesEtaPtAve[etaBin][ptBin] = oldChain->CloneTree(0);
+      newTreesEtaPtAve[etaBin][ptBin]->SetDirectory(newFilesEtaPtAve[etaBin][ptBin]);
+      
+      if( writeAllTrees ) {
+	name = outFilePrefix+"_PtBins"+outFileId+etaPtId+".root";
+	newFilesEtaPt[etaBin][ptBin] = new TFile(name,"RECREATE");
+	newTreesEtaPt[etaBin][ptBin] = oldChain->CloneTree(0);
+	newTreesEtaPt[etaBin][ptBin]->SetDirectory(newFilesEtaPt[etaBin][ptBin]);
+	
+	name = outFilePrefix+"_PtGenAveBins"+outFileId+etaPtId+".root";
+	newFilesEtaGenPtGenAve[etaBin][ptBin] = new TFile(name,"RECREATE");
+	newTreesEtaGenPtGenAve[etaBin][ptBin] = oldChain->CloneTree(0);
+	newTreesEtaGenPtGenAve[etaBin][ptBin]->SetDirectory(newFilesEtaGenPtGenAve[etaBin][ptBin]);
+      }
     }
   }
 
@@ -282,192 +426,362 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
   }
   for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
     for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
-      newTrees[etaBin][ptBin]->Branch("L2L3CorrJetColJetIdx",corrJetIdx,"L2L3CorrJetColJetIdx[NobjJet]/I");
-//       newTrees[etaBin][ptBin]->Branch("HltDiJetAve30",&hlt30,"HltDiJetAve30/O");
-//       newTrees[etaBin][ptBin]->Branch("HltDiJetAve60",&hlt60,"HltDiJetAve60/O");
-//       newTrees[etaBin][ptBin]->Branch("HltDiJetAve80",&hlt80,"HltDiJetAve80/O");
-//       newTrees[etaBin][ptBin]->Branch("HltDiJetAve110",&hlt110,"HltDiJetAve110/O");
-//       newTrees[etaBin][ptBin]->Branch("HltDiJetAve150",&hlt150,"HltDiJetAve150/O");
-//       newTrees[etaBin][ptBin]->Branch("HltDiJetAve190",&hlt190,"HltDiJetAve190/O");
-//       newTrees[etaBin][ptBin]->Branch("HltDiJetAve240",&hlt240,"HltDiJetAve240/O");
-//       newTrees[etaBin][ptBin]->Branch("HltDiJetAve300",&hlt300,"HltDiJetAve300/O");
-//       newTrees[etaBin][ptBin]->Branch("HltDiJetAve370",&hlt370,"HltDiJetAve370/O");
+      newTreesEtaPtAve[etaBin][ptBin]->Branch("L2L3CorrJetColJetIdx",corrJetIdx,"L2L3CorrJetColJetIdx[NobjJet]/I");
+      newTreesEtaPtAve[etaBin][ptBin]->Branch("WeightSpectrum",&wSpec,"WeightSpectrum/F");
+      if( writeAllTrees ) {
+	newTreesEtaPt[etaBin][ptBin]->Branch("L2L3CorrJetColJetIdx",corrJetIdx,"L2L3CorrJetColJetIdx[NobjJet]/I");
+	newTreesEtaPt[etaBin][ptBin]->Branch("WeightSpectrum",&wSpec,"WeightSpectrum/F");
+	newTreesEtaGenPtGenAve[etaBin][ptBin]->Branch("L2L3CorrJetColJetIdx",corrJetIdx,"L2L3CorrJetColJetIdx[NobjJet]/I");
+	newTreesEtaGenPtGenAve[etaBin][ptBin]->Branch("WeightSpectrum",&wSpec,"WeightSpectrum/F");
+      }
     }
   }
 
   // Container for jet ordering
   util::JetIndexCol corrJets;
+  
 
 
 
+   // ++++ Loop over old tree and select dijets +++++++++++++++++
 
-  // ++++ Loop over old tree and select dijets +++++++++++++++++
+   int nEntries = oldChain->GetEntries();
+   if( nEvts > 0 && nEvts <= nEntries ) nEntries = nEvts;
 
-  int nEntries = oldChain->GetEntries();
-  if( nEvts > 0 && nEvts <= nEntries ) nEntries = nEvts;
+   for(int i = 0; i < nEntries; ++i) {
+     if( i%50000 == 0 ) {
+       std::cout << "Processed " << i << " events" << std::endl;
+     }
 
-  for(int i = 0; i < nEntries; ++i) {
-    if( i%50000 == 0 ) {
-      std::cout << "Processed " << i << " events" << std::endl;
-    }
+     oldChain->GetEntry(i);
 
-    oldChain->GetEntry(i);
+     if( nObjJet > maxNJet ) {
+       std::cerr << "WARNING: nObjJet = " << nObjJet << " > " << maxNJet << ". Skipping event!\n";
+       ++nMaxNJet;
+       continue;
+     }
 
-    if( nObjJet > maxNJet ) {
-      std::cerr << "WARNING: nObjJet = " << nObjJet << " > " << maxNJet << ". Skipping event.\n";
-      ++nMaxNJet;
-      continue;
-    }
 
-    if( nObjJet < 2 ) {
-      ++nDijets;
-      continue;
-    }
-
-    if( isData ) {
-      // Use only 2011 runs with new triggers
-      if( RunNumber < minRunNumber ) {
-	++nNewTrig;
-	continue;
-      }
-
-      // HLT cuts
-      if( maxHltThres == 30 && !(hlt30) ) {
-	++nHlt;
+     if( isData ) {		// HLT selection
+       // Use only 2011 runs with new triggers
+       if( RunNumber < minRunNumber ) {
+ 	++nNewTrig;
  	continue;
-      } else if( maxHltThres == 60 && !(hlt30 || hlt60) ) {
-	++nHlt;
- 	continue;
-      } else if( maxHltThres == 80 && !(hlt30 || hlt60 || hlt80) ) {
-	++nHlt;
- 	continue;
-      } else if( maxHltThres == 110 && !(hlt30 || hlt60 || hlt80 || hlt110) ) {
-	++nHlt;
- 	continue;
-      } else if( maxHltThres == 150 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150) ) {
-	++nHlt;
- 	continue;
-      } else if( maxHltThres == 190 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150 || hlt190) ) {
-	++nHlt;
- 	continue;
-      } else if( maxHltThres == 240 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150 || hlt190 || hlt240) ) {
-	++nHlt;
- 	continue;
-      } else if( maxHltThres == 300 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150 || hlt190 || hlt240 || hlt300) ) {
-	++nHlt;
- 	continue;
-      } else if( maxHltThres == 370 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150 || hlt190 || hlt240 || hlt300 || hlt370) ) {
-	++nHlt;
- 	continue;
-      }
-    }
-
-    // Order corrected jets
-    corrJets.clear();
-    for(int j = 0; j < nObjJet; ++j) {
-      jetCorrL2L3[j] = JetCorrL2[j]*JetCorrL3[j]; // Remove residual correction due to bug in 42
-
-      corrJets.add(j,jetCorrL1[j]*jetCorrL2L3[j]*jetPt[j]);
-    }
-    corrJets.sort();
-
-    // Set branch corrected jet indices
-    for(int j = 0; j < nObjJet; ++j) {
-      corrJetIdx[j] = corrJets(j);
-    }
-
+       }
     
-    // Dijet selection
-    if( std::abs(TVector2::Phi_mpi_pi(jetPhi[corrJets(0)]-jetPhi[corrJets(1)])) < minDeltaPhi ) {
-      ++nDeltaPhi;
-      continue;
-    }
-    else if( !jetID[corrJets(0)] || !jetID[corrJets(1)] ) {
-      ++nJetID;
-      continue;
-    }
+       // HLT cuts
+       if( maxHltThres == 30 && !(hlt30) ) {
+ 	++nHlt;
+  	continue;
+       } else if( maxHltThres == 60 && !(hlt30 || hlt60) ) {
+ 	++nHlt;
+  	continue;
+       } else if( maxHltThres == 80 && !(hlt30 || hlt60 || hlt80) ) {
+ 	++nHlt;
+  	continue;
+       } else if( maxHltThres == 110 && !(hlt30 || hlt60 || hlt80 || hlt110) ) {
+ 	++nHlt;
+  	continue;
+       } else if( maxHltThres == 150 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150) ) {
+ 	++nHlt;
+  	continue;
+       } else if( maxHltThres == 190 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150 || hlt190) ) {
+ 	++nHlt;
+  	continue;
+       } else if( maxHltThres == 240 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150 || hlt190 || hlt240) ) {
+ 	++nHlt;
+  	continue;
+       } else if( maxHltThres == 300 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150 || hlt190 || hlt240 || hlt300) ) {
+ 	++nHlt;
+  	continue;
+       } else if( maxHltThres == 370 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150 || hlt190 || hlt240 || hlt300 || hlt370) ) {
+ 	++nHlt;
+  	continue;
+       }
+     } else {			// PU re-weighting
 
-    // Find eta and pt bin
-    unsigned int etaBin = 1000;
-    if( binAdmin.findSameEtaBin(jetEta[corrJets(0)],jetEta[corrJets(1)],etaBin) ) {
-      double ptAve = 0.5*(corrJets.pt(0)+corrJets.pt(1));
-      unsigned int ptAveBin = 1000;
-      if( binAdmin.findPtBin(hlt,ptAve,etaBin,ptAveBin) ) {
-  	ptAveBin -= binAdmin.hltMinPtBin(hlt,etaBin);
-  	newTrees[etaBin][ptAveBin]->Fill();
-      } else {
- 	++nPtAve;
-      }
-    } else {
-      ++nEta;
-    }
+       wSpec = Weight;
+       if( PUMCNumVtx < static_cast<int>(weightsPU.size()) ) {
+ 	wPU = weightsPU.at(PUMCNumVtx);
+       } else {
+ 	std::cerr << "ERROR: no event weights for PUMCNumVtx = " << PUMCNumVtx << std::endl;
+ 	wPU = 1.;
+       }
 
-    if( i%50000 == 0 ) {
-      for(etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
- 	for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
- 	  newTrees[etaBin][ptBin]->AutoSave();
+       // PU reweighting
+       Weight *= wPU;
+     }
+
+
+     // Order corrected jets
+     corrJets.clear();
+     for(int j = 0; j < nObjJet; ++j) {
+
+       //       // Vary JES
+       //       double scale = 1. - JetCorrUncert[j];
+       //       if( scale == scale ) {
+       //  	//jetCorrL2L3[j] *= scale;
+       //  	JetCorrL3[j] *= scale;
+       //       } else {
+       //  	std::cerr << "ERROR: JetCorrUncert[" << j << "] NAN" << std::endl;
+       //       }
+
+       // Remove residual correction due to bug in 42
+       jetCorrL2L3[j] = JetCorrL2[j]*JetCorrL3[j];
+
+       corrJets.add(j,jetCorrL1[j]*jetCorrL2L3[j]*jetPt[j]);
+     }
+     corrJets.sort();
+
+     // Set branch corrected jet indices
+     for(int j = 0; j < nObjJet; ++j) {
+       corrJetIdx[j] = corrJets(j);
+     }
+
+   
+
+     // Data driven dijet selection
+     if( nObjJet < 2 ) {
+       ++nDijets;
+     } else if( std::abs(TVector2::Phi_mpi_pi(jetPhi[corrJets(0)]-jetPhi[corrJets(1)])) < minDeltaPhi ) {
+       ++nDeltaPhi;
+     } else if( !jetID[corrJets(0)] || !jetID[corrJets(1)] ) {
+       ++nJetID;
+     } else {
+       unsigned int etaBin = 1000;
+       if( binAdmin.findSameEtaBin(jetEta[corrJets(0)],jetEta[corrJets(1)],etaBin) ) {
+	
+    	// Find ptAve bin
+    	double ptAve = 0.5*(corrJets.pt(0)+corrJets.pt(1));
+    	unsigned int ptAveBin = 1000;
+    	if( binAdmin.findPtBin(hlt,ptAve,etaBin,ptAveBin) ) {
+    	  ptAveBin -= binAdmin.hltMinPtBin(hlt,etaBin);
+    	  newTreesEtaPtAve[etaBin][ptAveBin]->Fill();
+    	} else {
+    	  ++nPtAve;
+    	}
+
+  	if( writeAllTrees ) {
+  	  // Find pt bin
+  	  // Selection A:
+  	  // - jet1: defines pt bin, i.e. ptMin < pt(jet1) < ptMax
+  	  // - jet2: just minimum pt requirement, i.e. pt(jet2) > 45 GeV
+  	  if( corrJets.pt(1) > 45. ) {
+  	    unsigned int ptBin = 1000;
+  	    if( binAdmin.findPtBin(hlt,corrJets.pt(0),etaBin,ptBin) ) {
+  	      ptBin -= binAdmin.hltMinPtBin(hlt,etaBin);
+  	      newTreesEtaPt[etaBin][ptBin]->Fill();
+  	    }
+  	  }
+  	  // Selection B:
+  	  // - jet2: defines pt bin, i.e. ptMin < pt(jet2) < ptMax
+  	  // - jet1: just minimum pt requirement, i.e. pt(jet1) > 45 GeV
+  	  if( corrJets.pt(0) > 45. ) {
+  	    unsigned int ptBin = 1000;
+  	    if( binAdmin.findPtBin(hlt,corrJets.pt(1),etaBin,ptBin) ) {
+  	      ptBin -= binAdmin.hltMinPtBin(hlt,etaBin);
+  	      corrJetIdx[0] = corrJets(1);
+  	      corrJetIdx[1] = corrJets(0);
+  	      newTreesEtaPt[etaBin][ptBin]->Fill();
+  	      corrJetIdx[0] = corrJets(0);
+  	      corrJetIdx[1] = corrJets(1);
+  	    }
+  	  }
+  	}
+       } else {
+   	++nEta;
+       }
+     }
+     
+
+     if( !isData ) {
+
+       // GenJet dijet selection
+       if( NobjGenJet > 1 ) {
+
+  	unsigned int etaGenBin = 1000;
+  	if( binAdmin.findSameEtaBin(GenJetEta[GenJetColJetIdx[0]],GenJetEta[GenJetColJetIdx[1]],etaGenBin) ) {
+  	  if( jetID[GenJetColJetIdx[0]] && jetID[GenJetColJetIdx[1]] ) {
+
+   	    double ptGen1 = GenJetPt[GenJetColJetIdx[0]];
+   	    double ptGen2 = GenJetPt[GenJetColJetIdx[1]];
+  	    double ptGenAve = 0.5*(ptGen1+ptGen2);
+  	    double ptGen3 = NobjGenJet>2 ? GenJetPt[GenJetColJetIdx[2]] : 0.;
+
+  	    double r1 = 0.;
+  	    double r2 = 0.;
+  	    if( ptGen1 > 0. && ptGen2 > 0. ) {
+  	      r1 = jetCorrL1[GenJetColJetIdx[0]]*jetCorrL2L3[GenJetColJetIdx[0]]*jetPt[GenJetColJetIdx[0]]/ptGen1;
+  	      r2 = jetCorrL1[GenJetColJetIdx[1]]*jetCorrL2L3[GenJetColJetIdx[1]]*jetPt[GenJetColJetIdx[1]]/ptGen2;
+  	    }
+
+  	    hRespVsPtGenLogNoDeltaPhi.at(etaGenBin)->Fill(ptGen1,r1);
+  	    hRespVsPtGenLogNoDeltaPhi.at(etaGenBin)->Fill(ptGen2,r2);
+
+  	    if( std::abs(TVector2::Phi_mpi_pi(GenJetPhi[GenJetColJetIdx[0]]-GenJetPhi[GenJetColJetIdx[1]])) > minDeltaPhi ) {
+  	      hRespVsPtGen.at(etaGenBin)->Fill(ptGen1,r1);
+  	      hRespVsPtGen.at(etaGenBin)->Fill(ptGen2,r2);
+  	      hRespVsPtGenLog.at(etaGenBin)->Fill(ptGen1,r1);
+  	      hRespVsPtGenLog.at(etaGenBin)->Fill(ptGen2,r2);
+  	      hRespVsPtGenPUReweighted.at(etaGenBin)->Fill(ptGen1,r1,wPU);
+  	      hRespVsPtGenPUReweighted.at(etaGenBin)->Fill(ptGen2,r2,wPU);
+  	      hRespVsPtGenLogPUReweighted.at(etaGenBin)->Fill(ptGen1,r1,wPU);
+  	      hRespVsPtGenLogPUReweighted.at(etaGenBin)->Fill(ptGen2,r2,wPU);
+	      
+  	      if( PUMCNumVtx < 5 ) {
+  		hRespVsPtGenLogPULow.at(etaGenBin)->Fill(ptGen1,r1);
+  		hRespVsPtGenLogPULow.at(etaGenBin)->Fill(ptGen2,r2);
+  	      } else if( PUMCNumVtx > 9 ) {
+  		hRespVsPtGenLogPUHigh.at(etaGenBin)->Fill(ptGen1,r1);
+  		hRespVsPtGenLogPUHigh.at(etaGenBin)->Fill(ptGen2,r2);
+  	      }
+	      
+  	      // Pt soft cuts
+  	      for(int ptSoftBin = binAdmin.nPtSoftBins()-1; ptSoftBin >= 0; --ptSoftBin) {
+  		if( ptGen3 > binAdmin.ptSoftMax(ptSoftBin)*ptGenAve ) break;
+		
+ 		hPtGen.at(etaGenBin).at(ptSoftBin)->Fill(ptGen1,wSpec);
+ 		hPtGen.at(etaGenBin).at(ptSoftBin)->Fill(ptGen2,wSpec);
+		
+ 		hRespVsPtGenLogVsPtSoftPUReweighted.at(etaGenBin).at(ptSoftBin)->Fill(ptGen1,r1,wSpec*wPU);
+ 		hRespVsPtGenLogVsPtSoftPUReweighted.at(etaGenBin).at(ptSoftBin)->Fill(ptGen2,r2,wSpec*wPU);
+  	      }
+	      
+ 	      if( writeAllTrees ) {
+ 		// Find ptGenAve bin
+ 		unsigned int ptGenAveBin = 1000;
+ 		if( binAdmin.findPtBin(ptGenAve,etaGenBin,ptGenAveBin) ) {
+ 		  for(int j = 0; j < nObjJet; ++j) {
+ 		    corrJetIdx[j] = GenJetColJetIdx[j];
+ 		  }
+ 		  newTreesEtaGenPtGenAve[etaGenBin][ptGenAveBin]->Fill();
+ 		}
+ 	      }
+  	    }
+  	  }
+  	}
+       }
+     }
+   
+     
+     if( i%50000 == 0 ) {
+       for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
+  	for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
+ 	  newTreesEtaPtAve[etaBin][ptBin]->AutoSave();
+ 	  if( writeAllTrees ) {
+ 	    newTreesEtaPt[etaBin][ptBin]->AutoSave();
+ 	    newTreesEtaGenPtGenAve[etaBin][ptBin]->AutoSave();
+ 	  }
+  	}
+       }
+     }
+   }     // End of loop over entries
+
+     for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
+       for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
+ 	newTreesEtaPtAve[etaBin][ptBin]->AutoSave();
+ 	if( writeAllTrees ) {
+ 	  newTreesEtaPt[etaBin][ptBin]->AutoSave();
+ 	  newTreesEtaGenPtGenAve[etaBin][ptBin]->AutoSave();
  	}
-      }
-    }
-  } // End of loop over entries
+       }
+     }
 
-  for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
-    for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
-      newTrees[etaBin][ptBin]->AutoSave();
-      //newTrees[etaBin][ptBin]->Print();
-    }
-  }
+     if( !isData ) {
 
+       TFile fileResponse(outFilePath+"/Kalibri_MCTruthResponse.root","RECREATE");
+       TFile fileSpetrum(outFilePath+"/Kalibri_MCTruthSpectrum.root","RECREATE");
+       for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
+ 	fileResponse.WriteTObject(hRespVsPtGen.at(etaBin));
+ 	fileResponse.WriteTObject(hRespVsPtGenLog.at(etaBin));
+ 	fileResponse.WriteTObject(hRespVsPtGenLogNoDeltaPhi.at(etaBin));
+ 	fileResponse.WriteTObject(hRespVsPtGenPUReweighted.at(etaBin));
+ 	fileResponse.WriteTObject(hRespVsPtGenLogPUReweighted.at(etaBin));
+ 	fileResponse.WriteTObject(hRespVsPtGenLogPULow.at(etaBin));
+ 	fileResponse.WriteTObject(hRespVsPtGenLogPUHigh.at(etaBin));
 
-
-
-  // ++++ Print status ++++++++++++++++++++++++++++++++++++++++++
-  std::cout << "Done processing " << nEntries << " events from file list '" << inFileListName << "'" << std::endl;
-
-  std::cout << "Selected " << std::endl;
-  if( isData ) std::cout << "  " << (nEntries -= nNewTrig ) << " events with run number >= " << minRunNumber << std::endl;
-  std::cout << "  " << (nEntries -= nMaxNJet ) << " events with <= " << maxNJet << " jets " << std::endl;
-  std::cout << "  " << (nEntries -= nDijets ) << " events with >= 2 jets " << std::endl;
-  if( isData ) std::cout << "  " << (nEntries -= nHlt ) << " events passing HLT trigger (max threshold " << maxHltThres << " GeV)" << std::endl;
-  std::cout << "  " << (nEntries -= nDeltaPhi ) << " events with |DeltaPhi(1,2)| > " << minDeltaPhi << std::endl;
-  std::cout << "  " << (nEntries -= nJetID ) << " events with Jet(1,2) passing loose JetID cuts" << std::endl;
-  std::cout << "  " << (nEntries -= nPtAve ) << " events with PtAve within binning" << std::endl;
-  std::cout << "  " << (nEntries -= nEta ) << " events with Eta(1,2) within binning" << std::endl;
-
-  std::cout << "Wrote " << nEntries << " events to files" << std::endl;
-  for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
-    for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
-      std::cout << "  " << newTrees[etaBin][ptBin]->GetEntries() << " events with " << binAdmin.etaMin(etaBin) << " < |eta(1,2)| < " << binAdmin.etaMax(etaBin) << " to file '" << newFiles[etaBin][ptBin]->GetName() << "'" << std::endl;
-    }
-  }
-    
+ 	for(unsigned int ptSoftBin = 0; ptSoftBin < binAdmin.nPtSoftBins(); ++ptSoftBin) {
+ 	  fileResponse.WriteTObject(hRespVsPtGenLogVsPtSoftPUReweighted.at(etaBin).at(ptSoftBin));
+ 	  fileSpetrum.WriteTObject(hPtGen.at(etaBin).at(ptSoftBin));
+ 	}
+       }
+       fileResponse.Close();
+       fileSpetrum.Close();
+     }
 
 
-  // ++++ Clean up +++++++++++++++++++++++++++++++++++++++++++++
 
-  for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
-    for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
-      newFiles[etaBin][ptBin]->Close();
-      delete newFiles[etaBin][ptBin];
-    }
-  }
-  delete oldChain;
+     // ++++ Print status ++++++++++++++++++++++++++++++++++++++++++
+     std::cout << "Done processing " << nEntries << " events from file list '" << inFileListName << "'" << std::endl;
+
+     std::cout << "Selected " << std::endl;
+     if( isData ) std::cout << "  " << (nEntries -= nNewTrig ) << " events with run number >= " << minRunNumber << std::endl;
+     std::cout << "  " << (nEntries -= nMaxNJet ) << " events with <= " << maxNJet << " jets " << std::endl;
+     std::cout << "  " << (nEntries -= nDijets ) << " events with >= 2 jets " << std::endl;
+     if( isData ) std::cout << "  " << (nEntries -= nHlt ) << " events passing HLT trigger (max threshold " << maxHltThres << " GeV)" << std::endl;
+     std::cout << "  " << (nEntries -= nDeltaPhi ) << " events with |DeltaPhi(1,2)| > " << minDeltaPhi << std::endl;
+     std::cout << "  " << (nEntries -= nJetID ) << " events with Jet(1,2) passing loose JetID cuts" << std::endl;
+     std::cout << "  " << (nEntries -= nPtAve ) << " events with PtAve within binning" << std::endl;
+     std::cout << "  " << (nEntries -= nEta ) << " events with Eta(1,2) within binning" << std::endl;
+
+     std::cout << "Wrote " << nEntries << " events to files" << std::endl;
+     for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
+       for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
+ 	std::cout << "  " << newTreesEtaPtAve[etaBin][ptBin]->GetEntries() << " events with " << binAdmin.etaMin(etaBin) << " < |eta(1,2)| < " << binAdmin.etaMax(etaBin) << " to file '" << newFilesEtaPtAve[etaBin][ptBin]->GetName() << "'" << std::endl;
+       }
+     }
+
+
+
+     // ++++ Clean up +++++++++++++++++++++++++++++++++++++++++++++
+
+     for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
+       for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
+ 	newFilesEtaPtAve[etaBin][ptBin]->Close();
+ 	delete newFilesEtaPtAve[etaBin][ptBin];
+
+ 	if( writeAllTrees ) {
+ 	  newFilesEtaPt[etaBin][ptBin]->Close();
+ 	  newFilesEtaGenPtGenAve[etaBin][ptBin]->Close();
+ 	  delete newFilesEtaPt[etaBin][ptBin];
+ 	  delete newFilesEtaGenPtGenAve[etaBin][ptBin];
+ 	}
+       }
+     }
+     delete oldChain;
+
+     if( !isData ) {
+       for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
+ 	delete hRespVsPtGen.at(etaBin);
+ 	delete hRespVsPtGenLog.at(etaBin);
+ 	delete hRespVsPtGenLogNoDeltaPhi.at(etaBin);
+ 	delete hRespVsPtGenPUReweighted.at(etaBin);
+ 	delete hRespVsPtGenLogPUReweighted.at(etaBin);
+ 	delete hRespVsPtGenLogPULow.at(etaBin);
+ 	delete hRespVsPtGenLogPUHigh.at(etaBin);
+  
+ 	for(unsigned int ptSoftBin = 0; ptSoftBin < binAdmin.nPtSoftBins(); ++ptSoftBin) {
+ 	  delete hRespVsPtGenLogVsPtSoftPUReweighted.at(etaBin).at(ptSoftBin);
+ 	  delete hPtGen.at(etaBin).at(ptSoftBin);
+ 	}
+       }
+     }
 }
 
 
-void writeDijetSkimsData() {
-  std::vector<unsigned int> hltThes;
-  hltThes.push_back(30);
-  hltThes.push_back(60);
-  hltThes.push_back(80);
-  hltThes.push_back(110);
-  hltThes.push_back(150);
-  hltThes.push_back(190);
-  hltThes.push_back(240);
-  hltThes.push_back(300);
-  hltThes.push_back(370);
-  for(std::vector<unsigned int>::const_iterator it = hltThes.begin();
-      it != hltThes.end(); ++it) {
-    writeDijetSkims(true,*it);
+  void writeDijetSkimsData() {
+    std::vector<unsigned int> hltThes;
+    hltThes.push_back(30);
+    hltThes.push_back(60);
+    hltThes.push_back(80);
+    hltThes.push_back(110);
+    hltThes.push_back(150);
+    hltThes.push_back(190);
+    hltThes.push_back(240);
+    hltThes.push_back(300);
+    hltThes.push_back(370);
+    for(std::vector<unsigned int>::const_iterator it = hltThes.begin();
+	it != hltThes.end(); ++it) {
+      writeDijetSkims(true,*it);
+    }
   }
-}
