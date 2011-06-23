@@ -1,4 +1,4 @@
-// $Id: EtaBin.cc,v 1.10 2011/03/19 17:41:03 mschrode Exp $
+// $Id: EtaBin.cc,v 1.11 2011/06/07 18:23:31 mschrode Exp $
 
 #include <algorithm>
 #include <iostream>
@@ -51,10 +51,10 @@ namespace resolutionFit{
 
 
   // -------------------------------------------------------------------------------------
-  bool EtaBin::addDataSample(const TString &label, const TString &baseFileName, const TString &baseFileNameSpectrum) {
+  bool EtaBin::addDataSample(const TString &label, const TString &fileName) {
     bool result = true;
     for(std::vector<PtBin*>::iterator it = ptBins_.begin(); it != ptBins_.end(); ++it) {
-      bool status = (*it)->addDataSample(label,baseFileName,baseFileNameSpectrum);
+      bool status = (*it)->addDataSample(label,fileName);
       result = result && status;
     }
     sampleTypes_[label] = Sample::Data;
@@ -64,10 +64,10 @@ namespace resolutionFit{
 
 
   // -------------------------------------------------------------------------------------
-  bool EtaBin::addMCSample(const TString &label, const TString &baseFileName, const TString &baseFileNameSpectrum) {
+  bool EtaBin::addMCSample(const TString &label, const TString &fileName) {
     bool result = true;
     for(std::vector<PtBin*>::iterator it = ptBins_.begin(); it != ptBins_.end(); ++it) {
-      bool status = (*it)->addMCSample(label,baseFileName,baseFileNameSpectrum);
+      bool status = (*it)->addMCSample(label,fileName);
       result = result && status;
     }
     sampleTypes_[label] = Sample::MC;
@@ -239,7 +239,7 @@ namespace resolutionFit{
   bool EtaBin::addPLIUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color) {
     SystematicUncertainty* uncert = findSystematicUncertainty(nominalSample,type);
     
-    TString label = "Particle Level Imbalance";
+    TString label = "PLI";
     if( !(uncert->hasComponent(label)) ) {
       std::vector<double> ptMean;
       std::vector<double> ptMin;
@@ -278,6 +278,30 @@ namespace resolutionFit{
 	relUncert.push_back(0.5*std::abs(1.-relativeMCClosure(nominalSample,type,i)));
       }
       uncert->addComponent(label,color,nominalSample,type,ptMean,ptMin,ptMax,relUncert,relUncert);
+    }
+    
+    return true;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  bool EtaBin::addUncertaintyFromVariedSample(const TString &uncertaintyLabel, double fraction, const SampleLabel &nominalSample, FitResult::Type type, const TString &variedSample, int color) {
+    SystematicUncertainty* uncert = findSystematicUncertainty(nominalSample,type);
+    
+    if( !(uncert->hasComponent(uncertaintyLabel)) ) {
+      std::vector<double> ptMean;
+      std::vector<double> ptMin;
+      std::vector<double> ptMax;
+      std::vector<double> relUncert;
+      for(unsigned int i = 0; i < par_->nPtBins(etaBin()); ++i) {
+ 	ptMean.push_back(meanPt(nominalSample,type,i));
+ 	ptMin.push_back(par_->ptMin(etaBin(),i));
+ 	ptMax.push_back(par_->ptMax(etaBin(),i));
+	double res = correctedResolution(nominalSample,type,i);
+	double resVar = correctedResolution(variedSample,type,i);
+	relUncert.push_back(fraction*std::abs((resVar-res)/res));
+      }
+      uncert->addComponent(uncertaintyLabel,color,nominalSample,type,ptMean,ptMin,ptMax,relUncert,relUncert);
     }
     
     return true;
@@ -423,7 +447,7 @@ namespace resolutionFit{
     TGraphAsymmErrors* kStatBand = new TGraphAsymmErrors(1,&x,&kVal,&xe,&xe,&kStatErr,&kStatErr);
     //kStatBand->SetFillStyle(3013);
     kStatBand->SetFillStyle(1001);
-    kStatBand->SetFillColor(28);
+    kStatBand->SetFillColor(40);
     kStatBand->SetLineColor(kStatBand->GetFillColor());
 
     return kStatBand;
@@ -463,13 +487,22 @@ namespace resolutionFit{
   }
 
 
+  //! \brief Fit the intrinsic particle level imbalance
+  //!
+  //! This will add a Sample of type MCTruth, which has the correct
+  //! FitResult::Type PtGenAsym. The fitted ptGen resolution is used
+  //! as PLI correction to compensate for jet hadronisation and
+  //! fragmentation effects.
+  //!
+  //! The value of the fitted ptGen resolution can can be computed
+  //! via EtaBin::pli, the fitted function via EtaBin::pliFunc.
   // -------------------------------------------------------------------------------------
-  void EtaBin::fitPLI(const TString &label, const TString &baseFileName, ResolutionFunction::Type type) {
+  void EtaBin::fitPLI(const TString &label, const TString &fileName, ResolutionFunction::Type type) {
 
     // Add Samples containing ptGen asymmetry histograms
     // They will per default have the correct FitResult::Type PtGenAsym
     for(std::vector<PtBin*>::iterator it = ptBins_.begin(); it != ptBins_.end(); ++it) {
-      if( !((*it)->addMCTruthSample(label,baseFileName)) ) {
+      if( !((*it)->addMCTruthSample(label,fileName)) ) {
 	std::cerr << "ERROR in EtaBin::fitPLI(): Error adding MCTruth Sample '" << label << "'" << std::endl;
 	exit(1);
       }

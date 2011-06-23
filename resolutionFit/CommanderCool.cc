@@ -1,4 +1,4 @@
-// $Id: CommanderCool.cc,v 1.7 2011/03/04 09:35:54 mschrode Exp $
+// $Id: CommanderCool.cc,v 1.8 2011/06/07 18:23:30 mschrode Exp $
 
 #include <iomanip>
 #include <iostream>
@@ -11,6 +11,7 @@
 
 
 namespace resolutionFit {
+  // -------------------------------------------------------------------
   CommanderCool::CommanderCool(const Parameters* par)
     : par_(par) {
 
@@ -25,6 +26,8 @@ namespace resolutionFit {
   }
 
   
+
+  // -------------------------------------------------------------------
   CommanderCool::~CommanderCool() {
     for(std::vector<EtaBin*>::iterator it = etaBins_.begin(); it != etaBins_.end(); ++it) {
       delete *it;
@@ -33,6 +36,8 @@ namespace resolutionFit {
   }
 
 
+
+  // -------------------------------------------------------------------
   void CommanderCool::setMCTruthResolution(const TString &fileName, ResolutionFunction::Type type) {
     if( par_->verbosity() > 0 ) std::cout << "CommanderCool::setMCTruthResolution(): Setting MC truth resolution from config file '" << fileName << "'" << std::endl;
 
@@ -47,20 +52,30 @@ namespace resolutionFit {
   }
 
 
-  void CommanderCool::fitPLI(const TString &label, const TString &baseFileName, ResolutionFunction::Type type) {
+
+  //! \brief Fit the intrinsic particle level imbalance
+  //!
+  //! This will add a Sample of type MCTruth, which has the correct
+  //! FitResult::Type PtGenAsym. The fitted ptGen resolution is used
+  //! as PLI correction to compensate for jet hadronisation and
+  //! fragmentation effects.
+  // -------------------------------------------------------------------
+  void CommanderCool::fitPLI(const TString &label, const TString &fileName, ResolutionFunction::Type type) {
     if( par_->verbosity() > 0 ) std::cout << "CommanderCool::fitPLI: Fitting PLI" << std::endl;
 
-    if( !isConsistentInputName(baseFileName) ) {
+    if( !isConsistentInputName(fileName) ) {
       std::cerr << "WARNING in CommanderCool::fitPLI(): name of file contains a jet type string different than the current type '" << JetProperties::toString(par_->jetType()) << "'" << std::endl;
       exit(1);
     }
 
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
-      (*it)->fitPLI(label,baseFileName,type);
+      (*it)->fitPLI(label,fileName,type);
     }
   }
 
 
+
+  // -------------------------------------------------------------------
   void CommanderCool::setPLI(const TString &fileName, ResolutionFunction::Type type) {
     if( par_->verbosity() > 0 ) std::cout << "CommanderCool::setPLI: Setting Particle Level Imbalance from config file '" << fileName << "'" << std::endl;
 
@@ -76,14 +91,15 @@ namespace resolutionFit {
 
 
 
-  void CommanderCool::addDataSample(const TString &label, const TString &baseFileName, const TString &baseFileNameSpectrum) {
-    if( !isConsistentInputName(baseFileName) ) {
+  // -------------------------------------------------------------------
+  void CommanderCool::addDataSample(const TString &label, const TString &fileName) {
+    if( !isConsistentInputName(fileName) ) {
       std::cerr << "WARNING in CommanderCool::addDataSample(): name of file contains a jet type string different than the current type '" << JetProperties::toString(par_->jetType()) << "'" << std::endl;
       exit(1);
     }
-
+    
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
-      if( !((*it)->addDataSample(label,baseFileName,baseFileNameSpectrum)) ) {
+      if( !((*it)->addDataSample(label,fileName) ) ) {
 	std::cerr << "ERROR adding DataSample '" << label << "'" << std::endl;
 	exit(1);
       }
@@ -92,14 +108,15 @@ namespace resolutionFit {
 
 
 
-  void CommanderCool::addMCSample(const TString &label, const TString &baseFileName, const TString &baseFileNameSpectrum) {
-    if( !isConsistentInputName(baseFileName) ) {
+  // -------------------------------------------------------------------
+  void CommanderCool::addMCSample(const TString &label, const TString &fileName) {
+    if( !isConsistentInputName(fileName) ) {
       std::cerr << "WARNING in CommanderCool::addMCSample(): name of file contains a jet type string different than the current type '" << JetProperties::toString(par_->jetType()) << "'" << std::endl;
       exit(1);
     }
 
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
-      if( !((*it)->addMCSample(label,baseFileName,baseFileNameSpectrum) ) ) {
+      if( !((*it)->addMCSample(label,fileName) ) ) {
 	std::cerr << "ERROR adding MCSample '" << label << "'" << std::endl;
 	exit(1);
       }
@@ -108,6 +125,7 @@ namespace resolutionFit {
 
 
 
+  // -------------------------------------------------------------------
   void CommanderCool::addFitResult(FitResult::Type type) {
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
       if( !((*it)->addFitResult(type)) ) {
@@ -118,6 +136,8 @@ namespace resolutionFit {
   }
 
 
+
+  // -------------------------------------------------------------------
   void CommanderCool::addExtrapolationUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color) {
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
       if( !((*it)->addExtrapolationUncertainty(nominalSample,type,color)) ) {
@@ -128,6 +148,8 @@ namespace resolutionFit {
   }
 
 
+
+  // -------------------------------------------------------------------
   void CommanderCool::addPLIUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color) {
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
       if( !((*it)->addPLIUncertainty(nominalSample,type,color)) ) {
@@ -138,6 +160,8 @@ namespace resolutionFit {
   }
 
 
+
+  // -------------------------------------------------------------------
   void CommanderCool::addMCClosureUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color) {
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
       if( !((*it)-> addMCClosureUncertainty(nominalSample,type,color)) ) {
@@ -148,6 +172,20 @@ namespace resolutionFit {
   }
    
 
+
+  // -------------------------------------------------------------------
+  void CommanderCool::addUncertaintyFromVariedSample(const TString &uncertaintyLabel, double fraction, const SampleLabel &nominalSample, FitResult::Type type, const TString &variedSample, int color) {
+    for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
+      if( !((*it)->addUncertaintyFromVariedSample(uncertaintyLabel,fraction,nominalSample,type,variedSample,color)) ) {
+	std::cerr << "ERROR adding '" << uncertaintyLabel << "' uncertainty" << std::endl;
+	exit(1);
+      }
+    }
+  }
+
+
+
+  // -------------------------------------------------------------------
   void CommanderCool::addUncertaintyFromVariedSample(const TString &uncertaintyLabel, double fraction, const SampleLabel &nominalSample, FitResult::Type type, const TString &variedSampleDown, const TString &variedSampleUp, int color) {
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
       if( !((*it)->addUncertaintyFromVariedSample(uncertaintyLabel,fraction,nominalSample,type,variedSampleDown,variedSampleUp,color)) ) {
@@ -158,6 +196,8 @@ namespace resolutionFit {
   }
 
 
+
+  // -------------------------------------------------------------------
   void CommanderCool::compareSamples(const SampleLabel &label1, const SampleLabel &label2) {
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
       if( !((*it)->compareSamples(label1,label2)) ) {
@@ -168,6 +208,8 @@ namespace resolutionFit {
   }
 
 
+
+  // -------------------------------------------------------------------
   void CommanderCool::fitKValues(FitResult::Type type) {
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
       (*it)->fitKValue(type);
@@ -175,6 +217,8 @@ namespace resolutionFit {
   }
 
 
+
+  // -------------------------------------------------------------------
   void CommanderCool::printSetup() const {
     std::cout << "\n\n++++++ Setup of CommanderCool ++++++++++++++++++++++++" << std::endl;
 
@@ -200,6 +244,8 @@ namespace resolutionFit {
   }
 
 
+
+  // -------------------------------------------------------------------
   void CommanderCool::printResult() const {
     std::cout << "\n\n++++++ Fitted Resolution +++++++++++++++++++++++++++++\n" << std::endl;
 
@@ -250,23 +296,53 @@ namespace resolutionFit {
 	  for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
 	    const EtaBin* etaBin = *etaBinIt;
 
-	    std::cout << std::setprecision(0) << "   " << etaBin->toString() << ": \t$ ";
+	    std::cout << std::setprecision(0) << "   " << etaBin->toString() << ":   \t$ ";
+	    std::cout << std::setprecision(1) << par_->etaMin(etaBin->etaBin()) << " < |\\eta| < " << par_->etaMax(etaBin->etaBin()) << "$ & $";
 	    std::cout << std::setprecision(3) << etaBin->kValue(sLabel1,sLabel2,fitResType) << " \\pm ";
 	    std::cout << std::setprecision(4) << etaBin->kStat(sLabel1,sLabel2,fitResType) << " _{-";
 	    std::cout << std::setprecision(4) << etaBin->kSystDown(sLabel1,sLabel2,fitResType) << "} ^{+";
 	    std::cout << std::setprecision(4) << etaBin->kSystUp(sLabel1,sLabel2,fitResType) << "} (-";
 	    std::cout << std::setprecision(4) << etaBin->kTotalDown(sLabel1,sLabel2,fitResType) << " +";
-	    std::cout << std::setprecision(4) << etaBin->kTotalUp(sLabel1,sLabel2,fitResType) << ") $" << std::endl;
+	    std::cout << std::setprecision(4) << etaBin->kTotalUp(sLabel1,sLabel2,fitResType) << ") $ \\\\" << std::endl;
 
 	  }
 	  std::cout << "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n" << std::endl;
 	}
       }
     }
+
+
+
+    for(FitResultTypeIt rIt = etaBins_.front()->fitResultTypesBegin();
+	rIt != etaBins_.front()->fitResultTypesEnd(); ++rIt) {
+      FitResult::Type fitResType = *rIt;
+      
+      for(ComparedSamplesIt sCIt = etaBins_.front()->comparedSamplesBegin();
+	  sCIt != etaBins_.front()->comparedSamplesEnd(); ++sCIt) {
+	SampleLabel sLabel1 = (*sCIt)->label1();
+	SampleLabel sLabel2 = (*sCIt)->label2();
+	
+	if( etaBins_.front()->hasKValue(sLabel1,sLabel2,fitResType) ) {
+	  std::cout.setf(std::ios::fixed,std::ios::floatfield);
+	  
+	  for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+	    const EtaBin* etaBin = *etaBinIt;
+
+	    std::cout << std::setprecision(0) << "   " << etaBin->toString() << ":   \t ";
+	    std::cout << std::setprecision(3) << etaBin->kValue(sLabel1,sLabel2,fitResType)-1. << " (-)";
+	    std::cout << std::setprecision(4) << std::max(etaBin->kValue(sLabel1,sLabel2,fitResType) - etaBin->kTotalDown(sLabel1,sLabel2,fitResType)-1.,0.) << " (+)";
+	    std::cout << std::setprecision(4) << std::max(etaBin->kValue(sLabel1,sLabel2,fitResType) + etaBin->kTotalUp(sLabel1,sLabel2,fitResType)-1.,0.) << std::endl;
+	  }
+	}
+      }
+    }
+
   }
 
 
-  // For combination with photon+jet data
+
+  //! \brief For combination with photon+jet data
+  // -------------------------------------------------------------------
   void CommanderCool::printRatioToCombinationFormat() const {
     std::cout << "\n\n++++++ Combination Format +++++++++++++++++++++++++++++\n" << std::endl;
 
@@ -332,6 +408,8 @@ namespace resolutionFit {
 
 
 
+  //! \brief Just some means for sanity checks I wrote when I was bored...
+  // -------------------------------------------------------------------
   bool CommanderCool::isConsistentInputName(const TString &name) const {
     // Set of all known jet types
     std::set<JetProperties::Type> types;

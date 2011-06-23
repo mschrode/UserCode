@@ -39,24 +39,18 @@ namespace resolutionFit{
 
 
   // -------------------------------------------------------------------------------------
-  bool PtBin::addSample(Sample::Type type, const TString &label, const TString &baseFileName, const TString &baseFileNameSpectrum) {
+  bool PtBin::addSample(Sample::Type type, const TString &label, const TString &fileName) {
     bool result = true;
-    std::vector<TString> fileNames;
-    for(unsigned int ptSoftBin = 0; ptSoftBin < par_->nPtSoftBins(); ++ptSoftBin) {
-      fileNames.push_back(baseFileName+par_->fileNameSuffix(etaBin(),ptBin(),ptSoftBin));
-    }
     if( type == Sample::Data ) {
-      DataSample* s = new DataSample(label,par_->ptMin(etaBin(),ptBin()),par_->ptMax(etaBin(),ptBin()),
-				     fileNames,par_->ptSoft(),par_->histNameSuffix(etaBin(),ptBin()),
-				     baseFileNameSpectrum+par_->fileNameSuffix(etaBin()),
-				     par_->verbosity());
+      DataSample* s = new DataSample(label,etaBin(),ptBin(),par_->ptMin(etaBin(),ptBin()),
+				     par_->ptMax(etaBin(),ptBin()),
+				     par_->ptSoft(),fileName,par_->verbosity());
       dataSamples_[label] = s;
       samples_[label] = s;
     } else if( type == Sample::MC ) {
-      MCSample* s = new MCSample(label,par_->ptMin(etaBin(),ptBin()),par_->ptMax(etaBin(),ptBin()),
-				 fileNames,par_->ptSoft(),par_->histNameSuffix(etaBin(),ptBin()),
-				 baseFileNameSpectrum+par_->fileNameSuffix(etaBin()),
-				 par_->verbosity());
+      MCSample* s = new MCSample(label,etaBin(),ptBin(),par_->ptMin(etaBin(),ptBin()),
+				 par_->ptMax(etaBin(),ptBin()),
+				 par_->ptSoft(),fileName,par_->verbosity());
       mcSamples_[label] = s;
       samples_[label] = s;
     } else {
@@ -68,23 +62,20 @@ namespace resolutionFit{
   }
 
 
+  //! \brief Add a sample of type MCTruth
   // -------------------------------------------------------------------------------------
-  bool PtBin::addMCTruthSample(const TString &label, const TString &baseFileName) {
+  bool PtBin::addMCTruthSample(const TString &label, const TString &fileName) {
     std::vector<TString> fileNames;
-    for(unsigned int ptSoftBin = 0; ptSoftBin < par_->nPtSoftBins(); ++ptSoftBin) {
-      fileNames.push_back(baseFileName+par_->fileNameSuffix(etaBin(),ptBin(),ptSoftBin));
-    }
-    mcTruthSample_ = new MCTruthSample(label,par_->ptMin(etaBin(),ptBin()),
+    mcTruthSample_ = new MCTruthSample(label,etaBin(),ptBin(),par_->ptMin(etaBin(),ptBin()),
 				       par_->ptMax(etaBin(),ptBin()),
-				       fileNames,par_->ptSoft(),
-				       par_->histNameSuffix(etaBin(),ptBin()),
-				       par_->verbosity());
+				       par_->ptSoft(),fileName,par_->verbosity());
     mcTruthSample_->addFitResult(FitResult::PtGenAsym);
     
     return true;
   }
 
 
+  //! \brief Add a FitResult to all samples but the ones of type MCTruth
   // -------------------------------------------------------------------------------------
   bool PtBin::addFitResult(FitResult::Type type) {
     bool result = true;

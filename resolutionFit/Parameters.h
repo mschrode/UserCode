@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.27 2011/03/04 09:35:54 mschrode Exp $
+// $Id: Parameters.h,v 1.28 2011/06/07 18:23:30 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -41,7 +41,7 @@ namespace resolutionFit {
 
     JetProperties::Algo jetAlgo() const { return jetAlgo_; }
     JetProperties::Type jetType() const { return jetType_; }
-    double lumi() const { return 124; }
+    double lumi() const { return 295.; }
 
     unsigned int nEtaBins() const { return nEtaBinsUser_>0 ? nEtaBinsUser_ : binAdm_->nEtaBins(); }
     unsigned int nPtBins(unsigned int etaBin) const { return binAdm_->nPtBins(etaBin); }
@@ -58,23 +58,6 @@ namespace resolutionFit {
     double ptSoftMax(unsigned int ptSoftBin) const { return binAdm_->ptSoftMax(ptSoftBin); }
 
     void printBinning() const { binAdm_->printBinning(); }
-
-    TString histNameSuffix(unsigned int etaBin, unsigned int ptBin) const {
-      return etaHistNameTag(etaBin)+ptHistNameTag(ptBin);
-    }
-    TString etaHistNameTag(unsigned int etaBin) const { return "_Eta"+util::toTString(etaBin); }
-    TString ptHistNameTag(unsigned int ptBin) const { return "_Pt"+util::toTString(ptBin); }
-
-    TString fileNameSuffix(unsigned int etaBin, unsigned int ptBin, unsigned int ptSoftBin) const {
-      return etaFileNameTag(etaBin)+ptSoftFileNameTag(ptSoftBin)+fileNameEnding();
-    }
-    TString fileNameSuffix(unsigned int etaBin) const {
-      return etaFileNameTag(etaBin)+fileNameEnding();
-    }
-    TString etaFileNameTag(unsigned int etaBin) const { return "_Eta"+util::toTString(etaBin); }
-    TString ptFileNameTag(unsigned int ptBin) const { return "_Pt"+util::toTString(ptBin); }
-    TString ptSoftFileNameTag(unsigned int ptSoftBin) const { return "_PtSoft"+util::toTString(ptSoftBin); }
-    TString fileNameEnding() const { return ".root"; }
 
     OutputManager::Mode outMode() const { return outPutMode_; }
     TString outFilePrefix() const { return id_; }

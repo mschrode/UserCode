@@ -1,4 +1,4 @@
-// $Id: FitResult.cc,v 1.7 2011/03/02 16:06:01 mschrode Exp $
+// $Id: FitResult.cc,v 1.8 2011/06/07 18:23:31 mschrode Exp $
 
 #include "FitResult.h"
 
@@ -248,6 +248,7 @@ namespace resolutionFit {
     statUncerts_.clear();
     ptSoft_.clear();
     
+    // Copy ptSoft threholds to local data members
     for(MeasIt it = meas_.begin() ; it != meas_.end(); ++it) {
       ptSoft_.push_back((*it)->ptSoft());
     }
@@ -269,7 +270,7 @@ namespace resolutionFit {
 	// Convolution with cuts on ptAve
 	double s = extrapolatedValue_/sqrt(2.);	// This is still the absolute resolution!
 	double c = sqrt(M_PI/2.)*s*( erf((maxPt()-ptTrue)/s/sqrt(2.)) - erf((minPt()-ptTrue)/s/sqrt(2.)) );
-	double pdf = c*meas_.front()->pdfPtTrue(ptTrue);
+	double pdf = c*meas_.front()->pdfPtTrue(ptTrue); // Get truth pdf from bin with lowest ptSoft; this should be closest to real dijet spectrum
 	
 	// Store (un-normalized) truth pdf for
 	// this value of ptTrue in hash table
@@ -299,7 +300,8 @@ namespace resolutionFit {
     }    
   }
 
-
+  
+  //! \brief Get assumed truth pdf for this EtaPt bin
   // -------------------------------------------------------------------------------------  
   TH1* FitResultFullMaxLikeAbs::spectrum() const {
     ++HIST_COUNT;
@@ -375,8 +377,8 @@ namespace resolutionFit {
       ptSoft_.push_back((*it)->ptSoft());
       if( (*it)->ptSoft() < ptSoftSmall ) {
 	ptSoftSmall = (*it)->ptSoft();
-	meanPt_ = (*it)->meanPtAve();
-	meanPtUncert_ = (*it)->meanPtAveUncert();
+	meanPt_ = (*it)->meanPtGen();
+	meanPtUncert_ = (*it)->meanPtGenUncert();
       }
     }
 

@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.15 2011/06/08 11:54:36 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.16 2011/06/08 16:58:02 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -350,7 +350,8 @@ namespace resolutionFit {
       bool printOutDone = false;
 
       // Loop over ptSoft bins
-      for(unsigned int ptSoftBinIdx = 0; ptSoftBinIdx < par_->nPtSoftBins(); ++ptSoftBinIdx) {
+      //      for(unsigned int ptSoftBinIdx = 0; ptSoftBinIdx < par_->nPtSoftBins(); ++ptSoftBinIdx) {
+      for(unsigned int ptSoftBinIdx = 4; ptSoftBinIdx < 5; ++ptSoftBinIdx) {
 	if( par_->verbosity() > 1 ) std::cout << "    PtSoftBin " << ptSoftBinIdx << std::endl;
 
 	// Loop over pt bins
@@ -443,8 +444,8 @@ namespace resolutionFit {
 	      hFrameMain->SetTitle(title_);	  
 	      TH1* hFrameRatio = out_->ratioFrame(hFrameMain,"Asymmetry","",0.53,1.47);
 	      hFrameRatio->SetLineWidth(lineWidth_);
-	      hFrameMain->GetXaxis()->SetRangeUser(0.,0.4);
-	      hFrameRatio->GetXaxis()->SetRangeUser(0.,0.4);
+	      hFrameMain->GetXaxis()->SetRangeUser(0.,0.6);
+	      hFrameRatio->GetXaxis()->SetRangeUser(0.,0.6);
 
 	      hFrameMain->Draw();
 	      hAsymMC->Draw("HISTsame");
@@ -461,14 +462,14 @@ namespace resolutionFit {
 	      out_->newPage("Data vs MC");      
 	      out_->nextMainPad("DataVsMC "+ptBin->toTString()+", PtSoftBin "+util::toTString(ptSoftBinIdx));
 
-	      util::HistOps::setYRange(hAsymMC,50,3E-1);
+	      util::HistOps::setYRange(hAsymMC,label->GetSize()+legNom->GetNRows(),3E-1);
 	      delete hFrameMain;
 	      hFrameMain = out_->mainFrame(hAsymMC);
 	      hFrameMain->SetTitle(title_);	  
 	      hFrameRatio = out_->ratioFrame(hFrameMain,"Asymmetry","",0.53,1.47);
 	      hFrameRatio->SetLineWidth(lineWidth_);
-	      hFrameMain->GetXaxis()->SetRangeUser(0.,1.);
-	      hFrameRatio->GetXaxis()->SetRangeUser(0.,1.);
+	      hFrameMain->GetXaxis()->SetRangeUser(0.,0.6);
+	      hFrameRatio->GetXaxis()->SetRangeUser(0.,0.6);
 
 	      hFrameMain->Draw();
 	      hAsymMC->Draw("HISTsame");
@@ -486,7 +487,7 @@ namespace resolutionFit {
 	      out_->newPage("Data vs MC");      
 	      out_->nextMainPad("DataVsMC "+ptBin->toTString()+", PtSoftBin "+util::toTString(ptSoftBinIdx));
 
-	      util::HistOps::setYRange(hIntAsymMC,50,3E-1);
+	      util::HistOps::setYRange(hIntAsymMC,label->GetSize()+legNom->GetNRows(),3E-1);
 	      delete hFrameMain;
 	      hFrameMain = out_->mainFrame(hIntAsymMC);
 	      hFrameMain->SetTitle(title_);	  
@@ -521,8 +522,8 @@ namespace resolutionFit {
 	      delete hFrameRatio;
 	      hFrameRatio = out_->ratioFrame(hFrameMain,"Asymmetry","",0.53,1.47);
 	      hFrameRatio->SetLineWidth(lineWidth_);
-	      hFrameMain->GetXaxis()->SetRangeUser(0.,0.4);
-	      hFrameRatio->GetXaxis()->SetRangeUser(0.,0.4);
+	      hFrameMain->GetXaxis()->SetRangeUser(0.,0.6);
+	      hFrameRatio->GetXaxis()->SetRangeUser(0.,0.6);
 
 	      hFrameMain->Draw();
 	      hAsymMCSmeared->Draw("HISTsame");
@@ -540,14 +541,14 @@ namespace resolutionFit {
 	      out_->newPage("Data vs MC");      
 	      out_->nextMainPad("DataVsMC "+ptBin->toTString()+", PtSoftBin "+util::toTString(ptSoftBinIdx));
 
-	      util::HistOps::setYRange(hAsymMCSmeared,80,3E-1);
+	      util::HistOps::setYRange(hAsymMCSmeared,label->GetSize()+legNom->GetNRows(),3E-1);
 	      delete hFrameMain;
 	      hFrameMain = out_->mainFrame(hAsymMCSmeared);
 	      hFrameMain->SetTitle(title_);	  
 	      hFrameRatio = out_->ratioFrame(hFrameMain,"Asymmetry","",0.53,1.47);
 	      hFrameRatio->SetLineWidth(lineWidth_);
-	      hFrameMain->GetXaxis()->SetRangeUser(0.,1.);
-	      hFrameRatio->GetXaxis()->SetRangeUser(0.,1.);
+	      hFrameMain->GetXaxis()->SetRangeUser(0.,0.6);
+	      hFrameRatio->GetXaxis()->SetRangeUser(0.,0.6);
 
 	      hFrameMain->Draw();
 	      hAsymMCSmeared->Draw("HISTsame");
@@ -566,7 +567,7 @@ namespace resolutionFit {
 	      out_->newPage("Data vs MC");      
 	      out_->nextMainPad("DataVsMC "+ptBin->toTString()+", PtSoftBin "+util::toTString(ptSoftBinIdx));
 
-	      util::HistOps::setYRange(hIntAsymMCSmeared,50,3E-1);
+	      util::HistOps::setYRange(hIntAsymMCSmeared,label->GetSize()+legNom->GetNRows()+1,3E-1);
 	      delete hFrameMain;
 	      hFrameMain = out_->mainFrame(hIntAsymMCSmeared);
 	      hFrameMain->SetTitle(title_);	  
@@ -605,7 +606,7 @@ namespace resolutionFit {
 	    
 	      // Asymmetry, log
 	      hAsymMC->GetXaxis()->SetRangeUser(0.,1.);
-	      util::HistOps::setYRange(hAsymMC,50,1E-3);
+	      util::HistOps::setYRange(hAsymMC,label->GetSize()+legNom->GetNRows(),1E-3);
 	      out_->nextMultiPad("DataVsMC "+ptBin->toTString()+", PtSoftBin "+util::toTString(ptSoftBinIdx));
 	      hAsymMC->Draw("HIST");
 	      hAsymData->Draw("PE1same");
@@ -616,7 +617,7 @@ namespace resolutionFit {
 
 	      // Cumulative asymmetry
 	      hIntAsymMC->GetXaxis()->SetRangeUser(0.,0.6);
-	      util::HistOps::setYRange(hIntAsymMC,50,1E-3);
+	      util::HistOps::setYRange(hIntAsymMC,label->GetSize()+legNom->GetNRows(),1E-3);
 	      out_->nextMultiPad("DataVsMC "+ptBin->toTString()+", PtSoftBin "+util::toTString(ptSoftBinIdx));
 	      hIntAsymMC->Draw("HIST");
 	      hIntAsymData->Draw("PE1same");
@@ -637,7 +638,7 @@ namespace resolutionFit {
 	    
 	      // Smeared asymmetry, log
 	      hAsymMCSmeared->GetXaxis()->SetRangeUser(0.,1.);
-	      util::HistOps::setYRange(hAsymMCSmeared,50,1E-3);
+	      util::HistOps::setYRange(hAsymMCSmeared,label->GetSize()+legNom->GetNRows(),1E-3);
 	      out_->nextMultiPad("DataVsMC "+ptBin->toTString()+", PtSoftBin "+util::toTString(ptSoftBinIdx));
 	      hAsymMCSmeared->Draw("HIST");
 	      hAsymData->Draw("PE1same");
@@ -648,7 +649,7 @@ namespace resolutionFit {
 
 	      // Cumulative smeared asymmetry
 	      hIntAsymMCSmeared->GetXaxis()->SetRangeUser(0.,0.6);
-	      util::HistOps::setYRange(hIntAsymMCSmeared,50,1E-3);
+	      util::HistOps::setYRange(hIntAsymMCSmeared,label->GetSize()+legNom->GetNRows(),1E-3);
 	      out_->nextMultiPad("DataVsMC "+ptBin->toTString()+", PtSoftBin "+util::toTString(ptSoftBinIdx));
 	      hIntAsymMCSmeared->Draw("HIST");
 	      hIntAsymData->Draw("PE1same");
@@ -1460,10 +1461,6 @@ namespace resolutionFit {
 		} else if( distIdx == 3 ) {
 		  h = sample->histPt3(ptSoftBinIdx);
 		  util::HistOps::setAxisTitles(h,"p_{T,3}","GeV","events");
-		  
-		  if( ptSoftBinIdx == 2 && sample->label() == "Data" ) {
-		    std::cout << "**** " << ptBin->toTString() << ": " << h->GetMean() << " \\pm " << h->GetMeanError() << std::endl;
-		  }
 		}
 		//h->GetXaxis()->SetRangeUser(-asymMax,asymMax);
 		setStyle(sample,h);
@@ -1636,9 +1633,9 @@ namespace resolutionFit {
 	  TPaveText* label = labelMk_->etaBin(etaBin->etaBin());
 	  TLegend* leg = 0;
 	  if( showMCTruth ) 
-	    leg = util::LabelFactory::createLegendColWithOffset(3,-1.*(labelMk_->start()),label->GetSize());
+	    leg = util::LabelFactory::createLegendColWithOffset(3,-0.6*(labelMk_->start()),label->GetSize());
 	  else 
-	    leg = util::LabelFactory::createLegendColWithOffset(2,-1.*(labelMk_->start()),label->GetSize());
+	    leg = util::LabelFactory::createLegendColWithOffset(2,-0.6*(labelMk_->start()),label->GetSize());
 	  leg->AddEntry(gRes1,labelMk_->label(sLabel1),"P");
 	  leg->AddEntry(gRes2,labelMk_->label(sLabel2),"P");
 	  if( showMCTruth ) 
@@ -1646,7 +1643,7 @@ namespace resolutionFit {
 
 	  out_->nextMainPad(sLabel1+"vs"+sLabel2+": Resolution "+etaBin->toString());
 	  hFrameMain->Draw();
-	  mcTruth->Draw("same");
+	  if( showMCTruth) mcTruth->Draw("same");
 	  gRes1->Draw("PE1same");
 	  gRes2->Draw("PE1same");
 	  label->Draw("same");
@@ -1719,12 +1716,11 @@ namespace resolutionFit {
 	     
 	    // Labels
 	    TPaveText* label = labelMk_->etaBin(etaBin->etaBin());
-	    //TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,-std::min(0.8,labelMk_->start()),label->GetSize());
-	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,-1.,label->GetSize());
+	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,-std::min(0.8,labelMk_->start()),label->GetSize());
 	    leg->AddEntry(gRatio,"Measurement","P");
 	    leg->AddEntry(kValueLine,"Fit","L");
 	    leg->AddEntry(kStatBand,"Stat. Uncertainty","F");
-	    leg->AddEntry(kSystBand,"Syst. Uncertainty (Incomplete)","F");
+	    leg->AddEntry(kSystBand,"Syst. Uncertainty","F");
 
 	    out_->nextPad(sLabel1+"Over"+sLabel2+": Resolution "+etaBin->toString());
 	    hFrame->Draw("][");
@@ -1945,15 +1941,20 @@ namespace resolutionFit {
 	    // and total uncertainty
 	    std::vector<TGraphAsymmErrors*> bands;
 	    TPaveText* label = labelMk_->etaBin(sampleLabel,etaBin->etaBin());
-	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(uncert->nComponents()+1,-0.88*labelMk_->start(),label->GetSize());
+	    int nLegEntries = uncert->nComponents()+1;
+	    TLegend* leg1 = util::LabelFactory::createLegendColWithOffset(std::min(nLegEntries,4),-0.5,label->GetSize());
+	    TLegend* leg2 = util::LabelFactory::createLegendColWithOffset(std::max(nLegEntries-4,0),0.5,label->GetSize());
+
 	    // Add total uncertainty
 	    bands.push_back(uncert->relUncertSteps());
 	    for(SystUncertIt it = uncert->componentsBegin(); it != uncert->componentsEnd(); ++it) {
 	      // Add components
 	      bands.push_back((*it)->relUncertSteps());
-	      leg->AddEntry(bands.back(),(*it)->label(),"F");
+	      if( leg1->GetNRows() < 4 ) leg1->AddEntry(bands.back(),(*it)->label(),"F");
+	      else leg2->AddEntry(bands.back(),(*it)->label(),"F");
 	    }
-	    leg->AddEntry(bands.front(),uncert->label(),"F");
+	    if( leg2->GetNRows() > 0 ) leg2->AddEntry(bands.front(),uncert->label(),"F");
+	    else leg1->AddEntry(bands.front(),uncert->label(),"F");
 
 	    // Create frame
 	    TH1* hFrame = new TH1D("hFrame",title_,1000,xMinPt_,xMaxPt_);
@@ -1975,7 +1976,8 @@ namespace resolutionFit {
 	    }
 	    hFrame->Draw("][same");
 	    label->Draw("same");
-	    leg->Draw("same");
+	    leg1->Draw("same");
+	    if( leg2->GetNRows() > 0 ) leg2->Draw("same");
 	    out_->logx();
 	    out_->saveCurrentPad(histFileName("RelativeSystematicUncertainty",etaBin,sampleLabel,fitResType));
 
@@ -1985,7 +1987,8 @@ namespace resolutionFit {
 	    }
 	    delete hFrame;
 	    delete label;
-	    delete leg;
+	    delete leg1;
+	    delete leg2;
 	  } // End if has uncertainties
 	} // End of loop over SampleLabels
       } // End of loop over FitResultTypes
@@ -2043,7 +2046,7 @@ namespace resolutionFit {
 	  for(std::vector<TH1*>::iterator it = hWeights.begin(); it != hWeights.end(); ++it) {
 	    util::HistOps::setAxisTitles(*it,"Event Weights","","events",true);
 	    (*it)->GetXaxis()->SetRangeUser(0.,1.3);
-	    util::HistOps::setYRange(*it,label->GetSize()+leg->GetNRows()+20,0.05*min);
+	    util::HistOps::setYRange(*it,label->GetSize()+leg->GetNRows(),min);
 	  }
 
 	  // Plots

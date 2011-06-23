@@ -1,4 +1,4 @@
-// $Id: Sample.h,v 1.10 2011/06/07 18:23:30 mschrode Exp $
+// $Id: Sample.h,v 1.11 2011/06/08 16:58:02 mschrode Exp $
 
 #ifndef SAMPLE_H
 #define SAMPLE_H
@@ -31,7 +31,7 @@ namespace resolutionFit {
     static int markerStyle(const SampleLabel &label);
     static Sample::Type type(const SampleLabel &label);
 
-    Sample(const SampleLabel &label, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, unsigned int verbosity = 0);
+    Sample(const SampleLabel &label, unsigned int verbosity = 0);
     virtual ~Sample();
 
     virtual Sample::Type type() const = 0;
@@ -136,7 +136,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   class DataSample : public Sample {
   public:
-    DataSample(const TString &label, double ptMin, double ptMax, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, const TString &fileNameSpectrum, unsigned int verbosity = 0);
+    DataSample(const TString &label, unsigned int etaBin, unsigned int ptBin, double ptMin, double ptMax, const std::vector<double> &ptSoft, const TString &fileName, unsigned int verbosity);
     
     Sample::Type type() const { return Data; }
     double relativeWeightTo(const SampleLabel &other) const { return 1.; }
@@ -155,7 +155,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   class MCSample : public Sample {
   public:
-    MCSample(const TString &label, double ptMin, double ptMax, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, const TString &fileNameSpectrum, unsigned int verbosity = 0);
+    MCSample(const TString &label, unsigned int etaBin, unsigned int ptBin, double ptMin, double ptMax, const std::vector<double> &ptSoft, const TString &fileName, unsigned int verbosity);
     
     Sample::Type type() const { return MC; }
 
@@ -172,7 +172,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   class MCTruthSample : public Sample {
   public:
-    MCTruthSample(const TString &label, double ptMin, double ptMax, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, unsigned int verbosity = 0);
+    MCTruthSample(const TString &label, unsigned int etaBin, unsigned int ptBin, double ptMin, double ptMax, const std::vector<double> &ptSoft, const TString &fileName, unsigned int verbosity);
     
     Sample::Type type() const { return MCTruth; }
 

@@ -1,4 +1,4 @@
-// $Id: EtaBin.h,v 1.8 2011/03/02 11:55:51 mschrode Exp $
+// $Id: EtaBin.h,v 1.9 2011/06/07 18:23:30 mschrode Exp $
 
 #ifndef ETA_BIN_H
 #define ETA_BIN_H
@@ -85,20 +85,21 @@ namespace resolutionFit {
 
     TGraphAsymmErrors* ratioGraph(const SampleLabel &label1, const SampleLabel &label2, FitResult::Type type) const;
 
-    bool addDataSample(const TString &label, const TString &baseFileName, const TString &baseFileNameSpectrum);
-    bool addMCSample(const TString &label, const TString &baseFileName, const TString &baseFileNameSpectrum);
+    bool addDataSample(const TString &label, const TString &fileName);
+    bool addMCSample(const TString &label, const TString &fileName);
     bool addFitResult(FitResult::Type type);
 
     bool addExtrapolationUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color);
     bool addPLIUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color);
     bool addMCClosureUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color);
+    bool addUncertaintyFromVariedSample(const TString &uncertaintyLabel, double fraction, const SampleLabel &nominalSample, FitResult::Type type, const TString &variedSample, int color);
     bool addUncertaintyFromVariedSample(const TString &uncertaintyLabel, double fraction, const SampleLabel &nominalSample, FitResult::Type type, const TString &variedSampleDown, const TString &variedSampleUp, int color);
 
     bool compareSamples(const SampleLabel &label1, const SampleLabel &label2);
     void fitKValue(FitResult::Type type);
 
     void setMCTruthResolution(ResolutionFunction* mcTruthReso);
-    void fitPLI(const TString &label, const TString &baseFileName, ResolutionFunction::Type type);
+    void fitPLI(const TString &label, const TString &fileName, ResolutionFunction::Type type);
     void setPLI(ResolutionFunction* pli);
     
 

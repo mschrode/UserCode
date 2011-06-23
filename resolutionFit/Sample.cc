@@ -70,13 +70,8 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------
-  Sample::Sample(const TString &label, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, unsigned int verbosity)
+  Sample::Sample(const TString &label, unsigned int verbosity)
     : label_(label), verbosity_(verbosity) {
-
-    if( fileNames.size() != ptSoft.size() ) {
-      std::cerr << "ERROR in Sample: Number of specified file names not equal to number of specified ptSoft thresholds" << std::endl;
-      exit(1);
-    }
   }
 
 
@@ -344,12 +339,11 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------
-  DataSample::DataSample(const TString &label, double ptMin, double ptMax, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, const TString &fileNameSpectrum, unsigned int verbosity)
-    : Sample(label,fileNames,ptSoft,histNameSuffix,verbosity) {
-
+  DataSample::DataSample(const TString &label, unsigned int etaBin, unsigned int ptBin, double ptMin, double ptMax, const std::vector<double> &ptSoft, const TString &fileName, unsigned int verbosity)
+    : Sample(label,verbosity) {
     // Read measurements and fitted values from file
     for(unsigned int i = 0; i < ptSoft.size(); ++i) {
-      meas_.push_back(new Measurement(fileNames.at(i),histNameSuffix,fileNameSpectrum,ptMin,ptMax,ptSoft.at(i),verbosity));
+      meas_.push_back(new Measurement(fileName,etaBin,ptBin,i,ptMin,ptMax,ptSoft.at(i),verbosity));
     }
 
     // Style
@@ -364,12 +358,12 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------
-  MCSample::MCSample(const TString &label, double ptMin, double ptMax, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, const TString &fileNameSpectrum, unsigned int verbosity)
-    : Sample(label,fileNames,ptSoft,histNameSuffix,verbosity) {
+  MCSample::MCSample(const TString &label, unsigned int etaBin, unsigned int ptBin, double ptMin, double ptMax, const std::vector<double> &ptSoft, const TString &fileName, unsigned int verbosity)
+    : Sample(label,verbosity) {
 
     // Read measurements and fitted values from file
     for(unsigned int i = 0; i < ptSoft.size(); ++i) {
-      meas_.push_back(new Measurement(fileNames.at(i),histNameSuffix,fileNameSpectrum,ptMin,ptMax,ptSoft.at(i),verbosity));
+      meas_.push_back(new Measurement(fileName,etaBin,ptBin,i,ptMin,ptMax,ptSoft.at(i),verbosity));
     }
 
     // Style
@@ -384,12 +378,12 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------
-  MCTruthSample::MCTruthSample(const TString &label, double ptMin, double ptMax, const std::vector<TString> &fileNames, const std::vector<double> &ptSoft, const TString &histNameSuffix, unsigned int verbosity)
-    : Sample(label,fileNames,ptSoft,histNameSuffix,verbosity) {
+  MCTruthSample::MCTruthSample(const TString &label, unsigned int etaBin, unsigned int ptBin, double ptMin, double ptMax, const std::vector<double> &ptSoft, const TString &fileName, unsigned int verbosity)
+    : Sample(label,verbosity) {
 
     // Read measurements from file
     for(unsigned int i = 0; i < ptSoft.size(); ++i) {
-      meas_.push_back(new Measurement(fileNames.at(i),histNameSuffix,ptMin,ptMax,ptSoft.at(i),verbosity));
+      meas_.push_back(new Measurement(fileName,etaBin,ptBin,i,ptMin,ptMax,ptSoft.at(i),verbosity));
     }
 
     // Style

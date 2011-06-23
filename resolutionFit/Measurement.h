@@ -1,4 +1,4 @@
-// $Id: Measurement.h,v 1.7 2011/06/07 18:23:30 mschrode Exp $
+// $Id: Measurement.h,v 1.8 2011/06/08 16:58:02 mschrode Exp $
 
 #ifndef MEASUREMENT_H
 #define MEASUREMENT_H
@@ -13,10 +13,23 @@
 class TH1;
 
 namespace resolutionFit {
+
+  //! \brief Reads and stores control histograms and fitted parameter values
+  //! from Kalibri resolution fits
+  //!
+  //! This is the interface to the resolution fit results and control
+  //! plots produced by the Kalibri tool described at
+  //! https://twiki.cern.ch/twiki/bin/view/CMS/HamburgWikiAnalysisCalibration
+  //! and specifically the output of http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/UserCode/Bromo/Calibration/CalibCore/ControlPlotsResolution.h?view=log
+  //! The histograms are expected to be stored in a ROOT file as produced
+  //! by this script,
+  //! http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/UserCode/mschrode/sampleTools/combineBins.C?view=log
+  //! which collects the Kalibri output from the different eta, pt, and
+  //! ptSoft bins.
+  // -------------------------------------------------------------------
   class Measurement {
   public:
-    Measurement(const TString &fileName, const TString &histNameSuffix, const TString &fileNameSpectrum, double ptMin, double ptMax, double ptSoft, unsigned int verbosity = 0);
-    Measurement(const TString &fileName, const TString &histNameSuffix, double ptMin, double ptMax, double ptSoft, unsigned int verbosity = 0);
+    Measurement(const TString &fileName, unsigned int etaBin, unsigned int ptBin, unsigned int ptSoftBin, double ptMin, double ptMax, double ptSoft, unsigned int verbosity = 0);
 
     ~Measurement();
 
@@ -55,15 +68,16 @@ namespace resolutionFit {
     typedef std::map<TString,TH1*> HistMap;
     typedef std::map<TString,TH1*>::iterator HistMapIt;
 
-    const TString histNameSuffix_;
     const double ptMin_;
     const double ptMax_;
     const double ptSoft_;
     const unsigned int verbosity_;
 
+    TString hnSuffix_;		//! Histogram name suffix
+    TString hnPrefix_;		//! Histogram name prefix
     std::vector<double> values_;     //! Fitted parameter values
     std::vector<double> statUncert_; //! Statistical uncertainty of the fitted parameter values
-    HistMap hists_;
+    HistMap hists_;		//! The stored histograms: [Name][Pointer to histogram]
 
     double meanPtGen_;		//! Mean value of ptGen distribution
     double meanPtGenUncert_;	//! Uncertainty on mean value of ptGen distribution
@@ -72,11 +86,13 @@ namespace resolutionFit {
     double meanPdfPtTrue_;	//! Mean value of ptTrue pdf
     double meanPdfPtTrueUncert_;	//! Uncertainty on mean value of ptTrue pdf
 
-    TH1* hSpectrum_;
+    TH1* hSpectrum_;		//! The assumed underlying dijet spectrum, i.e. without modification for migration effects
 
     TH1* getClone(const TString &name) const;
-    void init(const TString &fileName, const TString &fileNameSpectrum, bool hasFittedParameters);
-    bool parse(const TString &fileName, bool hasFittedParameters);
+    TString histNamePath(unsigned int etaBin, unsigned int ptBin, unsigned int ptSoftBin) const;
+    TString histNameSuffix(unsigned int etaBin, unsigned int ptBin, unsigned int ptSoftBin) const;
+    void init(const TString &fileName, unsigned int etaBin, unsigned int ptBin, unsigned int ptSoftBin);
+    bool parse(const TString &fileName);
     void setMean(const TString &name, double &mean, double &uncert);
   };
 

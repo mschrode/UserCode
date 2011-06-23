@@ -52,8 +52,7 @@ namespace sampleTools {
 	  }
 	  hltInfo->addEtaPtBinRange(etaBin,firstPtBin,lastPtBin);
 	} else {
-	  std::cerr << "ERROR in BinningAdmin: '" << *trigIt << "' turn-on " << hltInfo->turnOn() << " out of binning\n";
-	  exit(1);
+	  std::cerr << "WARNING in BinningAdmin: '" << *trigIt << "' turn-on " << hltInfo->turnOn() << " out of binning\n";
 	}
       } // End of loop over eta bins
       

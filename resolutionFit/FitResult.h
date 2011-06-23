@@ -1,4 +1,4 @@
-// $Id: FitResult.h,v 1.7 2011/03/02 16:06:01 mschrode Exp $
+// $Id: FitResult.h,v 1.8 2011/06/07 18:23:30 mschrode Exp $
 
 #ifndef FIT_RESULT_H
 #define FIT_RESULT_H
@@ -43,7 +43,7 @@ namespace resolutionFit {
       return values_.at(ptSoftBin);
     }
     virtual double statUncertInExtrapolation(unsigned int ptSoftBin) const {
-      return values_.at(ptSoftBin);
+      return statUncerts_.at(ptSoftBin);
     }
     double value(unsigned int ptSoftBin) const { return values_.at(ptSoftBin); }
     double statUncert(unsigned int ptSoftBin) const { return statUncerts_.at(ptSoftBin); }

@@ -1,4 +1,4 @@
-// $Id: CommanderCool.h,v 1.8 2011/03/04 09:35:54 mschrode Exp $
+// $Id: CommanderCool.h,v 1.9 2011/06/07 18:23:30 mschrode Exp $
 
 #ifndef COMMANDER_COOL_H
 #define COMMANDER_COOL_H
@@ -16,24 +16,25 @@
 
 namespace resolutionFit {
 
-  // Main steering class controling the workflow
+  //! Main steering class controling the workflow
   //
-  // Make Singleton
+  //! \todo Make it Singleton
   class CommanderCool {
   public:
     CommanderCool(const Parameters* par);
     ~CommanderCool();
 
     void setMCTruthResolution(const TString &fileName, ResolutionFunction::Type type);
-    void fitPLI(const TString &label, const TString &baseFileName, ResolutionFunction::Type type);
+    void fitPLI(const TString &label, const TString &fileName, ResolutionFunction::Type type);
     void setPLI(const TString &fileName, ResolutionFunction::Type type);
 
-    void addDataSample(const TString &label, const TString &baseFileName, const TString &baseFileNameSpectrum);
-    void addMCSample(const TString &label, const TString &baseFileName, const TString &baseFileNameSpectrum);
+    void addDataSample(const TString &label, const TString &fileName);
+    void addMCSample(const TString &label, const TString &fileName);
     void addFitResult(FitResult::Type type);
     void addExtrapolationUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color);
     void addPLIUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color);
     void addMCClosureUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color);
+    void addUncertaintyFromVariedSample(const TString &uncertaintyLabel, double fraction, const SampleLabel &nominalSample, FitResult::Type type, const TString &variedSample, int color);
     void addUncertaintyFromVariedSample(const TString &uncertaintyLabel, double fraction, const SampleLabel &nominalSample, FitResult::Type type, const TString &variedSampleDown, const TString &variedSampleUp, int color);
     void compareSamples(const SampleLabel &label1, const SampleLabel &label2);
     void fitKValues(FitResult::Type type);

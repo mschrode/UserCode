@@ -1,4 +1,4 @@
-// $Id: Measurement.cc,v 1.4 2011/06/07 18:23:31 mschrode Exp $
+// $Id: Measurement.cc,v 1.5 2011/06/08 16:58:02 mschrode Exp $
 
 #include "Measurement.h"
 
@@ -13,85 +13,59 @@ namespace resolutionFit {
 
   unsigned int Measurement::HIST_COUNT = 0;
 
-
   // -------------------------------------------------------------------
-  Measurement::Measurement(const TString &fileName, const TString &histNameSuffix, const TString &fileNameSpectrum, double ptMin, double ptMax, double ptSoft, unsigned int verbosity)
-    : histNameSuffix_(histNameSuffix), ptMin_(ptMin), ptMax_(ptMax), ptSoft_(ptSoft), verbosity_(verbosity) {
-    init(fileName,fileNameSpectrum,true);
-  }
-
-  // -------------------------------------------------------------------
-  Measurement::Measurement(const TString &fileName, const TString &histNameSuffix, double ptMin, double ptMax, double ptSoft, unsigned int verbosity)
-    : histNameSuffix_(histNameSuffix), ptMin_(ptMin), ptMax_(ptMax), ptSoft_(ptSoft), verbosity_(verbosity) {
-    init(fileName,"NONE",false);
+  Measurement::Measurement(const TString &fileName, unsigned int etaBin, unsigned int ptBin, unsigned int ptSoftBin, double ptMin, double ptMax, double ptSoft, unsigned int verbosity)
+    : ptMin_(ptMin), ptMax_(ptMax), ptSoft_(ptSoft), verbosity_(verbosity) {
+    init(fileName,etaBin,ptBin,ptSoftBin);
   }
   
 
   // -------------------------------------------------------------------
-  void Measurement::init(const TString &fileName, const TString &fileNameSpectrum, bool hasFittedParameters) {
+  void Measurement::init(const TString &fileName, unsigned int etaBin, unsigned int ptBin, unsigned int ptSoftBin) {
+
+    hnPrefix_ = fileName+":///"+histNamePath(etaBin,ptBin,ptSoftBin);
+    hnSuffix_ = histNameSuffix(etaBin,ptBin,ptSoftBin);
 
     // Histograms to be read from file
-    hists_[("hPtGen"+histNameSuffix_)] = 0;
-    hists_[("hPtGenJet1"+histNameSuffix_)] = 0;
-    hists_[("hPtAveAbs"+histNameSuffix_)] = 0;
-    hists_[("hTruthPDF"+histNameSuffix_)] = 0;
-    hists_[("hPtAbsAsym"+histNameSuffix_)] = 0;
-    hists_[("hFitPtAsym"+histNameSuffix_)] = 0;
-    hists_[("hRespMeas"+histNameSuffix_)] = 0;
-    hists_[("hRespFit"+histNameSuffix_)] = 0;
-    hists_[("hPtGenAsym"+histNameSuffix_)] = 0;
-    hists_[("hPtJet1"+histNameSuffix_)] = 0;
-    hists_[("hPtJet2"+histNameSuffix_)] = 0;
-    hists_[("hPtJet3"+histNameSuffix_)] = 0;
-    hists_[("hPtJet4"+histNameSuffix_)] = 0;
-    hists_[("hPJet3"+histNameSuffix_)] = 0;
-    hists_[("hPJet3Rel"+histNameSuffix_)] = 0;
-    hists_[("hPJet3GenRel"+histNameSuffix_)] = 0;
-    hists_[("hPSJ"+histNameSuffix_)] = 0;
-    hists_[("hPSJRel"+histNameSuffix_)] = 0;
-    hists_[("hPSJGenRel"+histNameSuffix_)] = 0;
-    hists_[("hEta"+histNameSuffix_)] = 0;
-    hists_[("hDeltaPhi12"+histNameSuffix_)] = 0;
-    hists_[("hDeltaPtJet12"+histNameSuffix_)] = 0;
-    hists_[("hWeights"+histNameSuffix_)] = 0;
-    hists_[("hNumPU"+histNameSuffix_)] = 0;
+    // Within Measurement, the histograms are stored with name
+    // "HistName_EtaX_PtX_PtSoftX".
+    hists_[("hPtGen"+hnSuffix_)] = 0;
+    hists_[("hPtGenJet1"+hnSuffix_)] = 0;
+    hists_[("hPtAveAbs"+hnSuffix_)] = 0;
+    hists_[("hTruthPDF"+hnSuffix_)] = 0;
+    hists_[("hPtAbsAsym"+hnSuffix_)] = 0;
+    hists_[("hFitPtAsym"+hnSuffix_)] = 0;
+    hists_[("hRespMeas"+hnSuffix_)] = 0;
+    hists_[("hRespFit"+hnSuffix_)] = 0;
+    hists_[("hPtGenAsym"+hnSuffix_)] = 0;
+    hists_[("hPtJet1"+hnSuffix_)] = 0;
+    hists_[("hPtJet2"+hnSuffix_)] = 0;
+    hists_[("hPtJet3"+hnSuffix_)] = 0;
+    hists_[("hPtJet4"+hnSuffix_)] = 0;
+    hists_[("hPJet3"+hnSuffix_)] = 0;
+    hists_[("hPJet3Rel"+hnSuffix_)] = 0;
+    hists_[("hPJet3GenRel"+hnSuffix_)] = 0;
+    hists_[("hPSJ"+hnSuffix_)] = 0;
+    hists_[("hPSJRel"+hnSuffix_)] = 0;
+    hists_[("hPSJGenRel"+hnSuffix_)] = 0;
+    hists_[("hEta"+hnSuffix_)] = 0;
+    hists_[("hDeltaPhi12"+hnSuffix_)] = 0;
+    hists_[("hDeltaPtJet12"+hnSuffix_)] = 0;
+    hists_[("hWeights"+hnSuffix_)] = 0;
+    hists_[("hNumPU"+hnSuffix_)] = 0;
     
     // Parse file
-    if( !parse(fileName,hasFittedParameters) ) exit(-1);
+    if( !parse(fileName) ) exit(-1);
 
     // Calculate mean pt values
     if( verbosity_ == 2 ) std::cout << "Setting mean pt values" << std::endl;
-    setMean("hPtAveAbs"+histNameSuffix_,meanPtAve_,meanPtAveUncert_);
-    setMean("hPtGen"+histNameSuffix_,meanPtGen_,meanPtGenUncert_);
-    setMean("hTruthPDF"+histNameSuffix_,meanPdfPtTrue_,meanPdfPtTrueUncert_);
+    setMean("hPtAveAbs"+hnSuffix_,meanPtAve_,meanPtAveUncert_);
+    setMean("hPtGen"+hnSuffix_,meanPtGen_,meanPtGenUncert_);
+    setMean("hTruthPDF"+hnSuffix_,meanPdfPtTrue_,meanPdfPtTrueUncert_);
     if( verbosity_ == 2 ) {
       std::cout << "  meanPtAve_      =  " << meanPtAve_ << std::endl;
       std::cout << "  meanPtGen_      =  " << meanPtGen_ << std::endl;
       std::cout << "  meanPdfPtTrue_  =  " << meanPdfPtTrue_ << std::endl;
-    }
-
-    // Read spectrum; this should be also in Kalibri output in the future
-    if( fileNameSpectrum != "NONE" ) {
-      TFile file(fileNameSpectrum,"READ");
-      if( file.IsZombie() ) {
-	std::cerr << "  ERROR: Error opening file " << fileNameSpectrum << std::endl;
-	exit(1);
-      }
-      hSpectrum_ = 0;
-      file.GetObject("hPtGen",hSpectrum_);
-      if( !hSpectrum_ ) {
-	std::cerr << "  ERROR: 'hPtGen' not found." << std::endl;
-	exit(1);
-      }
-      hSpectrum_->SetDirectory(0);
-      hSpectrum_->UseCurrentStyle();
-      hSpectrum_->SetName("hSpectrum::"+histNameSuffix_);
-      if( hSpectrum_->Integral() ) hSpectrum_->Scale(1./hSpectrum_->Integral("width"));
-    } else {
-      ++HIST_COUNT;
-      TString name = "Measurement::Dummy::";
-      name += HIST_COUNT;
-      hSpectrum_ = new TH1D(name,"",1,0,1);
     }
   }
 
@@ -107,10 +81,46 @@ namespace resolutionFit {
   }
 
 
+  //! \brief Path to histogram within input file
+  //!
+  //! The histograms are expected to be stored in a subdirectory
+  //!  "EtaX/PtX/PtSoftX"
+  // -------------------------------------------------------------------
+  TString Measurement::histNamePath(unsigned int etaBin, unsigned int ptBin, unsigned int ptSoftBin) const {
+    TString path = "Eta";
+    path += etaBin;
+    path += "/Pt";
+    path += ptBin;
+    path += "/PtSoft";
+    path += ptSoftBin;
+    path += "/";
+
+    return path;
+  }
+
+
+  //! \brief Suffix of histogram name
+  //!
+  //! The suffix has the form "EtaX_PtX_PtSoftX"
+  // -------------------------------------------------------------------
+  TString Measurement::histNameSuffix(unsigned int etaBin, unsigned int ptBin, unsigned int ptSoftBin) const {
+    TString name = "_Eta";
+    name += etaBin;
+    name += "_Pt";
+    name += ptBin;
+    name += "_PtSoft";
+    name += ptSoftBin;
+    
+    return name;
+  }
+
+
+
+
   // -------------------------------------------------------------------
   TH1* Measurement::getClone(const TString &name) const {
     TH1* h = 0;
-    TString histName = name+histNameSuffix_;
+    TString histName = name+hnSuffix_;
     std::map<TString,TH1*>::const_iterator it = hists_.find(histName);
     if( it != hists_.end() ) {
       TString newName = name+"_UID";
@@ -126,8 +136,11 @@ namespace resolutionFit {
   }
 
 
+  //! \brief Parse the input file
+  //!
+  //! Read and store the histograms and fitted parameter values.
   // -------------------------------------------------------------------
-  bool Measurement::parse(const TString &fileName, bool hasFittedParameters) {
+  bool Measurement::parse(const TString &fileName) {
     bool statusIsGood = true;
     if( verbosity_ == 2 ) std::cout << "(Measurement) Parsing file '" << fileName << "'" << std::endl;
     
@@ -139,34 +152,48 @@ namespace resolutionFit {
       statusIsGood = false;
     }
 
-
     if( statusIsGood ) {
-      if( hasFittedParameters ) {
-	// Read fitted values and statistical uncertainties from file
-	if( verbosity_ == 2 ) std::cout << "  Getting fitted values... " << std::endl;
-	TH1 *h = 0;
-	file.GetObject("hAbsoluteParameters"+histNameSuffix_,h);
-	if( !h ) {
-	  std::cerr << "  ERROR: 'hAbsoluteParameters' not found." << std::endl;
-	  statusIsGood = false;
-	} else {
-	  h->SetDirectory(0);
-	  for(int i = 0; i < h->GetNbinsX(); i++) {
-	    values_.push_back(h->GetBinContent(1+i));
-	    statUncert_.push_back(h->GetBinError(1+i));
-	    
-	    if( verbosity_ == 2 ) {
-	      std::cout << "  Value " << i << ": " << values_.back() << std::flush;
-	      std::cout << "  Value: " << values_.back() << std::flush;
-	      std::cout << " +/- " << statUncert_.back() << std::endl;
-	    }
-	  }
-	}
-      } else {
+      // Read fitted values and statistical uncertainties from file
+      if( verbosity_ == 2 ) std::cout << "  Getting fitted values... " << std::endl;
+      TH1 *h = 0;
+      file.GetObject(hnPrefix_+"hAbsoluteParameters"+hnSuffix_,h);
+      if( !h ) {
+	std::cerr << "  ERROR: 'hAbsoluteParameters' not found." << std::endl;
 	// Set default value
 	if( verbosity_ == 2 ) std::cout << "  Setting default fitted values... " << std::endl;
 	values_.push_back(0.);
 	statUncert_.push_back(0.);
+	statusIsGood = false;
+      } else {
+	h->SetDirectory(0);
+	for(int i = 0; i < h->GetNbinsX(); i++) {
+	  values_.push_back(h->GetBinContent(1+i));
+	  statUncert_.push_back(h->GetBinError(1+i));
+	  
+	  if( verbosity_ == 2 ) {
+	    std::cout << "  Value " << i << ": " << values_.back() << std::flush;
+	    std::cout << "  Value: " << values_.back() << std::flush;
+	    std::cout << " +/- " << statUncert_.back() << std::endl;
+	  }
+	}
+      }
+
+      // Read underlying spectrum from file
+      hSpectrum_ = 0;
+      file.GetObject(hnPrefix_+"hUnderlyingTruthPDF"+hnSuffix_,hSpectrum_);
+      if( !hSpectrum_ ) {
+	std::cerr << "  WARNING: '" << hnPrefix_+"hUnderlyingTruthPDF"+hnSuffix_ << "' not found." << std::endl;
+	++HIST_COUNT;
+	TString name = "Measurement::Dummy::";
+	name += HIST_COUNT;
+	hSpectrum_ = new TH1D(name,"",1,0,1);
+      } else {
+	hSpectrum_->SetDirectory(0);
+	hSpectrum_->SetName("hSpectrum::"+hnSuffix_);
+	hSpectrum_->UseCurrentStyle();
+	hSpectrum_->SetTitle("");
+	if( hSpectrum_->Integral() ) hSpectrum_->Scale(1./hSpectrum_->Integral("width"));
+	if( verbosity_ == 2 ) std::cout << "   (h->GetName() == '" << hSpectrum_->GetName() << "')... " << std::endl;
       }
 
       // Read histograms from file
@@ -174,7 +201,7 @@ namespace resolutionFit {
       for(HistMapIt it = hists_.begin(); it != hists_.end(); it++) {
 	TH1 *h = 0;
 	TString name = it->first;
-	file.GetObject(name,h);
+	file.GetObject(hnPrefix_+name,h);
 	if( !h ) {
 	  std::cerr << "  WARNING: '" << name << "' not found." << std::endl;
 	  it->second = new TH1D(name,"",1,0,1);
@@ -208,6 +235,10 @@ namespace resolutionFit {
   }
 
 
+  //! \brief Return pdf of assumed underlying dijet spectrum
+  //!
+  //! This is the underlying ptGen spectrum assumed in the fit, i.e.
+  //! it is not modified to describe migration effects.
   // -------------------------------------------------------------------
   double Measurement::pdfPtTrue(double pt) const {
     return hSpectrum_->Interpolate(pt);

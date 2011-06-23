@@ -1,4 +1,4 @@
-// $Id: Extrapolation.cc,v 1.10 2011/06/08 10:13:30 mschrode Exp $
+// $Id: Extrapolation.cc,v 1.11 2011/06/08 16:58:02 mschrode Exp $
 
 #include "Extrapolation.h"
 
@@ -22,7 +22,7 @@ namespace resolutionFit {
     bool result = true;
     
     TGraphAsymmErrors* g = getGraph(ptSoft,values,uncerts);
-    
+
     // Setup linear fit
     TString name = "LinearExtrapolation";
     name += NUM_EXTRAPOLATION_FUNCTIONS;
@@ -34,13 +34,18 @@ namespace resolutionFit {
     // Work-around to keep the program running in case of 
     // fitting failure
     if( !fitResult ) {
-      fit->SetParameter(0,0.01);
-      fit->SetParError(0,10.);
+      double mean = 0.;
+      for(int i = 0; i < g->GetN(); ++i) {
+	mean += g->GetY()[i];
+      }
+      mean /= g->GetN();
+      fit->SetParameter(0,mean);
+      fit->SetParError(0,100.);
       fit->SetParameter(1,0.);
       fit->SetParError(1,10.);
       fitResult = true;
-      std::cerr << "\nWARNING: Fit failed in " << bin() << std::endl;
-      std::cerr << "  Cured by setting fit result to 0.01 with large error" << std::endl << std::endl;
+      std::cerr << "\n\n+++++ WARNING: Fit failed in " << bin() << " +++++++++++++++++++++++++++++++++++++++\n";
+      std::cerr << "  Cured by setting fit result to mean " << mean << " with large error " << 100 << std::endl << std::endl;
     }
 
     systUncert = 0.5*std::abs(g->GetY()[0]-fit->GetParameter(0));

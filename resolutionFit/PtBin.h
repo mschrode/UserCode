@@ -34,13 +34,13 @@ namespace resolutionFit {
     bool hasMCTruthSample() const { return mcTruthSample_; }
     const Sample* mcTruthSample() const { return mcTruthSample_; }
     
-    bool addDataSample(const TString &label, const TString &baseFileName, const TString &baseFileNameSpectrum) {
-      return addSample(Sample::Data,label,baseFileName,baseFileNameSpectrum);
+    bool addDataSample(const TString &label, const TString &fileName) {
+      return addSample(Sample::Data,label,fileName);
     }
-    bool addMCSample(const TString &label, const TString &baseFileName, const TString &baseFileNameSpectrum) {
-      return addSample(Sample::MC,label,baseFileName,baseFileNameSpectrum);
+    bool addMCSample(const TString &label, const TString &fileName) {
+      return addSample(Sample::MC,label,fileName);
     }
-    bool addMCTruthSample(const TString &label, const TString &baseFileName);
+    bool addMCTruthSample(const TString &label, const TString &fileName);
     bool addFitResult(FitResult::Type type);
     bool setKSoftFit(const SampleLabel &label, FitResult::Type type, const TF1* fit);
 
@@ -57,7 +57,7 @@ namespace resolutionFit {
     Sample* mcTruthSample_;
     Samples samples_;
 
-    bool addSample(Sample::Type type, const TString &label, const TString &baseFileName, const TString &baseFileNameSpectrum);
+    bool addSample(Sample::Type type, const TString &label, const TString &fileName);
   };
 
   typedef std::vector<PtBin*> PtBins;

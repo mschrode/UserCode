@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.55 2011/06/07 18:23:31 mschrode Exp $
+// $Id: run.cc,v 1.56 2011/06/08 16:58:02 mschrode Exp $
 
 #include <iostream>
 
@@ -22,16 +22,17 @@ int main(int argc, char *argv[]) {
 //   gStyle->SetPadRightMargin(0.05);
   gErrorIgnoreLevel = 1001;
 
-  Parameters* par = new Parameters("Res_May10ReReco","config/BinningAdmin.cfg",0);
-  par->setNEtaBinsUser(4);
+  Parameters* par = new Parameters("Res_PromptRecoV4","config/BinningAdmin.cfg",0);
+  //  par->setNEtaBinsUser(1);
   par->setJetProperties(JetProperties::AK5,JetProperties::PF);
-  par->setOutMode(OutputManager::PSAllInOne);
-  //par->setOutMode(OutputManager::EPSSingleFiles);
+  //par->setOutMode(OutputManager::PSAllInOne);
+  par->setOutMode(OutputManager::EPSSingleFiles);
 
   TString pathToHome = "/afs/naf.desy.de/user/m/mschrode/";
-  TString pathToFitResults = pathToHome+"results/ResolutionFit/";
   TString pathToConfig = pathToHome+"UserCode/mschrode/resolutionFit/config/";
-  TString spectrumBaseName = "~/Kalibri/input/Kalibri_DijetSpectrum_PythiaD6T_Summer11_PtSoft015";
+  TString pathToFitResultsData = pathToHome+"results/ResolutionFit/Run2011A-PromptReco-v4";
+  TString pathToFitResultsMC = pathToHome+"results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV-pythia6_Summer11-PU_S3_START42_V11-v2";
+
 
   FitResult::Type nominalFitResType = FitResult::FullMaxLikeAbs;
 
@@ -45,36 +46,36 @@ int main(int argc, char *argv[]) {
   else if( par->jetType() == JetProperties::PF )  jetTypeStr = "PF";
   
   // MC truth resolution
-  cmd->setMCTruthResolution(pathToConfig+"Analysis2011/Parameters_MCTruthResolution_Summer11_PythiaD6T_L1FastJet_NumPUMay10ReReco_v2.txt",ResolutionFunction::ModifiedNSC);
-  //cmd->setMCTruthResolution(pathToConfig+"Analysis2011/Parameters_MCTruthResolution_Summer11_PythiaD6T_L1FastJet_NumPUGreater9_v2.txt",ResolutionFunction::ModifiedNSC);
-  //cmd->setMCTruthResolution(pathToConfig+"Analysis2011/Parameters_MCTruthResolution_Summer11_PythiaD6T_L1FastJet_NumPULess5_v2.txt",ResolutionFunction::ModifiedNSC);
+  cmd->setMCTruthResolution(pathToConfig+"Analysis2011/Parameters_MCTruthResolution_Summer11_PythiaZ2_L1FastJet_NumPUMay10ReReco_v2.txt",ResolutionFunction::ModifiedNSC);
   
 
   // Particle level imbalance
-  //cmd->fitPLI("PLI",pathToFitResults+"QCD_Pt-15to3000_TuneD6T_Flat_7TeV-pythia6_Summer11-PU_S3_START42_V11-v2/mvec10/ResFit_MCSummer11_"+jetTypeStr+"_L1FastJet",ResolutionFunction::ModifiedNSC);
-  cmd->setPLI(pathToConfig+"Parameters_PLI.txt",ResolutionFunction::ModifiedNSC);
+  cmd->fitPLI("PLI",pathToFitResultsMC+"/ResFit_PtGenAveBins_MCSummer11_"+jetTypeStr+"_L1FastJet.root",ResolutionFunction::ModifiedNSC);
+  //cmd->setPLI(pathToConfig+"Parameters_PLI.txt",ResolutionFunction::ModifiedNSC);
   
   // Samples
-  cmd->addMCSample("MC Summer11",pathToFitResults+"QCD_Pt-15to3000_TuneD6T_Flat_7TeV-pythia6_Summer11-PU_S3_START42_V11-v2/ResFit_MCSummer11_PUMay10ReReco_"+jetTypeStr+"_L1FastJet",spectrumBaseName);
-  //cmd->addMCSample("N(PU) #leq 4",pathToFitResults+"QCD_Pt-15to3000_TuneD6T_Flat_7TeV-pythia6_Summer11-PU_S3_START42_V11-v2/ResFit_MCSummer11_NumPULess5_"+jetTypeStr+"_L1FastJet",spectrumBaseName);
-  //cmd->addMCSample("N(PU) #geq 10",pathToFitResults+"QCD_Pt-15to3000_TuneD6T_Flat_7TeV-pythia6_Summer11-PU_S3_START42_V11-v2/ResFit_MCSummer11_NumPUGreater9_"+jetTypeStr+"_L1FastJet",spectrumBaseName);
-  //cmd->addDataSample("Data May10",pathToFitResults+"Run2011A-May10ReReco_v2/ResFit_Data_"+jetTypeStr+"_L1FastJet",spectrumBaseName);
+  TString idData = "Data";
+  TString idMC = "PYTHIA Z2";
+  cmd->addDataSample(idData,pathToFitResultsData+"/ResFit_PtAveBins_Data_"+jetTypeStr+"_L1FastJet.root");
+  cmd->addMCSample(idMC,pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_"+jetTypeStr+"_L1FastJet_Nominal.root");
+  cmd->addMCSample("JES Down",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_"+jetTypeStr+"_L1FastJet_JESDown.root");
+  cmd->addMCSample("JES Up",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_"+jetTypeStr+"_L1FastJet_JESUp.root");
+  cmd->addMCSample("Spec Herwig",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_"+jetTypeStr+"_L1FastJet_SpectrumHerwigpp.root");
+  cmd->addMCSample("PU Up",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_"+jetTypeStr+"_L1FastJet_PUUp.root");
 
   cmd->addFitResult(nominalFitResType);
 
   // Systematic uncertainties
-  cmd->addExtrapolationUncertainty("MC Summer11",nominalFitResType,7);
-  cmd->addPLIUncertainty("MC Summer11",nominalFitResType,8);
-
-  
+  cmd->addExtrapolationUncertainty(idMC,nominalFitResType,kCyan+2);
+  cmd->addMCClosureUncertainty(idMC,nominalFitResType,46);
+  cmd->addUncertaintyFromVariedSample("JES",1.,idMC,nominalFitResType,"JES Down","JES Up",kBlue-9);
+  cmd->addPLIUncertainty(idMC,nominalFitResType,kGreen-1);
+  cmd->addUncertaintyFromVariedSample("Spectrum",1.,idMC,nominalFitResType,"Spec Herwig",kBlue-2);
+  cmd->addUncertaintyFromVariedSample("PU",1.,idMC,nominalFitResType,"PU Up",kBlue+1);
   
   // Samples to be compared
-//   cmd->compareSamples("Data May10","MC Summer11");
-//   cmd->fitKValues(nominalFitResType);
-
-  //cmd->compareSamples("N(PU) #leq 4","Inclusive");
-  //cmd->compareSamples("N(PU) #geq 10","Incl");
-  //cmd->compareSamples("N(PU) #geq 10","N(PU) #leq 4");
+  cmd->compareSamples(idData,idMC);
+  cmd->fitKValues(nominalFitResType);
 
   // Output
   cmd->printSetup();
