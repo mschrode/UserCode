@@ -1,4 +1,4 @@
-// $Id: FileOps.h,v 1.9 2011/05/17 16:36:43 mschrode Exp $
+// $Id: FileOps.h,v 1.10 2011/06/01 12:05:21 mschrode Exp $
 
 #ifndef FileOps_h
 #define FileOps_h
@@ -28,6 +28,7 @@ namespace util
     static TH2* readTH2(const TString &fileName, const TString &hName, const TString &newHName = "");
     static TH1* readTH1(const TString &fileName, const TString &histName, const TString &newHistName = "");
     static util::HistVec readTH1(const std::vector<TString> &fileNames, const TString &histName, const TString &newHistName = "");
+    static util::HistVec readHistVec(const TString &fileName, const std::vector<TString> &histNames, const TString &newHistNameSuffix = "");
     static util::HistVec readHistVec(const TString &fileName, const TString &histName, const TString &newHistName = "");
     static std::vector<TF1*> readTF1Vec(const TString &fileName, const TString &fName, const TString &newFName = "");
     static TChain* createTChain(const TString &fileName, const TString &treeName = "", unsigned int verbosity = 1);
@@ -98,6 +99,31 @@ namespace util
     return v;
   }
   
+
+  //! Read TH1 histograms from one file
+  // -------------------------------------------------------------------------------------
+  util::HistVec FileOps::readHistVec(const TString &fileName, const std::vector<TString> &histNames, const TString &newHistNameSuffix) {
+    util::HistVec v;
+    TFile file(fileName,"READ");
+    for(std::vector<TString>::const_iterator it = histNames.begin();
+	it != histNames.end(); ++it) {
+      TH1 *h = 0;
+      file.GetObject(*it,h);
+      if( h ) {
+	h->SetDirectory(0);
+	h->SetName((*it)+newHistNameSuffix);
+	v.push_back(h);
+      } else {
+	std::cerr << "ERROR in FileOps::readHistVec: Histogram with name '" << *it << "' does not exist in file '" << fileName << "'\n.";
+	exit(1);
+      }
+    }
+    file.Close();
+    
+    return v;
+  }
+
+
   
   //! Read TH1 histograms from one file
   // -------------------------------------------------------------------------------------

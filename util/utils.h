@@ -1,4 +1,4 @@
-// $Id: utils.h,v 1.7 2011/05/17 16:36:43 mschrode Exp $
+// $Id: utils.h,v 1.8 2011/05/20 09:50:46 mschrode Exp $
 
 #ifndef UTILS_H
 #define UTILS_H
@@ -16,7 +16,7 @@
 //!
 //!  \author   Matthias Schroeder (www.desy.de/~matsch)
 //!  \date     2010/03/09
-//!  $Id: utils.h,v 1.7 2011/05/17 16:36:43 mschrode Exp $
+//!  $Id: utils.h,v 1.8 2011/05/20 09:50:46 mschrode Exp $
 // -------------------------------------------------------------------------------------
 namespace util {
 
@@ -75,6 +75,14 @@ namespace util {
     }
 
     return fileName;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  static inline TString absolutePath(const TString &name) {
+    TString absPath = name;
+
+    return absPath.ReplaceAll("~/","/afs/naf.desy.de/user/m/mschrode/");
   }
 
 
