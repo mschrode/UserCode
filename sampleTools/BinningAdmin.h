@@ -1,4 +1,4 @@
-// $Id: BinningAdmin.h,v 1.5 2010/12/30 13:47:49 mschrode Exp $
+// $Id: BinningAdmin.h,v 1.6 2011/05/20 10:00:07 mschrode Exp $
 
 #ifndef BINNING_ADMIN_H
 #define BINNING_ADMIN_H
@@ -195,8 +195,7 @@ namespace sampleTools {
 	  }
 	  hltInfo->addEtaPtBinRange(etaBin,firstPtBin,lastPtBin);
 	} else {
-	  std::cerr << "ERROR in BinningAdmin: '" << *trigIt << "' turn-on " << hltInfo->turnOn() << " out of binning\n";
-	  exit(1);
+	  std::cerr << "WARNING in BinningAdmin: '" << *trigIt << "' turn-on " << hltInfo->turnOn() << " out of binning\n";
 	}
       } // End of loop over eta bins
       
