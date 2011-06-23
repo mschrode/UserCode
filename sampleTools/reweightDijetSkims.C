@@ -1,4 +1,4 @@
-// $Id:  $
+// $Id: reweightDijetSkims.C,v 1.1 2011/06/01 20:39:07 mschrode Exp $
 
 
 #include <iostream>
@@ -9,6 +9,7 @@
 #include "TChainElement.h"
 #include "TFile.h"
 #include "TH1.h"
+#include "TH1D.h"
 #include "TString.h"
 
 #include "BinningAdmin.h"
@@ -149,7 +150,7 @@ void reweightEventsToMCStats(const char* path) {
       double pg2 = GenJetPt[Idx[1]];
       double r1 = 0.;
       double r2 = 0.;
-      if( pg1 && pg2 && p3 < 0.225*0.5*(p1+p2) ) {
+      if( pg1 && pg2 && p3 < 0.25*0.5*(p1+p2) ) {
 	r1 = p1/pg1;
 	r2 = p2/pg2;
 	if( (r1 < maxResp) && (r2 < maxResp) && (oldWeight > largestWeight) ) largestWeight = oldWeight;
@@ -157,13 +158,42 @@ void reweightEventsToMCStats(const char* path) {
     }
     if( !(largestWeight > 0.) ) largestWeight = 1.;
     std::cout << "    Largest weight = " << largestWeight << std::endl;
-    
+
+    // Optimise: search for largest, "non-isolated" weight
+    TH1* hWeights = new TH1D("hWeights","Weight",50,0.,1.05*largestWeight); // 2% bins
+    hWeights->SetDirectory(0);
+    for(Long64_t i = 0; i < nentries; i++){
+      djt->GetEntry(i);
+      double p1 = JetCorrL1[Idx[0]]*JetCorrL2L3[Idx[0]]*JetPt[Idx[0]];
+      double p2 = JetCorrL1[Idx[1]]*JetCorrL2L3[Idx[1]]*JetPt[Idx[1]];
+      double p3 = NObjJet > 2 ? JetCorrL1[Idx[2]]*JetCorrL2L3[Idx[2]]*JetPt[Idx[2]] : 0.;
+      double pg1 = GenJetPt[Idx[0]];
+      double pg2 = GenJetPt[Idx[1]];
+      double r1 = 0.;
+      double r2 = 0.;
+      if( pg1 && pg2 && p3 < 0.25*0.5*(p1+p2) ) {
+ 	r1 = p1/pg1;
+ 	r2 = p2/pg2;
+ 	if( (r1 < maxResp) && (r2 < maxResp) ) {
+ 	  hWeights->Fill(oldWeight);
+ 	}
+      }
+    }
+    //hWeights->Draw("HIST");
+    int binLargestWeight = hWeights->FindBin(largestWeight);
+    while( ( hWeights->GetBinContent(binLargestWeight) == 0 || hWeights->GetBinContent(binLargestWeight-1) == 0 ) && binLargestWeight > 2 ) {
+      binLargestWeight--;
+    }
+    largestWeight = hWeights->GetBinCenter(binLargestWeight);
+    std::cout << "    Largest weight = " << largestWeight << " (optimized)" << std::endl;
+    delete hWeights;
+  
     // Clone tree and set new weight branch
     djt->SetBranchStatus("Weight",0);
     TTree* ndjt = djt->CloneTree(-1,"fast");
     TBranch* bWeight = ndjt->Branch("Weight", &newWeight, "Weight/F");
     djt->SetBranchStatus("Weight",1);
-
+    
     // Set new weight
     std::cout << "  Setting new weights 'w --> w/" << largestWeight << "'" << std::endl;
     for (Long64_t i = 0; i < nentries; i++){
@@ -171,7 +201,7 @@ void reweightEventsToMCStats(const char* path) {
       newWeight = oldWeight/largestWeight;
       bWeight->Fill();
     }
-
+    
     // Delete original tree and replace by new one
     delete djt;
     f.Delete("DiJetTree;1");
