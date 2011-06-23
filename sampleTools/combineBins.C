@@ -1,4 +1,4 @@
-// $Id: combineBins.C,v 1.3 2011/06/03 10:06:07 mschrode Exp $
+// $Id: combineBins.C,v 1.4 2011/06/08 16:58:34 mschrode Exp $
 
 //! Combine Kalibri output histograms from different
 //! eta, pt, and ptSoft bins
@@ -8,18 +8,19 @@
 #include <iostream>
 #include <vector>
 
+#include "TDirectory.h"
 #include "TFile.h"
 #include "TH1.h"
 #include "TH1D.h"
 #include "TString.h"
 
 #include "BinningAdmin.h"
+#define UTILS_AS_HEADER_FILE
 #include "../util/utils.h"
 #include "../util/HistOps.h"
 
 
 std::vector<TString> namesBinnedHists_;
-std::vector<TString> namesCombinedHists_;
 
 
 
@@ -58,80 +59,19 @@ bool getBinnedHists(const TString &fileName, const std::vector<TString> &histNam
 
 
 // -------------------------------------------------------------------------------------
-bool getCombinedHists(const TString &fileName, util::HistVec &hists) {
-  bool result = true;
-
-  TFile file(fileName,"READ");
-  if( file.IsZombie() ) {
-    std::cerr << "  ERROR opening file '" << fileName << "'" << std::endl;
-    result = false;
-  } else {
-    for(unsigned int i = 0; i < hists.size(); ++i) {
-      TH1 *hNew = 0;
-      file.GetObject(hists[i]->GetName(),hNew);
-      if( hNew ) {
-	hNew->SetDirectory(0);
-
-	double hNewMin = 0;
-	double hNewMax = 0;	
-	util::HistOps::getBinBorders(hNew,hNewMin,hNewMax);
-	double hOldMin = 0;
-	double hOldMax = 0;	
-	util::HistOps::getBinBorders(hists[i],hOldMin,hOldMax);
-	if( hNewMin == hOldMax ) {
-	  TH1 *hCombi = new TH1D("tmp",hists[i]->GetTitle(),
-				 hists[i]->GetNbinsX()+hNew->GetNbinsX(),hOldMin,hNewMax);
-	  hCombi->SetXTitle(hists[i]->GetXaxis()->GetTitle());
-	  hCombi->SetYTitle(hists[i]->GetYaxis()->GetTitle());
-	  hCombi->SetMarkerStyle(hists[i]->GetMarkerStyle());
-	  int combiBin = 1;
-	  for(int bin = 1; bin <= hists[i]->GetNbinsX(); ++bin, ++combiBin) {
-	    hCombi->SetBinContent(combiBin,hists[i]->GetBinContent(bin));
-	    hCombi->SetBinError(combiBin,hists[i]->GetBinError(bin));
-	  }
-	  for(int bin = 1; bin <= hNew->GetNbinsX(); ++bin, ++combiBin) {
-	    hCombi->SetBinContent(combiBin,hNew->GetBinContent(bin));
-	    hCombi->SetBinError(combiBin,hNew->GetBinError(bin));
-	  }
-	  hCombi->SetDirectory(0); // This NEEDS to be done... don't understand ROOT!
-
-	  TString name = hists[i]->GetName();
-	  delete hists[i];
-	  hists[i] = hCombi;
-	  hists[i]->SetName(name);
-	} else {
-	  std::cerr << "  WARNING: bin borders of '" << hNew->GetName() << "' do not match '" << hists[i]->GetName() << "'" << std::endl;
-	  result = false;
-	}
-      } else {
-	std::cerr << "  ERROR getting histogram '" << hists[i]->GetName() << "' from file '" << fileName << "'" << std::endl;
-	result = false;
-	break;
-      }
-    }
-    file.Close();
-  }
-    
-  return result;
-}
-
-
-
-// -------------------------------------------------------------------------------------
 bool setHistNames(const TString &type) {
   bool result = true;
 
   namesBinnedHists_.clear();
-  namesCombinedHists_.clear();
 
   if( type == "ResolutionFit" || type == "default") {
     namesBinnedHists_.push_back("hPtGen_0");
     namesBinnedHists_.push_back("hPtGenJet1_0");
     namesBinnedHists_.push_back("hPtAveAbs_0");
     namesBinnedHists_.push_back("hTruthPDF_0");
+    namesBinnedHists_.push_back("hUnderlyingTruthPDF_0");
     namesBinnedHists_.push_back("hRespMeas_0");
     namesBinnedHists_.push_back("hRespMeasAbs_0");
-    namesBinnedHists_.push_back("hRespSymAbs_0");
     namesBinnedHists_.push_back("hRespFit_0");
     namesBinnedHists_.push_back("hPtAsym_0");
     namesBinnedHists_.push_back("hPtAbsAsym_0");
@@ -150,12 +90,19 @@ bool setHistNames(const TString &type) {
     namesBinnedHists_.push_back("hEta_0");
     namesBinnedHists_.push_back("hDeltaPhi12_0");
     namesBinnedHists_.push_back("hDeltaPtJet12_0"); 
+    namesBinnedHists_.push_back("hNumVtx_0"); 
     namesBinnedHists_.push_back("hNumPU_0"); 
     namesBinnedHists_.push_back("hWeights_0"); 
+    namesBinnedHists_.push_back("hPredPtAsym_0");
+    namesBinnedHists_.push_back("hPredPtAve_0");
+    namesBinnedHists_.push_back("hPredPtJet1_0");
+    namesBinnedHists_.push_back("hPredPtJet2_0");
+    namesBinnedHists_.push_back("hPredPtAsymStart_0");
+    namesBinnedHists_.push_back("hPredPtAveStart_0");
+    namesBinnedHists_.push_back("hPredPtJet1Start_0");
+    namesBinnedHists_.push_back("hPredPtJet2Start_0");
     namesBinnedHists_.push_back("hPtAveCombined");
     namesBinnedHists_.push_back("hAbsoluteParameters");
-
-    namesCombinedHists_.push_back("hPtAveAbs");  
   } else {
     std::cerr << "Unknown type '" << type << "'" << std::endl;
     result = false;
@@ -168,61 +115,55 @@ bool setHistNames(const TString &type) {
 
 
 // -------------------------------------------------------------------------------------
-void combineBins(const TString &binningConfig, const TString &namePrefix, const TString &type = "default") {
+void combineBins(const TString &binningConfig, const TString &dirPrefix, const TString &type = "default") {
   
 
   // Prepare parameters
   std::cout << "Preparing parameters" << std::endl;
 
-  Ssiz_t fileNameBegin = namePrefix.Last('/');
-  if( fileNameBegin < 0 ) fileNameBegin = 0;
-  else fileNameBegin++;
-  const TString path = namePrefix(0,fileNameBegin);
-  const TString file = namePrefix(fileNameBegin,namePrefix.Length()-fileNameBegin);
+  const TString absFileName = util::absolutePath(dirPrefix);
+  const TString relFileName = util::extractFileName(dirPrefix);
+
+//   Ssiz_t fileNameBegin = namePrefix.Last('/');
+//   if( fileNameBegin < 0 ) fileNameBegin = 0;
+//   else fileNameBegin++;
+//   const TString path = namePrefix(0,fileNameBegin);
+//   const TString file = namePrefix(fileNameBegin,namePrefix.Length()-fileNameBegin);
 
   sampleTools::BinningAdmin admin(binningConfig);
-
-
 
   // Prepare histograms
   std::cout << "Preparing histograms" << std::endl;
   setHistNames(type);
 
+  // The output file containing all histograms of interest
+  TFile* outFile  = new TFile(relFileName+".root","RECREATE");
 
   // Loop over bins and combine root files
   std::cout << "Looping over bins" << std::endl;
-  for(unsigned int ptSoftBin = 0; ptSoftBin < admin.nPtSoftBins(); ++ptSoftBin) {
-    for(unsigned int etaBin = 0; etaBin < 4; ++etaBin) {
-    //for(unsigned int etaBin = 0; etaBin < admin.nEtaBins(); ++etaBin) {
-      std::cout << "  Combining files for ptSoft bin " << ptSoftBin << " and eta bin " << etaBin << "... " << std::flush;
-      TFile outFile(file+"_Eta"+util::toTString(etaBin)+"_PtSoft"+util::toTString(ptSoftBin)+".root","RECREATE");
+  for(unsigned int etaBin = 0; etaBin < admin.nEtaBins(); ++etaBin) {
+    TDirectory* dirEtaBin = outFile->mkdir("Eta"+util::toTString(etaBin));
+      
+    for(unsigned int ptBin = 0; ptBin < admin.nPtBins(etaBin); ++ptBin) {
+      TDirectory* dirPtBin = dirEtaBin->mkdir("Pt"+util::toTString(ptBin));
 
-      util::HistVec combinedHists;
-      bool goodCombination = true;
-      for(unsigned int ptBin = 0; ptBin < admin.nPtBins(etaBin); ++ptBin) {
-	util::HistVec binnedHists;
-	TString newNameSuffix = "_Eta"+util::toTString(etaBin)+"_Pt"+util::toTString(ptBin);
-	TString inFileName = path+file+newNameSuffix+"_PtSoft"+util::toTString(ptSoftBin)+"/jsResponse.root";
- 	if( getBinnedHists(inFileName,namesBinnedHists_,newNameSuffix,binnedHists) ) {
- 	  for(util::HistItConst hIt = binnedHists.begin(); hIt != binnedHists.end(); ++hIt) {
- 	    outFile.WriteTObject(*hIt);
- 	  }
- 	}
-	if( ptBin == 0 ) {
-	  goodCombination = getBinnedHists(inFileName,namesCombinedHists_,"",combinedHists);
-	} else if( goodCombination ) {
-	  goodCombination = getCombinedHists(inFileName,combinedHists);
-	}
-      } // End of loop over pt bins
+      std::cout << "  Combining files for eta bin " << etaBin << " and pt bin " << ptBin << "... " << std::flush;
+      for(unsigned int ptSoftBin = 0; ptSoftBin < admin.nPtSoftBins(); ++ptSoftBin) {
+	TDirectory* outDir = dirPtBin->mkdir("PtSoft"+util::toTString(ptSoftBin));
 
-      if( goodCombination ) {
-	for(util::HistItConst hIt = combinedHists.begin(); hIt != combinedHists.end(); ++hIt) {
-	  outFile.WriteTObject(*hIt);
-	}
-      }
-
-      outFile.Close();
+       	TString newNameSuffix = "_Eta"+util::toTString(etaBin)+"_Pt"+util::toTString(ptBin)+"_PtSoft"+util::toTString(ptSoftBin);
+ 	TString inFileName = absFileName+newNameSuffix+"/jsResponse.root";
+ 	util::HistVec binnedHists;
+  	if( getBinnedHists(inFileName,namesBinnedHists_,newNameSuffix,binnedHists) ) {
+  	  for(util::HistItConst hIt = binnedHists.begin(); hIt != binnedHists.end(); ++hIt) {
+   	    outDir->WriteTObject(*hIt);
+  	  }
+  	}
+      } // End of loop over ptSoft bins
+      
       std::cout << "ok" << std::endl;
-    } // End of loop over eta bins
-  } // End of loop over ptSoft bins
+    } // End of loop over pt bins
+  } // End of loop over eta bins
+  outFile->Close();
+  delete outFile;
 }
