@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.1 2011/06/23 16:51:38 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.2 2011/07/09 15:38:18 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -40,16 +40,16 @@ const double PT3PLOTMAX = 0.23;
 const TString FASYM = "f_{asym}";
 const TString FASYMMC = "f^{mc}_{asym}";
 const TString FASYMDATA = "f^{data}_{asym}";
-const bool SHOW_HEADER = false;
-const TString HEADER = SHOW_HEADER ? "CMS preliminary" : "";
-const TString LUMI_LABEL = "#sqrt{s} = 7 TeV,  L = 801 pb^{ -1}";
+const TString LUMI_LABEL = "L = 801 pb^{ -1}, #sqrt{s} = 7 TeV";
+const bool SHOW_HEADER = true;
+const TString HEADER = SHOW_HEADER ? ("CMS preliminary, "+LUMI_LABEL) : "";
 
 const int COLOR_GAUSS = 46;
 const int COLOR_FILLED_ASYM = 38;
 const int COLOR_FILLED_ASYM_SMEAR = 29;
 const int COLOR_LINE_ASYM_SMEAR = 30;
-const double MARKER_SIZE = 1.4;
-const int LINE_WIDTH = 2;
+const double MARKER_SIZE = SHOW_HEADER ? 1. : 1.4;
+const int LINE_WIDTH = SHOW_HEADER ? 1 : 2;
 
 
 ///////////////////////// TYPE DEFINITIONS /////////////////////////////////////////////////
@@ -267,7 +267,7 @@ void getTailScalingFactors() {
 
   // User specified parameters
   const TString uid                    = "163337-167151";
-  const double  nSigTailStart          = 3.5;
+  const double  nSigTailStart          = 2.5;
   const double  nSigTailEnd            = 1000.;
   const bool    variationCoreUp        = false;
   const bool    variationCoreDown      = false;
@@ -315,10 +315,6 @@ void getTailScalingFactors() {
 
   if( SHOW_HEADER ) {
     util::StyleSettings::paper();
-    gStyle->SetTitleAlign(13);
-    gStyle->SetTitleFontSize(0.1);
-    gStyle->SetTitleX(0.7);
-    gStyle->SetTitleH(0.038);
   } else {
     util::StyleSettings::paperNoTitle();
   }
@@ -601,8 +597,12 @@ EtaPtBin::EtaPtBin(unsigned int etaBinIdx, unsigned int ptBinIdx, double nSigCor
   toyMC_ = 0;
   hasToyMC_ = false;
 
-  binLabel_ = util::LabelFactory::createPaveText(5,BINLABEL_WIDTH);
-  binLabel_->AddText(LUMI_LABEL);
+  if( SHOW_HEADER ) {
+    binLabel_ = util::LabelFactory::createPaveText(4,BINLABEL_WIDTH);
+  } else {
+    binLabel_ = util::LabelFactory::createPaveText(5,BINLABEL_WIDTH);
+    binLabel_->AddText(LUMI_LABEL);
+  }
   binLabel_->AddText(jetLabel_);
   binLabel_->AddText(util::toTString(binAdm_->etaMin(etaBin_))+" < |#eta| < "+util::toTString(binAdm_->etaMax(etaBin_)));
   binLabel_->AddText(util::toTString(binAdm_->ptMin(etaBin_,ptBin_))+" < p^{ave}_{T} < "+util::toTString(binAdm_->ptMax(etaBin_,ptBin_))+" GeV/c");
@@ -1348,9 +1348,14 @@ Pt3Bin::Pt3Bin(const TString &fileName, unsigned int etaBin, unsigned int ptBin,
 
 // ------------------------------------------------------------------------------------
 void Pt3Bin::initBinLabel(const sampleTools::BinningAdmin* adm, const TString &jetLabel, bool isMCTruth) {
-  if( isMCTruth ) binLabel_ = util::LabelFactory::createPaveText(4,BINLABEL_WIDTH);
-  else binLabel_ = util::LabelFactory::createPaveText(5,BINLABEL_WIDTH);
-  binLabel_->AddText(LUMI_LABEL);
+  if( SHOW_HEADER ) {
+    if( isMCTruth ) binLabel_ = util::LabelFactory::createPaveText(3,BINLABEL_WIDTH);
+    else binLabel_ = util::LabelFactory::createPaveText(4,BINLABEL_WIDTH);
+  } else {
+    if( isMCTruth ) binLabel_ = util::LabelFactory::createPaveText(4,BINLABEL_WIDTH);
+    else binLabel_ = util::LabelFactory::createPaveText(5,BINLABEL_WIDTH);
+    binLabel_->AddText(LUMI_LABEL);
+  }
   binLabel_->AddText(jetLabel);
   binLabel_->AddText(util::toTString(adm->etaMin(etaBin_))+" < |#eta| < "+util::toTString(adm->etaMax(etaBin_)));
   binLabel_->AddText(util::toTString(adm->ptMin(etaBin_,ptBin_))+" < p^{ave}_{T} < "+util::toTString(adm->ptMax(etaBin_,ptBin_))+" GeV/c");
@@ -2109,10 +2114,6 @@ TGraphAsymmErrors* uncertaintyBand(const TH1* hNom, const TGraphAsymmErrors* gRe
 void plotFinalResult() {
   if( SHOW_HEADER ) {
     util::StyleSettings::paper();
-    gStyle->SetTitleAlign(13);
-    gStyle->SetTitleFontSize(0.1);
-    gStyle->SetTitleX(0.7);
-    gStyle->SetTitleH(0.038);
   } else {
     util::StyleSettings::paperNoTitle();
   }
@@ -2181,8 +2182,13 @@ void plotFinalResult() {
     // ****** Plotting ********************************************************************
 
     // Label
-    TPaveText* label = util::LabelFactory::createPaveText(4,BINLABEL_WIDTH);
+    TPaveText* label = 0;
+    if( SHOW_HEADER ) {
+      label = util::LabelFactory::createPaveText(3,BINLABEL_WIDTH);
+    } else {
+      label = util::LabelFactory::createPaveText(4,BINLABEL_WIDTH);
     label->AddText(LUMI_LABEL);
+    }
     label->AddText("Anti-k_{T} (R=0.5) PF Jets");
     label->AddText(util::toTString(binAdm->etaMin(etaBin))+" < |#eta| < "+util::toTString(binAdm->etaMax(etaBin)));
     if( fileNamePrefix.Contains("Sig15") ) {
