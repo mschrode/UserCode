@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.24 2011/02/25 16:08:02 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.25 2011/03/08 15:21:32 mschrode Exp $
 
 #define UTILS_AS_HEADER_FILE
 
@@ -39,7 +39,7 @@ const TString FASYM = "f_{asym}";
 const TString FASYMMC = "f^{mc}_{asym}";
 const TString FASYMDATA = "f^{data}_{asym}";
 const bool SHOW_HEADER = true;
-const TString HEADER = SHOW_HEADER ? "CMS preliminary" : "";
+const TString HEADER = SHOW_HEADER ? "CMS 2010,  #sqrt{s} = 7 TeV,  L = 36 pb^{ -1}" : "";
 const TString LUMI_LABEL = "#sqrt{s} = 7 TeV,  L = 36 pb^{ -1}";
 
 
@@ -2034,27 +2034,27 @@ TGraphAsymmErrors* uncertaintyBand(const TH1* hNom, const TGraphAsymmErrors* gRe
 void plotFinalResult(int windowIdx = 0) {
   if( SHOW_HEADER ) {
     util::StyleSettings::paper();
-    gStyle->SetTitleAlign(13);
-    gStyle->SetTitleFontSize(0.1);
-    gStyle->SetTitleX(0.7);
-    gStyle->SetTitleH(0.038);
+//     gStyle->SetTitleAlign(13);
+//     gStyle->SetTitleFontSize(0.1);
+//     gStyle->SetTitleX(0.7);
+//     gStyle->SetTitleH(0.038);
   } else {
     util::StyleSettings::paperNoTitle();
   }
   gErrorIgnoreLevel = 1001;
 
-  sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("../sampleTools/BinningAdminTailsRebinned.cfg");  
+  sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("../resolutionFit/config/Analysis2010/Binning2010/BinningAdminTailsRebinned.cfg");  
 
-  TString fileNamePrefix = "results/RA2CleaningV1/TailSig15-25";
+  TString fileNamePrefix = "results/Analysis2010/RA2CleaningV1/TailSig15-25";
   TString outNamePrefix = "TailScalingFactorsSig15-25_PF";
   if( windowIdx == 1 ) {
-    fileNamePrefix = "results/RA2CleaningV1/TailSig25-50";
+    fileNamePrefix = "results/Analysis2010/RA2CleaningV1/TailSig25-50";
     outNamePrefix = "TailScalingFactorsSig25-50_PF";
   } else if( windowIdx == 2 ) {
-    fileNamePrefix = "results/RA2CleaningV1/TailSig15-Inf";
+    fileNamePrefix = "results/Analysis2010/RA2CleaningV1/TailSig15-Inf";
     outNamePrefix = "TailScalingFactorsSig15-Inf_PF";
   } else if( windowIdx == 3 ) {
-    fileNamePrefix = "results/RA2CleaningV1/TailSig25-Inf";
+    fileNamePrefix = "results/Analysis2010/RA2CleaningV1/TailSig25-Inf";
     outNamePrefix = "TailScalingFactorsSig25-Inf_PF";
   }
 
@@ -2113,8 +2113,8 @@ void plotFinalResult(int windowIdx = 0) {
     // ****** Plotting ********************************************************************
 
     // Label
-    TPaveText* label = util::LabelFactory::createPaveText(4,BINLABEL_WIDTH);
-    label->AddText(LUMI_LABEL);
+    TPaveText* label = util::LabelFactory::createPaveText(3,BINLABEL_WIDTH);
+    //label->AddText(LUMI_LABEL);
     label->AddText("Anti-k_{T} (R=0.5) PF Jets");
     label->AddText(util::toTString(binAdm->etaMin(etaBin))+" < |#eta| < "+util::toTString(binAdm->etaMax(etaBin)));
     if( windowIdx == 0 ) {
@@ -2160,6 +2160,7 @@ void plotFinalResult(int windowIdx = 0) {
     canScale->SetLogx();
     gPad->RedrawAxis();
     canScale->SaveAs(outNamePrefix+"_Eta"+util::toTString(etaBin)+".eps","eps");
+    canScale->SaveAs(outNamePrefix+"_Eta"+util::toTString(etaBin)+".root");
 
 
     // Plot relative uncertainties

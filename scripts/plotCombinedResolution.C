@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: plotCombinedResolution.C,v 1.8 2011/06/18 09:17:39 mschrode Exp $
 
 // Plot combined resolution from photon+jet and dijet measurements
 // for 2010 SUS and JME analyses.
@@ -200,15 +200,17 @@ TGraphAsymmErrors* getPoints(const TString &fileName, const TString &mode, doubl
 
 void plotCombinedResolution(const TString fileNameBase = "results/GaussCoreCombined_2011-03-03") {
 
-  bool showTitle = false;
+  bool showTitle = true;
   TString title = "";
   if( showTitle ) {
     util::StyleSettings::paper();
-    gStyle->SetTitleAlign(13);
-    gStyle->SetTitleFontSize(0.1);
-    gStyle->SetTitleX(0.7);
-    gStyle->SetTitleH(0.038);
-    title = "CMS preliminary";
+//     gStyle->SetTitleAlign(13);
+//     gStyle->SetTitleFontSize(0.1);
+//     gStyle->SetTitleX(0.7);
+//     gStyle->SetTitleH(0.038);
+    //title = "CMS preliminary";
+    //title = "CMS, L = "+util::toTString(par_->lumi())+" pb^{-1}, #sqrt{s} = 7 TeV";
+    title = "CMS 2010,  #sqrt{s} = 7 TeV";
   } else {
     util::StyleSettings::paperNoTitle();
   }
@@ -280,8 +282,8 @@ void plotCombinedResolution(const TString fileNameBase = "results/GaussCoreCombi
     std::cout << "  Done filling ratio vs eta" << std::endl;
 
     // Labels
-    TPaveText* label = util::LabelFactory::createPaveText(3,-0.46);
-    label->AddText("#sqrt{s} = 7 TeV");
+    TPaveText* label = util::LabelFactory::createPaveText(2,-0.46);
+    //label->AddText("#sqrt{s} = 7 TeV");
     label->AddText("Anti-k_{T} (R=0.5) PF Jets");
     label->AddText(util::toTString(etaMin)+" < |#eta| < "+util::toTString(etaMax));
 
@@ -316,6 +318,7 @@ void plotCombinedResolution(const TString fileNameBase = "results/GaussCoreCombi
     can->SetLogx();
     gPad->RedrawAxis();
     can->SaveAs("CombinedResolution_Eta"+util::toTString(etaBin)+".eps","eps");
+    can->SaveAs("CombinedResolution_Eta"+util::toTString(etaBin)+".root");
   }
 
 //   std::cout << "ratio.at(0) = " << ratio.at(0) << std::endl;
@@ -329,8 +332,8 @@ void plotCombinedResolution(const TString fileNameBase = "results/GaussCoreCombi
    gUncert->SetFillColor(COLOR_SYST);
    gUncert->SetLineColor(gUncert->GetFillColor());
 
-   TPaveText* label = util::LabelFactory::createPaveText(6,-0.48);
-   label->AddText("#sqrt{s} = 7 TeV");
+   TPaveText* label = util::LabelFactory::createPaveText(5,-0.48);
+   //label->AddText("#sqrt{s} = 7 TeV");
    label->AddText("Anti-k_{T} (R=0.5) PF Jets");
    label->AddText("Photon+Jet (L = 36 pb^{-1})");
    label->AddText("   22 < p_{T} < 180 GeV");
@@ -351,6 +354,7 @@ void plotCombinedResolution(const TString fileNameBase = "results/GaussCoreCombi
   leg->Draw("same");
   gPad->RedrawAxis();
   can->SaveAs("CombinedResolutionVsEta.eps","eps");
+  can->SaveAs("CombinedResolutionVsEta.root");
 }
 
 
