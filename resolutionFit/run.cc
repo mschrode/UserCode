@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.56 2011/06/08 16:58:02 mschrode Exp $
+// $Id: run.cc,v 1.57 2011/06/23 18:07:37 mschrode Exp $
 
 #include <iostream>
 
@@ -16,21 +16,22 @@ using namespace resolutionFit;
 
 int main(int argc, char *argv[]) {
 
-  //util::StyleSettings::paper();
-  util::StyleSettings::presentationNoTitle();
+//   util::StyleSettings::paper();
 //   gStyle->SetPadTopMargin(0.06);
 //   gStyle->SetPadRightMargin(0.05);
+  util::StyleSettings::presentationNoTitle();
+
   gErrorIgnoreLevel = 1001;
 
-  Parameters* par = new Parameters("Res_PromptRecoV4","config/BinningAdmin.cfg",0);
-  //  par->setNEtaBinsUser(1);
+  Parameters* par = new Parameters("Res_163337-167151_noL2L3Residual","config/BinningAdmin.cfg",0);
+  //par->setNEtaBinsUser(1);
   par->setJetProperties(JetProperties::AK5,JetProperties::PF);
-  //par->setOutMode(OutputManager::PSAllInOne);
-  par->setOutMode(OutputManager::EPSSingleFiles);
+  par->setOutMode(OutputManager::PSAllInOne);
+  //par->setOutMode(OutputManager::EPSSingleFiles);
 
   TString pathToHome = "/afs/naf.desy.de/user/m/mschrode/";
   TString pathToConfig = pathToHome+"UserCode/mschrode/resolutionFit/config/";
-  TString pathToFitResultsData = pathToHome+"results/ResolutionFit/Run2011A-PromptReco-v4";
+  TString pathToFitResultsData = pathToHome+"results/ResolutionFit/Run2011A_163337-167151";
   TString pathToFitResultsMC = pathToHome+"results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV-pythia6_Summer11-PU_S3_START42_V11-v2";
 
 
@@ -56,7 +57,7 @@ int main(int argc, char *argv[]) {
   // Samples
   TString idData = "Data";
   TString idMC = "PYTHIA Z2";
-  cmd->addDataSample(idData,pathToFitResultsData+"/ResFit_PtAveBins_Data_"+jetTypeStr+"_L1FastJet.root");
+  cmd->addDataSample(idData,pathToFitResultsData+"/ResFit_PtAveBins_Data_163337-167151_"+jetTypeStr+"_L1FastJet.root");
   cmd->addMCSample(idMC,pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_"+jetTypeStr+"_L1FastJet_Nominal.root");
   cmd->addMCSample("JES Down",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_"+jetTypeStr+"_L1FastJet_JESDown.root");
   cmd->addMCSample("JES Up",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_"+jetTypeStr+"_L1FastJet_JESUp.root");

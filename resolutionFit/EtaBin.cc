@@ -1,4 +1,4 @@
-// $Id: EtaBin.cc,v 1.11 2011/06/07 18:23:31 mschrode Exp $
+// $Id: EtaBin.cc,v 1.12 2011/06/23 18:07:37 mschrode Exp $
 
 #include <algorithm>
 #include <iostream>
@@ -364,6 +364,14 @@ namespace resolutionFit{
       TGraphAsymmErrors* g = util::HistOps::createRatioGraph(g1,g2);
 
       TF1* fit = new TF1("fit","pol0",(*std::min_element(g->GetX(),g->GetX()+g->GetN()))-1.,(*std::max_element(g->GetX(),g->GetX()+g->GetN()))+1);
+
+      // HACK for Eta4 bin, remove first point
+      // Should be replace by proper chi2 criterion in Extrapolation.cc
+      if( etaBin() == 4 ) {
+	std::cout << "\n\n************* HACK IN FITKVALUE *********************\n\n" << std::endl;
+	fit->SetRange(g->GetX()[1]-1.,(*std::max_element(g->GetX(),g->GetX()+g->GetN()))+1);
+      }
+
       g->Fit(fit,"0QR");
       kVal_ = fit->GetParameter(0);
       kValStat_ = fit->GetParError(0);

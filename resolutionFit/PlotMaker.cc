@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.16 2011/06/08 16:58:02 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.17 2011/06/23 18:07:37 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -40,6 +40,7 @@ namespace resolutionFit {
     lineWidth_ = 1;
     markerSize_ = 1.;
     if( util::StyleSettings::style() == util::StyleSettings::Presentation ) {
+      title_ = "";
       if( par_->outMode() == OutputManager::EPSSingleFiles ) {
 	lineWidth_ = 3;
 	markerSize_ = 1.5;
@@ -47,26 +48,12 @@ namespace resolutionFit {
 	lineWidth_ = 2;
 	markerSize_ = 0.9;
       }
+    } else {
+      title_ = "CMS preliminary, L = "+util::toTString(par_->lumi())+" pb^{-1}, #sqrt{s} = 7 TeV";
     }
+
 
     //gStyle->SetEndErrorSize(6);
-
-    if( false ) {
-      title_ = "CMS preliminary";
-//       // For paper-style
-//       gStyle->SetTitleAlign(13);
-//       gStyle->SetTitleFontSize(0.1);
-//       gStyle->SetTitleX(0.7);
-//       gStyle->SetTitleH(0.038);
-
-      // For presentation-style
-      gStyle->SetTitleAlign(13);
-      gStyle->SetTitleFontSize(0.15);
-      gStyle->SetTitleX(0.67);
-      gStyle->SetTitleH(0.041);
-    } else {
-      title_ = "";
-    }
   }
 
 
@@ -1709,6 +1696,7 @@ namespace resolutionFit {
 	    
 	    // Create frame
 	    TH1* hFrame = util::HistOps::createRatioFrame(xMinPt_,xMaxPt_,0.71,1.89,"p^{ref}_{T} (GeV)","#sigma("+sLabel1+") / #sigma("+sLabel2+")");
+	    if( etaBin->etaBin() >= 3 ) hFrame->GetYaxis()->SetRangeUser(0.71,2.89);
 	    hFrame->SetTitle(title_);
 	    hFrame->GetXaxis()->SetMoreLogLabels();
 	    hFrame->GetXaxis()->SetNoExponent();
@@ -1719,8 +1707,8 @@ namespace resolutionFit {
 	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,-std::min(0.8,labelMk_->start()),label->GetSize());
 	    leg->AddEntry(gRatio,"Measurement","P");
 	    leg->AddEntry(kValueLine,"Fit","L");
-	    leg->AddEntry(kStatBand,"Stat. Uncertainty","F");
-	    leg->AddEntry(kSystBand,"Syst. Uncertainty","F");
+	    leg->AddEntry(kStatBand,"Statistical Uncertainty","F");
+	    leg->AddEntry(kSystBand,"Systematic Uncertainty","F");
 
 	    out_->nextPad(sLabel1+"Over"+sLabel2+": Resolution "+etaBin->toString());
 	    hFrame->Draw("][");
@@ -1793,7 +1781,7 @@ namespace resolutionFit {
 	    leg->AddEntry(biasCorrRes,"Bias Corrected "+sLabel1,"P");
 	    leg->AddEntry(scaledMCT,"Scaled MC Truth","L");
 	    leg->AddEntry(scaledMCTBand,"Systematic Uncertainty","F");
-	    leg->AddEntry(mcTruth,"MC Truth","L");
+	    leg->AddEntry(mcTruth,"MC Truth ("+sLabel2+")","L");
 
 	    // Create frames for main and ratio plots
 	    TH1* hFrameMain = out_->mainFrame(xMinPt_,xMaxPt_,yMinExtraRes_,yMaxExtraRes_,"#sigma / p^{ref}_{T}");
@@ -2353,8 +2341,8 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   TString PlotMaker::LabelMaker::label(const SampleLabel &label) const {
     TString lab = label;
-    if( Sample::type(label) == Sample::Data )
-      lab += " (L = "+util::toTString(par_->lumi())+" pb^{-1})";
+//     if( Sample::type(label) == Sample::Data )
+//       lab += " (L = "+util::toTString(par_->lumi())+" pb^{-1})";
 
     return lab;    
   }

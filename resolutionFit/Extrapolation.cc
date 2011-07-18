@@ -1,4 +1,4 @@
-// $Id: Extrapolation.cc,v 1.11 2011/06/08 16:58:02 mschrode Exp $
+// $Id: Extrapolation.cc,v 1.12 2011/06/23 18:07:37 mschrode Exp $
 
 #include "Extrapolation.h"
 
@@ -30,6 +30,17 @@ namespace resolutionFit {
     fit = new TF1(name,"pol1",g->GetX()[0],g->GetX()[g->GetN()-1]);
     fit->SetLineWidth(1);
     bool fitResult = !(g->Fit(fit,"0QR"));
+
+    // HACK for Eta4 bin
+    // Should be replace by proper chi2 criterion
+    if( fit->GetParameter(0) > 34 && g->GetY()[2] > 45 ) {
+      std::cout << "\n\n************* HACK IN EXTRAPOLATION *********************\n\n" << std::endl;
+      for(int i = 0; i < 7; ++i) {
+	std::cout << "  ptSoftRel = " << g->GetX()[0] << " ("  << g->GetX()[0]*minPt_ << " GeV)" << std::endl;
+	g->RemovePoint(0);
+      }
+      fitResult = !(g->Fit(fit,"0QR"));
+    }
      
     // Work-around to keep the program running in case of 
     // fitting failure

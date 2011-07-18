@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.28 2011/06/07 18:23:30 mschrode Exp $
+// $Id: Parameters.h,v 1.29 2011/06/23 18:07:37 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -41,7 +41,7 @@ namespace resolutionFit {
 
     JetProperties::Algo jetAlgo() const { return jetAlgo_; }
     JetProperties::Type jetType() const { return jetType_; }
-    double lumi() const { return 295.; }
+    double lumi() const { return 801; }
 
     unsigned int nEtaBins() const { return nEtaBinsUser_>0 ? nEtaBinsUser_ : binAdm_->nEtaBins(); }
     unsigned int nPtBins(unsigned int etaBin) const { return binAdm_->nPtBins(etaBin); }

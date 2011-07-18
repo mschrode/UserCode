@@ -1,4 +1,4 @@
-// $Id: PlotMaker.h,v 1.13 2011/06/08 16:58:02 mschrode Exp $
+// $Id: PlotMaker.h,v 1.14 2011/06/23 18:07:37 mschrode Exp $
 
 #ifndef PLOT_MAKER_H
 #define PLOT_MAKER_H
@@ -28,7 +28,7 @@ namespace resolutionFit {
       //plotPtSpectra();
       plotExtrapolation();
       //plotSlopes();
-      plotPtGenSpectra();
+      //      plotPtGenSpectra();
       plotMCEventInfo();
       //plotParticleLevelImbalance();
       plotResolution();
