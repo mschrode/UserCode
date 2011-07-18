@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.34 2011/06/08 09:50:09 mschrode Exp $
+// $Id: HistOps.h,v 1.35 2011/06/18 11:42:21 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.34 2011/06/08 09:50:09 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.35 2011/06/18 11:42:21 mschrode Exp $
   class HistOps
   {
   public:
@@ -654,7 +654,6 @@ namespace util
       gauss->SetLineColor(kRed);
       
       TH1* h = static_cast<TH1*>(hist->Clone("util::HistOps::fitCoreWidth::h"));
-      
       double mean = h->GetMean();
       rms = h->GetRMS();
       rmsErr = h->GetRMSError();
@@ -957,7 +956,11 @@ namespace util
     // '(1+scaling) * width'.
     // --------------------------------------------------
     static void smearHistogram(const TH1* hOrig, TH1* &hSmeared, double width, double scaling) {
-      double nTotal = hOrig->GetEntries();
+      smearHistogram(hOrig,hSmeared,hOrig->GetEntries(),width,scaling);
+    }
+
+    // --------------------------------------------------
+    static void smearHistogram(const TH1* hOrig, TH1* &hSmeared, double nTotal, double width, double scaling) {
       TString name = hOrig->GetName();
       name += "Smeared";
       hSmeared = static_cast<TH1D*>(hOrig->Clone(name));
@@ -982,7 +985,7 @@ namespace util
 	  hSmeared->SetBinError(bin,sqrt(hSmeared->GetBinContent(bin)/nTotal));
 	}
       } else {
-	std::cerr << "WARNING in func::smearHistogram(): scaling = " << scaling << std::endl;
+	std::cerr << "WARNING in util::HistOps::smearHistogram(): scaling = " << scaling << std::endl;
       }
     }
 
