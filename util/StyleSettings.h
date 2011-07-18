@@ -1,4 +1,4 @@
-// $Id: StyleSettings.h,v 1.11 2010/09/14 22:12:07 mschrode Exp $
+// $Id: StyleSettings.h,v 1.12 2010/12/19 22:41:03 mschrode Exp $
 
 #ifndef STYLE_SETTINGS_H
 #define STYLE_SETTINGS_H
@@ -16,7 +16,7 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: StyleSettings.h,v 1.11 2010/09/14 22:12:07 mschrode Exp $
+  //!  $Id: StyleSettings.h,v 1.12 2010/12/19 22:41:03 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class StyleSettings {
   public:
@@ -154,10 +154,17 @@ namespace util {
       gStyle->SetTitleTextColor(1);
       gStyle->SetTitleFillColor(0);
       gStyle->SetTitleFontSize(0.1);
-      gStyle->SetTitleAlign(23);
+      gStyle->SetTitleAlign(13);
       gStyle->SetTitleX(0.6);
       gStyle->SetTitleH(0.05);
       gStyle->SetTitleBorderSize(0);
+      if( mode == "Paper" || mode == "CMS"  ) {
+	if( spaceForTitle ) {
+	  gStyle->SetTitleAlign(13);
+	  gStyle->SetTitleX(0.18);
+	  gStyle->SetTitleH(0.038);
+	}
+      }	  
 
       //  For the axis
       gStyle->SetAxisColor(1,"XYZ");
