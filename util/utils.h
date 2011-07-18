@@ -1,4 +1,4 @@
-// $Id: utils.h,v 1.8 2011/05/20 09:50:46 mschrode Exp $
+// $Id: utils.h,v 1.9 2011/06/23 16:54:24 mschrode Exp $
 
 #ifndef UTILS_H
 #define UTILS_H
@@ -10,13 +10,14 @@
 #include <vector>
 
 #include "TString.h"
+#include "TVector2.h"
 
 
 //!  Encapsulates useful classes and methods
 //!
 //!  \author   Matthias Schroeder (www.desy.de/~matsch)
 //!  \date     2010/03/09
-//!  $Id: utils.h,v 1.8 2011/05/20 09:50:46 mschrode Exp $
+//!  $Id: utils.h,v 1.9 2011/06/23 16:54:24 mschrode Exp $
 // -------------------------------------------------------------------------------------
 namespace util {
 
@@ -111,6 +112,17 @@ namespace util {
 
     return algo;
   }
+
+  
+  //! DeltaR between two vectors
+  // --------------------------------------------------
+  static inline double deltaR(double eta1, double eta2, double phi1, double phi2) {
+    double dphi = TVector2::Phi_mpi_pi(phi1-phi2);
+    double deta = eta1-eta2;
+
+    return sqrt( deta*deta + dphi*dphi );
+  }
+
 
 
   // For sorting jets in pt
