@@ -1,4 +1,4 @@
-// $Id: writeDijetSkims.C,v 1.5 2011/06/01 20:26:53 mschrode Exp $
+// $Id: writeDijetSkims.C,v 1.6 2011/06/23 17:56:15 mschrode Exp $
 //
 // Skim Kalibri ntuples as input for resolution fit.
 // At this pre-selection
@@ -100,15 +100,19 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
   std::cout << "Setting parameters" << std::endl;
   
   const TString inFileListName = "input/Analysis2011/Kalibri_MCSummer11_QCDFlat_PythiaZ2_PUS3_L1FastJet_AK5PF";
-  const TString outFilePath = "~/lustre/Analysis2011/KalibriDiJetSkims_QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Summer11-PU_S3_START42_V11-v2__PUDown";
+  const TString outFilePath = "~/lustre/Analysis2011/tmp";
   const TString config = "BinningAdmin.cfg";
   const bool writeAllTrees = false;
   
-  const int nEvts = -1000;
+  const int nEvts = -10000;
   const TString outFilePrefix = outFilePath+"/KalibriSkim";
-  const double minDeltaPhi = 2.7;
   const unsigned int minRunNumber = 163337;
-  
+
+  // Event selection cuts
+  const double minDeltaPhi = 2.7;
+  const double maxDeltaR = inFileListName.Contains("Calo") ? 0.2 : 0.1;	// Different MC truth matching depending on jet type
+
+  // Cut-flow counters
   unsigned int nNewTrig = 0;
   unsigned int nMaxNJet = 0;
   unsigned int nDijets = 0;
@@ -118,8 +122,9 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
   unsigned int nEta = 0;
   unsigned int nPtAve = 0;
   
-  double wPU = 1.;
-  float wSpec = 1.;
+  // Event weights
+  double wPU = 1.;		// PU weight
+  float wSpec = 1.;		// Spectrum weight (for flat samples, taken from input ntuple)
   
   
 
@@ -135,6 +140,7 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
   std::vector<double> weightsPU;
   std::vector<TH2*> hRespVsPtGen; // One entry per eta bin
   std::vector<TH2*> hRespVsPtGenLog; // One entry per eta bin
+  std::vector<TH2*> hRespVsPtGenLogNoDeltaR;
   std::vector<TH2*> hRespVsPtGenLogNoDeltaPhi;
   std::vector<TH2*> hRespVsPtGenPUReweighted; // One entry per eta bin
   std::vector<TH2*> hRespVsPtGenLogPUReweighted; // One entry per eta bin
@@ -146,7 +152,7 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
   if( !isData ) {
     std::cout << "Preparing PU reweighting" << std::endl;
     
-    TH1* hDataPU = util::FileOps::readTH1("~/Kalibri/input/PUDist_Cert_160404-163869_7TeV_May10ReReco_fitMinus.root","pileup");
+    TH1* hDataPU = util::FileOps::readTH1("~/Kalibri/input/PUDist_Cert_160404-163869_7TeV_May10ReReco.root","pileup");
     weightsPU = generate_flat10_weights(hDataPU);
     
     
@@ -159,35 +165,38 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
       // Pt binning as for resolution measurement
       TH2* h = new TH2D("hRespVsPtGen_Eta"+util::toTString(etaBin),title+";p^{gen}_{T} (GeV);Response",
 			binAdmin.nPtBins(etaBin),&(binAdmin.ptBinEdges(etaBin).front()),201,0.,2.);
-      h->SetTitle(title+", |#Delta#Phi|>2.7");
+      h->SetTitle(title+", |#DeltaR|<"+util::toTString(maxDeltaR)+", |#Delta#Phi|>"+util::toTString(minDeltaPhi));
       h->SetNdivisions(505);
       h->Sumw2();
       hRespVsPtGen.push_back(h);
       hRespVsPtGenPUReweighted.push_back(static_cast<TH2*>(h->Clone("hRespVsPtGenPUReweighted_Eta"+util::toTString(etaBin))));
-      hRespVsPtGenPUReweighted.back()->SetTitle(title+", |#Delta#Phi|>2.7, PU reweighted");
+      hRespVsPtGenPUReweighted.back()->SetTitle(title+", |#DeltaR|<"+util::toTString(maxDeltaR)+", |#Delta#Phi|>"+util::toTString(minDeltaPhi)+", PU reweighted");
       
       // Equidistant log bins
       std::vector<double> binEdges(35+1);
       util::HistOps::equidistLogBins(binEdges,binEdges.size()-1,4.,2700.);
       h = new TH2D("hRespVsPtGenLog_Eta"+util::toTString(etaBin),title,
 		   binEdges.size()-1,&(binEdges.front()),201,0.,2.);
-      h->SetTitle(title+", |#Delta#Phi|>2.7");
+      h->SetTitle(title+", |#DeltaR|<"+util::toTString(maxDeltaR)+", |#Delta#Phi|>"+util::toTString(minDeltaPhi));
       h->SetNdivisions(505);
       h->Sumw2();
       hRespVsPtGenLog.push_back(h);
-
+      hRespVsPtGenLogNoDeltaR.push_back(static_cast<TH2*>(h->Clone("hRespVsPtGenLogNoDeltaR_Eta"+util::toTString(etaBin))));
+      hRespVsPtGenLogNoDeltaR.back()->SetTitle(title);
+      title += ", |#DeltaR|<"+util::toTString(maxDeltaR);
       hRespVsPtGenLogNoDeltaPhi.push_back(static_cast<TH2*>(h->Clone("hRespVsPtGenLogNoDeltaPhi_Eta"+util::toTString(etaBin))));
       hRespVsPtGenLogNoDeltaPhi.back()->SetTitle(title);
+      title += ", |#Delta#Phi|<"+util::toTString(minDeltaPhi);
       hRespVsPtGenLogPUReweighted.push_back(static_cast<TH2*>(h->Clone("hRespVsPtGenLogPUReweighted_Eta"+util::toTString(etaBin))));
-      hRespVsPtGenLogPUReweighted.back()->SetTitle(title+", |#Delta#Phi|>2.7, PU reweighted");
+      hRespVsPtGenLogPUReweighted.back()->SetTitle(title+", PU reweighted");
       hRespVsPtGenLogPULow.push_back(static_cast<TH2*>(h->Clone("hRespVsPtGenLogPULow_Eta"+util::toTString(etaBin))));
-      hRespVsPtGenLogPULow.back()->SetTitle(title+", |#Delta#Phi|>2.7, low PU");
+      hRespVsPtGenLogPULow.back()->SetTitle(title+", low PU");
       hRespVsPtGenLogPUHigh.push_back(static_cast<TH2*>(h->Clone("hRespVsPtGenLogPUHigh_Eta"+util::toTString(etaBin))));
-      hRespVsPtGenLogPUHigh.back()->SetTitle(title+", |#Delta#Phi|>2.7, high PU");
+      hRespVsPtGenLogPUHigh.back()->SetTitle(title+", high PU");
       
       std::vector<TH2*> vtmp;
       for(unsigned int ptSoftBin = 0; ptSoftBin < binAdmin.nPtSoftBins(); ++ptSoftBin) {
-	title = util::toTString(binAdmin.etaMin(etaBin))+" < |#eta| < "+util::toTString(binAdmin.etaMax(etaBin))+", p^{rel}_{T,3} < "+util::toTString(binAdmin.ptSoftMax(ptSoftBin))+", |#Delta#Phi|>2.7, PU reweighted;p^{gen}_{T} (GeV);Response";
+	title = util::toTString(binAdmin.etaMin(etaBin))+" < |#eta| < "+util::toTString(binAdmin.etaMax(etaBin))+", p^{rel}_{T,3} < "+util::toTString(binAdmin.ptSoftMax(ptSoftBin))+", |#DeltaR|<"+util::toTString(maxDeltaR)+", |#Delta#Phi|>"+util::toTString(minDeltaPhi)+", PU reweighted;p^{gen}_{T} (GeV);Response";
 	
 	h = new TH2D("hRespVsPtGenLogVsPtSoftPUReweighted_Eta"+util::toTString(etaBin)+"_PtSoft"+util::toTString(ptSoftBin),title,binEdges.size()-1,&(binEdges.front()),201,0.,2.);
 	h->SetNdivisions(505);
@@ -526,8 +535,8 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
        //  	std::cerr << "ERROR: JetCorrUncert[" << j << "] NAN" << std::endl;
        //       }
 
-       // Remove residual correction due to bug in 42
-       jetCorrL2L3[j] = JetCorrL2[j]*JetCorrL3[j];
+//        // Remove residual correction
+//        jetCorrL2L3[j] = JetCorrL2[j]*JetCorrL3[j];
 
        corrJets.add(j,jetCorrL1[j]*jetCorrL2L3[j]*jetPt[j]);
      }
@@ -595,71 +604,92 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
      
 
      if( !isData ) {
-
+       
        // GenJet dijet selection
        if( NobjGenJet > 1 ) {
-
-  	unsigned int etaGenBin = 1000;
-  	if( binAdmin.findSameEtaBin(GenJetEta[GenJetColJetIdx[0]],GenJetEta[GenJetColJetIdx[1]],etaGenBin) ) {
-  	  if( jetID[GenJetColJetIdx[0]] && jetID[GenJetColJetIdx[1]] ) {
-
-   	    double ptGen1 = GenJetPt[GenJetColJetIdx[0]];
-   	    double ptGen2 = GenJetPt[GenJetColJetIdx[1]];
-  	    double ptGenAve = 0.5*(ptGen1+ptGen2);
-  	    double ptGen3 = NobjGenJet>2 ? GenJetPt[GenJetColJetIdx[2]] : 0.;
-
-  	    double r1 = 0.;
-  	    double r2 = 0.;
-  	    if( ptGen1 > 0. && ptGen2 > 0. ) {
-  	      r1 = jetCorrL1[GenJetColJetIdx[0]]*jetCorrL2L3[GenJetColJetIdx[0]]*jetPt[GenJetColJetIdx[0]]/ptGen1;
-  	      r2 = jetCorrL1[GenJetColJetIdx[1]]*jetCorrL2L3[GenJetColJetIdx[1]]*jetPt[GenJetColJetIdx[1]]/ptGen2;
-  	    }
-
-  	    hRespVsPtGenLogNoDeltaPhi.at(etaGenBin)->Fill(ptGen1,r1);
-  	    hRespVsPtGenLogNoDeltaPhi.at(etaGenBin)->Fill(ptGen2,r2);
-
-  	    if( std::abs(TVector2::Phi_mpi_pi(GenJetPhi[GenJetColJetIdx[0]]-GenJetPhi[GenJetColJetIdx[1]])) > minDeltaPhi ) {
-  	      hRespVsPtGen.at(etaGenBin)->Fill(ptGen1,r1);
-  	      hRespVsPtGen.at(etaGenBin)->Fill(ptGen2,r2);
-  	      hRespVsPtGenLog.at(etaGenBin)->Fill(ptGen1,r1);
-  	      hRespVsPtGenLog.at(etaGenBin)->Fill(ptGen2,r2);
-  	      hRespVsPtGenPUReweighted.at(etaGenBin)->Fill(ptGen1,r1,wPU);
-  	      hRespVsPtGenPUReweighted.at(etaGenBin)->Fill(ptGen2,r2,wPU);
-  	      hRespVsPtGenLogPUReweighted.at(etaGenBin)->Fill(ptGen1,r1,wPU);
-  	      hRespVsPtGenLogPUReweighted.at(etaGenBin)->Fill(ptGen2,r2,wPU);
+	 unsigned int etaGenBin = 1000;
+	 if( binAdmin.findSameEtaBin(GenJetColEta[0],GenJetColEta[1],etaGenBin) ) {
+	   // Indices of reco-jets matched to gen-jets: the reco-jet closest
+	   // in deltaR is used; this matching has already been done
+	   // when filling the original ntuples
+	   int recoIdx0 = GenJetColJetIdx[0];
+	   int recoIdx1 = GenJetColJetIdx[1];
+	   // Kinematics
+	   double ptGen0 = GenJetColPt[0];
+	   double ptGen1 = GenJetColPt[1];
+	   double ptGenAve = 0.5*(ptGen0+ptGen1);
+	   double ptGen2 = NobjGenJet>2 ? GenJetColPt[2] : 0.;
+	   // Response of leading two gen-jets
+	   double r0 = 0.;
+	   double r1 = 0.;
+	   if( ptGen0 > 0. && ptGen1 > 0. ) {
+	     r0 = jetCorrL1[recoIdx0]*jetCorrL2L3[recoIdx0]*jetPt[recoIdx0]/ptGen0;
+	     r1 = jetCorrL1[recoIdx1]*jetCorrL2L3[recoIdx1]*jetPt[recoIdx1]/ptGen1;
+	   }
+	   // DeltaR between gen-jet and matched reco-jet
+	   double dr0 = util::deltaR(jetEta[recoIdx0],GenJetColEta[0],jetPhi[recoIdx0],GenJetColPhi[0]);
+	   double dr1 = util::deltaR(jetEta[recoIdx1],GenJetColEta[1],jetPhi[recoIdx1],GenJetColPhi[1]);
+	   bool closeMatch = ( dr0 < maxDeltaR && dr1 < maxDeltaR );
+	   // Do the matched reco-jets pass the jet id?
+	   bool passJetID = ( jetID[recoIdx0] && jetID[recoIdx1] );
+	   
+	   // MC truth response only for good, closely matched reco-jets
+	   if( passJetID ) {
+	     hRespVsPtGenLogNoDeltaR.at(etaGenBin)->Fill(ptGen0,r0);
+	     hRespVsPtGenLogNoDeltaR.at(etaGenBin)->Fill(ptGen1,r1);
+	     if( closeMatch ) {
+	       hRespVsPtGenLogNoDeltaPhi.at(etaGenBin)->Fill(ptGen0,r0);
+	       hRespVsPtGenLogNoDeltaPhi.at(etaGenBin)->Fill(ptGen1,r1);
+	     }
+	   }
+	   
+	   // Require back-to-back gen-jets
+	   if( std::abs(TVector2::Phi_mpi_pi(GenJetColPhi[0]-GenJetColPhi[1])) > minDeltaPhi ) {
+	     // Fill various MC truth response distributions
+	     // MC truth response only for good, closely matched reco-jets
+	     if( passJetID && closeMatch ) {
+	       hRespVsPtGen.at(etaGenBin)->Fill(ptGen0,r0);
+	       hRespVsPtGen.at(etaGenBin)->Fill(ptGen1,r1);
+	       hRespVsPtGenLog.at(etaGenBin)->Fill(ptGen0,r0);
+	       hRespVsPtGenLog.at(etaGenBin)->Fill(ptGen1,r1);
+	       hRespVsPtGenPUReweighted.at(etaGenBin)->Fill(ptGen0,r0,wPU);
+	       hRespVsPtGenPUReweighted.at(etaGenBin)->Fill(ptGen1,r1,wPU);
+	       hRespVsPtGenLogPUReweighted.at(etaGenBin)->Fill(ptGen0,r0,wPU);
+	       hRespVsPtGenLogPUReweighted.at(etaGenBin)->Fill(ptGen1,r1,wPU);
+	       if( PUMCNumVtx < 5 ) {
+		 hRespVsPtGenLogPULow.at(etaGenBin)->Fill(ptGen0,r0);
+		 hRespVsPtGenLogPULow.at(etaGenBin)->Fill(ptGen1,r1);
+	       } else if( PUMCNumVtx > 9 ) {
+		 hRespVsPtGenLogPUHigh.at(etaGenBin)->Fill(ptGen0,r0);
+		 hRespVsPtGenLogPUHigh.at(etaGenBin)->Fill(ptGen1,r1);
+	       }
+	     }
 	      
-  	      if( PUMCNumVtx < 5 ) {
-  		hRespVsPtGenLogPULow.at(etaGenBin)->Fill(ptGen1,r1);
-  		hRespVsPtGenLogPULow.at(etaGenBin)->Fill(ptGen2,r2);
-  	      } else if( PUMCNumVtx > 9 ) {
-  		hRespVsPtGenLogPUHigh.at(etaGenBin)->Fill(ptGen1,r1);
-  		hRespVsPtGenLogPUHigh.at(etaGenBin)->Fill(ptGen2,r2);
-  	      }
+	     // Pt soft cuts
+	     for(int ptSoftBin = binAdmin.nPtSoftBins()-1; ptSoftBin >= 0; --ptSoftBin) {
+	       if( ptGen2 > binAdmin.ptSoftMax(ptSoftBin)*ptGenAve ) break;
+	       // Gen-jet spectrum independent from reco-jet properties
+	       hPtGen.at(etaGenBin).at(ptSoftBin)->Fill(ptGen0,wSpec);
+	       hPtGen.at(etaGenBin).at(ptSoftBin)->Fill(ptGen1,wSpec);
+	       // MC truth response only for good, closely matched reco-jets
+	       if( passJetID && closeMatch ) {
+		 hRespVsPtGenLogVsPtSoftPUReweighted.at(etaGenBin).at(ptSoftBin)->Fill(ptGen0,r0,wSpec*wPU);
+		 hRespVsPtGenLogVsPtSoftPUReweighted.at(etaGenBin).at(ptSoftBin)->Fill(ptGen1,r1,wSpec*wPU);
+	       }
+	     }
 	      
-  	      // Pt soft cuts
-  	      for(int ptSoftBin = binAdmin.nPtSoftBins()-1; ptSoftBin >= 0; --ptSoftBin) {
-  		if( ptGen3 > binAdmin.ptSoftMax(ptSoftBin)*ptGenAve ) break;
-		
- 		hPtGen.at(etaGenBin).at(ptSoftBin)->Fill(ptGen1,wSpec);
- 		hPtGen.at(etaGenBin).at(ptSoftBin)->Fill(ptGen2,wSpec);
-		
- 		hRespVsPtGenLogVsPtSoftPUReweighted.at(etaGenBin).at(ptSoftBin)->Fill(ptGen1,r1,wSpec*wPU);
- 		hRespVsPtGenLogVsPtSoftPUReweighted.at(etaGenBin).at(ptSoftBin)->Fill(ptGen2,r2,wSpec*wPU);
-  	      }
-	      
- 	      if( writeAllTrees ) {
- 		// Find ptGenAve bin
- 		unsigned int ptGenAveBin = 1000;
- 		if( binAdmin.findPtBin(ptGenAve,etaGenBin,ptGenAveBin) ) {
- 		  for(int j = 0; j < nObjJet; ++j) {
- 		    corrJetIdx[j] = GenJetColJetIdx[j];
- 		  }
- 		  newTreesEtaGenPtGenAve[etaGenBin][ptGenAveBin]->Fill();
- 		}
- 	      }
-  	    }
-  	  }
-  	}
+	     if( writeAllTrees ) {
+	       // Find ptGenAve bin
+	       unsigned int ptGenAveBin = 1000;
+	       if( binAdmin.findPtBin(ptGenAve,etaGenBin,ptGenAveBin) ) {
+		 for(int j = 0; j < nObjJet; ++j) {
+		   corrJetIdx[j] = GenJetColJetIdx[j];
+		 }
+		 newTreesEtaGenPtGenAve[etaGenBin][ptGenAveBin]->Fill();
+	       }
+	     }
+	   }
+	 }
        }
      }
    
@@ -694,6 +724,7 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
        for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
  	fileResponse.WriteTObject(hRespVsPtGen.at(etaBin));
  	fileResponse.WriteTObject(hRespVsPtGenLog.at(etaBin));
+	fileResponse.WriteTObject(hRespVsPtGenLogNoDeltaR.at(etaBin));
  	fileResponse.WriteTObject(hRespVsPtGenLogNoDeltaPhi.at(etaBin));
  	fileResponse.WriteTObject(hRespVsPtGenPUReweighted.at(etaBin));
  	fileResponse.WriteTObject(hRespVsPtGenLogPUReweighted.at(etaBin));
@@ -754,6 +785,7 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
        for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
  	delete hRespVsPtGen.at(etaBin);
  	delete hRespVsPtGenLog.at(etaBin);
+ 	delete hRespVsPtGenLogNoDeltaR.at(etaBin);
  	delete hRespVsPtGenLogNoDeltaPhi.at(etaBin);
  	delete hRespVsPtGenPUReweighted.at(etaBin);
  	delete hRespVsPtGenLogPUReweighted.at(etaBin);
