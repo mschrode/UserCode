@@ -1,4 +1,4 @@
-// $Id: PlotMaker.h,v 1.14 2011/06/23 18:07:37 mschrode Exp $
+// $Id: PlotMaker.h,v 1.15 2011/07/18 09:36:47 mschrode Exp $
 
 #ifndef PLOT_MAKER_H
 #define PLOT_MAKER_H
@@ -28,7 +28,7 @@ namespace resolutionFit {
       //plotPtSpectra();
       plotExtrapolation();
       //plotSlopes();
-      //      plotPtGenSpectra();
+      plotPtGenSpectra();
       plotMCEventInfo();
       //plotParticleLevelImbalance();
       plotResolution();
@@ -100,6 +100,7 @@ namespace resolutionFit {
     TString histFileName(const TString &id, const PtBin* ptBin, const Sample* sample) const;
     TString histFileName(const TString &id, const PtBin* ptBin, const Sample* sample, unsigned int ptSoftBinIdx) const;
     TString histFileName(const TString &id, const PtBin* ptBin, SampleLabel label1, SampleLabel label2, FitResult::Type type, unsigned int ptSoftBinIdx) const;
+    TString histFileNameFitResultTypeLabel(FitResult::Type type) const;
     TString cleanFileName(TString str) const;
 
     int color(const SampleLabel &label) const { return Sample::color(label); }

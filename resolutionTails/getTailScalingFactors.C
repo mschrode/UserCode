@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.2 2011/07/09 15:38:18 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.3 2011/07/18 09:16:01 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -41,7 +41,7 @@ const TString FASYM = "f_{asym}";
 const TString FASYMMC = "f^{mc}_{asym}";
 const TString FASYMDATA = "f^{data}_{asym}";
 const TString LUMI_LABEL = "L = 801 pb^{ -1}, #sqrt{s} = 7 TeV";
-const bool SHOW_HEADER = true;
+const bool SHOW_HEADER = false;
 const TString HEADER = SHOW_HEADER ? ("CMS preliminary, "+LUMI_LABEL) : "";
 
 const int COLOR_GAUSS = 46;
@@ -358,20 +358,22 @@ void getTailScalingFactors() {
   unsigned int globalBin = 0;
   for(unsigned int etaBin = 0; etaBin < nEtaBins; ++etaBin) {
     double coreScaling = 0.;
+    // Core scale factors from runs 163337-167151
+    // Version 2011/07/20: closure uncertainty removed
     if( variationCoreDown ) {
       // Uncertainties down
       if( etaBin == 0 )      coreScaling = 0.000;
-      else if( etaBin == 1 ) coreScaling = 0.000;
-      else if( etaBin == 2 ) coreScaling = 0.027;
-      else if( etaBin == 3 ) coreScaling = 0.033;
-      else if( etaBin == 4 ) coreScaling = 0.068;
+      else if( etaBin == 1 ) coreScaling = 0.001;
+      else if( etaBin == 2 ) coreScaling = 0.032;
+      else if( etaBin == 3 ) coreScaling = 0.043;
+      else if( etaBin == 4 ) coreScaling = 0.090;
     } else if( variationCoreUp ) {
       // Uncertainties up
-      if( etaBin == 0 )      coreScaling = 0.118;
-      else if( etaBin == 1 ) coreScaling = 0.117;
-      else if( etaBin == 2 ) coreScaling = 0.167;
-      else if( etaBin == 3 ) coreScaling = 0.238;
-      else if( etaBin == 4 ) coreScaling = 0.511;
+      if( etaBin == 0 )      coreScaling = 0.116;
+      else if( etaBin == 1 ) coreScaling = 0.115;
+      else if( etaBin == 2 ) coreScaling = 0.162;
+      else if( etaBin == 3 ) coreScaling = 0.228;
+      else if( etaBin == 4 ) coreScaling = 0.489;
     } else {
       // Nominal
       if( etaBin == 0 )      coreScaling = 0.052;
@@ -2121,8 +2123,8 @@ void plotFinalResult() {
 
   sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("BinningAdmin.cfg");  
 
-  TString fileNamePrefix = "ScaleFactors_163337-167151/Tail_163337-167151_Sig25-Inf_PF";
-  TString outNamePrefix = "Tail_163337-167151_Sig25-Inf_PF_ScaleFactors";
+  TString fileNamePrefix = "ScaleFactors_163337-167151_2011-07-21_UpdatedCoreUncerts/Tail_163337-167151_Sig35-Inf_PF";
+  TString outNamePrefix = "Tail_163337-167151_Sig35-Inf_PF_ScaleFactors";
 
   std::vector<EtaPtBin*> etaPtBins;
   unsigned int nEtaBins = binAdm->nEtaBins();

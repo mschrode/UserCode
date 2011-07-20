@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.17 2011/06/23 18:07:37 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.18 2011/07/18 09:36:47 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -1705,7 +1705,7 @@ namespace resolutionFit {
 	    // Labels
 	    TPaveText* label = labelMk_->etaBin(etaBin->etaBin());
 	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,-std::min(0.8,labelMk_->start()),label->GetSize());
-	    leg->AddEntry(gRatio,"Measurement","P");
+	    leg->AddEntry(gRatio,"Measurement ("+util::toTString(par_->lumi())+" pb^{-1})","P");
 	    leg->AddEntry(kValueLine,"Fit","L");
 	    leg->AddEntry(kStatBand,"Statistical Uncertainty","F");
 	    leg->AddEntry(kSystBand,"Systematic Uncertainty","F");
@@ -1777,8 +1777,8 @@ namespace resolutionFit {
 
 	    // Labels
 	    TPaveText* label = labelMk_->etaBin(etaBin->etaBin());
-	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,std::min(0.85,labelMk_->start()),label->GetSize());
-	    leg->AddEntry(biasCorrRes,"Bias Corrected "+sLabel1,"P");
+	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,labelMk_->start(),label->GetSize());
+	    leg->AddEntry(biasCorrRes,"Bias Corrected "+sLabel1+" ("+util::toTString(par_->lumi())+" pb^{-1})","P");
 	    leg->AddEntry(scaledMCT,"Scaled MC Truth","L");
 	    leg->AddEntry(scaledMCTBand,"Systematic Uncertainty","F");
 	    leg->AddEntry(mcTruth,"MC Truth ("+sLabel2+")","L");
@@ -2128,26 +2128,26 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::histFileName(const TString &id, const EtaBin* etaBin, SampleLabel label1, SampleLabel label2, FitResult::Type type) const {
-    return cleanFileName(par_->outFilePrefix()+"_"+id+"_"+label1+"_vs_"+label2+"_"+FitResult::toString(type)+"_EtaBin"+util::toTString(etaBin->etaBin())+".eps");
+    return cleanFileName(par_->outFilePrefix()+"_"+id+"_"+label1+"_vs_"+label2+histFileNameFitResultTypeLabel(type)+"EtaBin"+util::toTString(etaBin->etaBin())+".eps");
   }
 
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::histFileName(const TString &id, const EtaBin* etaBin, SampleLabel sampleLabel, FitResult::Type type) const {
-    return cleanFileName(par_->outFilePrefix()+"_"+id+"_"+sampleLabel+"_"+FitResult::toString(type)+"_EtaBin"+util::toTString(etaBin->etaBin())+".eps");
+    return cleanFileName(par_->outFilePrefix()+"_"+id+"_"+sampleLabel+histFileNameFitResultTypeLabel(type)+"EtaBin"+util::toTString(etaBin->etaBin())+".eps");
   }
 
 
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::histFileName(const TString &id, const PtBin* ptBin, const Sample* sample, FitResult::Type type) const {
-    return cleanFileName(par_->outFilePrefix()+"_"+id+"_"+sample->label()+"_"+FitResult::toString(type)+"_EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+".eps");
+    return cleanFileName(par_->outFilePrefix()+"_"+id+"_"+sample->label()+histFileNameFitResultTypeLabel(type)+"EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+".eps");
   }
 
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::histFileName(const TString &id, const PtBin* ptBin, FitResult::Type type) const {
-    return cleanFileName(par_->outFilePrefix()+"_"+id+"_AllSamples_"+FitResult::toString(type)+"_EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+".eps");
+    return cleanFileName(par_->outFilePrefix()+"_"+id+"_AllSamples"+histFileNameFitResultTypeLabel(type)+"EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+".eps");
   }
 
 
@@ -2165,9 +2165,14 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::histFileName(const TString &id, const PtBin* ptBin, SampleLabel label1, SampleLabel label2, FitResult::Type type, unsigned int ptSoftBinIdx) const {
-    return cleanFileName(par_->outFilePrefix()+"_"+id+"_"+label1+"_vs_"+label2+"_"+FitResult::toString(type)+"_EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+"_PtSoftBin"+util::toTString(ptSoftBinIdx)+".eps");
+    return cleanFileName(par_->outFilePrefix()+"_"+id+"_"+label1+"_vs_"+label2+histFileNameFitResultTypeLabel(type)+"EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+"_PtSoftBin"+util::toTString(ptSoftBinIdx)+".eps");
   }
 
+
+  // -------------------------------------------------------------------------------------
+  TString PlotMaker::histFileNameFitResultTypeLabel(FitResult::Type type) const {
+    return etaBins_.front()->nFitResultTypes() > 1 ? "_"+FitResult::toString(type)+"_" : "_";
+  }
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::cleanFileName(TString str) const {
@@ -2341,8 +2346,9 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   TString PlotMaker::LabelMaker::label(const SampleLabel &label) const {
     TString lab = label;
-//     if( Sample::type(label) == Sample::Data )
-//       lab += " (L = "+util::toTString(par_->lumi())+" pb^{-1})";
+    if( util::StyleSettings::style() == util::StyleSettings::Presentation &&
+	Sample::type(label) == Sample::Data )
+      lab += " (L = "+util::toTString(par_->lumi())+" pb^{-1})";
 
     return lab;    
   }

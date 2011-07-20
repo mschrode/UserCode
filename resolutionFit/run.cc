@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.57 2011/06/23 18:07:37 mschrode Exp $
+// $Id: run.cc,v 1.58 2011/07/18 09:36:47 mschrode Exp $
 
 #include <iostream>
 
@@ -23,11 +23,11 @@ int main(int argc, char *argv[]) {
 
   gErrorIgnoreLevel = 1001;
 
-  Parameters* par = new Parameters("Res_163337-167151_noL2L3Residual","config/BinningAdmin.cfg",0);
+  Parameters* par = new Parameters("Res_163337-167151","config/BinningAdmin.cfg",0);
   //par->setNEtaBinsUser(1);
   par->setJetProperties(JetProperties::AK5,JetProperties::PF);
-  par->setOutMode(OutputManager::PSAllInOne);
-  //par->setOutMode(OutputManager::EPSSingleFiles);
+  //par->setOutMode(OutputManager::PSAllInOne);
+  par->setOutMode(OutputManager::EPSSingleFiles);
 
   TString pathToHome = "/afs/naf.desy.de/user/m/mschrode/";
   TString pathToConfig = pathToHome+"UserCode/mschrode/resolutionFit/config/";
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
 
   // Systematic uncertainties
   cmd->addExtrapolationUncertainty(idMC,nominalFitResType,kCyan+2);
-  cmd->addMCClosureUncertainty(idMC,nominalFitResType,46);
+  //cmd->addMCClosureUncertainty(idMC,nominalFitResType,46);
   cmd->addUncertaintyFromVariedSample("JES",1.,idMC,nominalFitResType,"JES Down","JES Up",kBlue-9);
   cmd->addPLIUncertainty(idMC,nominalFitResType,kGreen-1);
   cmd->addUncertaintyFromVariedSample("Spectrum",1.,idMC,nominalFitResType,"Spec Herwig",kBlue-2);
