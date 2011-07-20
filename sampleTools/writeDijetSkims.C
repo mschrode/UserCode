@@ -1,4 +1,4 @@
-// $Id: writeDijetSkims.C,v 1.6 2011/06/23 17:56:15 mschrode Exp $
+// $Id: writeDijetSkims.C,v 1.7 2011/07/18 09:12:31 mschrode Exp $
 //
 // Skim Kalibri ntuples as input for resolution fit.
 // At this pre-selection
@@ -514,7 +514,7 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
  	wPU = weightsPU.at(PUMCNumVtx);
        } else {
  	std::cerr << "ERROR: no event weights for PUMCNumVtx = " << PUMCNumVtx << std::endl;
- 	wPU = 1.;
+ 	wPU = weightsPU.back();
        }
 
        // PU reweighting
