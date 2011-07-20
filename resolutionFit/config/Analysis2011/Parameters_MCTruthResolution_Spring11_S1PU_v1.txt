@@ -1,6 +1,9 @@
 # MC Truth parameters for modified NSC formula
 # AK5 Jets
 # /QCD\_Pt\_15to3000\_TuneZ2\_Flat\_7TeV\_pythia6/Spring11-PU\_S1\_START311\_V1G1-v1/AODSIM
+# Parametrization function
+# sqrt(((TMath::Sign(1,[0])*sq([0]/x))+(sq([1])*(x^([3]-1))))+sq([2]))
+#
 # Eta binning:
 #  0: 0.0 - 1.1
 #  1: 1.1 - 1.7

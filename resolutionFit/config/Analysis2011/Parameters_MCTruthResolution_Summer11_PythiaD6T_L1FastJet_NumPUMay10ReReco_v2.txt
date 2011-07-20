@@ -3,6 +3,9 @@
 # AK5 Jets, L1FastJet
 # PU scenario as in May10ReReco data
 # 
+# Parametrization function
+# sqrt(((TMath::Sign(1,[0])*sq([0]/x))+(sq([1])*(x^([3]-1))))+sq([2]))
+#
 # Eta binning:
 #  0: 0.0 - 0.5
 #  1: 0.5 - 1.1
