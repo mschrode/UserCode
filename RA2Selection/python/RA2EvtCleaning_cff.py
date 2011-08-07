@@ -1,4 +1,4 @@
-# $Id: RA2EvtCleaning_cff.py,v 1.2 2011/06/11 13:43:09 mschrode Exp $
+# $Id: RA2EvtCleaning_cff.py,v 1.3 2011/08/05 09:05:14 mschrode Exp $
 # Definition of the filters at
 # https://twiki.cern.ch/twiki/bin/view/CMS/SusyRA2NJetsInData2011
 
@@ -36,6 +36,12 @@ from SandBox.Skims.beamHaloFilter_cfi import beamHaloFilter
 # Dead ECAL cell TP filter
 from JetMETAnalysis.ecalDeadCellTools.RA2TPfilter_cff import ecalDeadCellTPfilter
 
+# ECAL endcap noise filter
+from SandBox.Skims.eeNoiseFilter_cfi import eeNoiseFilter
+
+# Lepton veto
+from SandBox.Skims.RA2Leptons_cff import *
+
 
 
 
@@ -45,13 +51,16 @@ from UserCode.CutFlow.EventCounter_cfi import EventCounter
 EvtCntTotal              =  EventCounter.clone(FilterName = cms.string("Total"))
 EvtCntHLT                =  EventCounter.clone(FilterName = cms.string("HLT"))
 EvtCntOneGoodVertex      =  EventCounter.clone(FilterName = cms.string("OneGoodVertex"))
-EvtCntNoScraping         =  EventCounter.clone(FilterName = cms.string("NoScraping"))
+EvtCntHBHENoise          =  EventCounter.clone(FilterName = cms.string("HBHENoise"))
 EvtCntBeamHalo           =  EventCounter.clone(FilterName = cms.string("BeamHalo"))
+EvtCntEENoise            =  EventCounter.clone(FilterName = cms.string("EENoise"))
+EvtCntNoScraping         =  EventCounter.clone(FilterName = cms.string("NoScraping"))
 EvtCntBadPFMuon          =  EventCounter.clone(FilterName = cms.string("BadPFMuon"))
 EvtCntTrackingFailure    =  EventCounter.clone(FilterName = cms.string("TrackingFailure"))
-EvtCntHBHENoise          =  EventCounter.clone(FilterName = cms.string("HBHENoise"))
 EvtCntTP                 =  EventCounter.clone(FilterName = cms.string("TP"))
 EvtCntBE                 =  EventCounter.clone(FilterName = cms.string("BE"))
+EvtCntLeptonVeto         =  EventCounter.clone(FilterName = cms.string("LeptonVeto"))
+
 
 
 # RA2 cleaning sequence
@@ -59,11 +68,15 @@ ra2Cleaning = cms.Sequence(
     EvtCntTotal *
     EvtCntHLT *
     goodVerticesRA2 * oneGoodVertex * EvtCntOneGoodVertex *
-    noscraping * EvtCntNoScraping *
+    HBHENoiseFilter * EvtCntHBHENoise *
     beamHaloFilter * EvtCntBeamHalo *
+    eeNoiseFilter * EvtCntEENoise *
+    noscraping * EvtCntNoScraping *
     goodPFEventsSequence * EvtCntBadPFMuon *
     trackingFailureFilterOnAOD * EvtCntTrackingFailure *
-    HBHENoiseFilter * EvtCntHBHENoise *
     ecalDeadCellTPfilter * EvtCntTP *
-    EvtCntBE
+    EvtCntBE *
+    ra2PFElectrons * ra2PFElectronVeto *
+    ra2PFMuons * ra2PFMuonVeto *
+    EvtCntLeptonVeto
     )
