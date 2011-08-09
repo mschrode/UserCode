@@ -1,3 +1,5 @@
+// $Id: $
+
 #include <iomanip>
 #include <iostream>
 #include <vector>
@@ -45,8 +47,8 @@ private:
 };
 
 
-CutFlow::Cut::Cut(const TString &fileName, const TString &moduleName, const TString &description) 
-  : moduleName_(moduleName), description_(description) {
+CutFlow::Cut::Cut(const TString &fileName, const TString &moduleName, const TString &descript) 
+  : moduleName_(moduleName), description_(descript) {
   
   // Get histogram of passed events
   TFile file(fileName,"READ");
@@ -125,9 +127,9 @@ void CutFlow::print(bool latex, int prescision) const {
     std::cout << " & ";
     std::cout << std::setw(10) << "$N(\\text{passed})$";
     std::cout << " & ";
-    std::cout << std::setw(10) << "$\epsilon(\\text{binomial})$";
+    std::cout << std::setw(10) << "$\\epsilon(\\text{binomial})$";
     std::cout << " & ";
-    std::cout << std::setw(34) << "$\epsilon(\\text{bayesian})$ \\\\ \n";
+    std::cout << std::setw(34) << "$\\epsilon(\\text{bayesian})$ \\\\ \n";
   } else {
     std::cout << "\n\n**********************************************************************************************\n";
     std::cout << std::setw(width) << "Cut     ";
@@ -141,11 +143,11 @@ void CutFlow::print(bool latex, int prescision) const {
   }
   for(size_t i = 0; i < cuts_.size(); ++i) {
     if( latex ) {
-      std::cout << std::setw(width) << "\\texttt{" << cuts_.at(i)->description() << "} & $";
-      std::cout << std::setw(10) << cuts_.at(i)->nPassed() << "$ & $";
+      std::cout << "\\texttt{" << std::setw(width) << cuts_.at(i)->description() << "} & $";
+      std::cout << std::setw(10) << static_cast<int>(cuts_.at(i)->nPassed()) << "$ & $";
     } else {
       std::cout << std::setw(width) << cuts_.at(i)->description() << " : ";
-      std::cout << std::setw(10) << cuts_.at(i)->nPassed() << " : ";
+      std::cout << std::setw(12) << static_cast<int>(cuts_.at(i)->nPassed()) << " : ";
     }
     if( i > 0 ) {
       double nTotal = cuts_.at(i-1)->nPassed();
@@ -154,18 +156,20 @@ void CutFlow::print(bool latex, int prescision) const {
       double eff = 0.;
       double effErrDown = 0.;
       double effErrUp = 0.;
-      //efficiencyBayes(nTotal,nPassed,eff,effErrDown,effErrUp);
+      efficiencyBayes(nTotal,nPassed,eff,effErrDown,effErrUp);
 
       if( latex ) {
 	std::cout.precision(prescision);
-	std::cout << std::setw(10) << std::fixed <<  efficiencySimple(nTotal,nPassed) << "$ & $";
-	std::cout << std::setw(10) << eff << "^{+" << effErrUp << "_{-" << effErrDown << "}";
+	std::cout << std::setw(12) << std::fixed << efficiencySimple(nTotal,nPassed) << "$ & $";
+	std::cout << std::setw(12) << eff << "^{+" << effErrUp << "}_{-" << effErrDown << "}";
       } else {
-	std::cout << std::setw(10) << efficiencySimple(nTotal,nPassed) << " : ";
-	std::cout << std::setw(10) << eff << " -" << effErrDown << " +" << effErrUp;
+	std::cout << std::setw(12) << efficiencySimple(nTotal,nPassed) << " : ";
+	std::cout << std::setw(12) << eff << " -" << effErrDown << " +" << effErrUp;
       }
+    } else {
+      if( latex ) std::cout << " & " << std::endl;
     }
-    if( latex ) std::cout << " \\\\";
+    if( latex ) std::cout << "$ \\\\";
     std::cout << std::endl;
   }
   if( !latex) std::cout << "**********************************************************************************************";
@@ -180,18 +184,16 @@ void CreateCutFlow(const TString &fileName, bool latex = false, int precision = 
   CutFlow* cf = new CutFlow(fileName);
   cf->addCut("EvtCntTotal","Total");
   cf->addCut("EvtCntHLT","HLT_DiJetAve trigger");
-  cf->addCut("EvtCntTPBE","TP+BE filter");
   cf->addCut("EvtCntOneGoodVertex","One good vertex filter");
-  cf->addCut("EvtCntNoScraping","No-scraping filter");
   cf->addCut("EvtCntHBHENoise","HBHE noise filter");
-  cf->addCut("EvtCntEENoise","EE noise filter");
   cf->addCut("EvtCntBeamHalo","Beam halo filter");
+  cf->addCut("EvtCntEENoise","EE noise filter");
+  cf->addCut("EvtCntNoScraping","No-scraping filter");
+  cf->addCut("EvtCntBadPFMuon","PF post-processing filter");
   cf->addCut("EvtCntTrackingFailure","Tracking failure filter");
-  cf->addCut("EvtCntInconsistentPFMuon","Inconsistent PF muon filter");
-  cf->addCut("EvtCntBadPFMuon","Bad PF muon filter");
-  cf->addCut("EvtCntGreedyPFMuon","Greedy PF muon filter");
-  cf->addCut("EvtCntPFMuon","PF muon filter");
-  cf->addCut("EvtCntPFElectron","PF electron filter");
+  cf->addCut("EvtCntTP","TP filter");
+  cf->addCut("EvtCntBE","BE filter");
+  cf->addCut("EvtCntLeptonVeto","Lepton veto");
 
   cf->print(latex,precision);
 }
