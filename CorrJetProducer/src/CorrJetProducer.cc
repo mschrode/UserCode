@@ -13,7 +13,7 @@
 //
 // Original Author:  Matthias Schroeder
 //         Created:  Tue Aug  9 21:13:57 CEST 2011
-// $Id$
+// $Id: CorrJetProducer.cc,v 1.1 2011/08/10 11:53:20 mschrode Exp $
 //
 //
 
@@ -107,25 +107,18 @@ CorrJetProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   for(edm::View<pat::Jet>::const_iterator j = origJets.begin(); j != origJets.end(); ++j) {
     pat::Jet correctedJet = *j;
     double corrFactor = corrector->correction(correctedJet.p4());
-    std::cout << correctedJet.pt() << std::flush;
+    //    std::cout << correctedJet.pt() << std::flush;
     correctedJet.scaleEnergy(corrFactor);
-    std::cout << " --> " << correctedJet.pt() << std::endl;
+    //    std::cout << " --> " << correctedJet.pt() << std::endl;
     correctedJets->push_back(correctedJet);
-  }
-
-  for(size_t i = 0; i < correctedJets->size(); ++i) {
-    std::cout << "  " << i << ": " << correctedJets->at(i).pt() << std::endl;
   }
 
   // Sort corrected jets by pt
   GreaterByPt<pat::Jet> ptComparator;
   std::sort(correctedJets->begin(),correctedJets->end(),ptComparator);
-  for(size_t i = 0; i < correctedJets->size(); ++i) {
-    std::cout << "  " << i << ": " << correctedJets->at(i).pt() << std::endl;
-  }
+
   // Store collection of corrected jets in the event
-  //iEvent.put(correctedJets,instanceName_);
-  iEvent.put(correctedJets);
+  iEvent.put(correctedJets,instanceName_);
 }
 
 // ------------ method called once each job just before starting event loop  ------------
