@@ -1,13 +1,15 @@
-// $Id: StyleSettings.h,v 1.12 2010/12/19 22:41:03 mschrode Exp $
+// $Id: StyleSettings.h,v 1.13 2011/07/18 08:58:40 mschrode Exp $
 
 #ifndef STYLE_SETTINGS_H
 #define STYLE_SETTINGS_H
 
+#include <cmath>
 #include <iostream>
 
 #include "TString.h"
 #include "TStyle.h"
 
+#include "../util/utils.h"
 
 
 namespace util {
@@ -16,43 +18,93 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: StyleSettings.h,v 1.12 2010/12/19 22:41:03 mschrode Exp $
+  //!  $Id: StyleSettings.h,v 1.13 2011/07/18 08:58:40 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class StyleSettings {
   public:
-    enum Style { Screen, Presentation, Paper };
-    
+    // Different style settings
+    enum Style { Screen, Presentation, Note, PAS };
+
+    // Convert between style representations
     static Style style() {
       Style st = Screen;
       TString mode = gStyle->GetTitle();
       if( mode == "Presentation" ) st = Presentation;
-      else if( mode == "Paper" ) st = Paper;
+      else if( mode == "Note" ) st = Note;
+      else if( mode == "PAS" ) st = PAS;
+      
       return st;
     }
-    static void screen() { setStyle("Screen",true); }
-    static void screenNoTitle() { setStyle("Screen",false); }
-    static void paper() { setStyle("Paper",true); }
-    static void paperNoTitle() { setStyle("Paper",false); }
-    static void presentation() { setStyle("Presentation",true); }
-    static void presentationNoTitle() { setStyle("Presentation",false); }
-    static void cms() { setStyle("CMS",false); }
+    static TString toString(Style mode) {
+      TString st = "Screen";
+      if( mode == Presentation ) st = "Presentation";
+      else if( mode == Note ) st = "Note";
+      else if( mode == PAS ) st = "PAS";
+      
+      return st;
+    }
+
+    // Set different styles
+    static void setStyleScreen() { setStyle(Screen,true); }
+    static void setStyleScreenNoTitle() { setStyle(Screen,false); }
+    static void setStylePresentation() { setStyle(Presentation,true); }
+    static void setStylePresentationNoTitle() { setStyle(Presentation,false); }
+    static void setStyleNote() { setStyle(Note,true); }
+    static void setStyleNoteNoTitle() { setStyle(Note,false); }
+    static void setStylePAS() { setStyle(PAS,true); }
+
+    // Retrieve some style attributes to be used in
+    // user code. Their value depends on the current
+    // global style settings:
+
+    // Get a histogram title string for CMS PAS style
+    static TString title(double lumi, bool isPreliminary = false) {
+      TString title = "CMS";
+      if( isPreliminary ) title += " preliminary";
+      title += ", L = "+luminosity(lumi)+",  #sqrt{s} = 7 TeV";
+      
+      return title;
+    }
+
+    // This needs the lumi in 1/pb and returns
+    // a nicely formatted TString
+    static TString luminosity(double lumi) {
+      TString lab = "";
+      if( lumi > 800. ) {
+	lumi /= 1000.;
+	lab = toTString(lumi,2)+" fb^{-1}";
+      } else {
+	lab = toTString(lumi,3)+" pb^{-1}";
+      }
+
+      return lab;
+    }
+
+    // Return a readable color; useful for loops
     static int color(int i) {
       int col[5] = { 1, 2, 4, 7, 8 };
-      return (i>=0 && i<5) ? col[i] : 1;
+      int idx = i%5;
+      return (idx>=0 && idx<5) ? col[idx] : 1;
     }
+
+    // Line width for histograms
     static int lineWidth() {
       int width = 1;
-      TString mode = "Presentation";
-      if( mode.CompareTo(gStyle->GetTitle()) == 0 ) {
+      if( style() == Presentation ) {
+	width = 3;
+      } else if( style() == Note || style() == PAS ) {
 	width = 2;
       }
+
       return width;
     }
+
     
   private:
-    static void setStyle(const TString &mode, bool spaceForTitle) {
+    // Helper function: set the actual gStyle attributes
+    static void setStyle(Style mode, bool spaceForTitle) {
       // Set title of current style object
-      gStyle->SetTitle(mode);
+      gStyle->SetTitle(toString(mode));
 
       // Zero horizontal error bars
       gStyle->SetErrorX(0);
@@ -87,7 +139,7 @@ namespace util {
       gStyle->SetGridWidth(1);
 
       //  Margins
-      if( mode == "Presentation" ) {
+      if( mode == Presentation ) {
 	if( spaceForTitle ) {
 	  gStyle->SetPadTopMargin(0.11);
 	  gStyle->SetPadBottomMargin(0.18);
@@ -99,7 +151,7 @@ namespace util {
 	  gStyle->SetPadLeftMargin(0.19);
 	  gStyle->SetPadRightMargin(0.04);
 	}
-      } else if( mode == "Paper" || mode == "CMS"  ) {
+      } else if( mode == Note || mode == PAS  ) {
 	if( spaceForTitle ) {
 	  gStyle->SetPadTopMargin(0.06);
 	  gStyle->SetPadBottomMargin(0.18);
@@ -131,7 +183,7 @@ namespace util {
       gStyle->SetHistLineWidth(1);
     
       //  For the statistics box:
-      if( mode == "Screen" ) {
+      if( mode == Screen ) {
 	gStyle->SetOptStat("eMR");
 	gStyle->SetStatColor(kWhite);
 	gStyle->SetStatFont(42);
@@ -158,10 +210,10 @@ namespace util {
       gStyle->SetTitleX(0.6);
       gStyle->SetTitleH(0.05);
       gStyle->SetTitleBorderSize(0);
-      if( mode == "Paper" || mode == "CMS"  ) {
+      if( mode == PAS  ) {
 	if( spaceForTitle ) {
 	  gStyle->SetTitleAlign(13);
-	  gStyle->SetTitleX(0.18);
+	  gStyle->SetTitleX(0.19);
 	  gStyle->SetTitleH(0.038);
 	}
       }	  
@@ -170,19 +222,14 @@ namespace util {
       gStyle->SetAxisColor(1,"XYZ");
       gStyle->SetTickLength(0.03,"XYZ");
       gStyle->SetNdivisions(510,"XYZ");
-      if( mode == "CMS" ) {
-	gStyle->SetPadTickX(0);
-	gStyle->SetPadTickY(0);
-      } else {
-	gStyle->SetPadTickX(1);
-	gStyle->SetPadTickY(1);
-      }
+      gStyle->SetPadTickX(1);
+      gStyle->SetPadTickY(1);
       gStyle->SetStripDecimals(kFALSE);
     
       //  For the axis labels and titles
       gStyle->SetTitleColor(1,"XYZ");
       gStyle->SetLabelColor(1,"XYZ");
-      if( mode == "Presentation" ) {
+      if( mode == Presentation ) {
 	// For the axis labels:
 	gStyle->SetLabelFont(42,"XYZ");
 	gStyle->SetLabelOffset(0.007,"XYZ");
@@ -194,7 +241,7 @@ namespace util {
 	gStyle->SetTitleXOffset(1.2);
 	if( spaceForTitle ) gStyle->SetTitleYOffset(2.0);
 	else                gStyle->SetTitleYOffset(1.5);
-      } else if ( mode == "Paper" || mode == "CMS" ) {
+      } else if ( mode == Note || mode == PAS ) {
 	// For the axis labels:
 	gStyle->SetLabelFont(42,"XYZ");
 	gStyle->SetLabelOffset(0.007,"XYZ");
@@ -225,7 +272,7 @@ namespace util {
       gStyle->SetLegendBorderSize(0);
 
       //  For the statistics box
-      if( mode == "Presentation" ) {
+      if( mode == Presentation ) {
 	if( spaceForTitle ) {
 	  gStyle->SetStatFontSize(0.04);
 	  gStyle->SetStatX(0.92);              
@@ -256,9 +303,9 @@ namespace util {
       }
 
       std::cout << "Adjusted gStyle for " << std::flush;
-      if( mode == "Screen" ) std::cout << "screen viewing" << std::flush;
-      else if( mode == "Paper" ) std::cout << "papers" << std::flush;
-      else if( mode == "CMS" ) std::cout << "CMS PAS" << std::flush;
+      if( mode == Screen ) std::cout << "screen viewing" << std::flush;
+      else if( mode == Note ) std::cout << "CMS Analysis Notes" << std::flush;
+      else if( mode == PAS ) std::cout << "CMS PAS" << std::flush;
       else std::cout << "presentations" << std::flush;
       std::cout << " and " << std::flush;
       if( spaceForTitle ) std::cout << "histograms with title." << std::endl;

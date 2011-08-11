@@ -1,4 +1,4 @@
-// $Id: utils.h,v 1.9 2011/06/23 16:54:24 mschrode Exp $
+// $Id: utils.h,v 1.10 2011/07/18 08:59:42 mschrode Exp $
 
 #ifndef UTILS_H
 #define UTILS_H
@@ -17,7 +17,7 @@
 //!
 //!  \author   Matthias Schroeder (www.desy.de/~matsch)
 //!  \date     2010/03/09
-//!  $Id: utils.h,v 1.9 2011/06/23 16:54:24 mschrode Exp $
+//!  $Id: utils.h,v 1.10 2011/07/18 08:59:42 mschrode Exp $
 // -------------------------------------------------------------------------------------
 namespace util {
 
@@ -55,15 +55,28 @@ namespace util {
   }
 
 
+  //! Convert double to TString
   // -------------------------------------------------------------------------------------
   static inline TString toTString(double d) {
     return toString(d).c_str();
   }
   
-  
+
+  //! Convert double to TString, rounded to decPlaces  
   // -------------------------------------------------------------------------------------
   static inline TString toTString(double d, int decPlaces) {
     return toString(d,decPlaces).c_str();
+  }
+
+
+  //! Convert double to TString, rounded to decPlaces, where the
+  //! decimal point is omitted. This is useful e.g. in file names.
+  // -------------------------------------------------------------------------------------
+  static inline TString toTStringNoPoint(double d, int decPlaces) {
+    TString str = toTString(d,decPlaces);
+    str.ReplaceAll(".","");
+
+    return str;
   }
 
 
@@ -100,6 +113,16 @@ namespace util {
     }
     
     return inRange;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  static inline TString jetType(const TString &name) {
+    TString type = "";
+    if( name.Contains("AK5") || name.Contains("ak5") ) type = "AK5";
+    else if( name.Contains("AK7") || name.Contains("ak7") ) type = "AK7";
+
+    return type;
   }
 
 
