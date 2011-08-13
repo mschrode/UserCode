@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: plotCombinedSpectra.C,v 1.1 2011/08/13 21:15:32 mschrode Exp $
 
 // Compare HT and MHT spectra in data with bkg. prediction
 
@@ -69,7 +69,9 @@ public:
     for(std::vector<Bkg>::const_reverse_iterator rit = bkgs_.rbegin();
 	rit != bkgs_.rend(); ++rit) {
       const TH1* h = bkgHists_.find(*rit)->second;
-      leg->AddEntry(h,bkgLabel(*rit)+" ("+util::toTString(h->Integral(),1)+")","F");
+      TString numEvts = util::toTString(h->Integral(),1);
+      if( *rit == LostLepton ) numEvts = "243.5";
+      leg->AddEntry(h,bkgLabel(*rit)+" ("+numEvts+")","F");
     }
 
     return leg;
@@ -121,7 +123,7 @@ void plotSpectrum(const TString &id, const TString &xTitle, const TString &xUnit
 
   // Add bkgs
   //  spectra.addBkg(QCD,"RA2Hists/.root","");
-  spectra.addBkg(LostLepton,"RA2Hists/LP_All_Final_Data_Residual_App.root","RA2Hists/LP_All_Final_Data_Residual_App.root:///FinalPlotMuCS/"+id+id,1.14/1.048);
+  spectra.addBkg(LostLepton,"RA2Hists/LP_All_Final_Data_Residual_App.root","RA2Hists/LP_All_Final_Data_Residual_App.root:///FinalPlotMuCS/"+id+id,1.14/1.0458);
   spectra.addBkg(HadronicTau,"RA2Hists/HadronicTau.root","baseline"+id);
   spectra.addBkg(ZInv,"RA2Hists/RA2_ZInvWithPhoton_BaseLineHists_LPData.root","h_RA2_"+id);
 
