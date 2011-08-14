@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.3 2011/07/18 09:16:01 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.4 2011/07/20 13:31:30 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -40,9 +40,9 @@ const double PT3PLOTMAX = 0.23;
 const TString FASYM = "f_{asym}";
 const TString FASYMMC = "f^{mc}_{asym}";
 const TString FASYMDATA = "f^{data}_{asym}";
-const TString LUMI_LABEL = "L = 801 pb^{ -1}, #sqrt{s} = 7 TeV";
-const bool SHOW_HEADER = false;
-const TString HEADER = SHOW_HEADER ? ("CMS preliminary, "+LUMI_LABEL) : "";
+const TString LUMI_LABEL = util::StyleSettings::title(838.);//"L = 801 pb^{ -1}, #sqrt{s} = 7 TeV";
+const bool SHOW_HEADER = true;
+const TString HEADER = SHOW_HEADER ? LUMI_LABEL : "";
 
 const int COLOR_GAUSS = 46;
 const int COLOR_FILLED_ASYM = 38;
@@ -314,9 +314,9 @@ void getTailScalingFactors() {
 
 
   if( SHOW_HEADER ) {
-    util::StyleSettings::paper();
+    util::StyleSettings::setStylePAS();
   } else {
-    util::StyleSettings::paperNoTitle();
+    util::StyleSettings::setStyleNoteNoTitle();
   }
 
   gErrorIgnoreLevel = 1001;        // Do not print ROOT message if eps file has been created
@@ -447,17 +447,17 @@ void getTailScalingFactors() {
   for(unsigned int etaBin = 0; etaBin < nEtaBins; ++etaBin) {
 
     TH1* hPtAveMeanData = new TH1D("hPtAveMeanData_Eta"+util::toTString(etaBin),
-				   HEADER+";p^{ave}_{T} Bin Idx;<p^{ave}_{T}> (GeV/c)",
+				   HEADER+";p^{ave}_{T} Bin Idx;<p^{ave}_{T}> (GeV)",
 				   binAdm->nPtBins(etaBin),-0.5,binAdm->nPtBins(etaBin)-0.5);
     hPtAveMeanData->SetMarkerStyle(20);
 
     TH1* hDelta = new TH1D("hDelta_Eta"+util::toTString(etaBin),
-			   HEADER+";p^{ave}_{T} (GeV/c);#Delta = f^{Data}_{Asym}(0) - f^{MC}_{Asym}(0)",
+			   HEADER+";p^{ave}_{T} (GeV);#Delta = f^{Data}_{Asym}(0) - f^{MC}_{Asym}(0)",
 			   binAdm->nPtBins(etaBin),&(binAdm->ptBinEdges(etaBin).front()));
     hDelta->SetMarkerStyle(20);
 
     TH1* hScale = new TH1D("hScale_Eta"+util::toTString(etaBin),
-			   HEADER+";p^{ave}_{T} (GeV/c);(f^{Data}_{Asym}(0) - f^{MC}_{Asym}(0)) / f^{MC}_{Asym}(0)",
+			   HEADER+";p^{ave}_{T} (GeV);(f^{Data}_{Asym}(0) - f^{MC}_{Asym}(0)) / f^{MC}_{Asym}(0)",
 			   binAdm->nPtBins(etaBin),&(binAdm->ptBinEdges(etaBin).front()));
     hScale->SetMarkerStyle(20);
 
@@ -607,7 +607,7 @@ EtaPtBin::EtaPtBin(unsigned int etaBinIdx, unsigned int ptBinIdx, double nSigCor
   }
   binLabel_->AddText(jetLabel_);
   binLabel_->AddText(util::toTString(binAdm_->etaMin(etaBin_))+" < |#eta| < "+util::toTString(binAdm_->etaMax(etaBin_)));
-  binLabel_->AddText(util::toTString(binAdm_->ptMin(etaBin_,ptBin_))+" < p^{ave}_{T} < "+util::toTString(binAdm_->ptMax(etaBin_,ptBin_))+" GeV/c");
+  binLabel_->AddText(util::toTString(binAdm_->ptMin(etaBin_,ptBin_))+" < p^{ave}_{T} < "+util::toTString(binAdm_->ptMax(etaBin_,ptBin_))+" GeV");
 }
 
 
@@ -1360,8 +1360,9 @@ void Pt3Bin::initBinLabel(const sampleTools::BinningAdmin* adm, const TString &j
   }
   binLabel_->AddText(jetLabel);
   binLabel_->AddText(util::toTString(adm->etaMin(etaBin_))+" < |#eta| < "+util::toTString(adm->etaMax(etaBin_)));
-  binLabel_->AddText(util::toTString(adm->ptMin(etaBin_,ptBin_))+" < p^{ave}_{T} < "+util::toTString(adm->ptMax(etaBin_,ptBin_))+" GeV/c");
-  if( !isMCTruth ) binLabel_->AddText(util::toTString(adm->ptSoftMin(pt3Bin_))+" < p^{rel}_{T,3} < "+util::toTString(adm->ptSoftMax(pt3Bin_)));
+  binLabel_->AddText(util::toTString(adm->ptMin(etaBin_,ptBin_))+" < p^{ave}_{T} < "+util::toTString(adm->ptMax(etaBin_,ptBin_))+" GeV");
+  //  if( !isMCTruth ) binLabel_->AddText(util::toTString(adm->ptSoftMin(pt3Bin_))+" < p_{T,3} / p^{ave}_{T} < "+util::toTString(adm->ptSoftMax(pt3Bin_)));
+  if( !isMCTruth ) binLabel_->AddText("p_{T,3} / p^{ave}_{T} < "+util::toTString(adm->ptSoftMax(pt3Bin_)));
 }
 
 
@@ -2115,16 +2116,16 @@ TGraphAsymmErrors* uncertaintyBand(const TH1* hNom, const TGraphAsymmErrors* gRe
 // ------------------------------------------------------------------------------------
 void plotFinalResult() {
   if( SHOW_HEADER ) {
-    util::StyleSettings::paper();
+    util::StyleSettings::setStylePAS();
   } else {
-    util::StyleSettings::paperNoTitle();
+    util::StyleSettings::setStyleNoteNoTitle();
   }
   gErrorIgnoreLevel = 1001;
 
   sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("BinningAdmin.cfg");  
 
-  TString fileNamePrefix = "ScaleFactors_163337-167151_2011-07-21_UpdatedCoreUncerts/Tail_163337-167151_Sig35-Inf_PF";
-  TString outNamePrefix = "Tail_163337-167151_Sig35-Inf_PF_ScaleFactors";
+  TString fileNamePrefix = "ScaleFactors_163337-167151_2011-07-21_UpdatedCoreUncerts/Tail_163337-167151_Sig25-Inf_PF";
+  TString outNamePrefix = "Tail_163337-167151_Sig25-Inf_PF_ScaleFactors";
 
   std::vector<EtaPtBin*> etaPtBins;
   unsigned int nEtaBins = binAdm->nEtaBins();
@@ -2139,7 +2140,7 @@ void plotFinalResult() {
     // Read nominal scaling factors
     histName = "hScaleFrame_Eta"+util::toTString(etaBin);
     TH1* hScaleFrame = util::FileOps::readTH1(fileNamePrefix+".root",histName,histName);
-    hScaleFrame->GetXaxis()->SetTitle("p^{ave}_{T} (GeV/c)");
+    hScaleFrame->GetXaxis()->SetTitle("p^{ave}_{T} (GeV)");
     hScaleFrame->SetLineWidth(LINE_WIDTH);
     histName = "hScale_Eta"+util::toTString(etaBin);
     TH1* hScaleNom = util::FileOps::readTH1(fileNamePrefix+".root",histName,histName+"_Nominal");
