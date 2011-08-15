@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.35 2011/06/18 11:42:21 mschrode Exp $
+// $Id: HistOps.h,v 1.36 2011/07/18 08:57:58 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.35 2011/06/18 11:42:21 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.36 2011/07/18 08:57:58 mschrode Exp $
   class HistOps
   {
   public:
@@ -280,9 +280,9 @@ namespace util
 
 
     // -------------------------------------------------------------------------------------
-    static TH1D *createRatioFrame(double xMin, double xMax, double yMin, double yMax, const TString &xTitle, const TString &yTitle) {
+    static TH1 *createRatioFrame(double xMin, double xMax, double yMin, double yMax, const TString &xTitle, const TString &yTitle) {
       ++COUNT_;
-      TH1D *h = new TH1D("util::HistOps::hRatioFrame"+toTString(COUNT_),"",1000,xMin,xMax);
+      TH1 *h = new TH1D("util::HistOps::hRatioFrame"+toTString(COUNT_),"",1000,xMin,xMax);
       for(int xBin = 1; xBin <= h->GetNbinsX(); ++xBin) {
 	h->SetBinContent(xBin,1.);
       }
@@ -296,7 +296,7 @@ namespace util
 
 
     // -------------------------------------------------------------------------------------
-    static TH1D *createRatioFrame(const TH1 *h, const TString &yTitle) {
+    static TH1 *createRatioFrame(const TH1 *h, const TString &yTitle) {
       double min = 0.;
       double max = 0.;
       findYRange(h,min,max);
@@ -304,7 +304,7 @@ namespace util
     }
 
     // -------------------------------------------------------------------------------------
-    static TH1D *createRatioFrame(const TH1 *h, const TString &yTitle, int nLabelLines) {
+    static TH1 *createRatioFrame(const TH1 *h, const TString &yTitle, int nLabelLines) {
       double min = 0.;
       double max = 0.;
       findYRange(h,nLabelLines,min,max);
@@ -312,27 +312,12 @@ namespace util
     }
 
     // -------------------------------------------------------------------------------------
-    static TH1D *createRatioFrame(const TH1 *h, const TString &yTitle, double yMin, double yMax) {
+    static TH1 *createRatioFrame(const TH1 *h, const TString &yTitle, double yMin, double yMax) {
       ++COUNT_;
       TString name = "Frame_";
       name += h->GetName();
       name += COUNT_;
-      TH1D *hFrame = 0;
-      bool hasConstBinWidth = true;
-      for(int bin = 2; bin <= h->GetNbinsX(); ++bin) {
- 	if( h->GetBinWidth(bin) != h->GetBinWidth(1) ) {
- 	  hasConstBinWidth = false;
- 	  break;
- 	}
-      }
-      if( hasConstBinWidth ) {
- 	hFrame = new TH1D(name,"",h->GetNbinsX(),
- 			  h->GetXaxis()->GetBinLowEdge(1),
- 			  h->GetXaxis()->GetBinUpEdge(h->GetNbinsX()));
-      } else {
- 	hFrame = new TH1D(name,"",h->GetNbinsX(),
- 			  h->GetXaxis()->GetXbins()->GetArray());
-      }
+      TH1* hFrame = static_cast<TH1*>(h->Clone(name));
       hFrame->SetLineStyle(2);
       hFrame->GetYaxis()->SetRangeUser(yMin,yMax);
       hFrame->GetYaxis()->SetTitle(yTitle);
@@ -347,10 +332,10 @@ namespace util
 
 
     // -------------------------------------------------------------------------------------
-    static TH1D *createFrame(const TH1 *h, const TString &yTitle, double yMin, double yMax) {
+    static TH1 *createFrame(const TH1 *h, const TString &yTitle, double yMin, double yMax) {
       TString name = "Frame_";
       name += h->GetName();
-      TH1D *hFrame = new TH1D(name,"",10*h->GetNbinsX(),
+      TH1 *hFrame = new TH1D(name,"",10*h->GetNbinsX(),
 			      h->GetXaxis()->GetBinLowEdge(1),
 			      h->GetXaxis()->GetBinUpEdge(h->GetNbinsX()));
       hFrame->GetYaxis()->SetRangeUser(yMin,yMax);
@@ -363,27 +348,27 @@ namespace util
 
 
     // -------------------------------------------------------------------------------------
-    static TH1D *createRatioPlot(const TH1 *h1, const TH1 *h2, const TString &yTitle, double yMin, double yMax) {
-      TH1D *hRatio = createRatioPlot(h1,h2,yTitle);
+    static TH1 *createRatioPlot(const TH1 *h1, const TH1 *h2, const TString &yTitle, double yMin, double yMax) {
+      TH1 *hRatio = createRatioPlot(h1,h2,yTitle);
       hRatio->GetYaxis()->SetRangeUser(yMin,yMax);
 
       return hRatio;
     }
 
     // -------------------------------------------------------------------------------------
-    static TH1D *createRatioPlot(const TH1 *h1, const TH1 *h2, const TString &yTitle, int nLabelLines) {
-      TH1D *hRatio = createRatioPlot(h1,h2,yTitle);
+    static TH1 *createRatioPlot(const TH1 *h1, const TH1 *h2, const TString &yTitle, int nLabelLines) {
+      TH1 *hRatio = createRatioPlot(h1,h2,yTitle);
       setYRange(hRatio,nLabelLines);
 
       return hRatio;
     }
 
     // -------------------------------------------------------------------------------------
-    static TH1D *createRatioPlot(const TH1 *h1, const TH1 *h2, const TString &yTitle = "") {
+    static TH1 *createRatioPlot(const TH1 *h1, const TH1 *h2, const TString &yTitle = "") {
       assert( h1->GetNbinsX() == h2->GetNbinsX() );
       TString name = "Ratio_";
       name += h1->GetName();
-      TH1D *hRatio = static_cast<TH1D*>(h1->Clone(name));
+      TH1 *hRatio = static_cast<TH1*>(h1->Clone(name));
       hRatio->SetMarkerStyle(h1->GetMarkerStyle());
       hRatio->SetMarkerColor(h1->GetLineColor());
       hRatio->SetYTitle(yTitle);
@@ -394,10 +379,10 @@ namespace util
     }
 
     // -------------------------------------------------------------------------------------
-    static TH1D *createRatioPlot(const TH1 *h, const TF1 *f, const TString &yTitle = "") {
+    static TH1 *createRatioPlot(const TH1 *h, const TF1 *f, const TString &yTitle = "") {
       TString name = "Ratio_";
       name += h->GetName();
-      TH1D *hRatio = static_cast<TH1D*>(h->Clone(name));
+      TH1 *hRatio = static_cast<TH1*>(h->Clone(name));
       hRatio->SetMarkerStyle(h->GetMarkerStyle());
       hRatio->SetMarkerColor(h->GetLineColor());
       hRatio->SetYTitle(yTitle);
@@ -511,10 +496,10 @@ namespace util
 
 
     // -------------------------------------------------------------------------------------
-    static TH1D *createRatio(const TF1 *f1, const TF1 *f2, double xMin, double xMax, const TString &xTitle, const TString &yTitle) {
+    static TH1 *createRatio(const TF1 *f1, const TF1 *f2, double xMin, double xMax, const TString &xTitle, const TString &yTitle) {
       TString name = f1->GetName();
       name += "Ratio";
-      TH1D *h = new TH1D(name,"",1000,xMin,xMax);
+      TH1 *h = new TH1D(name,"",1000,xMin,xMax);
       h->SetXTitle(xTitle);
       h->SetYTitle(yTitle);
       for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
@@ -557,7 +542,7 @@ namespace util
     // -------------------------------------------------------------------------------------
     static TH1 *createRatioTopFrame(double xMin, double xMax, double yMin, double yMax, const TString &yTitle) {
       COUNT_++;
-      TH1D *h = new TH1D("util::HistOps::hRatioTopFrame"+toTString(COUNT_),"",1000,xMin,xMax);
+      TH1 *h = new TH1D("util::HistOps::hRatioTopFrame"+toTString(COUNT_),"",1000,xMin,xMax);
       setAxisTitles(h,"","",yTitle);
       h->GetYaxis()->SetRangeUser(yMin,yMax);
       h->GetXaxis()->SetLabelSize(0);
@@ -568,7 +553,7 @@ namespace util
     // -------------------------------------------------------------------------------------
     static TH1 *createRatioTopHist(const TH1 *h) {
       COUNT_++;
-      TH1D *hFrame = static_cast<TH1D*>(h->Clone("util::HistOps::hRatioTopHist"+toTString(COUNT_)));
+      TH1 *hFrame = static_cast<TH1*>(h->Clone("util::HistOps::hRatioTopHist"+toTString(COUNT_)));
       double min = 1.;
       double max = 0.;
       findYRange(h,min,max);
@@ -582,7 +567,7 @@ namespace util
     // -------------------------------------------------------------------------------------
     static TH1 *createRatioBottomFrame(const TH1 *h, const TString &xTitle, const TString &xUnit, double yMin = 0.81, double yMax = 1.19) {
       COUNT_++;
-      TH1D *hFrame = createRatioFrame(h,"",yMin,yMax);
+      TH1 *hFrame = createRatioFrame(h,"",yMin,yMax);
       setAxisTitles(hFrame,xTitle,xUnit,"");
       hFrame->GetYaxis()->SetNdivisions(205);
       hFrame->GetYaxis()->SetTickLength(gStyle->GetTickLength("Y")/0.2);
@@ -701,10 +686,10 @@ namespace util
 
 
     // -------------------------------------------------------------------------------------
-    static TH1D *getUncertaintyBand(const TF1 *mean, double relUncert, double xMin, double xMax, int color = -1, int fillStyle = -1) {
+    static TH1 *getUncertaintyBand(const TF1 *mean, double relUncert, double xMin, double xMax, int color = -1, int fillStyle = -1) {
       TString name = mean->GetName();
       name += toTString(COUNT_);
-      TH1D *hBand = new TH1D(name,"",1000,xMin,xMax);
+      TH1 *hBand = new TH1D(name,"",1000,xMin,xMax);
       hBand->SetMarkerStyle(1);
       hBand->SetFillColor((color < 0) ? mean->GetLineColor()+1 : color);
       if( fillStyle > 0 ) hBand->SetFillStyle(fillStyle);
@@ -720,10 +705,10 @@ namespace util
 
 
     // -------------------------------------------------------------------------------------
-    static TH1D *getUncertaintyBand(const TH1 *mean, double relUncert, double xMin, double xMax, int color = -1, int fillStyle = -1) {
+    static TH1 *getUncertaintyBand(const TH1 *mean, double relUncert, double xMin, double xMax, int color = -1, int fillStyle = -1) {
       TString name = mean->GetName();
       name += toTString(COUNT_);
-      TH1D *hBand = new TH1D(name,"",1000,xMin,xMax);
+      TH1 *hBand = new TH1D(name,"",1000,xMin,xMax);
       hBand->SetMarkerStyle(1);
       hBand->SetFillColor((color < 0) ? mean->GetLineColor()+1 : color);
       if( fillStyle > 0 ) hBand->SetFillStyle(fillStyle);
@@ -963,7 +948,7 @@ namespace util
     static void smearHistogram(const TH1* hOrig, TH1* &hSmeared, double nTotal, double width, double scaling) {
       TString name = hOrig->GetName();
       name += "Smeared";
-      hSmeared = static_cast<TH1D*>(hOrig->Clone(name));
+      hSmeared = static_cast<TH1*>(hOrig->Clone(name));
       scaling += 1.;
       if( scaling > 1. ) {
 	scaling = sqrt( scaling*scaling - 1. )*width;
