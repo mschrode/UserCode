@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.36 2011/07/18 08:57:58 mschrode Exp $
+// $Id: HistOps.h,v 1.37 2011/08/15 15:50:39 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.36 2011/07/18 08:57:58 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.37 2011/08/15 15:50:39 mschrode Exp $
   class HistOps
   {
   public:
@@ -571,6 +571,8 @@ namespace util
       setAxisTitles(hFrame,xTitle,xUnit,"");
       hFrame->GetYaxis()->SetNdivisions(205);
       hFrame->GetYaxis()->SetTickLength(gStyle->GetTickLength("Y")/0.2);
+      hFrame->GetXaxis()->SetLabelSize(gStyle->GetLabelSize("X"));
+
       return hFrame;
     }
 
@@ -659,6 +661,53 @@ namespace util
       delete h;
       
       return result;
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static void shiftStartOfXAxisToFirstPopulatedBin(TH1* &h) {
+      int firstBin = 1;
+      int lastBin = h->GetNbinsX();
+      for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
+	if( h->GetBinContent(bin) > 0. ) {
+	  firstBin = bin;
+	  break;
+	}
+      }
+      if( lastBin >= firstBin ) resizeXAxis(h,firstBin,lastBin+firstBin-1);
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static void resizeXAxis(TH1* &h, int firstNewBin, int lastNewBin) {
+      TString name = h->GetName();
+      int nBins = 1+lastNewBin-firstNewBin;
+      double min = h->GetXaxis()->GetBinLowEdge(firstNewBin);
+      double max = h->GetXaxis()->GetBinUpEdge(lastNewBin);
+      if( lastNewBin > h->GetNbinsX() ) {
+	max = min + h->GetBinWidth(1)*nBins;
+      }
+      TString className = h->ClassName();
+      TH1* hTmp = 0;
+      if( className == "TH1D" ) {
+	hTmp = new TH1D("tmp",h->GetTitle(),nBins,min,max);
+      } else if( className == "TH1F" ) {
+	hTmp = new TH1F("tmp",h->GetTitle(),nBins,min,max);
+      } else {
+	std::cerr << "ERROR: util::HistOps::resizeXAxis() does not support histogram class '" << className << "'" << std::endl;
+      }
+      for(int bin = firstNewBin; bin <= lastNewBin; ++bin) {
+	hTmp->SetBinContent(1+bin-firstNewBin,h->GetBinContent(bin));
+	hTmp->SetBinError(1+bin-firstNewBin,h->GetBinError(bin));
+      }
+      hTmp->SetXTitle(h->GetXaxis()->GetTitle());
+      hTmp->SetYTitle(h->GetYaxis()->GetTitle());
+      hTmp->SetMarkerStyle(h->GetMarkerStyle());
+      hTmp->SetLineStyle(h->GetLineStyle());
+      hTmp->SetMarkerColor(h->GetMarkerColor());
+      delete h;
+      hTmp->SetName(name);
+      h = hTmp;
     }
 
 
