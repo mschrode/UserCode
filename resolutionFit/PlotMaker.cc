@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.19 2011/07/20 13:30:25 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.20 2011/08/15 15:55:09 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -1697,7 +1697,7 @@ namespace resolutionFit {
 	    TGraphAsymmErrors* kSystBand = etaBin->kValueSystBand(sLabel1,sLabel2,fitResType,xMinPt_,xMaxPt_);
 	    
 	    // Create frame
-	    TH1* hFrame = util::HistOps::createRatioFrame(xMinPt_,xMaxPt_,0.71,2.09,"p_{T} (GeV)","#sigma("+sLabel1+") / #sigma("+sLabel2+")");
+	    TH1* hFrame = util::HistOps::createRatioFrame(xMinPt_,xMaxPt_,0.71,2.09,"p^{ref}_{T} (GeV)","#sigma("+sLabel1+") / #sigma("+sLabel2+")");
 	    if( etaBin->etaBin() >= 3 ) hFrame->GetYaxis()->SetRangeUser(0.71,2.89);
 	    hFrame->SetTitle(title_);
 	    hFrame->GetXaxis()->SetMoreLogLabels();
@@ -1797,7 +1797,7 @@ namespace resolutionFit {
 	    hFrameMain->GetXaxis()->SetMoreLogLabels();
 	    hFrameMain->GetXaxis()->SetNoExponent();
 
-	    TH1* hFrameRatio = out_->ratioFrame(hFrameMain,"p_{T}","GeV",yMinResRatio_,yMaxResRatio_);
+	    TH1* hFrameRatio = out_->ratioFrame(hFrameMain,"p^{ref}_{T}","GeV",yMinResRatio_,yMaxResRatio_);
 	    hFrameRatio->GetXaxis()->SetMoreLogLabels();
 	    hFrameRatio->GetXaxis()->SetNoExponent();
 	    hFrameRatio->SetLineWidth(lineWidth_);
