@@ -1,4 +1,4 @@
-// $Id: reweightDijetSkims.C,v 1.1 2011/06/01 20:39:07 mschrode Exp $
+// $Id: reweightDijetSkims.C,v 1.2 2011/06/23 17:54:12 mschrode Exp $
 
 
 #include <iostream>
@@ -181,7 +181,9 @@ void reweightEventsToMCStats(const char* path) {
     }
     //hWeights->Draw("HIST");
     int binLargestWeight = hWeights->FindBin(largestWeight);
-    while( ( hWeights->GetBinContent(binLargestWeight) == 0 || hWeights->GetBinContent(binLargestWeight-1) == 0 ) && binLargestWeight > 2 ) {
+    while( ( hWeights->GetBinContent(binLargestWeight) == 0 || 
+	     (hWeights->GetBinContent(binLargestWeight-1) == 0 || hWeights->GetBinContent(binLargestWeight-2) == 0))
+	   && binLargestWeight > 3 ) {
       binLargestWeight--;
     }
     largestWeight = hWeights->GetBinCenter(binLargestWeight);

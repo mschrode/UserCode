@@ -1,4 +1,4 @@
-// $Id: writeConfigFiles.C,v 1.3 2011/06/03 10:05:23 mschrode Exp $
+// $Id: writeConfigFiles.C,v 1.4 2011/06/23 17:56:15 mschrode Exp $
 
 #include <iostream>
 #include <fstream>
@@ -84,7 +84,7 @@ void writeConfigFiles(const TString &binningConfig, const TString &skeleton, con
 	// (need to do this here since unable to return to
 	// beginning of stream each iteration...)
 	std::ifstream inFile;
-	inFile.open(skeleton.Data());
+	inFile.open((util::absolutePath(skeleton)).Data());
 	if( !inFile.is_open() ) {
 	  std::cerr << "ERROR opening file '" << skeleton << "'" << std::endl;
 	  exit(1);
