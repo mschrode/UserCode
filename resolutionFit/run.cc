@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.58 2011/07/18 09:36:47 mschrode Exp $
+// $Id: run.cc,v 1.59 2011/07/20 13:30:25 mschrode Exp $
 
 #include <iostream>
 
@@ -16,18 +16,17 @@ using namespace resolutionFit;
 
 int main(int argc, char *argv[]) {
 
-//   util::StyleSettings::paper();
-//   gStyle->SetPadTopMargin(0.06);
-//   gStyle->SetPadRightMargin(0.05);
-  util::StyleSettings::presentationNoTitle();
+  util::StyleSettings::setStylePAS();
+  //util::StyleSettings::setStyleNoteNoTitle();
 
   gErrorIgnoreLevel = 1001;
 
-  Parameters* par = new Parameters("Res_163337-167151","config/BinningAdmin.cfg",0);
-  //par->setNEtaBinsUser(1);
+  Parameters* par = new Parameters("Res_163337-167151","config/Analysis2011/Binning/BinningAdmin2011_v2.cfg",0);
+  par->setNEtaBinsUser(1);
   par->setJetProperties(JetProperties::AK5,JetProperties::PF);
   //par->setOutMode(OutputManager::PSAllInOne);
   par->setOutMode(OutputManager::EPSSingleFiles);
+  par->setLumi(838.);
 
   TString pathToHome = "/afs/naf.desy.de/user/m/mschrode/";
   TString pathToConfig = pathToHome+"UserCode/mschrode/resolutionFit/config/";
@@ -56,7 +55,7 @@ int main(int argc, char *argv[]) {
   
   // Samples
   TString idData = "Data";
-  TString idMC = "PYTHIA Z2";
+  TString idMC = "CMS Simulation";
   cmd->addDataSample(idData,pathToFitResultsData+"/ResFit_PtAveBins_Data_163337-167151_"+jetTypeStr+"_L1FastJet.root");
   cmd->addMCSample(idMC,pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_"+jetTypeStr+"_L1FastJet_Nominal.root");
   cmd->addMCSample("JES Down",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_"+jetTypeStr+"_L1FastJet_JESDown.root");

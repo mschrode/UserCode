@@ -14,29 +14,40 @@ namespace sampleTools {
   BinningAdmin::BinningAdmin(const TString &fileName) {
     util::ConfigParser parser(fileName.Data());
 
+    // Read the eta and pt binning information
     bins_ = new Binning(parser.readString("Binning config"));
 			
-			
+    // Read the trigger information
     std::vector<std::string> triggerNames = parser.readStringVec("Trigger");
     for(std::vector<std::string>::const_iterator trigIt = triggerNames.begin();
 	trigIt != triggerNames.end(); ++trigIt) {
+      // For each trigger, read the luminosity and turn-on information
       std::vector<double> info = parser.readDoubleVec(*trigIt);
+      // There must be at least two arguments
       if( info.size() < 2 ) {
 	std::cerr << "ERROR in BinningAdmin: too few arguments for trigger '" << *trigIt << "'\n";
 	exit(1);
       }
-      HltMaxInfo *hltInfo = new HltMaxInfo(info.at(0),info.at(1));
+      // Temporarily store the turn-on value per eta bin
+      std::vector<double> trigTurnOnPerEta(nEtaBins(),0.);
+      for(size_t etaBinIdx = 0; etaBinIdx < trigTurnOnPerEta.size(); ++etaBinIdx) {
+	size_t idx = etaBinIdx+1; // first entry in info is lumi
+	if( idx < info.size() ) trigTurnOnPerEta.at(etaBinIdx) = info.at(idx);
+	else trigTurnOnPerEta.at(etaBinIdx) = trigTurnOnPerEta.at(etaBinIdx-1);
+      }
+      // Create trigger info object
+      HltMaxInfo *hltInfo = new HltMaxInfo(info.at(0),trigTurnOnPerEta);
       for(unsigned int etaBin = 0; etaBin < nEtaBins(); ++etaBin) {
 	unsigned int firstPtBin = 0; // first pt bin where trigger is fully efficient
 	unsigned int lastPtBin = nPtBins(etaBin)-1;
-	if( findPtBin(hltInfo->turnOn(),etaBin,firstPtBin) ||
-	    hltInfo->turnOn() < ptMin(etaBin,firstPtBin) ) {
-	  if( hltInfo->turnOn() > ptMin(etaBin,firstPtBin) ) {
+	if( findPtBin(hltInfo->turnOn(etaBin),etaBin,firstPtBin) ||
+	    hltInfo->turnOn(etaBin) < ptMin(etaBin,firstPtBin) ) {
+	  if( hltInfo->turnOn(etaBin) > ptMin(etaBin,firstPtBin) ) {
 	    // If turn-on is within this bin, move to next higher bin
 	    if( firstPtBin < lastPtBin ) {
 	      ++firstPtBin;
 	    } else {
-	      std::cerr << "WARNING in BinningAdmin: '" << *trigIt << "' turn-on " << hltInfo->turnOn() << " in last pt bin\n";
+	      std::cerr << "WARNING in BinningAdmin: '" << *trigIt << "' turn-on " << hltInfo->turnOn(etaBin) << " for eta bin " << etaBin << " in last pt bin\n";
 	    }
 	  }
 	  // Loop over triggers already read and adjust
@@ -52,7 +63,7 @@ namespace sampleTools {
 	  }
 	  hltInfo->addEtaPtBinRange(etaBin,firstPtBin,lastPtBin);
 	} else {
-	  std::cerr << "WARNING in BinningAdmin: '" << *trigIt << "' turn-on " << hltInfo->turnOn() << " out of binning\n";
+	  std::cerr << "WARNING in BinningAdmin: '" << *trigIt << "' turn-on " << hltInfo->turnOn(etaBin) << " for eta bin " << etaBin << " out of binning\n";
 	}
       } // End of loop over eta bins
       

@@ -1,4 +1,4 @@
-// $Id: PlotMaker.h,v 1.15 2011/07/18 09:36:47 mschrode Exp $
+// $Id: PlotMaker.h,v 1.16 2011/07/20 13:30:25 mschrode Exp $
 
 #ifndef PLOT_MAKER_H
 #define PLOT_MAKER_H
@@ -28,8 +28,8 @@ namespace resolutionFit {
       //plotPtSpectra();
       plotExtrapolation();
       //plotSlopes();
-      plotPtGenSpectra();
-      plotMCEventInfo();
+      //plotPtGenSpectra();
+      //plotMCEventInfo();
       //plotParticleLevelImbalance();
       plotResolution();
       plotScaledMCTruth();
@@ -67,6 +67,7 @@ namespace resolutionFit {
       TString ptRange(unsigned int etaBin, unsigned int ptBin) const;
       TString ptSoftRange(unsigned int ptSoftBinIdx) const;
       TString jets() const;
+      TString lumi() const;
       TString pt() const;
       TString ptSoft() const;
       TString label(FitResult::Type type) const;

@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.29 2011/06/23 18:07:37 mschrode Exp $
+// $Id: Parameters.h,v 1.30 2011/07/18 09:36:47 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -36,12 +36,13 @@ namespace resolutionFit {
     void setJetProperties(JetProperties::Algo algo, JetProperties::Type type);
     void setOutMode(OutputManager::Mode mode);
     void setNEtaBinsUser(unsigned int nBins);
+    void setLumi(double lumi) { lumi_ = lumi; }
 
     unsigned int verbosity() const { return verbosity_; }
 
     JetProperties::Algo jetAlgo() const { return jetAlgo_; }
     JetProperties::Type jetType() const { return jetType_; }
-    double lumi() const { return 801; }
+    double lumi() const { return lumi_; }
 
     unsigned int nEtaBins() const { return nEtaBinsUser_>0 ? nEtaBinsUser_ : binAdm_->nEtaBins(); }
     unsigned int nPtBins(unsigned int etaBin) const { return binAdm_->nPtBins(etaBin); }
@@ -65,13 +66,14 @@ namespace resolutionFit {
 
   private:
     const unsigned int verbosity_;
-
+    
     TString id_;
     unsigned int nEtaBinsUser_;
 
     JetProperties::Algo jetAlgo_;
     JetProperties::Type jetType_;
     OutputManager::Mode outPutMode_;
+    double lumi_;
 
     sampleTools::BinningAdmin* binAdm_;
   };

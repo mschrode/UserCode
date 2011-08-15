@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.18 2011/07/18 09:36:47 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.19 2011/07/20 13:30:25 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -40,7 +40,6 @@ namespace resolutionFit {
     lineWidth_ = 1;
     markerSize_ = 1.;
     if( util::StyleSettings::style() == util::StyleSettings::Presentation ) {
-      title_ = "";
       if( par_->outMode() == OutputManager::EPSSingleFiles ) {
 	lineWidth_ = 3;
 	markerSize_ = 1.5;
@@ -48,9 +47,11 @@ namespace resolutionFit {
 	lineWidth_ = 2;
 	markerSize_ = 0.9;
       }
-    } else {
-      title_ = "CMS preliminary, L = "+util::toTString(par_->lumi())+" pb^{-1}, #sqrt{s} = 7 TeV";
     }
+    if( util::StyleSettings::style() == util::StyleSettings::PAS )
+      title_ = util::StyleSettings::title(par_->lumi(),true);
+    else
+      title_ = "";
 
 
     //gStyle->SetEndErrorSize(6);
@@ -948,8 +949,9 @@ namespace resolutionFit {
 	    TH1* hFrame = new TH1D("PlotMaker::plotExtrapolation::hFrame",title_,
 				   1000,0.,1.4*par_->ptSoftMax(par_->nPtSoftBins()-1));
 	    util::HistOps::setAxisTitles(hFrame,labelMk_->ptSoft(),"",yAxisLabel);
-	    hFrame->GetYaxis()->SetRangeUser(0.8*std::min(gVals1->GetY()[0],gVals2->GetY()[1]),
-					     1.5*std::max(gVals1->GetY()[gVals1->GetN()-1],gVals2->GetY()[gVals2->GetN()-1]));
+	    hFrame->GetXaxis()->SetTitle("p_{T,3} / p^{ave}_{T}  threshold");
+	    hFrame->GetYaxis()->SetRangeUser(0.7*std::min(gVals1->GetY()[0],gVals2->GetY()[1]),
+					     1.4*std::max(gVals1->GetY()[gVals1->GetN()-1],gVals2->GetY()[gVals2->GetN()-1]));
 	     
 	    // Linear scale
 	    out_->nextMultiPad("Sample comparison: Extrapolation "+ptBin->toTString());
@@ -1695,7 +1697,7 @@ namespace resolutionFit {
 	    TGraphAsymmErrors* kSystBand = etaBin->kValueSystBand(sLabel1,sLabel2,fitResType,xMinPt_,xMaxPt_);
 	    
 	    // Create frame
-	    TH1* hFrame = util::HistOps::createRatioFrame(xMinPt_,xMaxPt_,0.71,1.89,"p^{ref}_{T} (GeV)","#sigma("+sLabel1+") / #sigma("+sLabel2+")");
+	    TH1* hFrame = util::HistOps::createRatioFrame(xMinPt_,xMaxPt_,0.71,2.09,"p_{T} (GeV)","#sigma("+sLabel1+") / #sigma("+sLabel2+")");
 	    if( etaBin->etaBin() >= 3 ) hFrame->GetYaxis()->SetRangeUser(0.71,2.89);
 	    hFrame->SetTitle(title_);
 	    hFrame->GetXaxis()->SetMoreLogLabels();
@@ -1705,7 +1707,10 @@ namespace resolutionFit {
 	    // Labels
 	    TPaveText* label = labelMk_->etaBin(etaBin->etaBin());
 	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,-std::min(0.8,labelMk_->start()),label->GetSize());
-	    leg->AddEntry(gRatio,"Measurement ("+util::toTString(par_->lumi())+" pb^{-1})","P");
+	    if( util::StyleSettings::style() == util::StyleSettings::PAS )
+	      leg->AddEntry(gRatio,"Measurement","P");
+	    else
+	      leg->AddEntry(gRatio,"Measurement ("+labelMk_->lumi()+")","P");
 	    leg->AddEntry(kValueLine,"Fit","L");
 	    leg->AddEntry(kStatBand,"Statistical Uncertainty","F");
 	    leg->AddEntry(kSystBand,"Systematic Uncertainty","F");
@@ -1778,7 +1783,10 @@ namespace resolutionFit {
 	    // Labels
 	    TPaveText* label = labelMk_->etaBin(etaBin->etaBin());
 	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,labelMk_->start(),label->GetSize());
-	    leg->AddEntry(biasCorrRes,"Bias Corrected "+sLabel1+" ("+util::toTString(par_->lumi())+" pb^{-1})","P");
+	    if( util::StyleSettings::style() == util::StyleSettings::PAS )
+	      leg->AddEntry(biasCorrRes,"Bias Corrected "+sLabel1,"P");
+	    else
+	      leg->AddEntry(biasCorrRes,"Bias Corrected "+sLabel1+" ("+labelMk_->lumi()+")","P");
 	    leg->AddEntry(scaledMCT,"Scaled MC Truth","L");
 	    leg->AddEntry(scaledMCTBand,"Systematic Uncertainty","F");
 	    leg->AddEntry(mcTruth,"MC Truth ("+sLabel2+")","L");
@@ -1789,7 +1797,7 @@ namespace resolutionFit {
 	    hFrameMain->GetXaxis()->SetMoreLogLabels();
 	    hFrameMain->GetXaxis()->SetNoExponent();
 
-	    TH1* hFrameRatio = out_->ratioFrame(hFrameMain,"p^{ref}_{T}","GeV",yMinResRatio_,yMaxResRatio_);
+	    TH1* hFrameRatio = out_->ratioFrame(hFrameMain,"p_{T}","GeV",yMinResRatio_,yMaxResRatio_);
 	    hFrameRatio->GetXaxis()->SetMoreLogLabels();
 	    hFrameRatio->GetXaxis()->SetNoExponent();
 	    hFrameRatio->SetLineWidth(lineWidth_);
@@ -2260,11 +2268,16 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------------------------
   TPaveText* PlotMaker::LabelMaker::etaBin(SampleLabel label, unsigned int etaBinIdx, unsigned int nExtraEntries) const {
-    TPaveText* lab = util::LabelFactory::createPaveText(2+nExtraEntries);
-    if( Sample::type(label) == Sample::Data ) {
-      lab->AddText(label+",  #sqrt{s} = 7 TeV, L = "+util::toTString(par_->lumi())+" pb^{-1}");
+    TPaveText* lab = 0;
+    if( util::StyleSettings::style() != util::StyleSettings::PAS ) {
+      lab = util::LabelFactory::createPaveText(2+nExtraEntries);
+      if( Sample::type(label) == Sample::Data ) {
+	lab->AddText(label+",  #sqrt{s} = 7 TeV, L = "+lumi());
+      } else {
+	lab->AddText(label+",  #sqrt{s} = 7 TeV");
+      }
     } else {
-      lab->AddText(label+",  #sqrt{s} = 7 TeV");
+      lab = util::LabelFactory::createPaveText(1+nExtraEntries);
     }
     lab->AddText(jets()+",  "+etaRange(etaBinIdx));
 
@@ -2329,6 +2342,12 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------
+  TString PlotMaker::LabelMaker::lumi() const {
+    return util::StyleSettings::luminosity(par_->lumi());
+  }
+
+
+  // -------------------------------------------------------------------------------------
   TString PlotMaker::LabelMaker::label(FitResult::Type type) const { 
     TString lab = "";
     if( FitResult::validType(type) ) {
@@ -2346,9 +2365,9 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   TString PlotMaker::LabelMaker::label(const SampleLabel &label) const {
     TString lab = label;
-    if( util::StyleSettings::style() == util::StyleSettings::Presentation &&
+    if( util::StyleSettings::style() != util::StyleSettings::PAS &&
 	Sample::type(label) == Sample::Data )
-      lab += " (L = "+util::toTString(par_->lumi())+" pb^{-1})";
+      lab += " (L = "+util::StyleSettings::luminosity(par_->lumi())+")";
 
     return lab;    
   }
