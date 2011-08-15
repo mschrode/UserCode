@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.4 2011/07/20 13:31:30 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.5 2011/08/14 15:18:17 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -31,6 +31,8 @@
 #include "../util/StyleSettings.h"
 
 
+const bool SHOW_HEADER = true;
+const TString LUMI = util::StyleSettings::luminosity(838.);
 
 const bool DEBUG = false;
 const double BINLABEL_WIDTH = -0.48;
@@ -40,8 +42,8 @@ const double PT3PLOTMAX = 0.23;
 const TString FASYM = "f_{asym}";
 const TString FASYMMC = "f^{mc}_{asym}";
 const TString FASYMDATA = "f^{data}_{asym}";
-const TString LUMI_LABEL = util::StyleSettings::title(838.);//"L = 801 pb^{ -1}, #sqrt{s} = 7 TeV";
-const bool SHOW_HEADER = true;
+
+const TString LUMI_LABEL = SHOW_HEADER ? "CMS preliminary, L = "+LUMI+",  #sqrt{s} = 7 TeV" : "L = "+LUMI;
 const TString HEADER = SHOW_HEADER ? LUMI_LABEL : "";
 
 const int COLOR_GAUSS = 46;
