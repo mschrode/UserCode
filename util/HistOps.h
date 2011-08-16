@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.37 2011/08/15 15:50:39 mschrode Exp $
+// $Id: HistOps.h,v 1.38 2011/08/15 20:39:12 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.37 2011/08/15 15:50:39 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.38 2011/08/15 20:39:12 mschrode Exp $
   class HistOps
   {
   public:
@@ -799,6 +799,31 @@ namespace util
       }
       
       return hBand;
+    }
+
+
+    // Create TGraphAsymmErrors from histogram. This is useful when drawing
+    // the error band
+    // -------------------------------------------------------------------------------------
+    static TGraphAsymmErrors *getUncertaintyBand(const TH1* h, int color = -1, int fillStyle = -1) {
+      std::vector<double> x;
+      std::vector<double> xe;
+      std::vector<double> y;
+      std::vector<double> ye;
+
+      for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
+	x.push_back(h->GetBinCenter(bin));
+	xe.push_back(0.5*h->GetBinWidth(bin));
+	y.push_back(h->GetBinContent(bin));
+	ye.push_back(h->GetBinError(bin));
+      }
+      TGraphAsymmErrors* g = new TGraphAsymmErrors(x.size(),&(x.front()),&(y.front()),&(xe.front()),&(xe.front()),&(ye.front()),&(ye.front()));
+      g->SetMarkerStyle(0);
+      g->SetFillColor((color < 0) ? kBlack : color);
+      if( fillStyle > 0 ) g->SetFillStyle(fillStyle);
+      g->SetMarkerColor(g->GetFillColor());
+      
+      return g;
     }
 
 

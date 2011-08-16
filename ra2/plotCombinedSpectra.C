@@ -1,4 +1,4 @@
-// $Id: plotCombinedSpectra.C,v 1.2 2011/08/13 21:31:53 mschrode Exp $
+// $Id: plotCombinedSpectra.C,v 1.3 2011/08/15 20:40:16 mschrode Exp $
 
 // Compare HT and MHT spectra in data with bkg. prediction
 
@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "TCanvas.h"
+#include "TGraphAsymmErrors.h"
 #include "TH1.h"
 #include "THStack.h"
 #include "TPad.h"
@@ -59,9 +60,9 @@ public:
   int bkgFillColor(Bkg bkg) const {
     int color = kBlack;
     if( bkg == ZInv ) color = kGreen+1;
-    else if( bkg == LostLepton ) color = kRed+3;
-    else if( bkg == HadronicTau ) color = kRed+1;
-    else if( bkg == QCD ) color = kYellow;
+    else if( bkg == HadronicTau ) color = kYellow;
+    else if( bkg == LostLepton ) color = kRed+1;
+    else if( bkg == QCD ) color = kRed+3;
 
     return color;
   }
@@ -83,21 +84,23 @@ public:
   }
 
 
-  TH1* totalBkg() const {
-    return static_cast<TH1*>(totalBkg_->Clone(id_+"totalBkgInclUncerts"));
+  TGraphAsymmErrors* totalBkg() const {
+    return util::HistOps::getUncertaintyBand(totalBkg_,kBlue+2,3004);
   }
 
 
-  TH1* bkgForRatio() const {
-    TH1* h = static_cast<TH1*>(totalBkg_->Clone(id_+"totalBkgInRatioInclUncerts"));
+  TGraphAsymmErrors* bkgForRatio() const {
+    TH1* h = static_cast<TH1*>(totalBkg_->Clone("tmp"));
     for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
       double relUncert = h->GetBinError(bin);
       if( h->GetBinContent(bin) > 0. ) relUncert /= h->GetBinContent(bin);
       h->SetBinError(bin,relUncert);
       h->SetBinContent(bin,1.);
     }
+    TGraphAsymmErrors* g = util::HistOps::getUncertaintyBand(h,kBlue+2,3004);
+    delete h;
 
-    return h;
+    return g;
   }
 
 
@@ -155,30 +158,35 @@ public:
   }
 
 
-  void scaleTotalBkgStatUncertaintyTo(double targetStatUncert) {
-    double totUncert = sqrt(totalBkg_->Integral());
-    double scale = targetStatUncert / totUncert;
-    std::cout << "  Scaling the total statistical uncertainty of the background from " << totUncert << " to " << targetStatUncert << std::endl;
+  void scaleTotalBkgStatUncertaintyTo(const std::vector<double> &regionStartPoints, const std::vector<double> &bkgN, const std::vector<double> &targetStatUncert) {
+    std::cout << "  Scaling the total statistical uncertainty of the background" << std::endl;
     for(int bin = 1; bin <= totalBkg_->GetNbinsX(); ++bin) {
-      //      std::cout << "Bin " << bin << ":\tN = " << totalBkg_->GetBinContent(bin) << "\t-->\tsqrt(N) = " << sqrt(totalBkg_->GetBinContent(bin)) << " (" << totalBkg_->GetBinError(bin) << ")" << std::endl;
+      unsigned int i = 0;
+      while( i < regionStartPoints.size() && totalBkg_->GetBinCenter(bin) > regionStartPoints.at(i) ) ++i;
+      --i;
+      double scale = targetStatUncert.at(i)/sqrt(bkgN.at(i));
       totalBkg_->SetBinError(bin,scale*sqrt(totalBkg_->GetBinContent(bin)));
     }
   }
 
 
-  void setTotalBkgSystUncertainty(double systUncert) { 
+  void setTotalBkgSystUncertainty(const std::vector<double> &bkgN, const std::vector<double> &systUncert) { 
     relBkgSystUncert_ = systUncert;
-    if( totalBkg_->Integral() > 0. ) relBkgSystUncert_ /= totalBkg_->Integral();
-  }
-
-
-  void applyTotalBkgUncertainty() {
-    std::cout << "  Combining statistical and systematic uncertainty on background" << std::endl;
-    for(int bin = 1; bin <= totalBkg_->GetNbinsX(); ++bin) {
-      totalBkg_->SetBinError(bin,sqrt(pow(totalBkg_->GetBinError(bin),2)+pow(totalBkg_->GetBinContent(bin)*relBkgSystUncert_,2)));
+    for(unsigned int i = 0; i < relBkgSystUncert_.size(); ++i) {
+      relBkgSystUncert_.at(i) /= bkgN.at(i);
     }
   }
 
+
+  void applyTotalBkgUncertainty(const std::vector<double> &regionStartPoints) {
+    std::cout << "  Combining statistical and systematic uncertainty on background" << std::endl;
+    for(int bin = 1; bin <= totalBkg_->GetNbinsX(); ++bin) {
+      unsigned int i = 0;
+      while( i < regionStartPoints.size() && totalBkg_->GetBinCenter(bin) > regionStartPoints.at(i) ) ++i;
+      --i;
+      totalBkg_->SetBinError(bin,sqrt(pow(totalBkg_->GetBinError(bin),2)+pow(totalBkg_->GetBinContent(bin)*relBkgSystUncert_.at(i),2)));
+    }
+  }
 
 
 
@@ -191,10 +199,45 @@ private:
   const int rebin_;
   const double xMax_;
   TH1* totalBkg_;
-  double relBkgSystUncert_;
+  std::vector<double> relBkgSystUncert_;
   std::vector<Bkg> bkgs_;
   std::map<Bkg,TH1*> bkgHists_;
 };
+
+
+void setBkgUncertainties(const TString &id, std::vector<double> &regionStartPoints, std::vector<double> &bkgN, std::vector<double> &bkgStatUncert, std::vector<double> &bkgSystUncert) {
+  if( id == "HT" ) {
+    regionStartPoints.push_back(0.);
+//     regionStartPoints.push_back(500.);
+//     regionStartPoints.push_back(800.);
+  } else if( id == "MHT" ) {
+    regionStartPoints.push_back(0.);
+//     regionStartPoints.push_back(350.);
+//     regionStartPoints.push_back(500.);
+  } else {
+    std::cerr << "ERROR: unknown id '" << id << "'" << std::endl;
+    exit(1);
+  }
+
+  // Baseline
+  bkgN.push_back(927.5);		
+  double bkgTotalUncert = 103.1; 
+  bkgStatUncert.push_back(sqrt( pow(12.3,2)+pow(19.8,2)+pow(8.,2)+pow(35.2,2) ));
+  bkgSystUncert.push_back(sqrt( pow(bkgTotalUncert,2) - pow(bkgStatUncert.back(),2) )); 
+
+//   // Medium
+//   bkgN.push_back(73.9);		
+//   bkgTotalUncert = 11.9; 
+//   bkgStatUncert.push_back(sqrt( pow(4.4,2)+pow(3.3,2)+pow(2.,2)+pow(1.3,2) ));
+//   bkgSystUncert.push_back(sqrt( pow(bkgTotalUncert,2) - pow(bkgStatUncert.back(),2) )); 
+  
+//   // High
+//   bkgN.push_back(4.6);		
+//   bkgTotalUncert = 1.5; 
+//   bkgStatUncert.push_back(sqrt( pow(1.1,2)+pow(0.8,2)+pow(0.73,2)+pow(0.31,2) ));
+//   bkgSystUncert.push_back(0.);//sqrt( pow(bkgTotalUncert,2) - pow(bkgStatUncert.back(),2) )); 
+}
+  
 
 
 void plotSpectrum(const TString &id, const TString &xTitle, const TString &xUnit, int rebin, double xMax) {
@@ -208,14 +251,23 @@ void plotSpectrum(const TString &id, const TString &xTitle, const TString &xUnit
   spectra.addBkg(ZInv,"RA2Hists/RA2_ZInvWithPhoton_BaseLineHists_LPData.root","h_RA2_"+id);
 
   // Scale uncertainties to baseline prediciton
-  double bkgN = 927.5;		// Total bkg prediction
-  double bkgTotalUncert = 103.1; // Total uncertainty on bkg prediction
-  double bkgStatUncert = sqrt( pow(12.3,2)+pow(19.8,2)+pow(8.,2)+pow(35.2,2) );	// Quadratic sum of individual stat uncerts.
-  double bkgSystUncert = sqrt( pow(bkgTotalUncert,2) - pow(bkgStatUncert,2) ); // Total uncert \ominus total stat uncert
-  spectra.scaleTotalBkgTo(bkgN);
-  spectra.scaleTotalBkgStatUncertaintyTo(bkgStatUncert);
-  spectra.setTotalBkgSystUncertainty(bkgSystUncert);
-  spectra.applyTotalBkgUncertainty();
+  std::vector<double> regionStartPoints;
+  std::vector<double> bkgN;
+  std::vector<double> bkgStatUncert;
+  std::vector<double> bkgSystUncert;
+  setBkgUncertainties(id,regionStartPoints,bkgN,bkgStatUncert,bkgSystUncert);
+
+  std::cout << "Start \tN\t\tstat \tsyst" << std::endl;
+  for(unsigned int i = 0; i < regionStartPoints.size(); ++i) {
+    std::cout << "  >" << regionStartPoints.at(i) << "\t" << std::flush;
+    std::cout << bkgN.at(i) << "\t" << std::flush;
+    std::cout << bkgStatUncert.at(i) << "\t" << std::flush;
+    std::cout << bkgSystUncert.at(i) << std::endl;
+  }
+  spectra.scaleTotalBkgTo(bkgN.front());
+  spectra.scaleTotalBkgStatUncertaintyTo(regionStartPoints,bkgN,bkgStatUncert);
+  spectra.setTotalBkgSystUncertainty(bkgN,bkgSystUncert);
+  spectra.applyTotalBkgUncertainty(regionStartPoints);
 
 
   // Do plots
@@ -240,7 +292,7 @@ void plotSpectrum(const TString &id, const TString &xTitle, const TString &xUnit
   util::HistOps::setYRange(tFrame,1,3E-1);
   tFrame->Draw("PE1");
   spectra.bkgStack_->Draw("HISTsame");
-  spectra.totalBkg()->Draw("E3same");
+  spectra.totalBkg()->Draw("E2same");
   tFrame->Draw("PE1same");
   spectra.legend()->Draw("same");
   canRatio->SetLogy();
@@ -248,7 +300,7 @@ void plotSpectrum(const TString &id, const TString &xTitle, const TString &xUnit
   bPad->Draw();
   bPad->cd();
   bFrame->Draw();
-  spectra.bkgForRatio()->Draw("E3same");
+  spectra.bkgForRatio()->Draw("E2same");
   spectra.dataForRatio()->Draw("PE1same");
   canRatio->SaveAs("RA2DataVsEstimatedBkg_"+id+".eps","eps");
   canRatio->SaveAs("RA2DataVsEstimatedBkg_"+id+".root");
