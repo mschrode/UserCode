@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.5 2011/08/14 15:18:17 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.6 2011/08/15 15:48:43 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -31,13 +31,13 @@
 #include "../util/StyleSettings.h"
 
 
-const bool SHOW_HEADER = true;
+const bool SHOW_HEADER = false;
 const TString LUMI = util::StyleSettings::luminosity(838.);
 
 const bool DEBUG = false;
 const double BINLABEL_WIDTH = -0.48;
 const double LEG_WIDTH = 0.48;
-const TString PT3RELVAR = "p^{rel}_{T,3} Threshold";
+const TString PT3RELVAR = "p_{T,3} / p^{ave}_{T} threshold";
 const double PT3PLOTMAX = 0.23;
 const TString FASYM = "f_{asym}";
 const TString FASYMMC = "f^{mc}_{asym}";
@@ -1890,17 +1890,56 @@ void setStyleMC(TGraphAsymmErrors* g) {
 void printBin(unsigned int etaBin, unsigned int ptBin, const sampleTools::BinningAdmin* adm) {
   cout.setf(ios::fixed,ios::floatfield);
   std::cout << setprecision(1) << "    $" << adm->etaMin(etaBin) << " - " << adm->etaMax(etaBin) << "$ & $";
-  std::cout << setprecision(0) << adm->ptMin(etaBin,ptBin) << " - " << adm->ptMax(etaBin,ptBin) << "$";
+  double min = adm->ptMin(etaBin,ptBin);
+  double max = adm->ptMax(etaBin,ptBin);
+  if( min < 1000 ) std::cout << " ";
+  if( min <  100 ) std::cout << " ";
+  std::cout << setprecision(0) << min << " - ";
+  if( max < 1000 ) std::cout << " ";
+  if( max <  100 ) std::cout << " ";
+  std::cout << adm->ptMax(etaBin,ptBin) << "$";
   std::cout << setprecision(5);
 }
 
 
 // ------------------------------------------------------------------------------------
 void printWindowBorders(const std::vector<EtaPtBin*> &bins, const sampleTools::BinningAdmin* adm) {
+  bool exclRegion = bins.front()->tailWindowMax() < 1.;
+
   std::cout << "\n\n\n***  Window Borders  ***\n\n";
 
-  std::cout << "\\begin{tabular}[ht]{cccccc}\n\\hline\n";
-  std::cout << "$|\\eta|$ & $\\ptave \\,(\\gevnospace)$ & $A_{0} - A_{1}$ & $A_{0}/\\sigma - A_{1}/\\sigma$ & $\\int^{A_{1}}_{A_{0}}\\mathcal{G}$ & $\\fasymmc(\\pti{3} = 0.05)$ \\\\ \n\\hline\n";
+  std::cout << "\\begin{tabular}[ht]{cccc}\n\\toprule\n";
+  std::cout << "$|\\eta|$ & $\\ptave \\,(\\gevnospace)$ & $A_{0}";
+  if( exclRegion ) std::cout << " - A_{1}";
+  std::cout << "$ & $A_{0}/\\sigma";
+  if( exclRegion ) std::cout << " - A_{1}/\\sigma";
+  std::cout << "$ \\\\\n\\midrule" << std::endl;
+  for(EtaPtBinConstIt it = bins.begin(); it != bins.end(); ++it) {
+    EtaPtBin* bin = *it;
+    double min = bin->tailWindowMin();
+    double max = bin->tailWindowMax();
+    double sigSmear = bin->sigmaSmeared(0);
+
+    printBin(bin->etaBin(),bin->ptBin(),adm);
+    std::cout << std::setprecision(3) << " & $" << min;
+    if( exclRegion ) {
+      std::cout << " - " << max << "$ & $" << min/sigSmear << " - " << max/sigSmear;
+    } else {
+      std::cout << "$ & $" << min/sigSmear;
+    }
+    std::cout  << "$ \\\\" << std::endl;
+    if( bin->ptBin() == adm->nPtBins(bin->etaBin())-1 ) std::cout << "\\midrule\n";
+  }
+  std::cout << "  \\end{tabular}\n\n";
+
+
+  std::cout << "\n\n\n***  Tail vs Gaussian  ***\n\n";
+
+  std::cout << "\\begin{tabular}[ht]{cccc}\n\\toprule\n";
+  std::cout << "$|\\eta|$ & $\\ptave \\,(\\gevnospace)$ & $\\int^{";
+  if( exclRegion ) std::cout << "A_{1}";
+  else std::cout << "\\infty";
+  std::cout << "}_{A_{0}}\\mathcal{G}$ & $\\fasymmc(\\pti{3}/\\ptave = 0.05)$ \\\\ \n\\midrule\n";
   for(EtaPtBinConstIt it = bins.begin(); it != bins.end(); ++it) {
     EtaPtBin* bin = *it;
     double min = bin->tailWindowMin();
@@ -1911,12 +1950,12 @@ void printWindowBorders(const std::vector<EtaPtBin*> &bins, const sampleTools::B
     double fAsymErr = bin->fTailMCSmearedErr(0);
 
     printBin(bin->etaBin(),bin->ptBin(),adm);
-    std::cout << std::setprecision(3) << " & $" << min << " - " << max << "$ & $";
-    std::cout << min/sigSmear << " - " << max/sigSmear << "$ & $";
+    std::cout << std::setprecision(3) << " & $";
     std::cout << std::setprecision(4) << fGauss << "$ & $" << fAsym << " \\pm " << fAsymErr << "$ \\\\" << std::endl;
-    if( bin->ptBin() == adm->nPtBins(bin->etaBin())-1 ) std::cout << "\\hline\n";
+    if( bin->ptBin() == adm->nPtBins(bin->etaBin())-1 ) std::cout << "\\midrule\n";
   }
   std::cout << "  \\end{tabular}\n\n";
+
 }
 
 
@@ -1942,8 +1981,8 @@ void printMCClosure(const std::vector<EtaPtBin*> &bins, const sampleTools::Binni
 // ------------------------------------------------------------------------------------
 void printExtrapolation(const std::vector<EtaPtBin*> &bins, const sampleTools::BinningAdmin* adm) {
   std::cout << "\n\n\n***  Extrapolation  ***\n";
-  std::cout << "\\begin{tabular}[ht]{ccccc}\n\\hline\n";
-  std::cout << "$|\\eta|$ & $\\ptave \\,(\\gevnospace)$ & $\\mean{\\ptave} \\,(\\gevnospace)$ & $\\fasymdata(0)$ & $\\fasymmc(0)$ \\\\ \n\\hline \n";
+  std::cout << "\\begin{tabular}[ht]{ccccc}\n\\toprule\n";
+  std::cout << "$|\\eta|$ & $\\ptave \\,(\\gevnospace)$ & $\\mean{\\ptave} \\,(\\gevnospace)$ & $\\fasymdata(0)$ & $\\fasymmc(0)$ \\\\ \n\\midrule\n";
   for(EtaPtBinConstIt it = bins.begin(); it != bins.end(); ++it) {
     EtaPtBin* bin = *it;
     printBin(bin->etaBin(),bin->ptBin(),adm);
@@ -1952,7 +1991,7 @@ void printExtrapolation(const std::vector<EtaPtBin*> &bins, const sampleTools::B
     std::cout << setprecision(3);
     std::cout << "$ & $"  << bin->extraData() << " \\pm " << bin->extraDataErr();  
     std::cout << "$ & $" << bin->extraMC() << " \\pm " << bin->extraMCErr() << "$ \\\\ \n";
-    if( bin->ptBin() == adm->nPtBins(bin->etaBin())-1 ) std::cout << "\\hline\n";
+    if( bin->ptBin() == adm->nPtBins(bin->etaBin())-1 ) std::cout << "\\midrule\n";
   }
   std::cout << "  \\end{tabular}\n\n";
 }
@@ -2126,8 +2165,8 @@ void plotFinalResult() {
 
   sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("BinningAdmin.cfg");  
 
-  TString fileNamePrefix = "ScaleFactors_163337-167151_2011-07-21_UpdatedCoreUncerts/Tail_163337-167151_Sig25-Inf_PF";
-  TString outNamePrefix = "Tail_163337-167151_Sig25-Inf_PF_ScaleFactors";
+  TString fileNamePrefix = "ScaleFactors_163337-167151_2011-07-21_UpdatedCoreUncerts/Tail_163337-167151_Sig35-Inf_PF";
+  TString outNamePrefix = "Tail_163337-167151_Sig35-Inf_PF_ScaleFactors";
 
   std::vector<EtaPtBin*> etaPtBins;
   unsigned int nEtaBins = binAdm->nEtaBins();
