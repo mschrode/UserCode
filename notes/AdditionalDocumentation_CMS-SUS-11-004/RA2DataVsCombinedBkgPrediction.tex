@@ -1,0 +1,100 @@
+% $Id: $
+
+% =====  HEADER  ========================================
+
+% ----- Document ----------------------------------------
+\documentclass[a4paper]{article}
+
+
+% ----- Additional packages -----------------------------
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{xspace}
+
+
+% ----- User defined commands ---------------------------
+\newcommand{\HT}{\ensuremath{H_{\text{T}}}\xspace}
+\newcommand{\MHT}{\ensuremath{\slash\mkern-12mu{H}_{\text{T}}}\xspace}
+\newcommand{\sigmatot}{\ensuremath{\sigma_{\text{tot}}}\xspace}
+\newcommand{\sigmatotstat}{\ensuremath{\sigma^{\text{stat}}_{\text{tot}}}\xspace}
+\newcommand{\sigmatotsyst}{\ensuremath{\sigma^{\text{syst}}_{\text{tot}}}\xspace}
+\newcommand{\sigmastati}[1]{\ensuremath{\sigma^{\text{stat}}_{#1}}\xspace}
+\newcommand{\sigmasysti}[1]{\ensuremath{\sigma^{\text{syst}}_{#1}}\xspace}
+
+
+% ----- Document information ----------------------------
+\title{Additional Information on the RA2 ``Data vs.\ Combined Background'' Plots}
+
+
+% ----- pdflatex setup ----------------------------------
+\usepackage[pdftex]{color,graphicx}
+\usepackage[pdftex]{hyperref}
+\hypersetup{unicode=true}
+\hypersetup{bookmarks=true}
+\hypersetup{pdftitle={Additional Information on the RA2 ``Data vs. Combined Background'' Plots}}
+\hypersetup{pdfauthor={Matthias Schr\"oder}}
+\hypersetup{colorlinks=true}
+
+
+
+% =====  DOCUMENT  ======================================
+
+\begin{document}
+\maketitle
+\noindent This documentation refers to the search for Supersymmetry in the jets and missing momentum final state\footnote{\href{http://cms.cern.ch/iCMS/analysisadmin/viewanalysis?id=577&field=id&value=577&name=Search\%20for\%20supersymmetry\%20in\%20all-hadronic\%20events\%20with\%20missing\%20energy}{CMS~PAS SUS-11-004}, \textit{Search for supersymmetry in all-hadronic events with missing energy} (2011)} (``RA2'').
+In Fig.~9, the \HT and \MHT distributions of the 986 candidiate events observed after the baseline selection are compared to the Standard Model background expectation derived from data.
+The individual background contributions as well as the ratio data to total background expectation are shown.
+
+The integrated expectations from the individual background contributions and their statistical and systematic uncertainties are listed in Tab.~10.
+The total integrated background expectation \mbox{$927.5\pm103.2$} has been computed taking into account the actual probability densities of the inidividual contributions.
+
+However, the available input for Fig.~9 consists of one histogram per background contribution containing the number of predicted events per bin; uncertainties or correlations between bins or different backgrounds are not provided.
+This is too little information to properly combine the different backgrounds and their uncertainties per bin.
+Therefore, certain approximations were made to obtain Fig.~9.
+They are aimed at providing an as accurate as possible statement on how the agreement between data and background as well as the uncertainties evolve with \HT and \MHT, respectively.
+
+The idea is, in each bin, to estimate a statistical component of the uncertainty, which reflects the number of entries, and a constant relative systematic component.
+The overall normalisation of both should be such that, if integrated, the total uncertainty from Tab.~10 is regained.
+The procedure is as follows:
+\begin{enumerate}
+\item the total background expectation in each bin is computed as the linear sum of the individual background contributions.
+  The resulting total integrated background of $913.7$ events is scaled to the properly combined yield from Tab.~10, i.\,e.\ $927.5$;
+\item The total uncertainty from Tab.~10., \mbox{$\sigmatot=103.2$}, is split into a statistical, \sigmatotstat, and a systematic, \sigmatotsyst, component.
+  This is done by summing up the listed statistical uncertainties on the individual backgrounds $b$ in quadrature and subtracting them in quadrature from the total uncertainty,
+  \begin{align}
+    \begin{split}
+      \label{eq:SplittedUncerts}
+      \sigmatotstat & = \sqrt{ \sum_{b}\left(\sigmastati{b}\right)^{2} } = 43.0\;, \\
+      \sigmatotsyst & = \sqrt{ \left(\sigmatot\right)^{2} - \left(\sigmatotstat\right)^{2} } = 93.7\;,
+    \end{split}
+  \end{align}
+  where \sigmastati{b} are the statistical uncertainties on the individual background components.
+  Hence, linear combination of the backgrounds and uncorrelated statistical and systematic uncertainties are assumed;
+\item the statistical uncertainty of the total background prediction in each bin $i$ is set to
+  \begin{equation}
+    \label{eq:BinStatUncert}
+    \sigmastati{i} = s\cdot\sqrt{n_{i}}\;,
+  \end{equation}
+  where $n_{i}$ denotes the total number of predicted background events in that bin.
+  $s$ is a global scale factor which assures that the integrated total statistical uncertainty from summing up the bin contributions quadratically amounts to \sigmatotstat from~\eqref{eq:SplittedUncerts},
+  \begin{align}
+    \begin{split}
+      \label{eq:ScaleFactor}
+      s &= \frac{\sigmatotstat}{\sqrt{\sum_{i}n_{i}}} \\
+      \sigmastati{i} &= \sqrt{\frac{n_{i}}{\sum_{i}n_{i}}}\cdot\sigmatotstat \;,
+    \end{split}
+  \end{align}
+\item the systematic uncertainty of the total background prediction in each bin $i$ is set to the constant relative value
+  \begin{equation}
+    \label{eq:BinSystUncert}
+    \sigmasysti{i} = \frac{n_{i}}{\sum_{i}n_{i}}\cdot\sigmatotsyst \;.
+  \end{equation}
+\end{enumerate}
+
+In conclusion, the total number of predicted background events per bin in Fig.~9 as well as their statistical and systematic uncertainties have been approximated from several sources: the average number of events predicted in each bin by the individual background methods, the integrated statistical and systematic uncertainties on each background prediction, as well as the properly combined, total integrated background yield and its total uncertainty.
+For the approximation, essentially the proper profile likelihood based combination is ignored and replaced by a linear combination assuming uncorrelated backgrounds.
+However, the differences are small in the baseline region.
+While the size of the total uncertainty in each bin might be underestimated slightly, in particular at medium \HT and \MHT, respectively, the total integrated uncertainty corresponds to \mbox{$\sigmatot=103.2$} as cited in Tab.~10 and a realistic impression of the evolution of the expected background and its uncertainty is gained.
+
+\end{document}
+
