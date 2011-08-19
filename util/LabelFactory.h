@@ -1,4 +1,4 @@
-//  $Id: LabelFactory.h,v 1.18 2011/03/19 17:41:19 mschrode Exp $
+//  $Id: LabelFactory.h,v 1.19 2011/08/11 10:02:13 mschrode Exp $
 
 #ifndef LABEL_FACTORY_H
 #define LABEL_FACTORY_H
@@ -22,7 +22,7 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: LabelFactory.h,v 1.18 2011/03/19 17:41:19 mschrode Exp $
+  //!  $Id: LabelFactory.h,v 1.19 2011/08/11 10:02:13 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class LabelFactory {
   public:
@@ -122,16 +122,13 @@ namespace util {
     }
 
 
-
     // -------------------------------------------------------------------------------------
-    static TString labelJetAlgo(const TString &fileName) {
-      TString algo = "default jets";
-      if( fileName.Contains("Calo") ) {
-	algo = "AK5 Calo-Jets";
-      } else if( fileName.Contains("PF") ) {
-	algo = "AK5 PF-Jets";
+    static TString jetAlgo(const TString &name) {
+      TString algo = "DefaultJets";
+      if( name.Contains("AK5") || name.Contains("ak5") ) {
+	algo = "AK5";
       } else {
-	std::cerr << "WARNING in LabelFactory::jetAlgo(): unknown jet algorithm in file '" << fileName << "'" << std::endl;
+	std::cerr << "WARNING in LabelFactory::jetAlgo(): unknown jet algorithm in name '" << name << "'" << std::endl;
       }
 
       return algo;
@@ -139,10 +136,59 @@ namespace util {
 
 
     // -------------------------------------------------------------------------------------
-    static TString labelJetAlgo(const TString &fileName1, const TString &fileName2) {
-      TString algo = labelJetAlgo(fileName1);
-      if( algo != labelJetAlgo(fileName2) ) {
-	std::cerr << "WARNING in LabelFactory::jetAlgo(): inconsistent jet algorithms in files '" << fileName1 << "' and '" << fileName2 << "'" << std::endl;
+    static TString labelJetAlgo(const TString &name) {
+      TString algo = "default jets";
+      if( jetAlgo(name) == "AK5" ) {
+	algo = "Anti k_{T} (R=0.5)";
+      } else {
+	std::cerr << "WARNING in LabelFactory::jetAlgo(): unknown jet algorithm in name '" << name << "'" << std::endl;
+      }
+
+      return algo;
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static TString jetType(const TString &name) {
+      TString algo = "DefaultJets";
+      if( name.Contains("Calo") || name.Contains("calo") ) {
+	algo = "Calo";
+      } else if( name.Contains("PF") || name.Contains("pf") ) {
+	algo = "PF";
+      } else {
+	std::cerr << "WARNING in LabelFactory::jetType(): unknown jet type in name '" << name << "'" << std::endl;
+      }
+
+      return algo;
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static TString labelJetType(const TString &name) {
+      TString algo = "default jets";
+      if( jetType(name) == "Calo" ) {
+	algo = "Calo-Jets";
+      } else if( jetType(name) == "PF" ) {
+	algo = "PF-Jets";
+      } else {
+	std::cerr << "WARNING in LabelFactory::jetType(): unknown jet type in name '" << name << "'" << std::endl;
+      }
+
+      return algo;
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static TString labelJet(const TString &name) {
+      return labelJetAlgo(name)+" "+labelJetType(name);
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static TString labelJetAlgo(const TString &name1, const TString &name2) {
+      TString algo = labelJetAlgo(name1);
+      if( algo != labelJetAlgo(name2) ) {
+	std::cerr << "WARNING in LabelFactory::jetAlgo(): inconsistent jet algorithms in files '" << name1 << "' and '" << name2 << "'" << std::endl;
 	algo = "default jets";
       }
       return algo;
@@ -151,7 +197,12 @@ namespace util {
 
     // -------------------------------------------------------------------------------------
     static TString labelEta(double etaMin, double etaMax) {
-      return util::toTString(etaMin)+" < |#eta| < "+util::toTString(etaMax);
+      TString min = util::toTString(etaMin,1);
+      TString max = util::toTString(etaMax,1);
+      if( min.Length() == 1 ) min += ".0";
+      if( max.Length() == 1 ) max += ".0";
+
+      return min+" < |#eta| < "+max;
     }
 
 

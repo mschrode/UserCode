@@ -1,4 +1,4 @@
-// $Id: utils.h,v 1.10 2011/07/18 08:59:42 mschrode Exp $
+// $Id: utils.h,v 1.11 2011/08/11 10:02:13 mschrode Exp $
 
 #ifndef UTILS_H
 #define UTILS_H
@@ -17,7 +17,7 @@
 //!
 //!  \author   Matthias Schroeder (www.desy.de/~matsch)
 //!  \date     2010/03/09
-//!  $Id: utils.h,v 1.10 2011/07/18 08:59:42 mschrode Exp $
+//!  $Id: utils.h,v 1.11 2011/08/11 10:02:13 mschrode Exp $
 // -------------------------------------------------------------------------------------
 namespace util {
 
@@ -116,27 +116,6 @@ namespace util {
   }
 
 
-  // -------------------------------------------------------------------------------------
-  static inline TString jetType(const TString &name) {
-    TString type = "";
-    if( name.Contains("AK5") || name.Contains("ak5") ) type = "AK5";
-    else if( name.Contains("AK7") || name.Contains("ak7") ) type = "AK7";
-
-    return type;
-  }
-
-
-  // -------------------------------------------------------------------------------------
-  static inline TString jetAlgo(const TString &name) {
-    TString algo = "";
-    if( name.Contains("Calo") || name.Contains("calo") || name.Contains("CALO") ) algo = "Calo";
-    else if( name.Contains("Jpt") || name.Contains("jpt") || name.Contains("JPT") ) algo = "JPT";
-    else if( name.Contains("Pf") || name.Contains("pf") || name.Contains("PF") ) algo = "PF";
-
-    return algo;
-  }
-
-  
   //! DeltaR between two vectors
   // --------------------------------------------------
   static inline double deltaR(double eta1, double eta2, double phi1, double phi2) {
