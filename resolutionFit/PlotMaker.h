@@ -1,4 +1,4 @@
-// $Id: PlotMaker.h,v 1.16 2011/07/20 13:30:25 mschrode Exp $
+// $Id: PlotMaker.h,v 1.17 2011/08/15 15:55:09 mschrode Exp $
 
 #ifndef PLOT_MAKER_H
 #define PLOT_MAKER_H
@@ -22,23 +22,11 @@ namespace resolutionFit {
     PlotMaker(const Parameters *par, const EtaBins &etaBins);
     ~PlotMaker();
 
-    void makeAllPlots() const {
-      //plotAsymmetry();
-      //plotAsymmetryTails();
-      //plotPtSpectra();
-      plotExtrapolation();
-      //plotSlopes();
-      //plotPtGenSpectra();
-      //plotMCEventInfo();
-      //plotParticleLevelImbalance();
-      plotResolution();
-      plotScaledMCTruth();
-      plotSystematicUncertainties();
-    }
-
+    void makeAllPlots() const;
 
     void plotAsymmetry() const;
     void plotAsymmetryTails() const;
+    void plotControlDistributions() const;
     void plotExtrapolation() const;
     void plotMCEventInfo() const;
     void plotParticleLevelImbalance() const;
@@ -100,6 +88,7 @@ namespace resolutionFit {
     TString histFileName(const TString &id, const PtBin* ptBin, FitResult::Type type) const;
     TString histFileName(const TString &id, const PtBin* ptBin, const Sample* sample) const;
     TString histFileName(const TString &id, const PtBin* ptBin, const Sample* sample, unsigned int ptSoftBinIdx) const;
+    TString histFileName(const TString &id, const PtBin* ptBin, SampleLabel label1, SampleLabel label2, unsigned int ptSoftBinIdx) const;
     TString histFileName(const TString &id, const PtBin* ptBin, SampleLabel label1, SampleLabel label2, FitResult::Type type, unsigned int ptSoftBinIdx) const;
     TString histFileNameFitResultTypeLabel(FitResult::Type type) const;
     TString cleanFileName(TString str) const;

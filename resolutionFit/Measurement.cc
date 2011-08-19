@@ -1,4 +1,4 @@
-// $Id: Measurement.cc,v 1.5 2011/06/08 16:58:02 mschrode Exp $
+// $Id: Measurement.cc,v 1.6 2011/06/23 18:07:37 mschrode Exp $
 
 #include "Measurement.h"
 
@@ -53,6 +53,7 @@ namespace resolutionFit {
     hists_[("hDeltaPtJet12"+hnSuffix_)] = 0;
     hists_[("hWeights"+hnSuffix_)] = 0;
     hists_[("hNumPU"+hnSuffix_)] = 0;
+    hists_[("hNumVtx"+hnSuffix_)] = 0;
     
     // Parse file
     if( !parse(fileName) ) exit(-1);
