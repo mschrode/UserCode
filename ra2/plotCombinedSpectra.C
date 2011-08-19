@@ -1,4 +1,4 @@
-// $Id: plotCombinedSpectra.C,v 1.3 2011/08/15 20:40:16 mschrode Exp $
+// $Id: plotCombinedSpectra.C,v 1.4 2011/08/16 17:09:59 mschrode Exp $
 
 // Compare HT and MHT spectra in data with bkg. prediction
 
@@ -33,7 +33,7 @@ public:
     data_ = util::FileOps::readTH1(dataFileName,dataHistName,id_+"data");
     util::HistOps::shiftStartOfXAxisToFirstPopulatedBin(data_);
     data_->UseCurrentStyle();
-    data_->SetTitle(util::StyleSettings::title(1140,true));
+    data_->SetTitle(util::StyleSettings::title(1100,true)); // Lumi rounded to one digit
     data_->SetMarkerStyle(20);
     data_->SetNdivisions(505);
     if( rebin_ > 1 ) data_->Rebin(rebin_);
@@ -69,15 +69,18 @@ public:
 
 
   TLegend* legend() const {
-    TLegend* leg = util::LabelFactory::createLegendCol(bkgs_.size()+1,0.6);
-    leg->AddEntry(data_,"Data ("+util::toTString(data_->Integral(),0)+")","P");
+    //TLegend* leg = util::LabelFactory::createLegendCol(bkgs_.size()+1,0.6);
+    TLegend* leg = util::LabelFactory::createLegendCol(bkgs_.size()+1,0.5);
+    //leg->AddEntry(data_,"Data ("+util::toTString(data_->Integral(),0)+")","P");
+    leg->AddEntry(data_,"Data","P");
     for(std::vector<Bkg>::const_reverse_iterator rit = bkgs_.rbegin();
 	rit != bkgs_.rend(); ++rit) {
       const TH1* h = bkgHists_.find(*rit)->second;
       TString numEvts = util::toTString(h->Integral(1,10000),1);	// Include overflow bins
       if( *rit == LostLepton ) numEvts = "243.5";
       else if( *rit == HadronicTau ) numEvts = "263.0";
-      leg->AddEntry(h,bkgLabel(*rit)+" ("+numEvts+")","F");
+      //      leg->AddEntry(h,bkgLabel(*rit)+" ("+numEvts+")","F");
+      leg->AddEntry(h,bkgLabel(*rit),"F");
     }
 
     return leg;
