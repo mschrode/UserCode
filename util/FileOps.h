@@ -1,4 +1,4 @@
-// $Id: FileOps.h,v 1.10 2011/06/01 12:05:21 mschrode Exp $
+// $Id: FileOps.h,v 1.11 2011/06/23 16:54:24 mschrode Exp $
 
 #ifndef FileOps_h
 #define FileOps_h
@@ -42,6 +42,7 @@ namespace util
     file.GetObject(hName,h);
     if( h ) {
       h->SetDirectory(0);
+      h->UseCurrentStyle();
       if( newHName.Length() ) h->SetName(newHName);
     } else {
       std::cerr << "ERROR in FileOps::readTH2: No TH2 with name '" << hName << "' in file '" << fileName << "'\n.";
@@ -60,6 +61,7 @@ namespace util
     file.GetObject(histName,h);
     if( h ) {
       h->SetDirectory(0);
+      h->UseCurrentStyle();
       if( newHistName.Length() ) h->SetName(newHistName);
     } else {
       std::cerr << "ERROR in FileOps::readTH1: Histogram with name '" << histName << "' does not exist in file '" << fileName << "'\n.";
@@ -111,6 +113,7 @@ namespace util
       file.GetObject(*it,h);
       if( h ) {
 	h->SetDirectory(0);
+	h->UseCurrentStyle();
 	h->SetName((*it)+newHistNameSuffix);
 	v.push_back(h);
       } else {
@@ -137,6 +140,7 @@ namespace util
       file.GetObject(histName+util::toTString(bin),h);
       if( h ) {
 	h->SetDirectory(0);
+	h->UseCurrentStyle();
 	if( newHistName.Length() ) h->SetName(newHistName+util::toTString(bin));
 	v.push_back(h);
 	++bin;
