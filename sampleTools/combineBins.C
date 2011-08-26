@@ -1,4 +1,4 @@
-// $Id: combineBins.C,v 1.4 2011/06/08 16:58:34 mschrode Exp $
+// $Id: combineBins.C,v 1.5 2011/06/23 17:51:38 mschrode Exp $
 
 //! Combine Kalibri output histograms from different
 //! eta, pt, and ptSoft bins
@@ -12,6 +12,7 @@
 #include "TFile.h"
 #include "TH1.h"
 #include "TH1D.h"
+#include "TROOT.h"
 #include "TString.h"
 
 #include "BinningAdmin.h"
@@ -123,14 +124,8 @@ void combineBins(const TString &binningConfig, const TString &dirPrefix, const T
 
   const TString absFileName = util::absolutePath(dirPrefix);
   const TString relFileName = util::extractFileName(dirPrefix);
-
-//   Ssiz_t fileNameBegin = namePrefix.Last('/');
-//   if( fileNameBegin < 0 ) fileNameBegin = 0;
-//   else fileNameBegin++;
-//   const TString path = namePrefix(0,fileNameBegin);
-//   const TString file = namePrefix(fileNameBegin,namePrefix.Length()-fileNameBegin);
-
   sampleTools::BinningAdmin admin(binningConfig);
+  std::vector<TString> missingFiles;
 
   // Prepare histograms
   std::cout << "Preparing histograms" << std::endl;
@@ -158,7 +153,9 @@ void combineBins(const TString &binningConfig, const TString &dirPrefix, const T
   	  for(util::HistItConst hIt = binnedHists.begin(); hIt != binnedHists.end(); ++hIt) {
    	    outDir->WriteTObject(*hIt);
   	  }
-  	}
+  	} else {
+	  missingFiles.push_back("Eta "+util::toTString(etaBin)+"   Pt "+util::toTString(ptBin)+"\tPtSoft "+util::toTString(ptSoftBin));
+	}
       } // End of loop over ptSoft bins
       
       std::cout << "ok" << std::endl;
@@ -166,4 +163,18 @@ void combineBins(const TString &binningConfig, const TString &dirPrefix, const T
   } // End of loop over eta bins
   outFile->Close();
   delete outFile;
+
+  if( missingFiles.size() > 0 ) {
+    std::cerr << "ERROR: There were missing input files" << std::endl;
+    std::cerr << "  Deleting combined file... " << std::flush;
+    gROOT->ProcessLine(".! rm "+relFileName+".root");
+    std::cerr << "ok" << std::endl;
+    std::cerr << "\nThe input files in the following bins were missing:" << std::endl;
+    for(std::vector<TString>::const_iterator it = missingFiles.begin();
+	it != missingFiles.end(); ++it) {
+      std::cerr << "  " << *it << std::endl;
+    }
+  } else {
+    std::cout << "Successfully combined files." << std::endl;
+  }
 }
