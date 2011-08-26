@@ -1,4 +1,4 @@
-// $Id: plotCombinedSpectra.C,v 1.4 2011/08/16 17:09:59 mschrode Exp $
+// $Id: plotCombinedSpectra.C,v 1.5 2011/08/19 08:31:34 mschrode Exp $
 
 // Compare HT and MHT spectra in data with bkg. prediction
 
@@ -50,7 +50,7 @@ public:
     TString label = "";
     if( bkg == ZInv ) label = "Z#rightarrow#nu#bar{#nu}+jets";
     else if( bkg == LostLepton ) label = "W/t#bar{t}#rightarrowe/#mu+X";
-    else if( bkg == HadronicTau ) label = "W/t#bar{t}#rightarrowe/#tau_{h}+X";
+    else if( bkg == HadronicTau ) label = "W/t#bar{t}#rightarrow#tau_{h}+X";
     else if( bkg == QCD ) label = "QCD";
 
     return label;
@@ -70,9 +70,10 @@ public:
 
   TLegend* legend() const {
     //TLegend* leg = util::LabelFactory::createLegendCol(bkgs_.size()+1,0.6);
-    TLegend* leg = util::LabelFactory::createLegendCol(bkgs_.size()+1,0.5);
+    TLegend* leg = util::LabelFactory::createLegendColWithOffset(bkgs_.size(),0.6,0.06);
     //leg->AddEntry(data_,"Data ("+util::toTString(data_->Integral(),0)+")","P");
-    leg->AddEntry(data_,"Data","P");
+    //    leg->AddEntry(data_,"Data","P");
+    //util::LabelFactory::addExtraLegLine(leg,"");
     for(std::vector<Bkg>::const_reverse_iterator rit = bkgs_.rbegin();
 	rit != bkgs_.rend(); ++rit) {
       const TH1* h = bkgHists_.find(*rit)->second;
@@ -146,7 +147,8 @@ public:
       totalBkg_ = static_cast<TH1*>(h->Clone(id_+"TotalBkg"));
       totalBkg_->Sumw2();
       totalBkg_->SetMarkerStyle(0);
-      totalBkg_->SetFillStyle(3004);
+      //totalBkg_->SetFillStyle(3004);
+      totalBkg_->SetFillStyle(3354);
       totalBkg_->SetFillColor(kBlue+2);
     } else {
       totalBkg_->Add(h);
@@ -290,6 +292,7 @@ void plotSpectrum(const TString &id, const TString &xTitle, const TString &xUnit
   TH1 *tFrame = util::HistOps::createRatioTopHist(spectra.data_);
   TH1 *bFrame = util::HistOps::createRatioBottomFrame(spectra.data_,spectra.data_->GetXaxis()->GetTitle(),"",0.01,1.99);
   bFrame->GetYaxis()->SetNdivisions(505);
+  bFrame->GetYaxis()->SetTitle("Data / Bkg.");
 
   canRatio->cd();
   util::HistOps::setYRange(tFrame,1,3E-1);
@@ -297,7 +300,18 @@ void plotSpectrum(const TString &id, const TString &xTitle, const TString &xUnit
   spectra.bkgStack_->Draw("HISTsame");
   spectra.totalBkg()->Draw("E2same");
   tFrame->Draw("PE1same");
+
+  // Label
+  TPaveText* line = util::LabelFactory::createPaveTextWithOffset(1,0.7,0.006);
+  line->AddText("Bkg. predicted from data:");
+  line->SetTextSize(0.045);
+  line->Draw("same");
   spectra.legend()->Draw("same");
+  TLegend* leg = util::LabelFactory::createLegendCol(1,-0.3);
+  leg->AddEntry(spectra.data_,"Data","P");
+  leg->SetTextSize(0.045);
+  leg->Draw("same");
+
   canRatio->SetLogy();
   gPad->RedrawAxis();
   bPad->Draw();
@@ -306,6 +320,7 @@ void plotSpectrum(const TString &id, const TString &xTitle, const TString &xUnit
   spectra.bkgForRatio()->Draw("E2same");
   spectra.dataForRatio()->Draw("PE1same");
   canRatio->SaveAs("RA2DataVsEstimatedBkg_"+id+".eps","eps");
+  canRatio->SaveAs("RA2DataVsEstimatedBkg_"+id+".png");
   canRatio->SaveAs("RA2DataVsEstimatedBkg_"+id+".root");
 }
 
