@@ -1,4 +1,4 @@
-//  $Id: LabelFactory.h,v 1.19 2011/08/11 10:02:13 mschrode Exp $
+//  $Id: LabelFactory.h,v 1.20 2011/08/19 08:41:30 mschrode Exp $
 
 #ifndef LABEL_FACTORY_H
 #define LABEL_FACTORY_H
@@ -22,7 +22,7 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: LabelFactory.h,v 1.19 2011/08/11 10:02:13 mschrode Exp $
+  //!  $Id: LabelFactory.h,v 1.20 2011/08/19 08:41:30 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class LabelFactory {
   public:
@@ -86,6 +86,9 @@ namespace util {
     static TLegend *createLegendColWithOffset(int nEntries, double width, int yOffset) {
       return createLegend(nEntries,width,1.16*lineHeight()*yOffset,lineHeight());
     }
+    static TLegend *createLegendColWithOffset(int nEntries, double width, double yOffset) {
+      return createLegend(nEntries,width,yOffset,lineHeight());
+    }
 
     static void addExtraLegLine(TLegend *leg, const TString &entry) {
       TString name = "hDummy";
@@ -114,6 +117,36 @@ namespace util {
       double y1 = 0.;
       cornerCoordinates(nEntries,width,lineHgt>0 ? lineHgt : lineHeight(),x0,y0,x1,y1);
       TPaveText *txt = new TPaveText(x0,y0,x1,y1,"NDC");
+      txt->SetBorderSize(0);
+      txt->SetFillColor(0);
+      txt->SetTextFont(42);
+      txt->SetTextAlign(12);
+      return txt;
+    }
+
+
+    static TPaveText *createPaveTextWithOffset(int nEntries, double width, int yOffset) {
+      double x0 = 0.;
+      double y0 = 0.;
+      double x1 = 0.;
+      double y1 = 0.;
+      cornerCoordinates(nEntries,width,lineHeight(),x0,y0,x1,y1);
+      TPaveText *txt = new TPaveText(x0,y0-1.16*lineHeight()*yOffset,x1,y1-1.16*lineHeight()*yOffset,"NDC");
+      txt->SetBorderSize(0);
+      txt->SetFillColor(0);
+      txt->SetTextFont(42);
+      txt->SetTextAlign(12);
+      return txt;
+    }
+
+
+    static TPaveText *createPaveTextWithOffset(int nEntries, double width, double yOffset) {
+      double x0 = 0.;
+      double y0 = 0.;
+      double x1 = 0.;
+      double y1 = 0.;
+      cornerCoordinates(nEntries,width,lineHeight(),x0,y0,x1,y1);
+      TPaveText *txt = new TPaveText(x0,y0-yOffset,x1,y1-yOffset,"NDC");
       txt->SetBorderSize(0);
       txt->SetFillColor(0);
       txt->SetTextFont(42);
