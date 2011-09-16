@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.20 2011/08/15 15:55:09 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.21 2011/08/15 20:38:45 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -66,11 +66,28 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------
+  void PlotMaker::makeAllPlots() const {
+    plotAsymmetry();
+    //plotAsymmetryTails();
+    //plotPtSpectra();
+    plotExtrapolation();
+    //plotSlopes();
+    plotPtGenSpectra();
+    //plotMCEventInfo();
+    //plotParticleLevelImbalance();
+    plotControlDistributions();
+    plotResolution();
+    plotScaledMCTruth();
+    plotSystematicUncertainties();
+  }
+
+
+  // -------------------------------------------------------------------------------------
   void PlotMaker::plotAsymmetry() const {
     if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotAsymmetry(): Entering" << std::endl;
     std::cout << "Plotting asymmetry" << std::endl;
 
-    const double asymMax = 0.49;
+    const double asymMax = 0.44;
 
     // +++++ Asymmetry plots per bin, with different FitResult types ++++++++++++++++++++++++++++++
 
@@ -191,9 +208,11 @@ namespace resolutionFit {
 	    // Asymmetry distribution for different ptSoft
 	    std::vector<TH1*> hPtAsyms;
 	    std::vector<TString> labels;
-	    unsigned int step = (par_->nPtSoftBins() > 3 ? 2 : 1);
+	    unsigned int step = (par_->nPtSoftBins() > 4 ? 3 : 1);
 	    for(unsigned int ptSoftBinIdx = 0; ptSoftBinIdx < par_->nPtSoftBins(); ptSoftBinIdx += step) {
-	      hPtAsyms.push_back(sample->histPtAsym(ptSoftBinIdx));
+	      TH1* h = sample->histPtAsym(ptSoftBinIdx);
+	      util::HistOps::normHist(h,"width");
+	      hPtAsyms.push_back(h);
 	      labels.push_back(labelMk_->ptSoftRange(ptSoftBinIdx));
 	    }
 
@@ -2135,45 +2154,122 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------
+  void PlotMaker::plotControlDistributions() const {
+    if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotControlDistributions(): Entering" << std::endl;
+
+    // +++++ Number of reconstructed vertices per bin, different Samples +++++++++++++
+    
+    if( etaBins_.front()->nComparedSamples() > 0 ) {
+      // Loop over ptSoft bins
+      for(unsigned int ptSoftBinIdx = 0; ptSoftBinIdx < par_->nPtSoftBins(); ++ptSoftBinIdx) {
+	if( par_->verbosity() > 1 ) std::cout << "  PtSoftBin " << ptSoftBinIdx << std::endl;
+	  
+	// Loop over eta bins
+	for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+	  const EtaBin* etaBin = *etaBinIt;
+	  out_->newPage("Asymmetry");
+	    
+	  // Loop over pt bins
+	  for(PtBinIt ptBinIt = etaBin->ptBinsBegin(); ptBinIt != etaBin->ptBinsEnd(); ++ptBinIt) {
+	    const PtBin* ptBin = *ptBinIt;
+	    if( par_->verbosity() > 1 ) std::cout << "    " << ptBin->toTString() << std::endl;
+	    
+	    // Loop over to-be-compare Samples
+	    for(ComparedSamplesIt sCIt = etaBin->comparedSamplesBegin();
+		sCIt != etaBin->comparedSamplesEnd(); ++sCIt) {
+	      SampleLabel sLabel1 = (*sCIt)->label1();
+	      SampleLabel sLabel2 = (*sCIt)->label2();
+	      const Sample* sample1 = ptBin->findSample(sLabel1);
+	      const Sample* sample2 = ptBin->findSample(sLabel2);
+
+	      // NVtx distributions and fits
+	      TH1* hNVtx1 = sample1->histNumVtx(ptSoftBinIdx);
+	      hNVtx1->Sumw2();
+	      if( hNVtx1->Integral() ) hNVtx1->Scale(1./hNVtx1->Integral("width"));
+	      util::HistOps::setAxisTitles(hNVtx1,"N(reconstructed vertices)","","events",true);
+	      setStyle(sample1,hNVtx1);
+
+	      TH1* hNVtx2 = sample2->histNumVtx(ptSoftBinIdx);
+	      hNVtx2->Sumw2();
+	      if( hNVtx2->Integral() ) hNVtx2->Scale(1./hNVtx2->Integral("width"));
+	      util::HistOps::setAxisTitles(hNVtx2,"N(reconstructed vertices)","","events",true);
+	      setStyle(sample2,hNVtx2);
+			      
+	      // Labels
+	      TPaveText* label = labelMk_->ptSoftBin(etaBin->etaBin(),ptBin->ptBin(),ptSoftBinIdx);
+	      TLegend* leg = util::LabelFactory::createLegendWithOffset(2,label->GetSize());
+	      leg->AddEntry(hNVtx1,sLabel1+": #LTN#GT = "+util::toTString(hNVtx1->GetMean(),3)+" #pm "+util::toTString(hNVtx1->GetMeanError(),3),"P");
+	      leg->AddEntry(hNVtx2,sLabel2+": #LTN#GT = "+util::toTString(hNVtx2->GetMean(),3)+" #pm "+util::toTString(hNVtx2->GetMeanError(),3),"L");
+	    
+	      util::HistOps::setYRange(hNVtx2,label->GetSize()+leg->GetNRows());
+	      hNVtx2->GetXaxis()->SetRange(1,19);
+	      out_->nextMultiPad(sLabel1+" vs "+sLabel2+": NVtx "+ptBin->toTString()+", PtSoftBin "+util::toTString(ptSoftBinIdx));
+	      hNVtx2->Draw("HIST");
+	      hNVtx1->Draw("PE1same");
+	      label->Draw("same");
+	      leg->Draw("same");
+	      out_->saveCurrentPad(histFileName("NumVtx",ptBin,sLabel1,sLabel2,ptSoftBinIdx));
+
+	      delete hNVtx1;
+	      delete hNVtx2;
+	      delete label;
+	      delete leg;
+	    } // End of loop over to-be-compared samples
+	  } // End of loop over pt bins
+	} // End of loop over eta bins
+      } // End of loop over ptSoft bins
+    } // End if samples to be compared
+
+    if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotControlDistributions(): Leaving" << std::endl;
+  }
+
+
+  // -------------------------------------------------------------------------------------
   TString PlotMaker::histFileName(const TString &id, const EtaBin* etaBin, SampleLabel label1, SampleLabel label2, FitResult::Type type) const {
-    return cleanFileName(par_->outFilePrefix()+"_"+id+"_"+label1+"_vs_"+label2+histFileNameFitResultTypeLabel(type)+"EtaBin"+util::toTString(etaBin->etaBin())+".eps");
+    return cleanFileName(par_->outFilePrefix()+"_"+id+"_"+label1+"_vs_"+label2+histFileNameFitResultTypeLabel(type)+"_EtaBin"+util::toTString(etaBin->etaBin()));
   }
 
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::histFileName(const TString &id, const EtaBin* etaBin, SampleLabel sampleLabel, FitResult::Type type) const {
-    return cleanFileName(par_->outFilePrefix()+"_"+id+"_"+sampleLabel+histFileNameFitResultTypeLabel(type)+"EtaBin"+util::toTString(etaBin->etaBin())+".eps");
+    return cleanFileName(par_->outFilePrefix()+"_"+id+"_"+sampleLabel+histFileNameFitResultTypeLabel(type)+"EtaBin"+util::toTString(etaBin->etaBin()));
   }
 
 
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::histFileName(const TString &id, const PtBin* ptBin, const Sample* sample, FitResult::Type type) const {
-    return cleanFileName(par_->outFilePrefix()+"_"+id+"_"+sample->label()+histFileNameFitResultTypeLabel(type)+"EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+".eps");
+    return cleanFileName(par_->outFilePrefix()+"_"+id+"_"+sample->label()+histFileNameFitResultTypeLabel(type)+"EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin()));
   }
 
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::histFileName(const TString &id, const PtBin* ptBin, FitResult::Type type) const {
-    return cleanFileName(par_->outFilePrefix()+"_"+id+"_AllSamples"+histFileNameFitResultTypeLabel(type)+"EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+".eps");
+    return cleanFileName(par_->outFilePrefix()+"_"+id+"_AllSamples"+histFileNameFitResultTypeLabel(type)+"EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin()));
   }
 
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::histFileName(const TString &id, const PtBin* ptBin, const Sample* sample) const {
-    return cleanFileName(par_->outFilePrefix()+"_"+id+"_"+sample->label()+"_EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+".eps");
+    return cleanFileName(par_->outFilePrefix()+"_"+id+"_"+sample->label()+"_EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin()));
   }
 
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::histFileName(const TString &id, const PtBin* ptBin, const Sample* sample, unsigned int ptSoftBinIdx) const {
-    return cleanFileName(par_->outFilePrefix()+"_"+id+"_"+sample->label()+"_EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+"_PtSoftBin"+util::toTString(ptSoftBinIdx)+".eps");
+    return cleanFileName(par_->outFilePrefix()+"_"+id+"_"+sample->label()+"_EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+"_PtSoftBin"+util::toTString(ptSoftBinIdx));
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  TString PlotMaker::histFileName(const TString &id, const PtBin* ptBin, SampleLabel label1, SampleLabel label2, unsigned int ptSoftBinIdx) const {
+    return cleanFileName(par_->outFilePrefix()+"_"+id+"_"+label1+"_vs_"+label2+"EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+"_PtSoftBin"+util::toTString(ptSoftBinIdx));
   }
 
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::histFileName(const TString &id, const PtBin* ptBin, SampleLabel label1, SampleLabel label2, FitResult::Type type, unsigned int ptSoftBinIdx) const {
-    return cleanFileName(par_->outFilePrefix()+"_"+id+"_"+label1+"_vs_"+label2+histFileNameFitResultTypeLabel(type)+"EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+"_PtSoftBin"+util::toTString(ptSoftBinIdx)+".eps");
+    return cleanFileName(par_->outFilePrefix()+"_"+id+"_"+label1+"_vs_"+label2+histFileNameFitResultTypeLabel(type)+"EtaBin"+util::toTString(ptBin->etaBin())+"_PtBin"+util::toTString(ptBin->ptBin())+"_PtSoftBin"+util::toTString(ptSoftBinIdx));
   }
 
 
