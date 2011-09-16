@@ -1,4 +1,4 @@
-// $Id: OutputManager.h,v 1.2 2011/02/17 13:42:32 mschrode Exp $
+// $Id: OutputManager.h,v 1.3 2011/06/07 18:23:30 mschrode Exp $
 
 #ifndef OUTPUT_MANAGER_H
 #define OUTPUT_MANAGER_H
@@ -18,7 +18,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   class OutputManager {
   public:
-    enum Mode { PSAllInOne, EPSSingleFiles };
+    enum Mode { PSAllInOne, EPSSingleFiles, EPSSingleFilesPlusROOT };
 
     static OutputManager* createOutputManager(OutputManager::Mode mode, const TString &fileNameBase);
     static bool isValidMode(Mode mode);
@@ -50,6 +50,8 @@ namespace resolutionFit {
   };
 
 
+  //! Plots are stored in one common .ps file
+  //! Several multipads are put on one page
   // -------------------------------------------------------------------------------------
   class OutputManagerPSAllInOne : public OutputManager {
   public:
@@ -73,10 +75,13 @@ namespace resolutionFit {
   };
 
 
+  //! Each plot is stored in a separate .eps file; all
+  //! plots are stored as TCanvas objects in one common
+  //! .root file
   // -------------------------------------------------------------------------------------
   class OutputManagerEPSSingleFiles : public OutputManager {
   public:
-    OutputManagerEPSSingleFiles(const TString &fileNameBase);
+    OutputManagerEPSSingleFiles(const TString &fileNameBase, bool rootOutput);
 
     void logx();
     void logy();
@@ -86,6 +91,10 @@ namespace resolutionFit {
     void nextMainPad(const TString &title);
     void nextRatioPad();
     void saveCurrentPad(const TString &name);
+
+  private:
+    const bool rootOutput_;
+    const TString rootOutFileName;
   };
 }
 #endif

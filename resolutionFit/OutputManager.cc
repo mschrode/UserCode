@@ -1,8 +1,10 @@
-// $Id: OutputManager.cc,v 1.3 2011/02/18 15:17:04 mschrode Exp $
+// $Id: OutputManager.cc,v 1.4 2011/06/07 18:23:31 mschrode Exp $
 
 #include "OutputManager.h"
 
 #include <iostream>
+
+#include "TFile.h"
 
 namespace resolutionFit {
 
@@ -10,7 +12,9 @@ namespace resolutionFit {
   OutputManager* OutputManager::createOutputManager(OutputManager::Mode mode, const TString &fileNameBase) {
     OutputManager* out = 0;
     if( mode == OutputManager::EPSSingleFiles ) {
-      out = new OutputManagerEPSSingleFiles(fileNameBase);
+      out = new OutputManagerEPSSingleFiles(fileNameBase,false);
+    } else if( mode == OutputManager::EPSSingleFilesPlusROOT ) {
+      out = new OutputManagerEPSSingleFiles(fileNameBase,true);
     } else if( mode == OutputManager::PSAllInOne ) {
       out = new OutputManagerPSAllInOne(fileNameBase);
     } else {
@@ -157,8 +161,14 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------
-  OutputManagerEPSSingleFiles::OutputManagerEPSSingleFiles(const TString &fileNameBase) 
-    : OutputManager(fileNameBase) { }
+  OutputManagerEPSSingleFiles::OutputManagerEPSSingleFiles(const TString &fileNameBase, bool rootOutput) 
+    : OutputManager(fileNameBase),
+      rootOutput_(rootOutput),
+      rootOutFileName(fileNameBase+".root") {
+    // ROOT file to store TPad objects
+    TFile outFile(rootOutFileName,"RECREATE");
+    outFile.Close();
+  }
 
 
   // -------------------------------------------------------------------------------------
@@ -208,6 +218,20 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------------------------
   void OutputManagerEPSSingleFiles::saveCurrentPad(const TString &name) {
-    lastPad_->SaveAs(name,"eps");
+    // .eps output
+    lastPad_->SaveAs(name+".eps","eps");
+    
+    // TCanvas into .root file
+    if( rootOutput_ ) {
+      TString nameTmp = lastPad_->GetName();
+      lastPad_->SetName(name);
+      TFile outFile(rootOutFileName,"UPDATE");
+      //    lastPad_->SaveAs(rootOutFileName,"UPDATE");
+      if( outFile.IsOpen() ) {
+	outFile.WriteTObject(lastPad_);
+	outFile.Close();
+      }
+      lastPad_->SetName(nameTmp);
+    }
   }
 }
