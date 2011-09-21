@@ -1,4 +1,4 @@
-// $Id: OutputManager.cc,v 1.4 2011/06/07 18:23:31 mschrode Exp $
+// $Id: OutputManager.cc,v 1.5 2011/09/16 13:59:31 mschrode Exp $
 
 #include "OutputManager.h"
 
@@ -29,7 +29,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   bool OutputManager::isValidMode(Mode mode) {
     bool result = true;
-    if( mode != PSAllInOne && mode != EPSSingleFiles ) {
+    if( mode != PSAllInOne && mode != EPSSingleFiles && mode != EPSSingleFilesPlusROOT ) {
       result = false;
       std::cerr << "ERROR in OutputManager::isValidMode: Invalid OutputMode" << std::endl;
     }
@@ -166,8 +166,10 @@ namespace resolutionFit {
       rootOutput_(rootOutput),
       rootOutFileName(fileNameBase+".root") {
     // ROOT file to store TPad objects
-    TFile outFile(rootOutFileName,"RECREATE");
-    outFile.Close();
+    if( rootOutput_ ) {
+      TFile outFile(rootOutFileName,"RECREATE");
+      outFile.Close();
+    }
   }
 
 
