@@ -1,4 +1,4 @@
-// $Id: writeConfigFiles.C,v 1.4 2011/06/23 17:56:15 mschrode Exp $
+// $Id: writeConfigFiles.C,v 1.5 2011/08/15 15:57:12 mschrode Exp $
 
 #include <iostream>
 #include <fstream>
@@ -16,11 +16,8 @@
 TString OUT_FILE_PREFIX_;
 
 
-TString outputDir(bool isMC, int i) {
-  TString out = OUT_FILE_PREFIX_;
-  if( isMC) out += "_"+util::toTString(i);
-
-  return out;
+TString outputDir(int i) {
+  return OUT_FILE_PREFIX_+"_"+util::toTString(i);
 }
 
 
@@ -51,9 +48,12 @@ TString outputDir(bool isMC, unsigned int etaBin, unsigned int ptBin, unsigned i
     } else if( etaBin == 4 ) {
       idx = 8;
     }
+  } else {
+    if( etaBin >= 3 ) idx = 3;
+    else idx = etaBin;
   }
 
-  return outputDir(isMC,idx);
+  return outputDir(idx);
 }
 
 
@@ -68,9 +68,9 @@ void writeConfigFiles(const TString &binningConfig, const TString &skeleton, con
 
   // Create output directories
   OUT_FILE_PREFIX_ = outFilePrefix;
-  for(int i = 0; i < (isMC?11:1); ++i) {
-    gROOT->ProcessLine(".! mkdir "+outputDir(isMC,i));
-    gROOT->ProcessLine(".! mkdir "+outputDir(isMC,i)+"/done");
+  for(int i = 0; i < (isMC?11:4); ++i) {
+    gROOT->ProcessLine(".! mkdir "+outputDir(i));
+    gROOT->ProcessLine(".! mkdir "+outputDir(i)+"/done");
   }
 
   sampleTools::BinningAdmin binAdmin(binningConfig);
