@@ -1,4 +1,6 @@
-// $Id: ResolutionFunction.cc,v 1.3 2011/02/28 10:53:15 mschrode Exp $
+// $Id: ResolutionFunction.cc,v 1.4 2011/03/01 16:52:42 mschrode Exp $
+
+#include <algorithm>
 
 #include "ResolutionFunction.h"
 
@@ -65,6 +67,47 @@ namespace resolutionFit {
 
     return func;
   }
+
+
+  // -------------------------------------------------------------------------------------
+  ResolutionFunction* ResolutionFunction::fitTGraph(const TGraphAsymmErrors* g, ResolutionFunction::Type type) {
+
+    TGraphAsymmErrors* gc = static_cast<TGraphAsymmErrors*>(g->Clone());
+
+    std::vector<double> param;
+    // Min and max pt
+    param.push_back(*std::min_element(gc->GetX(),gc->GetX()+gc->GetN()));
+    param.push_back(*std::max_element(gc->GetX(),gc->GetX()+gc->GetN()));
+    // Choose typical start values
+    if( type == ResolutionFunction::NSC ) {
+      param.push_back(4.);
+      param.push_back(1.);
+      param.push_back(0.03);
+    } else if( type == ResolutionFunction::ModifiedNSC ) {
+      param.push_back(4.);
+      param.push_back(0.7);
+      param.push_back(0.);
+      param.push_back(0.2);
+    }
+    ResolutionFunction* f = ResolutionFunction::createResolutionFunction(type,param);
+
+    // Get TF1 to fit
+    TF1* fit = f->func("tmp");
+    if( type == ResolutionFunction::ModifiedNSC ) fit->FixParameter(2,0.);
+    gc->Fit(fit,"0QBR");
+    std::cout << "Parameters of fitted resolution:\n";
+    for(int i = 0; i < fit->GetNpar(); ++i) {
+      std::cout << "  " << fit->GetParameter(i) << std::flush;
+    }
+    std::cout << std::endl;
+    ResolutionFunction* result = ResolutionFunction::createResolutionFunction(type,fit);
+    delete f;
+    delete fit;
+    delete gc;
+    
+    return result;
+  }
+
 
 
   // -------------------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-// $Id: Extrapolation.h,v 1.3 2011/02/25 19:50:21 mschrode Exp $
+// $Id: Extrapolation.h,v 1.4 2011/06/07 18:23:30 mschrode Exp $
 
 #ifndef EXTRAPOLATION_H
 #define EXTRAPOLATION_H
@@ -15,8 +15,8 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   class Extrapolation {
   public:
-    Extrapolation(double minPt, double maxPt)
-      : minPt_(minPt), maxPt_(maxPt) {}
+    Extrapolation(double minPt, double maxPt, double minPt3)
+      : minPt_(minPt), maxPt_(maxPt), minPt3_(minPt3) {}
     
     bool operator()(const std::vector<double> &values,
 		    const std::vector<double> &uncerts,
@@ -29,6 +29,7 @@ namespace resolutionFit {
 
     const double minPt_;
     const double maxPt_;
+    const double minPt3_;
 
     TGraphAsymmErrors* getGraph(const std::vector<double> &ptSoft,
 				const std::vector<double> &values,

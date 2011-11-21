@@ -1,4 +1,4 @@
-// $Id: ResolutionFunction.h,v 1.3 2011/02/28 10:53:15 mschrode Exp $
+// $Id: ResolutionFunction.h,v 1.4 2011/03/01 16:52:41 mschrode Exp $
 
 #ifndef RESOLUTION_FUNCTION_H
 #define RESOLUTION_FUNCTION_H
@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "TF1.h"
+#include "TGraphAsymmErrors.h"
 #include "TString.h"
 
 namespace resolutionFit {
@@ -18,6 +19,8 @@ namespace resolutionFit {
     static ResolutionFunction* createScaledResolutionFunction(const ResolutionFunction* rf, double scale, double relUncertDown = 0., double relUncertUp = 0.);
     static ResolutionFunction* createResolutionFunction(Type type, const TF1* f, double relUncertDown = 0., double relUncertUp = 0.);
     static ResolutionFunction* createResolutionFunction(Type type, std::vector<double> &param, double relUncertDown = 0., double relUncertUp = 0.);
+    static ResolutionFunction* fitTGraph(const TGraphAsymmErrors* g, ResolutionFunction::Type type);
+
 
     virtual ~ResolutionFunction();
 

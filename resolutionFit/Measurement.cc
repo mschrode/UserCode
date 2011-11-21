@@ -1,4 +1,4 @@
-// $Id: Measurement.cc,v 1.6 2011/06/23 18:07:37 mschrode Exp $
+// $Id: Measurement.cc,v 1.7 2011/08/19 08:33:56 mschrode Exp $
 
 #include "Measurement.h"
 
@@ -164,7 +164,7 @@ namespace resolutionFit {
 	if( verbosity_ == 2 ) std::cout << "  Setting default fitted values... " << std::endl;
 	values_.push_back(0.);
 	statUncert_.push_back(0.);
-	statusIsGood = false;
+	//statusIsGood = false;
       } else {
 	h->SetDirectory(0);
 	for(int i = 0; i < h->GetNbinsX(); i++) {
@@ -188,6 +188,7 @@ namespace resolutionFit {
 	TString name = "Measurement::Dummy::";
 	name += HIST_COUNT;
 	hSpectrum_ = new TH1D(name,"",1,0,1);
+	hSpectrum_->SetDirectory(0);
       } else {
 	hSpectrum_->SetDirectory(0);
 	hSpectrum_->SetName("hSpectrum::"+hnSuffix_);
@@ -206,6 +207,7 @@ namespace resolutionFit {
 	if( !h ) {
 	  std::cerr << "  WARNING: '" << name << "' not found." << std::endl;
 	  it->second = new TH1D(name,"",1,0,1);
+	  it->second->SetDirectory(0);
 	} else {
 	  h->SetDirectory(0);
 	  h->UseCurrentStyle();

@@ -1,4 +1,4 @@
-// $Id: Sample.h,v 1.12 2011/06/23 18:07:37 mschrode Exp $
+// $Id: Sample.h,v 1.13 2011/08/19 08:33:56 mschrode Exp $
 
 #ifndef SAMPLE_H
 #define SAMPLE_H
@@ -53,7 +53,7 @@ namespace resolutionFit {
     TH1* histMCWeight(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histMCWeight(); }
     TH1* histMCNumPU(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histMCNumPU(); }
 
-    bool addFitResult(FitResult::Type type);
+    bool addFitResult(FitResult::Type type, double minPt3);
     bool setKSoftFit(FitResult::Type type, const TF1* fit);
     void addSystematicUncertainty(FitResult::Type type, const TString &label, double variedValue, double fraction);
     void addSystematicUncertainty(FitResult::Type type, const TString &label, double variedValueDown, double variedValueUp, double fraction);
@@ -63,6 +63,12 @@ namespace resolutionFit {
     unsigned int nPtSoftBins() const { return meas_.size(); }
     double ptSoft(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->ptSoft(); }
     void ptSoft(std::vector<double> &ptSoftVals) const;
+
+    double asymmetryWidth(unsigned int ptSoftBin) const { return asymmetryWidths_.at(ptSoftBin); }
+    double asymmetryWidthStatUncert(unsigned int ptSoftBin) const { return asymmetryWidthErrs_.at(ptSoftBin); }
+    double meanPtAve(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->meanPtAve(); }
+    double meanPtAveStatUncert(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->meanPtAveUncert(); }
+
     double meanPt(FitResult::Type type) const;
     double meanPtStatUncert(FitResult::Type type) const;
     void valuesInExtrapolation(FitResult::Type type, std::vector<double> &val, std::vector<double> &uncert) const;
@@ -81,7 +87,6 @@ namespace resolutionFit {
     TString labelQuantityInExtrapolation(FitResult::Type type) const;
 
 
-
   protected:
     static std::map<TString,int> COLOR;
     static std::map<TString,int> MARKER_STYLE;
@@ -95,10 +100,16 @@ namespace resolutionFit {
 
     Meas meas_;
     FitResultMap fitResult_;
-    std::map <SampleLabel, std::vector<double> > relWeightToOtherSample_;
+    std::map<SampleLabel, std::vector<double> > relWeightToOtherSample_;
 
     int color(unsigned int idx) const;
     bool findFitResult(FitResult::Type type, FitResult* &fitResult) const;
+    void fitAsymmetryWidths();
+
+
+  private:
+    std::vector<double> asymmetryWidths_; //! Standard deviation of Gaussian fitted to asymmetry histogram for the different ptSoft bins
+    std::vector<double> asymmetryWidthErrs_;  //! Uncertainty on standard deviation of Gaussian fitted to asymmetry histogram for the different ptSoft bins
   };
 
   typedef std::map<SampleLabel,Sample::Type> SampleTypes;

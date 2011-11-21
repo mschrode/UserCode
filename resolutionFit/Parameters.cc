@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.29 2011/03/04 09:35:54 mschrode Exp $
+// $Id: Parameters.cc,v 1.30 2011/06/07 18:23:31 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -15,6 +15,7 @@ namespace resolutionFit {
     jetType_ = JetProperties::Calo;
     outPutMode_ = OutputManager::PSAllInOne;
     nEtaBinsUser_ = 0;
+    ptSoftAbsMin_ = 10.;
 
     // Print binning info
     binAdm_->printBinning();

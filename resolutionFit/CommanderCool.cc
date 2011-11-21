@@ -1,4 +1,4 @@
-// $Id: CommanderCool.cc,v 1.8 2011/06/07 18:23:30 mschrode Exp $
+// $Id: CommanderCool.cc,v 1.9 2011/06/23 18:07:37 mschrode Exp $
 
 #include <iomanip>
 #include <iostream>
@@ -68,6 +68,7 @@ namespace resolutionFit {
       exit(1);
     }
 
+    std::cout << "Adding MCTruthSample '" << label << "'" << std::endl;
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
       (*it)->fitPLI(label,fileName,type);
     }
@@ -97,7 +98,7 @@ namespace resolutionFit {
       std::cerr << "WARNING in CommanderCool::addDataSample(): name of file contains a jet type string different than the current type '" << JetProperties::toString(par_->jetType()) << "'" << std::endl;
       exit(1);
     }
-    
+    std::cout << "Adding DataSample '" << label << "'" << std::endl;
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
       if( !((*it)->addDataSample(label,fileName) ) ) {
 	std::cerr << "ERROR adding DataSample '" << label << "'" << std::endl;
@@ -115,6 +116,7 @@ namespace resolutionFit {
       exit(1);
     }
 
+    std::cout << "Adding MCSample '" << label << "'" << std::endl;
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
       if( !((*it)->addMCSample(label,fileName) ) ) {
 	std::cerr << "ERROR adding MCSample '" << label << "'" << std::endl;
@@ -127,6 +129,7 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------
   void CommanderCool::addFitResult(FitResult::Type type) {
+    std::cout << "Producing fit results of type '" << FitResult::toString(type) << "'" << std::endl;
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
       if( !((*it)->addFitResult(type)) ) {
 	std::cerr << "ERROR adding FitResult of type '" << FitResult::toString(type) << "'" << std::endl;
@@ -197,6 +200,11 @@ namespace resolutionFit {
 
 
 
+  //! \brief Marks the specified samples for direct comparison plots
+  //! 
+  //! Also, if only two samples are added (i.e. if this method gets
+  //! only called once), k-values can be fitted from the resolution
+  //! ratio of 'sample1' and 'sample2' (\sa CommanderCool::fitKValues)
   // -------------------------------------------------------------------
   void CommanderCool::compareSamples(const SampleLabel &label1, const SampleLabel &label2) {
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
@@ -209,6 +217,8 @@ namespace resolutionFit {
 
 
 
+  //! \brief Fit the ratio of the measured resolutions of the
+  //! samples marked for comparison (\sa CommanderCool::compareSamples)
   // -------------------------------------------------------------------
   void CommanderCool::fitKValues(FitResult::Type type) {
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
@@ -239,6 +249,7 @@ namespace resolutionFit {
     std::cout << "  " << std::flush;
     if( par_->outMode() == OutputManager::PSAllInOne ) std::cout << "One ps file containing all plots" << std::endl;
     else if( par_->outMode() == OutputManager::EPSSingleFiles ) std::cout << "One eps file per plot" << std::endl;
+    else if( par_->outMode() == OutputManager::EPSSingleFilesPlusROOT ) std::cout << "One eps file per plot and all plots in one root file" << std::endl;
     
     std::cout << "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n" << std::endl;
   }

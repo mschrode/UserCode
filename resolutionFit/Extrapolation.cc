@@ -1,4 +1,4 @@
-// $Id: Extrapolation.cc,v 1.12 2011/06/23 18:07:37 mschrode Exp $
+// $Id: Extrapolation.cc,v 1.13 2011/07/18 09:36:47 mschrode Exp $
 
 #include "Extrapolation.h"
 
@@ -76,12 +76,13 @@ namespace resolutionFit {
 						 &(ptSoftUncert.front()),&(ptSoftUncert.front()),
 						 &(uncerts.front()),&(uncerts.front()));
     
-    // Remove points that correspond to bins with an
-    // average ptAve below 10 GeV
-    double minPtAve = minPt_ > 70. ? 10. : 6.;
+    // Remove points that correspond to bins with
+    // ptAveMin below 'minPt3_'
+    double minPt3 = minPt3_;
+    if( minPt3 > 6. && minPt_ > 70. ) minPt3 = 6.;
     int nPointsToDelete = 0;
     for(int i = 0; i < g->GetN(); ++i) {
-      if( g->GetX()[i]*minPt_ < minPtAve ) nPointsToDelete++;
+      if( g->GetX()[i]*minPt_ < minPt3 ) nPointsToDelete++;
     }
     if( nPointsToDelete ) {
       std::cout << "Extrapolation in " << bin() << ": Removing " << nPointsToDelete << " points" << std::endl;

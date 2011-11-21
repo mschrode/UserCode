@@ -1,4 +1,4 @@
-// $Id: FitResult.h,v 1.8 2011/06/07 18:23:30 mschrode Exp $
+// $Id: FitResult.h,v 1.9 2011/06/23 18:07:37 mschrode Exp $
 
 #ifndef FIT_RESULT_H
 #define FIT_RESULT_H
@@ -23,10 +23,10 @@ namespace resolutionFit {
     enum Type { MaxLikeKSoftRel, FullMaxLikeRel, FullMaxLikeAbs, SimpleMaxLike, PtAsym, PtGenAsym };
 
     static bool validType(Type type);
-    static FitResult* createFitResult(Type type, const std::vector<Measurement*> &meas, unsigned int verbosity);
+    static FitResult* createFitResult(Type type, const std::vector<Measurement*> &meas, double minPt3, unsigned int verbosity);
     static TString toString(FitResult::Type type);
 
-    FitResult(const std::vector<Measurement*> &meas, unsigned int verbosity);
+    FitResult(const std::vector<Measurement*> &meas, double minPt3, unsigned int verbosity);
     virtual ~FitResult();
 
     virtual FitResult::Type fitResultType() const = 0;
@@ -69,6 +69,7 @@ namespace resolutionFit {
     const std::vector<Measurement*> meas_;
     const unsigned int verbosity_;
     const unsigned int workingPointBin_;
+    const double minPt3_;
 
     double meanPt_;
     double meanPtUncert_;
@@ -92,7 +93,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   class FitResultMaxLikeKSoftRel : public FitResult {
   public:
-    FitResultMaxLikeKSoftRel(const std::vector<Measurement*> meas, unsigned int verbosity);
+    FitResultMaxLikeKSoftRel(const std::vector<Measurement*> meas, double minPt3, unsigned int verbosity);
 
     FitResult::Type fitResultType() const { return FitResult::MaxLikeKSoftRel; }
 
@@ -108,7 +109,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   class FitResultFullMaxLikeRel : public FitResult {
   public:
-    FitResultFullMaxLikeRel(const std::vector<Measurement*> meas, unsigned int verbosity);
+    FitResultFullMaxLikeRel(const std::vector<Measurement*> meas, double minPt3, unsigned int verbosity);
 
     FitResult::Type fitResultType() const { return FitResult::FullMaxLikeRel; }
 
@@ -120,7 +121,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   class FitResultFullMaxLikeAbs : public FitResult {
   public:
-    FitResultFullMaxLikeAbs(const std::vector<Measurement*> meas, unsigned int verbosity);
+    FitResultFullMaxLikeAbs(const std::vector<Measurement*> meas, double minPt3, unsigned int verbosity);
     ~FitResultFullMaxLikeAbs();
 
     FitResult::Type fitResultType() const { return FitResult::FullMaxLikeAbs; }
@@ -148,7 +149,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   class FitResultPtAsym : public FitResult {
   public:
-    FitResultPtAsym(const std::vector<Measurement*> meas, unsigned int verbosity);
+    FitResultPtAsym(const std::vector<Measurement*> meas, double minPt3, unsigned int verbosity);
 
     FitResult::Type fitResultType() const { return FitResult::PtAsym; }
 
@@ -160,7 +161,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   class FitResultPtGenAsym : public FitResult {
   public:
-    FitResultPtGenAsym(const std::vector<Measurement*> meas, unsigned int verbosity);
+    FitResultPtGenAsym(const std::vector<Measurement*> meas, double minPt3, unsigned int verbosity);
 
     FitResult::Type fitResultType() const { return FitResult::PtGenAsym; }
 

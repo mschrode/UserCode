@@ -1,4 +1,4 @@
-// $Id: PlotMaker.h,v 1.17 2011/08/15 15:55:09 mschrode Exp $
+// $Id: PlotMaker.h,v 1.18 2011/08/19 08:33:56 mschrode Exp $
 
 #ifndef PLOT_MAKER_H
 #define PLOT_MAKER_H
@@ -25,6 +25,7 @@ namespace resolutionFit {
     void makeAllPlots() const;
 
     void plotAsymmetry() const;
+    void plotAsymmetryComparison() const;
     void plotAsymmetryTails() const;
     void plotControlDistributions() const;
     void plotExtrapolation() const;
@@ -47,6 +48,7 @@ namespace resolutionFit {
 
       TPaveText* ptSoftBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int ptSoftBinIdx) const;
       TPaveText* ptSoftBin(unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int ptSoftBinIdx) const;
+      TPaveText* ptSoftBin(unsigned int etaBinIdx, unsigned int ptSoftBinIdx) const;
       TPaveText* ptBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptBinIdx) const;
       TPaveText* ptBin(unsigned int etaBinIdx, unsigned int ptBinIdx) const;
       TPaveText* etaBin(SampleLabel label, unsigned int etaBinIdx, unsigned int nExtraEntries = 0) const;
@@ -82,6 +84,7 @@ namespace resolutionFit {
     double markerSize_;
     int lineWidth_;
 
+    TString histFileName(const TString &id, SampleLabel label1, SampleLabel label2, const EtaBin* etaBin, unsigned int ptSoftBin) const;
     TString histFileName(const TString &id, const EtaBin* etaBin, SampleLabel label1, SampleLabel label2, FitResult::Type type) const;
     TString histFileName(const TString &id, const EtaBin* etaBin, SampleLabel sampleLabel, FitResult::Type type) const;
     TString histFileName(const TString &id, const PtBin* ptBin, const Sample* sample, FitResult::Type type) const;

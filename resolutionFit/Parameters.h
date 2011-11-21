@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.30 2011/07/18 09:36:47 mschrode Exp $
+// $Id: Parameters.h,v 1.31 2011/08/15 15:55:09 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -37,6 +37,7 @@ namespace resolutionFit {
     void setOutMode(OutputManager::Mode mode);
     void setNEtaBinsUser(unsigned int nBins);
     void setLumi(double lumi) { lumi_ = lumi; }
+    void setPtSoftAbsMin(double min) { ptSoftAbsMin_ = min; }
 
     unsigned int verbosity() const { return verbosity_; }
 
@@ -57,6 +58,7 @@ namespace resolutionFit {
     const std::vector<double>& ptSoft() const { return binAdm_->ptSoftMax(); }
     double ptSoftMin(unsigned int ptSoftBin) const { return binAdm_->ptSoftMin(ptSoftBin); }
     double ptSoftMax(unsigned int ptSoftBin) const { return binAdm_->ptSoftMax(ptSoftBin); }
+    double ptSoftAbsMin() const { return ptSoftAbsMin_; }
 
     void printBinning() const { binAdm_->printBinning(); }
 
@@ -69,6 +71,7 @@ namespace resolutionFit {
     
     TString id_;
     unsigned int nEtaBinsUser_;
+    double ptSoftAbsMin_;
 
     JetProperties::Algo jetAlgo_;
     JetProperties::Type jetType_;

@@ -1,4 +1,4 @@
-// $Id: FitResult.cc,v 1.8 2011/06/07 18:23:31 mschrode Exp $
+// $Id: FitResult.cc,v 1.9 2011/06/23 18:07:37 mschrode Exp $
 
 #include "FitResult.h"
 
@@ -27,19 +27,19 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------
-  FitResult* FitResult::createFitResult(Type type, const std::vector<Measurement*> &meas, unsigned int verbosity) {
+  FitResult* FitResult::createFitResult(Type type, const std::vector<Measurement*> &meas, double minPt3, unsigned int verbosity) {
     FitResult* fr = 0;
     if( validType(type) ) {
       if( type == MaxLikeKSoftRel ) {
-	fr = new FitResultMaxLikeKSoftRel(meas,verbosity);
+	fr = new FitResultMaxLikeKSoftRel(meas,minPt3,verbosity);
       } else if( type == FullMaxLikeRel ) {
-	fr = new FitResultFullMaxLikeRel(meas,verbosity);
+	fr = new FitResultFullMaxLikeRel(meas,minPt3,verbosity);
       } else if( type == FullMaxLikeAbs ) {
-	fr = new FitResultFullMaxLikeAbs(meas,verbosity);
+	fr = new FitResultFullMaxLikeAbs(meas,minPt3,verbosity);
       } else if( type == PtAsym ) {
-	fr = new FitResultPtAsym(meas,verbosity);
+	fr = new FitResultPtAsym(meas,minPt3,verbosity);
       } else if( type == PtGenAsym ) {
-	fr = new FitResultPtGenAsym(meas,verbosity);
+	fr = new FitResultPtGenAsym(meas,minPt3,verbosity);
       }
       if( !fr->init() ) {
 	std::cerr << "ERROR in FitResult::createFitResult(): initialization failure. Das ist ganz schlecht!" << std::endl;
@@ -67,8 +67,8 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------  
-  FitResult::FitResult(const Meas &meas, unsigned int verbosity)
-    : meas_(meas), verbosity_(verbosity), workingPointBin_(3) {
+  FitResult::FitResult(const Meas &meas, double minPt3, unsigned int verbosity)
+    : meas_(meas), verbosity_(verbosity), workingPointBin_(3), minPt3_(minPt3) {
 
     extrapolation_ = 0;
     kSoftFit_ = 0;
@@ -85,7 +85,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------  
   bool FitResult::extrapolate() {
     if( verbosity_ == 1 ) std::cout << "Extrapolating" << std::endl;
-    Extrapolation extra(minPt(),maxPt());
+    Extrapolation extra(minPt(),maxPt(),minPt3_);
     bool result = extra(ptSoft_,values_,statUncerts_,extrapolation_,extrapolatedSystUncert_);
     extrapolatedValue_ = extrapolation_->GetParameter(0);
     extrapolatedStatUncert_ = extrapolation_->GetParError(0);
@@ -137,8 +137,8 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------  
-  FitResultMaxLikeKSoftRel::FitResultMaxLikeKSoftRel(const Meas meas, unsigned int verbosity)
-    : FitResult(meas,verbosity) { }
+  FitResultMaxLikeKSoftRel::FitResultMaxLikeKSoftRel(const Meas meas, double minPt3, unsigned int verbosity)
+    : FitResult(meas,minPt3,verbosity) { }
 
 
   // -------------------------------------------------------------------------------------  
@@ -187,8 +187,8 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------  
-  FitResultFullMaxLikeRel::FitResultFullMaxLikeRel(const Meas meas, unsigned int verbosity)
-    : FitResult(meas,verbosity) { }
+  FitResultFullMaxLikeRel::FitResultFullMaxLikeRel(const Meas meas, double minPt3, unsigned int verbosity)
+    : FitResult(meas,minPt3,verbosity) { }
 
 
   // -------------------------------------------------------------------------------------  
@@ -200,16 +200,17 @@ namespace resolutionFit {
     for(size_t i = 0; i < meas_.size(); ++i) {
       ptSoft_.push_back(meas_.at(i)->ptSoft());
     }
-    std::cout << "FitResultFullMaxLike::storeResult(): TODO MeanPt from spectrum convoluted with extrapolated *sigma*!" << std::endl;
+    meanPt_ = meas_.front()->meanPdfPtTrue();
+    meanPtUncert_ = meas_.front()->meanPdfPtTrueUncert();
 
-    // Hack specific for Spring11 PF sample
-    size_t i = 0;
-    if( meas_.at(0)->fittedValue(0)/meas_.at(1)->fittedValue(0) > 2. ) {
-      std::cerr << "\nWARNING: Resolution a first point large; using second point.\n" << std::endl;
-      i = 1;
-    }
-    meanPt_ = meas_.at(i)->meanPdfPtTrue();
-    meanPtUncert_ = meas_.at(i)->meanPdfPtTrueUncert();
+//     // Hack specific for Spring11 PF sample
+//     size_t i = 0;
+//     if( meas_.at(0)->fittedValue(0)/meas_.at(1)->fittedValue(0) > 2. ) {
+//       std::cerr << "\nWARNING: Resolution a first point large; using second point.\n" << std::endl;
+//       i = 1;
+//     }
+//     meanPt_ = meas_.at(i)->meanPdfPtTrue();
+//     meanPtUncert_ = meas_.at(i)->meanPdfPtTrueUncert();
 
 
     // Set fitted values
@@ -227,8 +228,8 @@ namespace resolutionFit {
   //! \brief Extrapolate absolute sigma and convolute extrapolated resolution
   //! with spectrum to obtain mean pt in each bin
   // -------------------------------------------------------------------------------------  
-  FitResultFullMaxLikeAbs::FitResultFullMaxLikeAbs(const Meas meas, unsigned int verbosity)
-    : FitResult(meas,verbosity) {
+  FitResultFullMaxLikeAbs::FitResultFullMaxLikeAbs(const Meas meas, double minPt3, unsigned int verbosity)
+    : FitResult(meas,minPt3,verbosity) {
     ++HIST_COUNT;
     TString name = "FitResultFullMaxLikeAbs::Spectrum::";
     name += HIST_COUNT;
@@ -314,8 +315,8 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------  
-  FitResultPtAsym::FitResultPtAsym(const Meas meas, unsigned int verbosity)
-    : FitResult(meas,verbosity) { }
+  FitResultPtAsym::FitResultPtAsym(const Meas meas, double minPt3, unsigned int verbosity)
+    : FitResult(meas,minPt3,verbosity) { }
 
 
   // -------------------------------------------------------------------------------------  
@@ -324,14 +325,17 @@ namespace resolutionFit {
     statUncerts_.clear();
     ptSoft_.clear();
 
-    // Set ptSoft cut values and find smalles ptSoft for meanPt
-    double ptSoftSmall = 1000.;
+    // Set ptSoft cut values
     for(MeasIt it = meas_.begin() ; it != meas_.end(); ++it) {
       ptSoft_.push_back((*it)->ptSoft());
-      if( (*it)->ptSoft() < ptSoftSmall ) {
-	ptSoftSmall = (*it)->ptSoft();
+    }
+    meanPt_ = 0.;
+    meanPtUncert_ = 1000.;
+    for(MeasIt it = meas_.begin() ; it != meas_.end(); ++it) {
+      if( (*it)->meanPtAve() > 3. ) {
 	meanPt_ = (*it)->meanPtAve();
 	meanPtUncert_ = (*it)->meanPtAveUncert();
+	break;
       }
     }
 
@@ -361,8 +365,8 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------  
-  FitResultPtGenAsym::FitResultPtGenAsym(const Meas meas, unsigned int verbosity)
-    : FitResult(meas,verbosity) { }
+  FitResultPtGenAsym::FitResultPtGenAsym(const Meas meas, double minPt3, unsigned int verbosity)
+    : FitResult(meas,minPt3,verbosity) { }
 
 
   // -------------------------------------------------------------------------------------  

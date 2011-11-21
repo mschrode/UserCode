@@ -1,4 +1,4 @@
-// $Id: EtaBin.h,v 1.9 2011/06/07 18:23:30 mschrode Exp $
+// $Id: EtaBin.h,v 1.10 2011/06/23 18:07:37 mschrode Exp $
 
 #ifndef ETA_BIN_H
 #define ETA_BIN_H
@@ -71,6 +71,7 @@ namespace resolutionFit {
     TF1* scaledMCTruthResoFunc(const TString &name) const { return scaledMCTruthReso_->func(name); }
     TGraphAsymmErrors* scaledMCTruthUncertaintyBand() const;
     TGraphAsymmErrors* scaledMCTruthRatioBand() const;
+    TGraphAsymmErrors* asymmetryWidths(const SampleLabel &label, unsigned int ptSoftBin) const;
 
     bool hasKValue(const SampleLabel &label1, const SampleLabel &label2, FitResult::Type type) const;
     double kValue(const SampleLabel &label1, const SampleLabel &label2, FitResult::Type type) const { return kVal_; }
@@ -132,7 +133,6 @@ namespace resolutionFit {
 
     SystematicUncertainty* findSystematicUncertainty(const SampleLabel &label, FitResult::Type type);
     TF1* fitKSoftSlope(const TString &name, const SampleLabel &label, FitResult::Type type) const;
-    ResolutionFunction* fitResolution(const TGraphAsymmErrors* g, ResolutionFunction::Type type) const;
   };
 
   typedef std::vector<EtaBin*> EtaBins;

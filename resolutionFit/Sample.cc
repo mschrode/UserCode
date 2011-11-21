@@ -3,6 +3,8 @@
 #include <cassert>
 #include <iostream>
 
+#include "../util/HistOps.h"
+
 
 namespace resolutionFit {
 
@@ -114,7 +116,7 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------
-  bool Sample::addFitResult(FitResult::Type type) {
+  bool Sample::addFitResult(FitResult::Type type, double minPt3) {
     bool result = true;
     FitResultMapIt it = fitResult_.find(type);
     if( it != fitResult_.end() ) {
@@ -122,7 +124,7 @@ namespace resolutionFit {
       if( verbosity_ ) std::cerr << "ERROR in Sample: FitResult of type '" << FitResult::toString(type) << "' does already exist" << std::endl;
     } else {
       if( verbosity_ ) std::cout << "Sample::addFitResult(): Adding FitResult '" << FitResult::toString(type) << "'" << std::endl;
-      fitResult_[type] = FitResult::createFitResult(type,meas_,verbosity_);
+      fitResult_[type] = FitResult::createFitResult(type,meas_,minPt3,verbosity_);
     }
 
     return result;
@@ -337,6 +339,33 @@ namespace resolutionFit {
   }
 
 
+  //! Fit Gaussian to asymmetry histograms for the different ptSoft bins
+  //! and store standard deviation and uncertainty
+  // -------------------------------------------------------------------
+  void Sample::fitAsymmetryWidths() {
+    for(unsigned int ptSoftBin = 0; ptSoftBin < meas_.size(); ++ptSoftBin) {
+      double width = 0.;
+      double widthErr = 1000.;
+      TH1* hPtAsym = meas_.at(ptSoftBin)->histPtAsym();
+      hPtAsym->GetXaxis()->SetRangeUser(-1.,1.);
+      if( hPtAsym->Integral(1,hPtAsym->GetNbinsX()) > 0. ) {
+	if( util::HistOps::fitCoreWidth(hPtAsym,2.,width,widthErr) ) {
+	  asymmetryWidths_.push_back(width);
+	  asymmetryWidthErrs_.push_back(widthErr);
+	} else {
+	  asymmetryWidths_.push_back(0.);
+	  asymmetryWidthErrs_.push_back(1000.);
+	  std::cerr << "WARNING: error when fitting asymmetry of sample '" << label() << "' for " << meas_.at(ptSoftBin)->ptMin() << " < ptAve < " << meas_.at(ptSoftBin)->ptMax() << " GeV and ptSoft/ptAve < " << meas_.at(ptSoftBin)->ptSoft() << std::endl;
+	}
+      } else {
+	asymmetryWidths_.push_back(0.);
+	asymmetryWidthErrs_.push_back(1000.);
+      }
+      delete hPtAsym;
+    }
+  }
+
+
 
   // -------------------------------------------------------------------
   DataSample::DataSample(const TString &label, unsigned int etaBin, unsigned int ptBin, double ptMin, double ptMax, const std::vector<double> &ptSoft, const TString &fileName, unsigned int verbosity)
@@ -345,6 +374,7 @@ namespace resolutionFit {
     for(unsigned int i = 0; i < ptSoft.size(); ++i) {
       meas_.push_back(new Measurement(fileName,etaBin,ptBin,i,ptMin,ptMax,ptSoft.at(i),verbosity));
     }
+    fitAsymmetryWidths();
 
     // Style
     if( Sample::type(label) == Sample::NONE ) {
@@ -365,6 +395,7 @@ namespace resolutionFit {
     for(unsigned int i = 0; i < ptSoft.size(); ++i) {
       meas_.push_back(new Measurement(fileName,etaBin,ptBin,i,ptMin,ptMax,ptSoft.at(i),verbosity));
     }
+    fitAsymmetryWidths();
 
     // Style
     if( Sample::type(label) == Sample::NONE ) {

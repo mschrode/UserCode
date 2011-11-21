@@ -1,4 +1,4 @@
-// $Id: EtaBin.cc,v 1.12 2011/06/23 18:07:37 mschrode Exp $
+// $Id: EtaBin.cc,v 1.13 2011/07/18 09:36:47 mschrode Exp $
 
 #include <algorithm>
 #include <iostream>
@@ -534,7 +534,8 @@ namespace resolutionFit{
 
     // Fit new PLI from extrapolated ptGen asymmetry width
     delete pli_;
-    pli_ = fitResolution(g,type);
+    std::cout << "Fitting PLI for EtaBin " << etaBin() << std::endl;
+    pli_ = ResolutionFunction::fitTGraph(g,type);
   }
 
 
@@ -747,47 +748,6 @@ namespace resolutionFit{
 
 
   // -------------------------------------------------------------------------------------
-  ResolutionFunction* EtaBin::fitResolution(const TGraphAsymmErrors* g, ResolutionFunction::Type type) const {
-
-    TGraphAsymmErrors* gc = static_cast<TGraphAsymmErrors*>(g->Clone());
-
-    std::vector<double> param;
-    // Min and max pt
-    param.push_back(*std::min_element(gc->GetX(),gc->GetX()+gc->GetN()));
-    param.push_back(*std::max_element(gc->GetX(),gc->GetX()+gc->GetN()));
-    // Choose typical start values
-    if( type == ResolutionFunction::NSC ) {
-      param.push_back(4.);
-      param.push_back(1.);
-      param.push_back(0.03);
-    } else if( type == ResolutionFunction::ModifiedNSC ) {
-      param.push_back(4.);
-      param.push_back(0.7);
-      param.push_back(0.);
-      param.push_back(0.2);
-    }
-    ResolutionFunction* f = ResolutionFunction::createResolutionFunction(type,param);
-
-    // Get TF1 to fit
-    TF1* fit = f->func("tmp");
-    if( type == ResolutionFunction::ModifiedNSC ) fit->FixParameter(2,0.);
-    gc->Fit(fit,"0QBR");
-    std::cout << "\nParameters of fitted resolution:\n";
-    std::cout << "  Eta" << etaBin() << ": 10. 1500. ";
-    for(int i = 0; i < fit->GetNpar(); ++i) {
-      std::cout << "  " << fit->GetParameter(i) << std::flush;
-    }
-    std::cout << std::endl;
-    ResolutionFunction* result = ResolutionFunction::createResolutionFunction(type,fit);
-    delete f;
-    delete fit;
-    delete gc;
-    
-    return result;
-  }
-
-
-  // -------------------------------------------------------------------------------------
   TGraphAsymmErrors* EtaBin::scaledMCTruthUncertaintyBand() const {
     int n = 1000;
     double dx = (scaledMCTruthReso_->ptMax()-scaledMCTruthReso_->ptMin())/n;
@@ -836,5 +796,26 @@ namespace resolutionFit{
     g->SetLineColor(g->GetFillColor());
 
     return g;
+  }
+
+
+  //! Return TGraphAsymmErrors of the standard deviations of a Gaussian fit to 
+  //! the asymmetry histogram in each ptBin, for the specified ptSoftBin
+  // -------------------------------------------------------------------------------------
+  TGraphAsymmErrors* EtaBin::asymmetryWidths(const SampleLabel &label, unsigned int ptSoftBin) const {
+    std::vector<double> pt;
+    std::vector<double> ptErr;
+    std::vector<double> width;
+    std::vector<double> widthStatErr;
+    for(PtBinIt ptBinIt = ptBinsBegin(); ptBinIt != ptBinsEnd(); ++ptBinIt) {
+      const Sample* s = (*ptBinIt)->findSample(label);
+      pt.push_back(s->meanPtAve(ptSoftBin));
+      ptErr.push_back(s->meanPtAveStatUncert(ptSoftBin));
+      width.push_back(s->asymmetryWidth(ptSoftBin));
+      widthStatErr.push_back(s->asymmetryWidthStatUncert(ptSoftBin));
+    }
+
+    return new TGraphAsymmErrors(pt.size(),&(pt.front()),&(width.front()),&(ptErr.front()),&(ptErr.front()),
+				 &(widthStatErr.front()),&(widthStatErr.front()));
   }
 }
