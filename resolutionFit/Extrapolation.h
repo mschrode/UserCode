@@ -1,4 +1,4 @@
-// $Id: Extrapolation.h,v 1.4 2011/06/07 18:23:30 mschrode Exp $
+// $Id: Extrapolation.h,v 1.5 2011/11/21 17:18:04 mschrode Exp $
 
 #ifndef EXTRAPOLATION_H
 #define EXTRAPOLATION_H
@@ -15,8 +15,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   class Extrapolation {
   public:
-    Extrapolation(double minPt, double maxPt, double minPt3)
-      : minPt_(minPt), maxPt_(maxPt), minPt3_(minPt3) {}
+    Extrapolation(double minPt, double maxPt, double minPt3);
     
     bool operator()(const std::vector<double> &values,
 		    const std::vector<double> &uncerts,
@@ -26,6 +25,7 @@ namespace resolutionFit {
 
   private:
     static unsigned int NUM_EXTRAPOLATION_FUNCTIONS;
+    static unsigned int NUM_INSTANCES;
 
     const double minPt_;
     const double maxPt_;

@@ -1,4 +1,4 @@
-// $Id: Extrapolation.cc,v 1.13 2011/07/18 09:36:47 mschrode Exp $
+// $Id: Extrapolation.cc,v 1.14 2011/11/21 17:18:05 mschrode Exp $
 
 #include "Extrapolation.h"
 
@@ -12,8 +12,23 @@
 namespace resolutionFit {
 
   unsigned int Extrapolation::NUM_EXTRAPOLATION_FUNCTIONS = 0;
+  unsigned int Extrapolation::NUM_INSTANCES = 0;
   
-  
+
+  // -------------------------------------------------------------------------------------
+  Extrapolation::Extrapolation(double minPt, double maxPt, double minPt3)
+    : minPt_(minPt), maxPt_(maxPt), minPt3_(minPt3) {
+    
+    if( NUM_INSTANCES == 0 ) {
+      std::cout << "\n\n++++++ Extrapolation +++++++++++++++++++++++++++++++++" << std::endl;
+      std::cout << "\nLinear extrapolation\nMinimum ptSoft = " << minPt3_ << " GeV" << std::endl;
+      std::cout << std::endl;
+    }
+    
+    ++NUM_INSTANCES;
+  }
+
+
   // -------------------------------------------------------------------------------------
   bool Extrapolation::operator()(const std::vector<double> &ptSoft,
 				 const std::vector<double> &values,
@@ -79,18 +94,18 @@ namespace resolutionFit {
     // Remove points that correspond to bins with
     // ptAveMin below 'minPt3_'
     double minPt3 = minPt3_;
-    if( minPt3 > 6. && minPt_ > 70. ) minPt3 = 6.;
+    if( minPt3 > 6. && minPt_ < 70. ) minPt3 = 6.; // Otherwise no points left in first bin
     int nPointsToDelete = 0;
     for(int i = 0; i < g->GetN(); ++i) {
       if( g->GetX()[i]*minPt_ < minPt3 ) nPointsToDelete++;
     }
     if( nPointsToDelete ) {
-      std::cout << "Extrapolation in " << bin() << ": Removing " << nPointsToDelete << " points" << std::endl;
+      std::cout << "  Extrapolation in " << bin() << ": Removing " << nPointsToDelete << " points" << std::endl;
       for(int i = 0; i < nPointsToDelete; ++i) {
-	std::cout << "  ptSoftRel = " << g->GetX()[0] << " ("  << g->GetX()[0]*minPt_ << " GeV)" << std::endl;
+	std::cout << "    ptSoftRel = " << g->GetX()[0] << " ("  << g->GetX()[0]*minPt_ << " GeV)" << std::endl;
 	g->RemovePoint(0);
       }
-      std::cout << "  " << g->GetN() << " points remaining" << std::endl;
+      std::cout << "    " << g->GetN() << " points remaining" << std::endl;
     }
 
     return g;
