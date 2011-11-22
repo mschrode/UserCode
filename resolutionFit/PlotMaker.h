@@ -1,4 +1,4 @@
-// $Id: PlotMaker.h,v 1.18 2011/08/19 08:33:56 mschrode Exp $
+// $Id: PlotMaker.h,v 1.19 2011/11/21 17:18:05 mschrode Exp $
 
 #ifndef PLOT_MAKER_H
 #define PLOT_MAKER_H
@@ -46,7 +46,7 @@ namespace resolutionFit {
 
       double start() const;
 
-      TPaveText* ptSoftBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int ptSoftBinIdx) const;
+      TPaveText* ptSoftBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int ptSoftBinIdx, unsigned int nExtraEntries = 0) const;
       TPaveText* ptSoftBin(unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int ptSoftBinIdx) const;
       TPaveText* ptSoftBin(unsigned int etaBinIdx, unsigned int ptSoftBinIdx) const;
       TPaveText* ptBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptBinIdx) const;

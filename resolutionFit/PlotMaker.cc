@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.22 2011/09/16 14:00:26 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.23 2011/11/21 17:18:05 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -71,10 +71,10 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------------------------
   void PlotMaker::makeAllPlots() const {
-//     plotAsymmetry();
+    plotAsymmetry();
 //    plotAsymmetryComparison();
 //     plotAsymmetryTails();
-//    plotPtSpectra();
+    //plotPtSpectra();
     plotExtrapolation();
 //     //plotSlopes();
 //     plotPtGenSpectra();
@@ -125,7 +125,7 @@ namespace resolutionFit {
 	      
 	      // Asymmetry distribution
 	      TH1* hPtAsym = sample->histPtAsym(ptSoftBinIdx);
-	      util::HistOps::setAxisTitles(hPtAsym,"Asymmetry","","events",true);
+	      util::HistOps::setAxisTitles(hPtAsym,"Asymmetry","","events",false);
 	      hPtAsym->GetXaxis()->SetRangeUser(-asymMax,asymMax);
 	      setStyle(sample,hPtAsym);
 	      
@@ -154,11 +154,11 @@ namespace resolutionFit {
 	      
 	      // Labels
 	      TPaveText* label = labelMk_->ptSoftBin(sample->label(),etaBin->etaBin(),ptBin->ptBin(),ptSoftBinIdx);
-	      TLegend* leg = util::LabelFactory::createLegendColWithOffset(1+labels.size(),labelMk_->start(),label->GetSize());
-	      leg->AddEntry(hPtAsym,sample->label(),"P");
-	      for(unsigned int i = 0; i < fits.size(); ++i) {
-		leg->AddEntry(fits.at(i),labels.at(i),"L");
-	      }
+	      TLegend* leg = util::LabelFactory::createLegendColWithOffset(1,-labelMk_->start(),label->GetSize());
+	      leg->AddEntry(hPtAsym,sample->label()+" (N = "+util::toTString(hPtAsym->Integral())+")","P");
+// 	      for(unsigned int i = 0; i < fits.size(); ++i) {
+// 		leg->AddEntry(fits.at(i),labels.at(i),"L");
+// 	      }
 	    
 	      //util::HistOps::setYRange(hPtAsym,label->GetSize()+leg->GetNRows()+1);
 	      util::HistOps::setYRange(hPtAsym,label->GetSize()+1);
@@ -168,7 +168,7 @@ namespace resolutionFit {
 		//fits.at(i)->Draw("same");
 	      }
 	      label->Draw("same");
-	      //leg->Draw("same");
+	      leg->Draw("same");
 	      out_->saveCurrentPad(histFileName("PtAsym",ptBin,sample,ptSoftBinIdx));
 
 	      delete hPtAsym;
@@ -2671,8 +2671,8 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------
-  TPaveText* PlotMaker::LabelMaker::ptSoftBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int ptSoftBinIdx) const {
-    TPaveText* lab = etaBin(label,etaBinIdx,1);
+  TPaveText* PlotMaker::LabelMaker::ptSoftBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int ptSoftBinIdx, unsigned int nExtraEntries) const {
+    TPaveText* lab = etaBin(label,etaBinIdx,1+nExtraEntries);
     lab->AddText(ptRange(etaBinIdx,ptBinIdx)+",  "+ptSoftRange(ptSoftBinIdx));
 
     return lab;
