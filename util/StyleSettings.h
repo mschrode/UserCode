@@ -1,4 +1,4 @@
-// $Id: StyleSettings.h,v 1.13 2011/07/18 08:58:40 mschrode Exp $
+// $Id: StyleSettings.h,v 1.14 2011/08/11 10:02:13 mschrode Exp $
 
 #ifndef STYLE_SETTINGS_H
 #define STYLE_SETTINGS_H
@@ -18,12 +18,12 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: StyleSettings.h,v 1.13 2011/07/18 08:58:40 mschrode Exp $
+  //!  $Id: StyleSettings.h,v 1.14 2011/08/11 10:02:13 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class StyleSettings {
   public:
     // Different style settings
-    enum Style { Screen, Presentation, Note, PAS };
+    enum Style { Screen, Presentation, PresentationCOLZ, Note, PAS };
 
     // Convert between style representations
     static Style style() {
@@ -32,6 +32,7 @@ namespace util {
       if( mode == "Presentation" ) st = Presentation;
       else if( mode == "Note" ) st = Note;
       else if( mode == "PAS" ) st = PAS;
+      else if( mode == "PresentationCOLZ" ) st = PresentationCOLZ;
       
       return st;
     }
@@ -40,6 +41,7 @@ namespace util {
       if( mode == Presentation ) st = "Presentation";
       else if( mode == Note ) st = "Note";
       else if( mode == PAS ) st = "PAS";
+      else if( mode == PresentationCOLZ ) st = "PresentationCOLZ";
       
       return st;
     }
@@ -49,6 +51,8 @@ namespace util {
     static void setStyleScreenNoTitle() { setStyle(Screen,false); }
     static void setStylePresentation() { setStyle(Presentation,true); }
     static void setStylePresentationNoTitle() { setStyle(Presentation,false); }
+    static void setStylePresentationCOLZ() { setStyle(PresentationCOLZ,true); }
+    static void setStylePresentationCOLZNoTitle() { setStyle(PresentationCOLZ,false); }
     static void setStyleNote() { setStyle(Note,true); }
     static void setStyleNoteNoTitle() { setStyle(Note,false); }
     static void setStylePAS() { setStyle(PAS,true); }
@@ -70,7 +74,10 @@ namespace util {
     // a nicely formatted TString
     static TString luminosity(double lumi) {
       TString lab = "";
-      if( lumi > 800. ) {
+      if( lumi > 2000. ) {
+	lumi /= 1000.;
+	lab = toTString(lumi,1)+" fb^{-1}";
+      } else if( lumi > 800. ) {
 	lumi /= 1000.;
 	lab = toTString(lumi,2)+" fb^{-1}";
       } else {
@@ -150,6 +157,18 @@ namespace util {
 	  gStyle->SetPadBottomMargin(0.18);
 	  gStyle->SetPadLeftMargin(0.19);
 	  gStyle->SetPadRightMargin(0.04);
+	}
+      } else if( mode == PresentationCOLZ ) {
+	if( spaceForTitle ) {
+	  gStyle->SetPadTopMargin(0.16);
+	  gStyle->SetPadBottomMargin(0.23);
+	  gStyle->SetPadLeftMargin(0.25);
+	  gStyle->SetPadRightMargin(0.14);
+	} else {
+	  gStyle->SetPadTopMargin(0.07);
+	  gStyle->SetPadBottomMargin(0.21);
+	  gStyle->SetPadLeftMargin(0.14);
+	  gStyle->SetPadRightMargin(0.14);
 	}
       } else if( mode == Note || mode == PAS  ) {
 	if( spaceForTitle ) {
@@ -306,6 +325,7 @@ namespace util {
       if( mode == Screen ) std::cout << "screen viewing" << std::flush;
       else if( mode == Note ) std::cout << "CMS Analysis Notes" << std::flush;
       else if( mode == PAS ) std::cout << "CMS PAS" << std::flush;
+      else if( mode == PresentationCOLZ ) std::cout << "presentations (COLZ)" << std::flush;
       else std::cout << "presentations" << std::flush;
       std::cout << " and " << std::flush;
       if( spaceForTitle ) std::cout << "histograms with title." << std::endl;
