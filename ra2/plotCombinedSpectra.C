@@ -1,6 +1,10 @@
-// $Id: plotCombinedSpectra.C,v 1.5 2011/08/19 08:31:34 mschrode Exp $
+// $Id: plotCombinedSpectra.C,v 1.6 2011/08/26 10:28:05 mschrode Exp $
 
 // Compare HT and MHT spectra in data with bkg. prediction
+//
+// The statistical methods used to obtain the approximated
+// combined and individual uncertainties are documented in
+// http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/UserCode/mschrode/notes/AdditionalDocumentation_CMS-SUS-11-004/RA2DataVsCombinedBkgPrediction.pdf?view=log
 
 #include <iostream>
 #include <map>
@@ -21,6 +25,46 @@
 #include "../util/StyleSettings.h"
 
 
+// Event yields and uncertainties
+// Baseline 4.65/fb 2011
+const double BKG_ZTOINV  = 591.2807;
+const double BKG_ZTOINV_STAT = 28.2741;
+const double BKG_ZTOINV_SYSTUP = 25.4456;
+const double BKG_ZTOINV_SYSTDN = 25.4456;
+
+const double BKG_LL  = 426.8;
+const double BKG_LL_STAT = 22.4;
+const double BKG_LL_SYSTUP = 55.2;
+const double BKG_LL_SYSTDN = 53.7;
+
+const double lumiScaleHadTau = 4650./3943.;
+const double BKG_HADTAU  = 427.*lumiScaleHadTau;
+const double BKG_HADTAU_STAT = 10.8*sqrt(lumiScaleHadTau);
+const double BKG_HADTAU_SYSTUP = 36.6*sqrt(lumiScaleHadTau);
+const double BKG_HADTAU_SYSTDN = 34.9*sqrt(lumiScaleHadTau);
+
+const double BKG_QCD  = 338.8;
+const double BKG_QCD_STAT = 166.9;
+const double BKG_QCD_SYSTUP = 185.;
+const double BKG_QCD_SYSTDN = 195.;
+
+const double BKG_TOTAL = BKG_ZTOINV +
+                         BKG_LL  +
+                         BKG_HADTAU +
+			 BKG_QCD;
+
+double tmp1 = sqrt( pow(BKG_ZTOINV_STAT,2) + pow(0.5*(BKG_ZTOINV_SYSTUP+BKG_ZTOINV_SYSTDN),2) );
+double tmp2 = sqrt( pow(BKG_LL_STAT,2) + pow(0.5*(BKG_LL_SYSTUP+BKG_LL_SYSTDN),2) );
+double tmp3 = sqrt( pow(BKG_HADTAU_STAT,2) + pow(0.5*(BKG_HADTAU_SYSTUP+BKG_HADTAU_SYSTDN),2) );
+double tmp4 = sqrt( pow(BKG_QCD_STAT,2) + pow(0.5*(BKG_QCD_SYSTUP+BKG_QCD_SYSTDN),2) );
+
+const double BKG_TOTAL_UNCERT = sqrt( pow(tmp1,2) + pow(tmp2,2) + pow(tmp3,2) + pow(tmp4,2) );
+
+
+
+
+
+
 enum Bkg { ZInv, LostLepton, HadronicTau, QCD };
 
 class HistContainer {
@@ -33,7 +77,7 @@ public:
     data_ = util::FileOps::readTH1(dataFileName,dataHistName,id_+"data");
     util::HistOps::shiftStartOfXAxisToFirstPopulatedBin(data_);
     data_->UseCurrentStyle();
-    data_->SetTitle(util::StyleSettings::title(1100,true)); // Lumi rounded to one digit
+    data_->SetTitle(util::StyleSettings::title(4600,true)); // Lumi rounded to one digit
     data_->SetMarkerStyle(20);
     data_->SetNdivisions(505);
     if( rebin_ > 1 ) data_->Rebin(rebin_);
@@ -78,9 +122,11 @@ public:
 	rit != bkgs_.rend(); ++rit) {
       const TH1* h = bkgHists_.find(*rit)->second;
       TString numEvts = util::toTString(h->Integral(1,10000),1);	// Include overflow bins
-      if( *rit == LostLepton ) numEvts = "243.5";
-      else if( *rit == HadronicTau ) numEvts = "263.0";
-      //      leg->AddEntry(h,bkgLabel(*rit)+" ("+numEvts+")","F");
+//       if( *rit == LostLepton ) numEvts = util::toTString(BKG_LL);
+//       else if( *rit == HadronicTau ) numEvts = util::toTString(BKG_HADTAU);
+//      else if( *rit == ZInv ) numEvts = util::toTString(BKG_ZTOINV);
+//      else if( *rit == QCD ) numEvts = util::toTString(BKG_QCD);
+      //leg->AddEntry(h,bkgLabel(*rit)+" ("+numEvts+")","F");
       leg->AddEntry(h,bkgLabel(*rit),"F");
     }
 
@@ -213,47 +259,45 @@ private:
 void setBkgUncertainties(const TString &id, std::vector<double> &regionStartPoints, std::vector<double> &bkgN, std::vector<double> &bkgStatUncert, std::vector<double> &bkgSystUncert) {
   if( id == "HT" ) {
     regionStartPoints.push_back(0.);
-//     regionStartPoints.push_back(500.);
-//     regionStartPoints.push_back(800.);
   } else if( id == "MHT" ) {
     regionStartPoints.push_back(0.);
-//     regionStartPoints.push_back(350.);
-//     regionStartPoints.push_back(500.);
   } else {
     std::cerr << "ERROR: unknown id '" << id << "'" << std::endl;
     exit(1);
   }
 
-  // Baseline
-  bkgN.push_back(927.5);		
-  double bkgTotalUncert = 103.1; 
-  bkgStatUncert.push_back(sqrt( pow(12.3,2)+pow(19.8,2)+pow(8.,2)+pow(35.2,2) ));
-  bkgSystUncert.push_back(sqrt( pow(bkgTotalUncert,2) - pow(bkgStatUncert.back(),2) )); 
+//   // Baseline 1.14/fb 2011
+//   const double bkgTotal       = 927.5; 
+//   const double bkgTotalUncert = 103.1; 
+//   const double bkgStatZToInv  = 12.3;
+//   const double bkgStatLL      = 19.8;
+//   const double bkgStatHadTau  = 8.0;
+//   const double bkgStatQCD     = 35.2;
 
-//   // Medium
-//   bkgN.push_back(73.9);		
-//   bkgTotalUncert = 11.9; 
-//   bkgStatUncert.push_back(sqrt( pow(4.4,2)+pow(3.3,2)+pow(2.,2)+pow(1.3,2) ));
-//   bkgSystUncert.push_back(sqrt( pow(bkgTotalUncert,2) - pow(bkgStatUncert.back(),2) )); 
-  
-//   // High
-//   bkgN.push_back(4.6);		
-//   bkgTotalUncert = 1.5; 
-//   bkgStatUncert.push_back(sqrt( pow(1.1,2)+pow(0.8,2)+pow(0.73,2)+pow(0.31,2) ));
-//   bkgSystUncert.push_back(0.);//sqrt( pow(bkgTotalUncert,2) - pow(bkgStatUncert.back(),2) )); 
+  // This is the total event yield from the proper combination
+  bkgN.push_back(BKG_TOTAL);		
+  // Approximated total stat uncertainty as quadratic sum of 
+  // individual bkg stat uncertainties
+  bkgStatUncert.push_back(sqrt( pow(BKG_ZTOINV_STAT,2)+pow(BKG_LL_STAT,2)+pow(BKG_HADTAU_STAT,2)+pow(BKG_QCD_STAT,2) ));
+  // Approximated total systematic uncertainty such that when
+  // adding the approximated total stat uncertainty the properly
+  // combined total uncertainty is regained
+  std::cout << ">>> BKG_TOTAL        = " << BKG_TOTAL << std::endl;
+  std::cout << ">>> BKG_TOTAL_UNCERT = " << BKG_TOTAL_UNCERT << std::endl;
+  bkgSystUncert.push_back(sqrt( pow(BKG_TOTAL_UNCERT,2) - pow(bkgStatUncert.back(),2) )); 
 }
   
 
 
 void plotSpectrum(const TString &id, const TString &xTitle, const TString &xUnit, int rebin, double xMax) {
   // Data
-  HistContainer spectra(id,"RA2Hists/RA2_BaseLineHists_LPData.root","h_"+id,xTitle,xUnit,rebin,xMax);
+  HistContainer spectra(id,"RA2Hists/hist_DataBaseline_4p65ifb.root","h_"+id,xTitle,xUnit,rebin,xMax);
 
   // Add bkgs
-  spectra.addBkg(QCD,"RA2Hists/QCD.root","QCD_"+id,1.082*0.997); // Scale factor: lumi, bias correction
-  spectra.addBkg(LostLepton,"RA2Hists/LP_All_Final_Data_Residual_App.root","RA2Hists/LP_All_Final_Data_Residual_App.root:///FinalPlotMuCS/"+id+id,1.14/1.0458);	// Scale factor: lumi
-  spectra.addBkg(HadronicTau,"RA2Hists/HadronicTau.root","baseline"+id);
-  spectra.addBkg(ZInv,"RA2Hists/RA2_ZInvWithPhoton_BaseLineHists_LPData.root","h_RA2_"+id);
+  spectra.addBkg(QCD,"RA2Hists/QCD.root","QCD_"+id,1.19); // bias correction scale factor
+  spectra.addBkg(LostLepton,"RA2Hists/LostLepton.root","LostLepton_"+id);
+  spectra.addBkg(HadronicTau,"RA2Hists/HadTau.root","HadTau_"+id);
+  spectra.addBkg(ZInv,"RA2Hists/hist_ZInvPredictedFromGJets_4p65ifb.root","h_RA2_"+id);
 
   // Scale uncertainties to baseline prediciton
   std::vector<double> regionStartPoints;
@@ -329,6 +373,26 @@ void plotSpectrum(const TString &id, const TString &xTitle, const TString &xUnit
 void plotCombinedSpectra() {
   util::StyleSettings::setStylePAS();
 
-  plotSpectrum("HT","H_{T}","GeV",2,1900);
+  double val = BKG_ZTOINV;
+  double unc = sqrt( pow(BKG_ZTOINV_STAT,2) + pow(0.5*(BKG_ZTOINV_SYSTUP+BKG_ZTOINV_SYSTDN),2) );
+  std::cout << "ZTOINV\t = " << val << " +/- " << unc << " (" << unc/val << ")" << std::endl;
+
+  val = BKG_LL;
+  unc = sqrt( pow(BKG_LL_STAT,2) + pow(0.5*(BKG_LL_SYSTUP+BKG_LL_SYSTDN),2) );
+  std::cout << "LL\t = " << val << " +/- " << unc << " (" << unc/val << ")" << std::endl;
+
+  val = BKG_HADTAU;
+  unc = sqrt( pow(BKG_HADTAU_STAT,2) + pow(0.5*(BKG_HADTAU_SYSTUP+BKG_HADTAU_SYSTDN),2) );
+  std::cout << "HADTAU\t = " << val << " +/- " << unc << " (" << unc/val << ")" << std::endl;
+
+  val = BKG_QCD;
+  unc = sqrt( pow(BKG_QCD_STAT,2) + pow(0.5*(BKG_QCD_SYSTUP+BKG_QCD_SYSTDN),2) );
+  std::cout << "QCD\t = " << val << " +/- " << unc << " (" << unc/val << ")" << std::endl;
+
+  val = BKG_TOTAL;
+  unc = BKG_TOTAL_UNCERT;
+  std::cout << "TOTAL\t = " << val << " +/- " << unc << " (" << unc/val << ")" << std::endl;
+
+  plotSpectrum("HT","H_{T}","GeV",2,2300);
   plotSpectrum("MHT","#slash{H}_{T}","GeV",5,950);
 }
