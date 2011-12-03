@@ -1,4 +1,4 @@
-// $Id: plotCombinedSpectra.C,v 1.6 2011/08/26 10:28:05 mschrode Exp $
+// $Id: plotCombinedSpectra.C,v 1.7 2011/12/02 09:53:51 mschrode Exp $
 
 // Compare HT and MHT spectra in data with bkg. prediction
 //
@@ -28,9 +28,9 @@
 // Event yields and uncertainties
 // Baseline 4.65/fb 2011
 const double BKG_ZTOINV  = 591.2807;
-const double BKG_ZTOINV_STAT = 28.2741;
-const double BKG_ZTOINV_SYSTUP = 25.4456;
-const double BKG_ZTOINV_SYSTDN = 25.4456;
+const double BKG_ZTOINV_STAT = 16.;
+const double BKG_ZTOINV_SYSTUP = 81.;
+const double BKG_ZTOINV_SYSTDN = 81.;
 
 const double BKG_LL  = 426.8;
 const double BKG_LL_STAT = 22.4;
