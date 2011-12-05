@@ -1,4 +1,4 @@
-// $Id: plotCombinedSpectra.C,v 1.7 2011/12/02 09:53:51 mschrode Exp $
+// $Id: plotCombinedSpectra.C,v 1.8 2011/12/03 13:20:26 mschrode Exp $
 
 // Compare HT and MHT spectra in data with bkg. prediction
 //
@@ -27,26 +27,26 @@
 
 // Event yields and uncertainties
 // Baseline 4.65/fb 2011
-const double BKG_ZTOINV  = 591.2807;
-const double BKG_ZTOINV_STAT = 16.;
+const double BKG_ZTOINV        = 591.2807;
+const double BKG_ZTOINV_STAT   = 16.;
 const double BKG_ZTOINV_SYSTUP = 81.;
 const double BKG_ZTOINV_SYSTDN = 81.;
 
-const double BKG_LL  = 426.8;
-const double BKG_LL_STAT = 22.4;
+const double BKG_LL        = 426.8;
+const double BKG_LL_STAT   = 22.4;
 const double BKG_LL_SYSTUP = 55.2;
 const double BKG_LL_SYSTDN = 53.7;
 
-const double lumiScaleHadTau = 4650./3943.;
-const double BKG_HADTAU  = 427.*lumiScaleHadTau;
-const double BKG_HADTAU_STAT = 10.8*sqrt(lumiScaleHadTau);
+const double lumiScaleHadTau   = 4650./3943.;
+const double BKG_HADTAU        = 427.*lumiScaleHadTau;
+const double BKG_HADTAU_STAT   = 10.8*sqrt(lumiScaleHadTau);
 const double BKG_HADTAU_SYSTUP = 36.6*sqrt(lumiScaleHadTau);
 const double BKG_HADTAU_SYSTDN = 34.9*sqrt(lumiScaleHadTau);
 
-const double BKG_QCD  = 338.8;
-const double BKG_QCD_STAT = 166.9;
-const double BKG_QCD_SYSTUP = 185.;
-const double BKG_QCD_SYSTDN = 195.;
+const double BKG_QCD        = 349.02;
+const double BKG_QCD_STAT   = 21.38;
+const double BKG_QCD_SYSTUP = 188.03;
+const double BKG_QCD_SYSTDN = 186.43;
 
 const double BKG_TOTAL = BKG_ZTOINV +
                          BKG_LL  +
