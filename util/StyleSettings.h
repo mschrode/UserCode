@@ -1,4 +1,4 @@
-// $Id: StyleSettings.h,v 1.14 2011/08/11 10:02:13 mschrode Exp $
+// $Id: StyleSettings.h,v 1.15 2011/12/02 09:55:02 mschrode Exp $
 
 #ifndef STYLE_SETTINGS_H
 #define STYLE_SETTINGS_H
@@ -18,7 +18,7 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: StyleSettings.h,v 1.14 2011/08/11 10:02:13 mschrode Exp $
+  //!  $Id: StyleSettings.h,v 1.15 2011/12/02 09:55:02 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class StyleSettings {
   public:
@@ -89,7 +89,7 @@ namespace util {
 
     // Return a readable color; useful for loops
     static int color(int i) {
-      int col[5] = { 1, 2, 4, 7, 8 };
+      int col[5] = { 1, 4, 2, 7, 8 };
       int idx = i%5;
       return (idx>=0 && idx<5) ? col[idx] : 1;
     }

@@ -1,4 +1,4 @@
-// $Id: utils.h,v 1.11 2011/08/11 10:02:13 mschrode Exp $
+// $Id: utils.h,v 1.12 2011/08/19 08:41:30 mschrode Exp $
 
 #ifndef UTILS_H
 #define UTILS_H
@@ -17,7 +17,7 @@
 //!
 //!  \author   Matthias Schroeder (www.desy.de/~matsch)
 //!  \date     2010/03/09
-//!  $Id: utils.h,v 1.11 2011/08/11 10:02:13 mschrode Exp $
+//!  $Id: utils.h,v 1.12 2011/08/19 08:41:30 mschrode Exp $
 // -------------------------------------------------------------------------------------
 namespace util {
 
@@ -127,7 +127,7 @@ namespace util {
 
 
 
-  // For sorting jets in pt
+  //! For sorting jets in pt
   // --------------------------------------------------
   class JetIndexCol {
   private:

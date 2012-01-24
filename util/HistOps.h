@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.38 2011/08/15 20:39:12 mschrode Exp $
+// $Id: HistOps.h,v 1.39 2011/08/16 17:09:59 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.38 2011/08/15 20:39:12 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.39 2011/08/16 17:09:59 mschrode Exp $
   class HistOps
   {
   public:
@@ -565,16 +565,59 @@ namespace util
     }
 
     // -------------------------------------------------------------------------------------
-    static TH1 *createRatioBottomFrame(const TH1 *h, const TString &xTitle, const TString &xUnit, double yMin = 0.81, double yMax = 1.19) {
+    static TH1 *createRatioBottomFrame(const TH1 *h, double yMin = 0.81, double yMax = 1.19) {
       COUNT_++;
       TH1 *hFrame = createRatioFrame(h,"",yMin,yMax);
-      setAxisTitles(hFrame,xTitle,xUnit,"");
+      hFrame->GetYaxis()->SetTitle("");
       hFrame->GetYaxis()->SetNdivisions(205);
       hFrame->GetYaxis()->SetTickLength(gStyle->GetTickLength("Y")/0.2);
       hFrame->GetXaxis()->SetLabelSize(gStyle->GetLabelSize("X"));
 
       return hFrame;
     }
+
+
+    // -------------------------------------------------------------------------------------
+    static TH1 *createRatioBottomFrame(const TH1 *h, const TString &xTitle, const TString &xUnit, double yMin = 0.81, double yMax = 1.19) {
+      TH1 *hFrame = createRatioBottomFrame(h,yMin,yMax);
+      setAxisTitles(hFrame,xTitle,xUnit,"");
+
+      return hFrame;
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static TGraphAsymmErrors *createQuadraticDifferenceGraph(const TGraphAsymmErrors *g1, const TGraphAsymmErrors *g2) {
+      TGraphAsymmErrors *gDiff2 = new TGraphAsymmErrors(g1->GetN());
+      for(int i = 0; i < g1->GetN() && i < g2->GetN(); ++i) {
+	double x = 0.5*(g1->GetX()[i]+g2->GetX()[i]); // Mean value of x1 and x2
+	double e1 = g1->GetEXhigh()[i];
+	double e2 = g2->GetEXhigh()[i];
+	double xe = sqrt( e1*e1 + e2*e2 ); // Quadratic mean of x1e and x2e
+
+	double y1 = g1->GetY()[i];
+	double y2 = g2->GetY()[i];
+	double diff = y1*y1 - y2*y2;
+	double diff2 = sqrt(std::abs(diff));
+	if( diff2 > 0. ) {
+	  e1 = g1->GetEYhigh()[i];
+	  e2 = g2->GetEYhigh()[i];
+	  double ye = sqrt(pow(y1*e1/diff2,2.)+pow(y2*e2/diff2,2.));
+	  if( diff > 0. ) gDiff2->SetPoint(i,x,diff2);
+	  else gDiff2->SetPoint(i,x,-1.*diff2);
+	  gDiff2->SetPointError(i,xe,xe,ye,ye);
+	} else {
+	  gDiff2->SetPoint(i,x,0.);
+	  gDiff2->SetPointError(i,xe,0.,0.);
+	}
+      }
+      gDiff2->SetMarkerStyle(g1->GetMarkerStyle());
+      gDiff2->SetMarkerColor(g1->GetMarkerColor());
+      gDiff2->SetLineColor(g1->GetLineColor());
+      
+      return gDiff2;
+    }
+
 
 
     // -------------------------------------------------------------------------------------
@@ -652,11 +695,15 @@ namespace util
 	  result = true;
 	  width = gauss->GetParameter(2);
 	  widthErr = gauss->GetParError(2);
+
+	  mean = gauss->GetParameter(1);
+	  sig = nSig*width;
+	  gauss->SetRange(mean-sig,mean+sig);
+	} else {
+	  std::cerr << "WARNING in util::HistOps::fitCoreWidth: No convergence when fitting width of '" << h->GetName() << "'\n";
+	  width = 0.;
+	  widthErr = 10000.;
 	}
-      } else {
-	std::cerr << "WARNING in util::HistOps::fitCoreWidth: No convergence when fitting width of '" << h->GetName() << "'\n";
-	width = 0.;
-	widthErr = 10000.;
       }
       delete h;
       

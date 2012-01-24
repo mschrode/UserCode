@@ -1,4 +1,4 @@
-//  $Id: LabelFactory.h,v 1.20 2011/08/19 08:41:30 mschrode Exp $
+//  $Id: LabelFactory.h,v 1.21 2011/08/26 10:21:56 mschrode Exp $
 
 #ifndef LABEL_FACTORY_H
 #define LABEL_FACTORY_H
@@ -22,7 +22,7 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: LabelFactory.h,v 1.20 2011/08/19 08:41:30 mschrode Exp $
+  //!  $Id: LabelFactory.h,v 1.21 2011/08/26 10:21:56 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class LabelFactory {
   public:
@@ -229,13 +229,19 @@ namespace util {
 
 
     // -------------------------------------------------------------------------------------
-    static TString labelEta(double etaMin, double etaMax) {
+    static TString labelEta(double etaMin, double etaMax, const TString &etaExp = "") {
       TString min = util::toTString(etaMin,1);
       TString max = util::toTString(etaMax,1);
       if( min.Length() == 1 ) min += ".0";
       if( max.Length() == 1 ) max += ".0";
 
-      return min+" < |#eta| < "+max;
+      return etaExp == "" ? min+" < |#eta| < "+max :  min+" < |#eta^{"+etaExp+"}| < "+max;
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static TString labelEtaGen(double etaMin, double etaMax) {
+      return labelEta(etaMin,etaMax,"gen");
     }
 
 
