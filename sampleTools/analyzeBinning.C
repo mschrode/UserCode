@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: analyzeBinning.C,v 1.1 2011/05/18 17:12:56 mschrode Exp $
 //
 // Plot ptAve spectra from Kalibri ntuples for
 //  - all selected events (inclusive trigger paths)
@@ -402,7 +402,7 @@ void plotPtAveSpectra(std::vector<TH1*> &hPtAveIncl, std::vector<TH1*> &hPtAveFu
 
 
 void analyzeBinning(int nEvts = -1) {
-  util::StyleSettings::presentationNoTitle();
+  util::StyleSettings::setStylePresentationNoTitle();
 
   std::vector<double> etaBinEdges;
   etaBinEdges.push_back(0.0);

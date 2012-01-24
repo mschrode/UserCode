@@ -1,4 +1,4 @@
-// $Id: combineBins.C,v 1.5 2011/06/23 17:51:38 mschrode Exp $
+// $Id: combineBins.C,v 1.6 2011/08/26 10:16:22 mschrode Exp $
 
 //! Combine Kalibri output histograms from different
 //! eta, pt, and ptSoft bins
@@ -175,6 +175,6 @@ void combineBins(const TString &binningConfig, const TString &dirPrefix, const T
       std::cerr << "  " << *it << std::endl;
     }
   } else {
-    std::cout << "Successfully combined files." << std::endl;
+    std::cout << "Successfully combined files to " << relFileName+".root" << std::endl;
   }
 }
