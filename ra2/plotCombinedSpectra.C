@@ -1,10 +1,6 @@
-// $Id: plotCombinedSpectra.C,v 1.8 2011/12/03 13:20:26 mschrode Exp $
+// $Id: plotCombinedSpectra.C,v 1.9 2011/12/05 16:55:32 mschrode Exp $
 
 // Compare HT and MHT spectra in data with bkg. prediction
-//
-// The statistical methods used to obtain the approximated
-// combined and individual uncertainties are documented in
-// http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/UserCode/mschrode/notes/AdditionalDocumentation_CMS-SUS-11-004/RA2DataVsCombinedBkgPrediction.pdf?view=log
 
 #include <iostream>
 #include <map>
@@ -37,13 +33,12 @@ const double BKG_LL_STAT   = 22.4;
 const double BKG_LL_SYSTUP = 55.2;
 const double BKG_LL_SYSTDN = 53.7;
 
-const double lumiScaleHadTau   = 4650./3943.;
-const double BKG_HADTAU        = 427.*lumiScaleHadTau;
-const double BKG_HADTAU_STAT   = 10.8*sqrt(lumiScaleHadTau);
-const double BKG_HADTAU_SYSTUP = 36.6*sqrt(lumiScaleHadTau);
-const double BKG_HADTAU_SYSTDN = 34.9*sqrt(lumiScaleHadTau);
+const double BKG_HADTAU        = 552.;
+const double BKG_HADTAU_STAT   = 16.;
+const double BKG_HADTAU_SYSTUP = 38.2;
+const double BKG_HADTAU_SYSTDN = 35.6;
 
-const double BKG_QCD        = 349.02;
+const double BKG_QCD        = 200.;
 const double BKG_QCD_STAT   = 21.38;
 const double BKG_QCD_SYSTUP = 188.03;
 const double BKG_QCD_SYSTDN = 186.43;
@@ -63,16 +58,18 @@ const double BKG_TOTAL_UNCERT = sqrt( pow(tmp1,2) + pow(tmp2,2) + pow(tmp3,2) + 
 
 
 
-
-
+// --------------------------------------------------------------
+// --------------------------------------------------------------
 enum Bkg { ZInv, LostLepton, HadronicTau, QCD };
 
+// --------------------------------------------------------------
 class HistContainer {
 public:
+  // --------------------------------------------------------------
   HistContainer(const TString &id, const TString &dataFileName, const TString &dataHistName, const TString &xTitle, const TString &xUnit, int rebin, double xMax)
     : id_(id), rebin_(rebin), xMax_(xMax) {
     
-    std::cout << "Constructing spectra '" << id_ << "'" << std::endl;
+    std::cout << "\n\n*****  Constructing spectra '" << id_ << "' ********************" << std::endl;
 
     data_ = util::FileOps::readTH1(dataFileName,dataHistName,id_+"data");
     util::HistOps::shiftStartOfXAxisToFirstPopulatedBin(data_);
@@ -90,6 +87,7 @@ public:
   }
 
 
+  // --------------------------------------------------------------
   TString bkgLabel(Bkg bkg) const {
     TString label = "";
     if( bkg == ZInv ) label = "Z#rightarrow#nu#bar{#nu}+jets";
@@ -101,6 +99,7 @@ public:
   }
 
 
+  // --------------------------------------------------------------
   int bkgFillColor(Bkg bkg) const {
     int color = kBlack;
     if( bkg == ZInv ) color = kGreen+1;
@@ -112,21 +111,12 @@ public:
   }
 
 
+  // --------------------------------------------------------------
   TLegend* legend() const {
-    //TLegend* leg = util::LabelFactory::createLegendCol(bkgs_.size()+1,0.6);
     TLegend* leg = util::LabelFactory::createLegendColWithOffset(bkgs_.size(),0.6,0.06);
-    //leg->AddEntry(data_,"Data ("+util::toTString(data_->Integral(),0)+")","P");
-    //    leg->AddEntry(data_,"Data","P");
-    //util::LabelFactory::addExtraLegLine(leg,"");
     for(std::vector<Bkg>::const_reverse_iterator rit = bkgs_.rbegin();
 	rit != bkgs_.rend(); ++rit) {
       const TH1* h = bkgHists_.find(*rit)->second;
-      TString numEvts = util::toTString(h->Integral(1,10000),1);	// Include overflow bins
-//       if( *rit == LostLepton ) numEvts = util::toTString(BKG_LL);
-//       else if( *rit == HadronicTau ) numEvts = util::toTString(BKG_HADTAU);
-//      else if( *rit == ZInv ) numEvts = util::toTString(BKG_ZTOINV);
-//      else if( *rit == QCD ) numEvts = util::toTString(BKG_QCD);
-      //leg->AddEntry(h,bkgLabel(*rit)+" ("+numEvts+")","F");
       leg->AddEntry(h,bkgLabel(*rit),"F");
     }
 
@@ -134,11 +124,13 @@ public:
   }
 
 
+  // --------------------------------------------------------------
   TGraphAsymmErrors* totalBkg() const {
     return util::HistOps::getUncertaintyBand(totalBkg_,kBlue+2,3004);
   }
 
 
+  // --------------------------------------------------------------
   TGraphAsymmErrors* bkgForRatio() const {
     TH1* h = static_cast<TH1*>(totalBkg_->Clone("tmp"));
     for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
@@ -154,6 +146,7 @@ public:
   }
 
 
+  // --------------------------------------------------------------
   TH1* dataForRatio() const {
     TH1* h = static_cast<TH1*>(data_->Clone(id_+"dataInRatio"));
     for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
@@ -172,6 +165,7 @@ public:
   }
 
 
+  // --------------------------------------------------------------
   void addBkg(Bkg bkg, const TString &fileName, const TString &histName, double scale = 1.) {
     bkgs_.push_back(bkg);
 
@@ -182,7 +176,7 @@ public:
     h->SetFillColor(bkgFillColor(bkg));
     h->SetLineColor(h->GetFillColor());
     h->SetNdivisions(505);
-    if( rebin_ > 1 ) h->Rebin(rebin_);
+    if( rebin_ > 1 && bkg != QCD ) h->Rebin(rebin_);
     h->GetXaxis()->SetRange(1,h->FindBin(xMax_));
     if( scale != 1. ) h->Scale(scale);
 
@@ -202,6 +196,10 @@ public:
   }
 
 
+  // Scale integral of sum of background histograms
+  // to the total bkg prediction from the proper 
+  // combination
+  // --------------------------------------------------------------
   void scaleTotalBkgTo(double targetTotalBkg) {
     std::cout << "  Scaling the total background prediction from " << totalBkg_->Integral() << std::flush;
     if( totalBkg_->Integral() ) totalBkg_->Scale(targetTotalBkg/totalBkg_->Integral());
@@ -209,33 +207,37 @@ public:
   }
 
 
-  void scaleTotalBkgStatUncertaintyTo(const std::vector<double> &regionStartPoints, const std::vector<double> &bkgN, const std::vector<double> &targetStatUncert) {
+  // Scale statistical uncertainty of background prediction
+  // in each bin such that the quadratic sum of all statistical
+  // uncertainties equals the target uncertainty
+  // --------------------------------------------------------------
+  void scaleTotalBkgStatUncertaintyTo(double bkgN, double targetStatUncert) {
     std::cout << "  Scaling the total statistical uncertainty of the background" << std::endl;
+    double scale = 0.;
     for(int bin = 1; bin <= totalBkg_->GetNbinsX(); ++bin) {
-      unsigned int i = 0;
-      while( i < regionStartPoints.size() && totalBkg_->GetBinCenter(bin) > regionStartPoints.at(i) ) ++i;
-      --i;
-      double scale = targetStatUncert.at(i)/sqrt(bkgN.at(i));
-      totalBkg_->SetBinError(bin,scale*sqrt(totalBkg_->GetBinContent(bin)));
+      scale += pow(totalBkg_->GetBinError(bin),2);
+    }
+    scale = targetStatUncert/sqrt(scale);
+    for(int bin = 1; bin <= totalBkg_->GetNbinsX(); ++bin) {
+      totalBkg_->SetBinError(bin,scale*totalBkg_->GetBinError(bin));
     }
   }
 
 
-  void setTotalBkgSystUncertainty(const std::vector<double> &bkgN, const std::vector<double> &systUncert) { 
-    relBkgSystUncert_ = systUncert;
-    for(unsigned int i = 0; i < relBkgSystUncert_.size(); ++i) {
-      relBkgSystUncert_.at(i) /= bkgN.at(i);
-    }
+
+  // --------------------------------------------------------------
+  void setTotalBkgSystUncertainty(double bkgN, double systUncert) { 
+    relBkgSystUncert_ = systUncert/bkgN;
   }
 
 
-  void applyTotalBkgUncertainty(const std::vector<double> &regionStartPoints) {
+  // Add statistical and systematic uncertainties to set total
+  // background uncertainty
+  // --------------------------------------------------------------
+  void applyTotalBkgUncertainty() {
     std::cout << "  Combining statistical and systematic uncertainty on background" << std::endl;
     for(int bin = 1; bin <= totalBkg_->GetNbinsX(); ++bin) {
-      unsigned int i = 0;
-      while( i < regionStartPoints.size() && totalBkg_->GetBinCenter(bin) > regionStartPoints.at(i) ) ++i;
-      --i;
-      totalBkg_->SetBinError(bin,sqrt(pow(totalBkg_->GetBinError(bin),2)+pow(totalBkg_->GetBinContent(bin)*relBkgSystUncert_.at(i),2)));
+      totalBkg_->SetBinError(bin,sqrt(pow(totalBkg_->GetBinError(bin),2)+pow(totalBkg_->GetBinContent(bin)*relBkgSystUncert_,2)));
     }
   }
 
@@ -250,73 +252,55 @@ private:
   const int rebin_;
   const double xMax_;
   TH1* totalBkg_;
-  std::vector<double> relBkgSystUncert_;
+  double relBkgSystUncert_;
   std::vector<Bkg> bkgs_;
   std::map<Bkg,TH1*> bkgHists_;
 };
 
 
-void setBkgUncertainties(const TString &id, std::vector<double> &regionStartPoints, std::vector<double> &bkgN, std::vector<double> &bkgStatUncert, std::vector<double> &bkgSystUncert) {
-  if( id == "HT" ) {
-    regionStartPoints.push_back(0.);
-  } else if( id == "MHT" ) {
-    regionStartPoints.push_back(0.);
-  } else {
-    std::cerr << "ERROR: unknown id '" << id << "'" << std::endl;
-    exit(1);
-  }
-
-//   // Baseline 1.14/fb 2011
-//   const double bkgTotal       = 927.5; 
-//   const double bkgTotalUncert = 103.1; 
-//   const double bkgStatZToInv  = 12.3;
-//   const double bkgStatLL      = 19.8;
-//   const double bkgStatHadTau  = 8.0;
-//   const double bkgStatQCD     = 35.2;
-
+// Set target values for the total background prediction
+// and the uncertainties. This is to ensure that the integrated
+// uncertainties of the final plot corresponds to the 
+// properly combined values which take into account correlations.
+// --------------------------------------------------------------
+void setBkgUncertainties(double &bkgN, double &bkgStatUncert, double &bkgSystUncert) {
   // This is the total event yield from the proper combination
-  bkgN.push_back(BKG_TOTAL);		
+  bkgN = BKG_TOTAL;		
   // Approximated total stat uncertainty as quadratic sum of 
-  // individual bkg stat uncertainties
-  bkgStatUncert.push_back(sqrt( pow(BKG_ZTOINV_STAT,2)+pow(BKG_LL_STAT,2)+pow(BKG_HADTAU_STAT,2)+pow(BKG_QCD_STAT,2) ));
+  // individual bkg stat uncertainties (neglects e.g. correlation
+  // between control samples of lost-lepton and hadronic-tau methods)
+  bkgStatUncert = sqrt( pow(BKG_ZTOINV_STAT,2) + 
+			pow(BKG_LL_STAT,2)     +
+			pow(BKG_HADTAU_STAT,2) +
+			pow(BKG_QCD_STAT,2)      );
   // Approximated total systematic uncertainty such that when
   // adding the approximated total stat uncertainty the properly
   // combined total uncertainty is regained
-  std::cout << ">>> BKG_TOTAL        = " << BKG_TOTAL << std::endl;
-  std::cout << ">>> BKG_TOTAL_UNCERT = " << BKG_TOTAL_UNCERT << std::endl;
-  bkgSystUncert.push_back(sqrt( pow(BKG_TOTAL_UNCERT,2) - pow(bkgStatUncert.back(),2) )); 
+  bkgSystUncert = sqrt( pow(BKG_TOTAL_UNCERT,2) - pow(bkgStatUncert,2) ); 
 }
   
 
-
+// --------------------------------------------------------------
 void plotSpectrum(const TString &id, const TString &xTitle, const TString &xUnit, int rebin, double xMax) {
   // Data
-  HistContainer spectra(id,"RA2Hists/hist_DataBaseline_4p65ifb.root","h_"+id,xTitle,xUnit,rebin,xMax);
+  HistContainer spectra(id,"RA2Hists/Paper2011_PreApproval/hist_DataBaseline_4p65ifb.root","h_"+id,xTitle,xUnit,rebin,xMax);
 
   // Add bkgs
-  spectra.addBkg(QCD,"RA2Hists/QCD.root","QCD_"+id,1.19); // bias correction scale factor
-  spectra.addBkg(LostLepton,"RA2Hists/LostLepton.root","LostLepton_"+id);
+  spectra.addBkg(QCD,"RA2Hists/QCD.root","QCD_"+id);
+  spectra.addBkg(LostLepton,"RA2Hists/Paper2011_PreApproval/LostLepton.root","LostLepton_"+id);
   spectra.addBkg(HadronicTau,"RA2Hists/HadTau.root","HadTau_"+id);
-  spectra.addBkg(ZInv,"RA2Hists/hist_ZInvPredictedFromGJets_4p65ifb.root","h_RA2_"+id);
+  spectra.addBkg(ZInv,"RA2Hists/Paper2011_PreApproval/hist_ZInvPredictedFromGJets_4p65ifb.root","h_RA2_"+id);
 
   // Scale uncertainties to baseline prediciton
-  std::vector<double> regionStartPoints;
-  std::vector<double> bkgN;
-  std::vector<double> bkgStatUncert;
-  std::vector<double> bkgSystUncert;
-  setBkgUncertainties(id,regionStartPoints,bkgN,bkgStatUncert,bkgSystUncert);
-
-  std::cout << "Start \tN\t\tstat \tsyst" << std::endl;
-  for(unsigned int i = 0; i < regionStartPoints.size(); ++i) {
-    std::cout << "  >" << regionStartPoints.at(i) << "\t" << std::flush;
-    std::cout << bkgN.at(i) << "\t" << std::flush;
-    std::cout << bkgStatUncert.at(i) << "\t" << std::flush;
-    std::cout << bkgSystUncert.at(i) << std::endl;
-  }
-  spectra.scaleTotalBkgTo(bkgN.front());
-  spectra.scaleTotalBkgStatUncertaintyTo(regionStartPoints,bkgN,bkgStatUncert);
+  double bkgN = 0.;
+  double bkgStatUncert = 0.;
+  double bkgSystUncert = 0.;
+  setBkgUncertainties(bkgN,bkgStatUncert,bkgSystUncert);
+  std::cout << "Total bkg: " << bkgN << " +/-" << bkgStatUncert << " (stat) +/-" << bkgSystUncert << " (syst)" << std::endl;
+  spectra.scaleTotalBkgTo(bkgN);
+  spectra.scaleTotalBkgStatUncertaintyTo(bkgN,bkgStatUncert);
   spectra.setTotalBkgSystUncertainty(bkgN,bkgSystUncert);
-  spectra.applyTotalBkgUncertainty(regionStartPoints);
+  spectra.applyTotalBkgUncertainty();
 
 
   // Do plots
@@ -373,26 +357,7 @@ void plotSpectrum(const TString &id, const TString &xTitle, const TString &xUnit
 void plotCombinedSpectra() {
   util::StyleSettings::setStylePAS();
 
-  double val = BKG_ZTOINV;
-  double unc = sqrt( pow(BKG_ZTOINV_STAT,2) + pow(0.5*(BKG_ZTOINV_SYSTUP+BKG_ZTOINV_SYSTDN),2) );
-  std::cout << "ZTOINV\t = " << val << " +/- " << unc << " (" << unc/val << ")" << std::endl;
-
-  val = BKG_LL;
-  unc = sqrt( pow(BKG_LL_STAT,2) + pow(0.5*(BKG_LL_SYSTUP+BKG_LL_SYSTDN),2) );
-  std::cout << "LL\t = " << val << " +/- " << unc << " (" << unc/val << ")" << std::endl;
-
-  val = BKG_HADTAU;
-  unc = sqrt( pow(BKG_HADTAU_STAT,2) + pow(0.5*(BKG_HADTAU_SYSTUP+BKG_HADTAU_SYSTDN),2) );
-  std::cout << "HADTAU\t = " << val << " +/- " << unc << " (" << unc/val << ")" << std::endl;
-
-  val = BKG_QCD;
-  unc = sqrt( pow(BKG_QCD_STAT,2) + pow(0.5*(BKG_QCD_SYSTUP+BKG_QCD_SYSTDN),2) );
-  std::cout << "QCD\t = " << val << " +/- " << unc << " (" << unc/val << ")" << std::endl;
-
-  val = BKG_TOTAL;
-  unc = BKG_TOTAL_UNCERT;
-  std::cout << "TOTAL\t = " << val << " +/- " << unc << " (" << unc/val << ")" << std::endl;
-
   plotSpectrum("HT","H_{T}","GeV",2,2300);
   plotSpectrum("MHT","#slash{H}_{T}","GeV",5,950);
+  //  plotSpectrum("MEff","M_{eff}","GeV",2,2000);
 }
