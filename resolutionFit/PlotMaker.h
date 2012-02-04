@@ -1,4 +1,4 @@
-// $Id: PlotMaker.h,v 1.19 2011/11/21 17:18:05 mschrode Exp $
+// $Id: PlotMaker.h,v 1.20 2011/11/22 17:39:26 mschrode Exp $
 
 #ifndef PLOT_MAKER_H
 #define PLOT_MAKER_H
@@ -53,7 +53,8 @@ namespace resolutionFit {
       TPaveText* ptBin(unsigned int etaBinIdx, unsigned int ptBinIdx) const;
       TPaveText* etaBin(SampleLabel label, unsigned int etaBinIdx, unsigned int nExtraEntries = 0) const;
       TPaveText* etaBin(unsigned int etaBinIdx, unsigned int nExtraEntries = 0) const;
-      TString etaRange(unsigned int etaBin) const;
+      TPaveText* inclusiveLabel(SampleLabel label, unsigned int nExtraEntries = 0) const;
+      TString etaRange(unsigned int etaBin, const TString &superscript = "") const;
       TString ptRange(unsigned int etaBin, unsigned int ptBin) const;
       TString ptSoftRange(unsigned int ptSoftBinIdx) const;
       TString jets() const;
@@ -84,6 +85,7 @@ namespace resolutionFit {
     double markerSize_;
     int lineWidth_;
 
+    TString histFileName(const TString &id, SampleLabel label) const;
     TString histFileName(const TString &id, SampleLabel label1, SampleLabel label2, const EtaBin* etaBin, unsigned int ptSoftBin) const;
     TString histFileName(const TString &id, const EtaBin* etaBin, SampleLabel label1, SampleLabel label2, FitResult::Type type) const;
     TString histFileName(const TString &id, const EtaBin* etaBin, SampleLabel sampleLabel, FitResult::Type type) const;

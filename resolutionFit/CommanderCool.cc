@@ -1,4 +1,4 @@
-// $Id: CommanderCool.cc,v 1.9 2011/06/23 18:07:37 mschrode Exp $
+// $Id: CommanderCool.cc,v 1.10 2011/11/21 17:18:05 mschrode Exp $
 
 #include <iomanip>
 #include <iostream>
@@ -47,7 +47,8 @@ namespace resolutionFit {
       TString key = JetProperties::toString(par_->jetType())+"Eta";
       key += etaBin;
       std::vector<double> param = parser.readDoubleVec(key.Data(),":");
-      etaBins_.at(etaBin)->setMCTruthResolution(ResolutionFunction::createResolutionFunction(type,param));
+      std::vector<double> paramErr(param.size(),0.);
+      etaBins_.at(etaBin)->setMCTruthResolution(ResolutionFunction::createResolutionFunction(type,param,paramErr));
     }
   }
 
@@ -86,7 +87,8 @@ namespace resolutionFit {
       TString key = "Eta";
       key += etaBin;
       std::vector<double> param = parser.readDoubleVec(key.Data(),":");
-      etaBins_.at(etaBin)->setPLI(ResolutionFunction::createResolutionFunction(type,param));
+      std::vector<double> paramErr(param.size(),0.);
+      etaBins_.at(etaBin)->setPLI(ResolutionFunction::createResolutionFunction(type,param,paramErr));
     }
   }
 
@@ -264,7 +266,7 @@ namespace resolutionFit {
     for(FitResultTypeIt rIt = etaBins_.front()->fitResultTypesBegin();
 	rIt != etaBins_.front()->fitResultTypesEnd(); ++rIt) {
       FitResult::Type fitResType = *rIt;
-      std::cout << " " << FitResult::toString(fitResType) << std::endl;
+      std::cout << "   Method: '" << FitResult::toString(fitResType) << "'\n\n";
 
       for(SampleTypeIt sTIt = etaBins_.front()->sampleTypesBegin();
 	  sTIt != etaBins_.front()->sampleTypesEnd(); ++sTIt) {
@@ -302,6 +304,7 @@ namespace resolutionFit {
 	if( etaBins_.front()->hasKValue(sLabel1,sLabel2,fitResType) ) {
 	  std::cout << "\n\n++++++ " << sLabel1 << " / " << sLabel2 << " ratio +++++++++++++++++++++++++++++\n" << std::endl;
 
+	  std::cout << "   Method: '" << FitResult::toString(fitResType) << "'\n\n";
 	  std::cout.setf(std::ios::fixed,std::ios::floatfield);
 	  
 	  for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
@@ -324,30 +327,52 @@ namespace resolutionFit {
 
 
 
-    for(FitResultTypeIt rIt = etaBins_.front()->fitResultTypesBegin();
-	rIt != etaBins_.front()->fitResultTypesEnd(); ++rIt) {
-      FitResult::Type fitResType = *rIt;
+//     for(FitResultTypeIt rIt = etaBins_.front()->fitResultTypesBegin();
+// 	rIt != etaBins_.front()->fitResultTypesEnd(); ++rIt) {
+//       FitResult::Type fitResType = *rIt;
       
-      for(ComparedSamplesIt sCIt = etaBins_.front()->comparedSamplesBegin();
-	  sCIt != etaBins_.front()->comparedSamplesEnd(); ++sCIt) {
-	SampleLabel sLabel1 = (*sCIt)->label1();
-	SampleLabel sLabel2 = (*sCIt)->label2();
+//       for(ComparedSamplesIt sCIt = etaBins_.front()->comparedSamplesBegin();
+// 	  sCIt != etaBins_.front()->comparedSamplesEnd(); ++sCIt) {
+// 	SampleLabel sLabel1 = (*sCIt)->label1();
+// 	SampleLabel sLabel2 = (*sCIt)->label2();
 	
-	if( etaBins_.front()->hasKValue(sLabel1,sLabel2,fitResType) ) {
-	  std::cout.setf(std::ios::fixed,std::ios::floatfield);
+// 	if( etaBins_.front()->hasKValue(sLabel1,sLabel2,fitResType) ) {
+// 	  std::cout.setf(std::ios::fixed,std::ios::floatfield);
 	  
-	  for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
-	    const EtaBin* etaBin = *etaBinIt;
+// 	  for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+// 	    const EtaBin* etaBin = *etaBinIt;
 
-	    std::cout << std::setprecision(0) << "   " << etaBin->toString() << ":   \t ";
-	    std::cout << std::setprecision(3) << etaBin->kValue(sLabel1,sLabel2,fitResType)-1. << " (-)";
-	    std::cout << std::setprecision(4) << std::max(etaBin->kValue(sLabel1,sLabel2,fitResType) - etaBin->kTotalDown(sLabel1,sLabel2,fitResType)-1.,0.) << " (+)";
-	    std::cout << std::setprecision(4) << std::max(etaBin->kValue(sLabel1,sLabel2,fitResType) + etaBin->kTotalUp(sLabel1,sLabel2,fitResType)-1.,0.) << std::endl;
-	  }
-	}
+// 	    std::cout << std::setprecision(0) << "   " << etaBin->toString() << ":   \t ";
+// 	    std::cout << std::setprecision(3) << etaBin->kValue(sLabel1,sLabel2,fitResType)-1. << " (-)";
+// 	    std::cout << std::setprecision(4) << std::max(etaBin->kValue(sLabel1,sLabel2,fitResType) - etaBin->kTotalDown(sLabel1,sLabel2,fitResType)-1.,0.) << " (+)";
+// 	    std::cout << std::setprecision(4) << std::max(etaBin->kValue(sLabel1,sLabel2,fitResType) + etaBin->kTotalUp(sLabel1,sLabel2,fitResType)-1.,0.) << std::endl;
+// 	  }
+// 	}
+//       }
+//     }
+
+  }
+
+
+  // -------------------------------------------------------------------
+  void CommanderCool::printPLI() const {
+    std::cout << "\n\n++++++ Particle-level imbalance ++++++++++++++++++++++\n" << std::endl;
+
+    std::cout.setf(std::ios::fixed,std::ios::floatfield);
+    for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+      const EtaBin* etaBin = *etaBinIt;
+      TF1* pli = etaBin->pliFunc("PLIFuncTmp");
+      std::cout << std::setprecision(0) << "   " << etaBin->toString() << ":   \t$ ";
+      std::cout << std::setprecision(1) << par_->etaMin(etaBin->etaBin()) << " < |\\eta| < " << par_->etaMax(etaBin->etaBin());
+      for(int i = 0; i < pli->GetNpar(); ++i) {
+	std::cout << std::setprecision(4) << "$ & $" << pli->GetParameter(i) << " \\pm ";
+	std::cout << std::setprecision(4) << pli->GetParError(i);
       }
+      std::cout << "$ \\\\" << std::endl;
+      delete pli;
     }
 
+    std::cout << "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n" << std::endl;
   }
 
 

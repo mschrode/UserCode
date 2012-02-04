@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: fitMCTruth.C,v 1.13 2012/01/24 10:02:14 mschrode Exp $
 
 //!  Fit mean response and resolution from MC truth
 //!  histograms in Kalibri skims from
@@ -134,11 +134,34 @@ void fitResolutionVsPtGen(const TString &fileName,
   for(unsigned int i = 0; i < nEtaBins; ++i) {
     std::cout << i << "   " << std::flush;
     // Get 2D histogram
-    TString histName = histNamePrefix;
-    if( histName.Contains("Eta?") ) histName.ReplaceAll("Eta?","Eta"+util::toTString(i));
-    else histName += "_Eta"+util::toTString(i);
-    std::cout << "Getting '" << histName << "' from file" << std::endl;
-    TH2* h2 = util::FileOps::readTH2(fileName,histName);
+    std::vector<TString> histName;
+    // In case several histograms are to be added
+    if( histNamePrefix.Contains(":") ) {
+      int idxFirst = 0;
+      int idxLast = histNamePrefix.Index(":");
+      while( idxLast >= 0 ) {
+	histName.push_back(histNamePrefix(idxFirst,idxLast-idxFirst));
+	std::cout << ">>> " << idxFirst << " - " << idxLast << ": " << histName.back() << std::endl;
+	idxFirst = idxLast+1;
+	idxLast = histNamePrefix.Index(":",idxFirst);
+	std::cout << "    " << idxFirst << " - " << idxLast << std::endl;
+      }
+      histName.push_back(histNamePrefix(idxFirst,histNamePrefix.Length()-idxFirst));
+    } else {
+      histName.push_back(histNamePrefix);
+    }
+    TH2* h2 = 0;
+    for(std::vector<TString>::iterator it = histName.begin();
+	it != histName.end(); ++it) {
+      if( it->Contains("Eta?") ) it->ReplaceAll("Eta?","Eta"+util::toTString(i));
+      else *it += "_Eta"+util::toTString(i);
+      std::cout << "Getting '" << *it << "' from file" << std::endl;
+      if( h2 == 0 ) {
+	h2 = util::FileOps::readTH2(fileName,*it);
+      } else {
+	h2->Add(util::FileOps::readTH2(fileName,*it));
+      }
+    }
 
     std::vector<TH1*> hProfTmp;
     std::vector<TF1*> fProfTmp;
@@ -562,13 +585,13 @@ void plotMCTruth(const TString &fileName, const TString &histNamePrefix, const s
 }
 
 
-
 // Compare MC-truth resolution for different selections
 // One plot per eta bin
 // ------------------------------------------------------------
-void plotMCTruth(const TString &fileName, const std::vector<TString> &histNamePrefix, const std::vector<TString> &legEntries, const sampleTools::BinningAdmin &binningAdmin, double nSigCore, double minPt, const TString &outNamePrefix, bool plotProfiles = false, int colorOffset = 0) {
+void plotMCTruth(const std::vector<TString> &fileName, const std::vector<TString> &histNamePrefix, const std::vector<TString> &legEntries, const sampleTools::BinningAdmin &binningAdmin, double nSigCore, double minPt, const TString &outNamePrefix, bool plotProfiles = false, bool normProfilesToMax = false, int colorOffset = 0) {
 
   assert( legEntries.size() == histNamePrefix.size() );
+  if( fileName.size() > 1 ) assert( legEntries.size() == fileName.size() );
 
   std::vector< std::vector< std::vector<TH1*> > > hProf;
   std::vector< std::vector<TH1*> > hMean;
@@ -581,7 +604,7 @@ void plotMCTruth(const TString &fileName, const std::vector<TString> &histNamePr
     std::vector< std::vector<TH1*> > tmpHProf;
     std::vector< std::vector<TF1*> > fProf;
     std::vector<TH1*> hChi2Ndof;
-    fitResolutionVsPtGen(fileName,histNamePrefix.at(i),binningAdmin.nEtaBins(),nSigCore,minPt,tmpHProf,fProf,hChi2Ndof,tmpHMean,tmpHSigma,tmpFSigma);
+    fitResolutionVsPtGen((fileName.size()>1?fileName.at(i):fileName.front()),histNamePrefix.at(i),binningAdmin.nEtaBins(),nSigCore,minPt,tmpHProf,fProf,hChi2Ndof,tmpHMean,tmpHSigma,tmpFSigma);
     hProf.push_back(tmpHProf);
     hMean.push_back(tmpHMean);
     hSigma.push_back(tmpHSigma);
@@ -589,6 +612,7 @@ void plotMCTruth(const TString &fileName, const std::vector<TString> &histNamePr
     for(unsigned int k = 0; k < fProf.size(); ++k) {
       for(unsigned int j = 0; j < fProf.at(k).size(); ++j) {
 	delete fProf.at(k).at(j);
+	tmpHProf.at(k).at(j)->Rebin(3);
       }
     }
     for(unsigned int k = 0; k < hChi2Ndof.size(); ++k) {
@@ -670,8 +694,17 @@ void plotMCTruth(const TString &fileName, const std::vector<TString> &histNamePr
 	  leg->AddEntry(hProf.at(i).at(etaBin).at(ptBin),legEntries.at(i),"L");
 	}
 
+	double totalProbNorm = 0;
  	for(unsigned int i = 0; i < hProf.size(); ++i) {
-	  util::HistOps::normHist(hProf.at(i).at(etaBin).at(ptBin),"width");
+ 	  totalProbNorm += hProf.at(i).at(etaBin).at(ptBin)->Integral("width");
+	}
+	totalProbNorm = 1./totalProbNorm;
+ 	for(unsigned int i = 0; i < hProf.size(); ++i) {
+	  if( normProfilesToMax ) {
+	    hProf.at(i).at(etaBin).at(ptBin)->Scale(totalProbNorm);
+	  } else {
+	    util::HistOps::normHist(hProf.at(i).at(etaBin).at(ptBin),"width");
+	  }
  	  hProf.at(i).at(etaBin).at(ptBin)->SetLineColor(util::StyleSettings::color(i+colorOffset));
  	  hProf.at(i).at(etaBin).at(ptBin)->SetLineStyle(1+i);
  	  hProf.at(i).at(etaBin).at(ptBin)->SetLineWidth(2);
@@ -733,6 +766,93 @@ void plotMCTruth(const TString &fileName, const std::vector<TString> &histNamePr
     std::cout << "Plots stored in "+outNamePrefix+".tar.gz" << std::endl;
   }
 }
+
+// ------------------------------------------------------------
+void plotMCTruth(const TString &fileName, const std::vector<TString> &histNamePrefix, const std::vector<TString> &legEntries, const sampleTools::BinningAdmin &binningAdmin, double nSigCore, double minPt, const TString &outNamePrefix, bool plotProfiles = false, bool normProfilesToMax = false, int colorOffset = 0) {
+  std::vector<TString> name;
+  name.push_back(fileName);
+  plotMCTruth(name,histNamePrefix,legEntries,binningAdmin,nSigCore,minPt,outNamePrefix,plotProfiles,normProfilesToMax,colorOffset);
+}
+
+
+
+
+// Plot MC-truth resolution for different
+// Gaussian fit ranges (nSigCore)
+// Different eta bins are compared
+// ------------------------------------------------------------
+void plotGaussianFitRange(const TString &fileName, const TString &histNamePrefix, const sampleTools::BinningAdmin &binningAdmin, double minPt, const TString &outNamePrefix) {
+
+  // Tested nSigCore
+  std::vector<double> nSigCore;
+  nSigCore.push_back(1.5);
+  nSigCore.push_back(2.0);
+  nSigCore.push_back(2.5);
+  
+  // Fit response distributions in eta and ptGen bins,
+  // obtain mean and width, and fit width vs ptGen
+  std::vector< std::vector<TH1*> > hSigma;
+  std::vector< std::vector<TF1*> > fSigma;
+  for(unsigned int i = 0; i < nSigCore.size(); ++i) {
+    std::vector<TH1*> hSigmaTmp;
+    std::vector<TF1*> fSigmaTmp;
+    fitResolutionVsPtGen(fileName,histNamePrefix,binningAdmin.nEtaBins(),nSigCore.at(i),minPt,hSigmaTmp,fSigmaTmp);
+    hSigma.push_back(hSigmaTmp);
+    fSigma.push_back(fSigmaTmp);
+
+    for(unsigned int etaBin = 0; etaBin < hSigmaTmp.size(); ++etaBin) {
+      hSigmaTmp.at(etaBin)->SetMarkerStyle(20+i);
+      hSigmaTmp.at(etaBin)->SetMarkerColor(util::StyleSettings::color(i));
+      hSigmaTmp.at(etaBin)->SetLineColor(hSigmaTmp.at(etaBin)->GetMarkerColor());
+      fSigmaTmp.at(etaBin)->SetLineColor(hSigmaTmp.at(etaBin)->GetMarkerColor());
+      fSigmaTmp.at(etaBin)->SetLineWidth(2);
+    }
+  }
+
+  TCanvas* can = new TCanvas("can","",500,500);
+
+  TLegend* leg = util::LabelFactory::createLegendCol(nSigCore.size(),0.4);
+  for(unsigned int i = 0; i < nSigCore.size(); ++i) {
+    leg->AddEntry(hSigma.at(i).front(),"#mu #pm "+util::toTString(nSigCore.at(i))+"#sigma","P");
+  }
+  
+  TH1* hFrame = new TH1D("hFrame",";p^{gen}_{T} (GeV);Resolution",1000,
+			 std::max(minPt-0.99,hSigma.front().front()->GetXaxis()->GetBinLowEdge(1)),1.2*hSigma.front().front()->GetXaxis()->GetBinUpEdge(hSigma.front().front()->GetNbinsX()));
+  hFrame->GetYaxis()->SetRangeUser(3E-3,0.39);
+  hFrame->GetXaxis()->SetMoreLogLabels();
+  hFrame->GetXaxis()->SetNoExponent();
+  for(unsigned int etaBin = 0; etaBin < binningAdmin.nEtaBins(); ++etaBin) {
+    TPaveText* label = util::LabelFactory::createPaveText(3,-0.58);
+    label->AddText("CMS Simulation,  #sqrt{s} = 7 TeV");
+    label->AddText(jetLabel_);
+    label->AddText(util::LabelFactory::labelEtaGen(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin)));
+
+    can->cd();
+    hFrame->Draw();
+    for(unsigned int i = 0; i < nSigCore.size(); ++i) {
+      fSigma.at(i).at(etaBin)->Draw("same");
+      hSigma.at(i).at(etaBin)->Draw("PE1same");
+    }
+    label->Draw("same");
+    leg->Draw("same");
+    can->SetLogx();
+    can->SaveAs(outNamePrefix+"_NSigCore_EtaBin"+util::toTString(etaBin)+".eps","eps");
+    
+    delete label;
+  }
+
+  for(unsigned int i = 0; i < hSigma.size(); ++i) {
+    for(unsigned int j = 0; j < hSigma.at(i).size(); ++j) {
+      delete hSigma.at(i).at(j);
+      delete fSigma.at(i).at(j);
+    }
+  }
+
+  delete leg;
+  delete hFrame;
+  delete can;
+}
+
 
 
 // ------------------------------------------------------------
@@ -801,6 +921,282 @@ void plotDeltaR(const TString &fileName, const TString &histNamePrefix, const sa
 }
 
 
+// Compare one and two Gaussian fits
+// ------------------------------------------------------------
+void plotTwoGaussFit(const TString &fileName, const TString &histNamePrefix, const sampleTools::BinningAdmin &binningAdmin, double nSigCore, double minPt, const TString &outNamePrefix) {
+  
+
+  std::vector<TH1*> hChi2Ndof;
+  std::vector<TH1*> hChi2Ndof2Gauss;
+
+  for(unsigned int etaBin = 0; etaBin < binningAdmin.nEtaBins(); ++etaBin) {
+    // Obtain response distributions in ptGen bins,
+    // perform standard, one-Gaussian fit
+    TString histName = histNamePrefix;
+    if( histName.Contains("Eta?") ) histName.ReplaceAll("Eta?","Eta"+util::toTString(etaBin));
+    else histName += "_Eta"+util::toTString(etaBin);
+    TH2* h2 = util::FileOps::readTH2(fileName,histName);
+
+    std::vector<TH1*> hProf;
+    std::vector<TF1*> fProf;
+    std::vector<TF1*> fProf2Gauss;
+    TH1* hChi2NdofTmp;
+    TH1* hMean;
+    TH1* hSigma;
+    fitProfile(h2,hProf,nSigCore,fProf,hMean,hSigma,hChi2NdofTmp);
+
+    hChi2NdofTmp->GetYaxis()->SetRangeUser(3E-4,8.9);
+    hChi2NdofTmp->SetMarkerStyle(20+etaBin);
+    hChi2NdofTmp->SetMarkerColor(util::StyleSettings::color(etaBin));
+    hChi2NdofTmp->SetLineColor(hChi2NdofTmp->GetMarkerColor());
+    util::HistOps::setAxisTitles(hChi2NdofTmp,"p^{gen}_{T}","GeV","#chi^{2} / ndof");
+    TH1* hChi2Ndof2GaussTmp = static_cast<TH1*>(hChi2NdofTmp->Clone("hChi2Ndof2Gauss_Eta"+util::toTString(etaBin)));
+
+    // Fit sum of two Gaussian within range of one-Gaus fit
+    for(unsigned int ptBin = 0; ptBin < hProf.size(); ++ptBin) {
+      TString name = fProf.at(ptBin)->GetName();
+      double min = 1.;
+      double max = 1.;
+      fProf.at(ptBin)->GetRange(min,max);
+      TF1* f2Gauss = new TF1(name+"2Gauss","[0]*TMath::Exp(-0.5*sq(([1]-x[0])/[2])) + [0]*[3]*TMath::Exp(-0.5*sq(([1]-x[0])/[4]))",min,max);
+      f2Gauss->SetParameter(0,fProf.at(ptBin)->GetParameter(0));
+      f2Gauss->SetParameter(1,1.);
+      f2Gauss->SetParameter(2,fProf.at(ptBin)->GetParameter(2));
+      f2Gauss->SetParameter(3,0.);
+      f2Gauss->SetParameter(4,f2Gauss->GetParameter(2));
+      int fitRes = hProf.at(ptBin)->Fit(f2Gauss,"QBINR");
+      fProf2Gauss.push_back(f2Gauss);
+
+      double chi2ndof = f2Gauss->GetChisquare() / f2Gauss->GetNDF();
+      if( fitRes == 0 && chi2ndof < 1000. ) {
+	hChi2Ndof2GaussTmp->SetBinContent(ptBin+1,chi2ndof);
+	hChi2Ndof2GaussTmp->SetBinError(ptBin+1,0.);
+      }
+    }
+    int startOfPrecisionRegion = 1;
+    int endOfPrecisionRegion = 10000;
+    for(int bin = hSigma->GetNbinsX()/2; bin >= 1; --bin) {
+      if( hSigma->GetBinContent(bin) &&
+	  hSigma->GetBinError(bin) / hSigma->GetBinContent(bin) > 0.15 ) {
+	startOfPrecisionRegion = bin;
+	break;
+      }
+    }
+    startOfPrecisionRegion = max(startOfPrecisionRegion,hSigma->FindBin(minPt));
+    for(int bin = hSigma->GetNbinsX()/2; bin <= hSigma->GetNbinsX(); ++bin) {
+      if( hSigma->GetBinContent(bin) &&
+	  hSigma->GetBinError(bin) / hSigma->GetBinContent(bin) > 0.15 ) {
+	endOfPrecisionRegion = bin;
+	break;
+      }
+    }
+    for(int bin = 1; bin <= hSigma->GetNbinsX(); ++bin) {
+      if( bin <= startOfPrecisionRegion || bin >= endOfPrecisionRegion ) {
+	hChi2NdofTmp->SetBinContent(bin,0);
+	hChi2NdofTmp->SetBinError(bin,0);
+	hChi2Ndof2GaussTmp->SetBinContent(bin,0);
+	hChi2Ndof2GaussTmp->SetBinError(bin,0);
+      }
+    }
+    hChi2Ndof.push_back(hChi2NdofTmp);
+    hChi2Ndof2Gauss.push_back(hChi2Ndof2GaussTmp);
+
+
+    // Create ratio plots of histogram and fit function
+    std::vector<TH1*> hProfOverFit;
+    std::vector<TH1*> hProfOver2Gauss;
+    for(unsigned int ptBin = 0; ptBin < hProf.size(); ++ptBin) {
+      hProfOverFit.push_back(util::HistOps::createRatioPlot(hProf.at(ptBin),fProf.at(ptBin)));
+      hProfOver2Gauss.push_back(util::HistOps::createRatioPlot(hProf.at(ptBin),fProf2Gauss.at(ptBin)));
+    }
+
+    // Norm profile plots and fits
+    for(unsigned int ptBin = 0; ptBin < hProf.size(); ++ptBin) {
+      if( hProf.at(ptBin)->Integral() ) {
+ 	double norm = 1./hProf.at(ptBin)->Integral("width");
+ 	fProf.at(ptBin)->SetParameter(0,norm*fProf.at(ptBin)->GetParameter(0));
+ 	fProf2Gauss.at(ptBin)->SetParameter(0,norm*fProf2Gauss.at(ptBin)->GetParameter(0));
+ 	hProf.at(ptBin)->Scale(norm);
+      }
+    }
+
+    // Set style
+    for(unsigned int ptBin = 0; ptBin < hProf.size(); ++ptBin) {
+      hProf.at(ptBin)->SetMarkerStyle(20);
+      hProf.at(ptBin)->SetMarkerColor(kBlack);
+      hProf.at(ptBin)->SetLineColor(hProf.at(ptBin)->GetMarkerColor());
+      hProf.at(ptBin)->SetLineWidth(2);
+
+      fProf.at(ptBin)->SetLineColor(kRed);
+      fProf.at(ptBin)->SetLineWidth(2);
+      hProfOverFit.at(ptBin)->SetMarkerStyle(0);
+      hProfOverFit.at(ptBin)->SetLineColor(fProf.at(ptBin)->GetLineColor());
+      hProfOverFit.at(ptBin)->SetLineWidth(fProf.at(ptBin)->GetLineWidth());
+
+      fProf2Gauss.at(ptBin)->SetLineColor(kBlue);
+      fProf2Gauss.at(ptBin)->SetLineWidth(fProf.at(ptBin)->GetLineWidth());
+      hProfOver2Gauss.at(ptBin)->SetMarkerStyle(0);
+      hProfOver2Gauss.at(ptBin)->SetLineColor(fProf2Gauss.at(ptBin)->GetLineColor());
+      hProfOver2Gauss.at(ptBin)->SetLineWidth(fProf2Gauss.at(ptBin)->GetLineWidth());
+    }
+
+    // Canvases
+    for(unsigned int ptBin = 0; ptBin < hProf.size(); ++ptBin) {
+      // Indicate fit range
+      fProf.at(ptBin)->SetRange(0.,2.);
+      fProf2Gauss.at(ptBin)->SetRange(0.,2.);
+
+      TF1* fitRestricted = static_cast<TF1*>(fProf.at(ptBin)->Clone("fitRestricted"));
+      double xMin = fitRestricted->GetParameter(1)-nSigCore*fitRestricted->GetParameter(2);
+      double xMax = fitRestricted->GetParameter(1)+nSigCore*fitRestricted->GetParameter(2);
+      fitRestricted->SetRange(xMin,xMax);
+      TF1* fitRestricted2Gauss = static_cast<TF1*>(fProf2Gauss.at(ptBin)->Clone("fitRestricted2Gauss"));
+      fitRestricted2Gauss->SetRange(xMin,xMax);
+
+      TH1* ratioRestricted = static_cast<TH1*>(hProfOverFit.at(ptBin)->Clone("ratioRestricted"));
+      TH1* ratioRestricted2Gauss = static_cast<TH1*>(hProfOver2Gauss.at(ptBin)->Clone("ratioRestricted2Gauss"));
+      for(int bin = 1; bin <= ratioRestricted->GetNbinsX(); ++bin) {
+	if( ratioRestricted->GetXaxis()->GetBinCenter(bin) < xMin ||
+	    ratioRestricted->GetXaxis()->GetBinCenter(bin) > xMax ) {
+	  ratioRestricted->SetBinContent(bin,0.);
+	  ratioRestricted->SetBinError(bin,0.);
+	  ratioRestricted2Gauss->SetBinContent(bin,0.);
+	  ratioRestricted2Gauss->SetBinError(bin,0.);
+	}
+      }
+
+      fProf.at(ptBin)->SetLineStyle(2);
+      fProf2Gauss.at(ptBin)->SetLineStyle(2);
+      hProfOverFit.at(ptBin)->SetLineStyle(2);
+      hProfOver2Gauss.at(ptBin)->SetLineStyle(2);
+
+      // Labels
+      TPaveText* label = util::LabelFactory::createPaveText(3,-0.8);
+      label->AddText("CMS Simulation,  #sqrt{s} = 7 TeV");
+      label->AddText(jetLabel_);
+      label->AddText(util::LabelFactory::labelEtaGen(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin))+", "+util::toTString(hChi2Ndof.at(etaBin)->GetXaxis()->GetBinLowEdge(ptBin+1),0)+" < p^{gen}_{T} < "+util::toTString(hChi2Ndof.at(etaBin)->GetXaxis()->GetBinUpEdge(ptBin+1),0)+" GeV");
+      TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,-0.9,3);
+      leg->AddEntry(fitRestricted,"G_{A}(#mu,#sigma):  #chi^{2} / ndof = "+util::toTString(hChi2Ndof.at(etaBin)->GetBinContent(ptBin+1),2),"L");
+      leg->AddEntry(fitRestricted2Gauss,"G_{A}(#mu,#sigma_{A}) + G_{B}(#mu,#sigma_{B}):  #chi^{2} / ndof = "+util::toTString(hChi2Ndof2Gauss.at(etaBin)->GetBinContent(ptBin+1),2),"L");
+
+      // Plot
+      TCanvas* canRatio = util::HistOps::createRatioTopCanvas();
+      canRatio->cd();
+      canRatio->SetLogy(1);
+      TH1* tFrame = util::HistOps::createRatioTopHist(hProf.at(ptBin));
+      util::HistOps::setAxisTitles(tFrame,"","","jets",true);
+      util::HistOps::setYRange(tFrame,3,3E-4); 
+      tFrame->GetXaxis()->SetRangeUser(labelResponseLogMin_,labelResponseLogMax_);     
+      tFrame->Draw("HIST");
+      fProf.at(ptBin)->SetLineStyle(2);      
+      fProf.at(ptBin)->Draw("same");
+      fitRestricted->Draw("same");
+      fProf2Gauss.at(ptBin)->Draw("same");
+      fitRestricted2Gauss->Draw("same");
+      label->Draw("same");
+      TPad* bPad  = util::HistOps::createRatioBottomPad();
+      bPad->Draw();
+      bPad->cd();
+      TH1* bFrame = util::HistOps::createRatioBottomFrame(tFrame,"Response","",0.51,1.99);
+      bFrame->GetXaxis()->SetRangeUser(labelResponseLogMin_,labelResponseLogMax_);     
+      bFrame->Draw();
+      hProfOverFit.at(ptBin)->Draw("HISTsameE");
+      hProfOver2Gauss.at(ptBin)->Draw("HISTsameE");
+      ratioRestricted->Draw("HISTsameE");
+      ratioRestricted2Gauss->Draw("HISTsameE");
+      label->Draw("same");
+      gPad->RedrawAxis();
+      canRatio->SaveAs(outNamePrefix+"_OneVsTwoGauss_ResponseFitLog_EtaBin"+util::toTString(etaBin)+"_PtBin"+util::toTString(ptBin)+".eps","eps");
+
+      canRatio->cd();
+      canRatio->SetLogy(0);
+      util::HistOps::setYRange(tFrame,5);
+      tFrame->GetXaxis()->SetRangeUser(labelResponseMin_,labelResponseMax_);
+      tFrame->Draw("HIST");
+      fProf.at(ptBin)->SetLineStyle(2);      
+      fProf.at(ptBin)->Draw("same");
+      fitRestricted->Draw("same");
+      fitRestricted2Gauss->Draw("same");
+      fProf2Gauss.at(ptBin)->Draw("same");
+      label->Draw("same");
+      leg->Draw("same");
+      bPad  = util::HistOps::createRatioBottomPad();
+      bPad->Draw();
+      bPad->cd();
+      delete bFrame;
+      bFrame = util::HistOps::createRatioBottomFrame(tFrame,"Response","",0.61,1.39);
+      bFrame->GetXaxis()->SetRangeUser(labelResponseMin_,labelResponseMax_);     
+      bFrame->Draw();
+      hProfOverFit.at(ptBin)->Draw("HISTsameE");
+      hProfOver2Gauss.at(ptBin)->Draw("HISTsameE");
+      ratioRestricted->Draw("HISTsameE");
+      ratioRestricted2Gauss->Draw("HISTsameE");
+      label->Draw("same");
+      gPad->RedrawAxis();
+      canRatio->SaveAs(outNamePrefix+"_OneVsTwoGauss_ResponseFit_EtaBin"+util::toTString(etaBin)+"_PtBin"+util::toTString(ptBin)+".eps","eps");
+
+      delete fitRestricted;
+      delete fitRestricted2Gauss;
+      delete ratioRestricted;
+      delete ratioRestricted2Gauss;
+      delete label;
+      delete leg;
+      delete tFrame;
+      delete bFrame;
+      delete canRatio;
+    } // End of loop over pt bins
+
+    delete hMean;
+    delete hSigma;
+    for(unsigned int ptBin = 0; ptBin < hProf.size(); ++ptBin) {
+      delete hProf.at(ptBin);
+      delete fProf.at(ptBin);
+      delete fProf2Gauss.at(ptBin);
+      delete hProfOverFit.at(ptBin);
+      delete hProfOver2Gauss.at(ptBin);
+    }
+  } // End of loop over eta bins
+
+  // Plot chi2/ndof fit probability
+  TPaveText* label = util::LabelFactory::createPaveText(2,-0.58);
+  label->AddText("CMS Simulation,  #sqrt{s} = 7 TeV");
+  label->AddText(jetLabel_);
+  TLegend* leg = util::LabelFactory::createLegendCol(binningAdmin.nEtaBins(),0.4);
+  for(unsigned int etaBin = 0; etaBin < binningAdmin.nEtaBins(); ++etaBin) {
+    leg->AddEntry(hChi2Ndof.at(etaBin),util::LabelFactory::labelEtaGen(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin)),"P");
+  }
+
+  TCanvas* can = new TCanvas("can","#chi^{2}/ndof",500,500);
+  can->cd();
+  hChi2Ndof.back()->Draw("P");
+  for(int i = hChi2Ndof.size()-2; i >= 0; --i) {
+    hChi2Ndof.at(i)->Draw("Psame");
+  }
+  label->Draw("same");
+  leg->Draw("same");
+  can->SetLogx();
+  can->SaveAs(outNamePrefix+"_OneVsTwoGauss_Chi2NdofOneGauss.eps","eps");
+
+  can->cd();
+  hChi2Ndof2Gauss.back()->Draw("P");
+  for(int i = hChi2Ndof2Gauss.size()-2; i >= 0; --i) {
+    hChi2Ndof2Gauss.at(i)->Draw("Psame");
+  }
+  label->Draw("same");
+  leg->Draw("same");
+  can->SetLogx();
+  can->SaveAs(outNamePrefix+"_OneVsTwoGauss_Chi2NdofTwoGauss.eps","eps");  
+
+  for(unsigned int i = 0; i < hChi2Ndof.size(); ++i) {
+    delete hChi2Ndof.at(i);
+    delete hChi2Ndof2Gauss.at(i);
+  }
+  delete leg;
+  delete label;
+  delete can;
+}
+
+
 // ------------------------------------------------------------
 void fitMCTruth() {
   gErrorIgnoreLevel = 1001;
@@ -808,59 +1204,83 @@ void fitMCTruth() {
   
   sampleTools::BinningAdmin admin("config/Analysis2011/Binning/BinningAdmin2011_v2.cfg");
   
-  TString file = "Kalibri_MCTruthResponse_Summer11.root";
+  TString file = "Kalibri_MCTruthResponse_Summer11_AK5PF.root";
   TString name = "MCTruthSummer11";
 
-  //plotMCTruth(file,"hRespVsPtGen",admin,2.,10.,name,false);
+  //plotMCTruth(file,"hRespVsPtGen",admin,2.,10.,name);
   //plotDeltaR(file,"hDeltaRVsPtGen",admin,100.,200.,name);
+  //  plotGaussianFitRange(file,"hRespVsPtGen",admin,10.,name);
+  //plotTwoGaussFit(file,"hRespVsPtGenUncorrected",admin,2.,10.,name);
+  //plotMCTruth(file,"hRespVsPtGenUncorrected",admin,2.,10.,name+"_Uncorr");
 
-  //plotMCTruth(file,"hRespVsPtGenUncorrected",admin,2.,10.,name+"_Uncorr",true);
 
+   std::vector<TString> histNamePrefix;
+   std::vector<TString> legEntries;
 
-  std::vector<TString> histNamePrefix;
-  std::vector<TString> legEntries;
+//    histNamePrefix.push_back("hRespVsPtGenUncorrected");
+//    histNamePrefix.push_back("hRespVsPtGen");
+//    legEntries.push_back("Uncorrected");
+//    legEntries.push_back("C_{off} #upoint C_{rel} #upoint C_{abs}");
+//    plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_UncorrVsCorr",true,false,1);
 
-  histNamePrefix.push_back("hRespVsPtGenUncorrected");
-  histNamePrefix.push_back("hRespVsPtGen");
-  legEntries.push_back("Uncorrected");
-  legEntries.push_back("C_{off} #upoint C_{rel} #upoint C_{abs}");
-  plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_UncorrVsCorr",true,1);
+//    histNamePrefix.clear();
+//    legEntries.clear();
+//    histNamePrefix.push_back("hRespVsPtGenUncorrected");
+//    histNamePrefix.push_back("hRespVsPtGenL1Corrected");
+//    histNamePrefix.push_back("hRespVsPtGen");
+//    legEntries.push_back("Uncorrected");
+//    legEntries.push_back("C_{off}");
+//    legEntries.push_back("C_{off} #upoint C_{rel} #upoint C_{abs}");
+//    plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_UncorrVsL1VsCorr");
 
-  histNamePrefix.clear();
-  legEntries.clear();
-  histNamePrefix.push_back("hRespVsPtGenUncorrected");
-  histNamePrefix.push_back("hRespVsPtGenL1Corrected");
-  histNamePrefix.push_back("hRespVsPtGen");
-  legEntries.push_back("Uncorrected");
-  legEntries.push_back("C_{off}");
-  legEntries.push_back("C_{off} #upoint C_{rel} #upoint C_{abs}");
-  plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_UncorrVsL1VsCorr");
+//    histNamePrefix.clear();
+//    legEntries.clear();
+//    histNamePrefix.push_back("hRespVsPtGenUncorrected");
+//    histNamePrefix.push_back("hRespVsPtGenUncorrectedLowPU");
+//    histNamePrefix.push_back("hRespVsPtGenL1Corrected");
+//    legEntries.push_back("Uncorrected  ");
+//    legEntries.push_back("N(PU) < 2");
+//    legEntries.push_back("C_{off}");
+//    plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_UncorrVsLowPUVsL1Corr",true);
 
-  histNamePrefix.clear();
-  legEntries.clear();
-  histNamePrefix.push_back("hRespVsPtGenUncorrected");
-  histNamePrefix.push_back("hRespVsPtGenUncorrectedLowPU");
-  histNamePrefix.push_back("hRespVsPtGenL1Corrected");
-  legEntries.push_back("Uncorrected  ");
-  legEntries.push_back("N(PU) < 2");
-  legEntries.push_back("C_{off}");
-  plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_UncorrVsLowPUVsL1Corr",true);
+//    histNamePrefix.clear();
+//    legEntries.clear();
+//    histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId1:hRespVsPtGenVsPdgId_Eta?_PdgId2:hRespVsPtGenVsPdgId_Eta?_PdgId3");
+//    histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId4");
+//    histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId5");
+//    histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId21");
+//    legEntries.push_back("u,d,s");
+//    legEntries.push_back("c");
+//    legEntries.push_back("b");
+//    legEntries.push_back("g");
+//    plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_Flavour",true);
 
-  //   histNamePrefix.clear();
-  //   legEntries.clear();
-  //    histNamePrefix.push_back("hRespVsPtGenDeltaRLess05");
-  //    histNamePrefix.push_back("hRespVsPtGenDeltaRLess10");
-  //    histNamePrefix.push_back("hRespVsPtGenDeltaRLess15");
-  //    histNamePrefix.push_back("hRespVsPtGenDeltaRLess20");
-  //    histNamePrefix.push_back("hRespVsPtGenDeltaRLess25");
-  //    //  histNamePrefix.push_back("hRespVsPtGenDeltaRLess30");
-  //    legEntries.push_back("#DeltaR_{max} = 0.05");
-  //    legEntries.push_back("#DeltaR_{max} = 0.10");
-  //    legEntries.push_back("#DeltaR_{max} = 0.15");
-  //    legEntries.push_back("#DeltaR_{max} = 0.20");
-  //    legEntries.push_back("#DeltaR_{max} = 0.25");
-  //    //  legEntries.push_back("#DeltaR_{max} = 0.30");
-  //    plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionVsDeltaR");
+   histNamePrefix.clear();
+   legEntries.clear();
+   histNamePrefix.push_back("hRespVsPtGen");
+   histNamePrefix.push_back("hRespVsPtGen");
+   legEntries.push_back("Particle-flow");
+   legEntries.push_back("Calorimeter");
+   std::vector<TString> fileNames;
+   fileNames.push_back(file);
+   fileNames.push_back("Kalibri_MCTruthResponse_Summer11_AK5Calo.root");
+   plotMCTruth(fileNames,histNamePrefix,legEntries,admin,2.,10.,name+"_PFVsCalo");
+
+//      histNamePrefix.clear();
+//      legEntries.clear();
+//       histNamePrefix.push_back("hRespVsPtGenDeltaRLess05");
+//       histNamePrefix.push_back("hRespVsPtGenDeltaRLess10");
+//       histNamePrefix.push_back("hRespVsPtGenDeltaRLess15");
+//       histNamePrefix.push_back("hRespVsPtGenDeltaRLess20");
+//       histNamePrefix.push_back("hRespVsPtGenDeltaRLess25");
+//       //  histNamePrefix.push_back("hRespVsPtGenDeltaRLess30");
+//       legEntries.push_back("#DeltaR_{max} = 0.05");
+//       legEntries.push_back("#DeltaR_{max} = 0.10");
+//       legEntries.push_back("#DeltaR_{max} = 0.15");
+//       legEntries.push_back("#DeltaR_{max} = 0.20");
+//       legEntries.push_back("#DeltaR_{max} = 0.25");
+//       //  legEntries.push_back("#DeltaR_{max} = 0.30");
+//       plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionVsDeltaR");
 
   //     histNamePrefix.clear();
   //     legEntries.clear();
@@ -870,32 +1290,89 @@ void fitMCTruth() {
   //     legEntries.push_back("JetID not applied");
   //     plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionJetID");
 
-  //     histNamePrefix.clear();
-  //     legEntries.clear();
-  //     histNamePrefix.push_back("hRespVsPtGen");
-  //     histNamePrefix.push_back("hRespVsPtGenPUMC");
-  //     legEntries.push_back("With PU reweighting");
-  //     legEntries.push_back("No PU reweighting");
-  //     plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionPU");
+//        histNamePrefix.clear();
+//        legEntries.clear();
+//        histNamePrefix.push_back("hRespVsPtGen");
+//        histNamePrefix.push_back("hRespVsPtGenPUMC");
+//        legEntries.push_back("With PU reweighting");
+//        legEntries.push_back("No PU reweighting");
+//        plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionPU");
 
-  //     histNamePrefix.clear();
-  //     legEntries.clear();
-  //     histNamePrefix.push_back("hRespVsPtGen");
-  //     //   histNamePrefix.push_back("hRespVsPtGenVsPtSoft_Eta?_PtSoft4");
-  //     histNamePrefix.push_back("hRespVsPtGenVsPtSoft_Eta?_PtSoft6");
-  //     legEntries.push_back("QCD multijets");
-  //     legEntries.push_back("QCD dijets");
-  //     plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionDijetSelection",true);
+//        histNamePrefix.clear();
+//        legEntries.clear();
+//        histNamePrefix.push_back("hRespVsPtGen");
+//        //   histNamePrefix.push_back("hRespVsPtGenVsPtSoft_Eta?_PtSoft4");
+//        histNamePrefix.push_back("hRespVsPtGenVsPtSoft_Eta?_PtSoft6");
+//        legEntries.push_back("QCD multijets");
+//        legEntries.push_back("QCD dijets");
+//        plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionDijetSelection",true);
  
-  //     histNamePrefix.clear();
-  //     legEntries.clear();
-  //     histNamePrefix.push_back("hRespVsPtGenPULess05");
-  //     histNamePrefix.push_back("hRespVsPtGenPULess10");
-  //     histNamePrefix.push_back("hRespVsPtGenPULess15");
-  //     histNamePrefix.push_back("hRespVsPtGenPULess99");
-  //     legEntries.push_back("N(PU) #leq 4");
-  //     legEntries.push_back("4 < N(PU) #leq 9");
-  //     legEntries.push_back("9 < N(PU) #leq 14");
-  //     legEntries.push_back("N(PU) > 14");
-  //     plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionNPU");
+//      histNamePrefix.clear();
+//      legEntries.clear();
+//      histNamePrefix.push_back("hRespVsPtGenPULess05");
+//      histNamePrefix.push_back("hRespVsPtGenPULess10");
+//      histNamePrefix.push_back("hRespVsPtGenPULess15");
+//      histNamePrefix.push_back("hRespVsPtGenPULess99");
+//      legEntries.push_back("N(PU) #leq 4");
+//      legEntries.push_back("4 < N(PU) #leq 9");
+//      legEntries.push_back("9 < N(PU) #leq 14");
+//      legEntries.push_back("N(PU) > 14");
+//      plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionNPU");
 }
+
+
+// ------------------------------------------------------------
+void plotAsymmetryComponents(const TString &file) {
+  gErrorIgnoreLevel = 1001;
+  util::StyleSettings::setStyleNoteNoTitle();
+
+  TH1* hSigAsym = util::FileOps::readTH1(file,"Components:hSigAsym");
+  TH1* hSigResp = util::FileOps::readTH1(file,"Components:hSigResp");
+  TH1* hSigSoft = util::FileOps::readTH1(file,"Components:hSigSoft");
+  TH1* hSigTotal = util::FileOps::readTH1(file,"Components:hSigTotal");
+
+  hSigAsym->SetMarkerStyle(21);
+  hSigAsym->SetMarkerColor(kBlack);
+  hSigAsym->SetLineColor(kBlack);
+  hSigAsym->SetLineWidth(2);
+
+  hSigTotal->SetLineColor(kRed);
+  hSigTotal->SetLineWidth(2);
+  hSigTotal->GetYaxis()->SetRangeUser(3E-4,0.59);
+  hSigTotal->GetXaxis()->SetRange(1,hSigTotal->GetNbinsX()-1);
+  hSigTotal->GetXaxis()->SetMoreLogLabels();
+  hSigTotal->GetXaxis()->SetNoExponent();
+  util::HistOps::setAxisTitles(hSigTotal,"p^{gen}_{T}","GeV","Standard deviation");
+
+  hSigResp->SetLineColor(kBlue);
+  hSigResp->SetLineWidth(2);
+  hSigResp->SetLineStyle(2);
+
+  hSigSoft->SetLineColor(28);
+  hSigSoft->SetLineWidth(2);
+  hSigSoft->SetLineStyle(3);
+
+  TPaveText* label = util::LabelFactory::createPaveText(3,-0.65);
+  label->AddText("CMS Simulation,  #sqrt{s} = 7 TeV");
+  label->AddText(jetLabel_);
+  label->AddText("0.0 < |#eta^{gen}| < 0.5, |#Delta#phi^{gen}| > 2.7");
+  TLegend* leg = util::LabelFactory::createLegendCol(4,0.35);
+  leg->AddEntry(hSigAsym,"#sqrt{2} #upoint #sigma_{A}","P");
+  leg->AddEntry(hSigResp,"#sigma/p_{T}","L");
+  leg->AddEntry(hSigSoft,"#sigma_{soft}","L");
+  leg->AddEntry(hSigTotal,"#sigma/p_{T} #oplus #sigma_{soft}","L");
+
+  
+  TCanvas* can = new TCanvas("can","Asymmetry Components",500,500);
+  can->cd();
+  hSigTotal->Draw("HIST");
+  hSigSoft->Draw("HISTEsame");
+  hSigResp->Draw("HISTEsame");
+  hSigAsym->Draw("PE1same");
+  label->Draw("same");
+  leg->Draw("same");
+  can->SetLogx();
+  gPad->RedrawAxis();
+  can->SaveAs("MCTruthSummer11_AsymmetryContributions.eps","eps");
+}
+

@@ -1,4 +1,4 @@
-// $Id: FileOps.h,v 1.11 2011/06/23 16:54:24 mschrode Exp $
+// $Id: FileOps.h,v 1.12 2011/08/19 08:41:19 mschrode Exp $
 
 #ifndef FileOps_h
 #define FileOps_h
@@ -46,6 +46,8 @@ namespace util
       if( newHName.Length() ) h->SetName(newHName);
     } else {
       std::cerr << "ERROR in FileOps::readTH2: No TH2 with name '" << hName << "' in file '" << fileName << "'\n.";
+      file.Close();
+      exit(-1);
     }
     file.Close();
     
@@ -65,6 +67,8 @@ namespace util
       if( newHistName.Length() ) h->SetName(newHistName);
     } else {
       std::cerr << "ERROR in FileOps::readTH1: Histogram with name '" << histName << "' does not exist in file '" << fileName << "'\n.";
+      file.Close();
+      exit(-1);
     }
     file.Close();
     
@@ -82,6 +86,8 @@ namespace util
       if( newGName.Length() ) g->SetName(newGName);
     } else {
       std::cerr << "ERROR in FileOps::readTGraph: TGraph with name '" << gName << "' does not exist in file '" << fileName << "'\n.";
+      file.Close();
+      exit(-1);
     }
     file.Close();
     
@@ -118,7 +124,8 @@ namespace util
 	v.push_back(h);
       } else {
 	std::cerr << "ERROR in FileOps::readHistVec: Histogram with name '" << *it << "' does not exist in file '" << fileName << "'\n.";
-	exit(1);
+	file.Close();
+	exit(-1);
       }
     }
     file.Close();

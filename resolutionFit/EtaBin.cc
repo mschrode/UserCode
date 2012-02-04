@@ -1,4 +1,4 @@
-// $Id: EtaBin.cc,v 1.13 2011/07/18 09:36:47 mschrode Exp $
+// $Id: EtaBin.cc,v 1.14 2011/11/21 17:18:05 mschrode Exp $
 
 #include <algorithm>
 #include <iostream>
@@ -16,9 +16,9 @@ namespace resolutionFit{
     for(unsigned int i = 0; i < nPtBins; ++i) {
       ptBins_.push_back(new PtBin(etaBin_,i,par));
     }
-    mcTruthReso_ = new ResolutionFunctionModifiedNSC(0.,1.,0.,1.,0.,0.,0.,0.);
-    scaledMCTruthReso_ = new ResolutionFunctionModifiedNSC(0.,1.,0.,1.,0.,0.,0.,0.);
-    pli_ = new ResolutionFunctionModifiedNSC(0.,1.,0.,1.,0.,0.,0.,0.);
+    mcTruthReso_ = new ResolutionFunctionModifiedNSC();
+    scaledMCTruthReso_ = new ResolutionFunctionModifiedNSC();
+    pli_ = new ResolutionFunctionModifiedNSC();
 
     kVal_ = 1.;
     kValStat_ = 0.;

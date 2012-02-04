@@ -23,6 +23,8 @@ namespace resolutionFit {
     unsigned int etaBin() const { return etaBin_; }
     unsigned int ptBin() const { return ptBin_; }
     TString toTString() const;
+    double min() const { return par_->ptMin(etaBin(),ptBin()); }
+    double max() const { return par_->ptMax(etaBin(),ptBin()); }
 
     SampleIt samplesBegin() const { return samples_.begin(); }
     SampleIt samplesEnd() const { return samples_.end(); }

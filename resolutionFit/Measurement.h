@@ -1,4 +1,4 @@
-// $Id: Measurement.h,v 1.9 2011/06/23 18:07:37 mschrode Exp $
+// $Id: Measurement.h,v 1.10 2011/08/19 08:33:56 mschrode Exp $
 
 #ifndef MEASUREMENT_H
 #define MEASUREMENT_H
@@ -60,6 +60,7 @@ namespace resolutionFit {
     TH1* histNumVtx() const { return getClone("hNumVtx"); }
     TH1* histMCWeight() const { return getClone("hWeights"); }
     TH1* histMCNumPU() const { return getClone("hNumPU"); }
+    TH1* histDeltaPt() const { return getClone("hDeltaPtJet12"); }
 
 
 
