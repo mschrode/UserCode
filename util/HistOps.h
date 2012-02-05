@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.40 2012/01/24 10:10:15 mschrode Exp $
+// $Id: HistOps.h,v 1.41 2012/02/04 21:47:26 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.40 2012/01/24 10:10:15 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.41 2012/02/04 21:47:26 mschrode Exp $
   class HistOps
   {
   public:
@@ -119,6 +119,17 @@ namespace util
 	  break;
 	}
       }
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static void setXRange(TH1 *h, int nBinsOffset = 0) {
+      int min = 1;
+      int max = h->GetNbinsX();
+      findXRange(h,min,max);
+      min = std::max(min-nBinsOffset,1);
+      max = std::min(max+nBinsOffset,h->GetNbinsX());
+      h->GetXaxis()->SetRange(min,max);
     }
 
 
