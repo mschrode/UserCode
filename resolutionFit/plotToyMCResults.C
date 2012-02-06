@@ -1,4 +1,4 @@
-// $Id:  $
+// $Id: plotToyMCResults.C,v 1.1 2012/02/05 21:37:09 mschrode Exp $
 
 #include <iomanip>
 #include <iostream>
@@ -41,13 +41,15 @@ const int LINE_WIDTH = 2;
 
 
 // ------------------------------------------------------------
-void smallestInterval(const TH1* h, double frac, int &binMin, int &binMax) {
+void smallestInterval(const TH1* h, double frac, int &binMin, int &binMax, bool isSymmetric) {
   int startBin = h->GetMaximumBin();
   binMin = 1;
   binMax = h->GetNbinsX();
   double tot = h->Integral();
   if( frac < 1. && tot > 0. ) {
-    for(int startBinTmp = std::max(startBin-10,1); startBinTmp < std::min(startBin+10,h->GetNbinsX()); ++startBinTmp) {
+    int startBinTmpFirst = isSymmetric ? startBin : std::max(startBin-10,1);
+    int startBinTmpLast = isSymmetric ? startBinTmpFirst : std::min(startBin+10,h->GetNbinsX());
+    for(int startBinTmp = startBinTmpFirst; startBinTmp <= startBinTmpLast; ++startBinTmp) {
       int binMinTmp = startBinTmp;
       int binMaxTmp = startBinTmp;
       double currFrac = h->Integral(binMinTmp,binMaxTmp)/tot;
@@ -56,6 +58,7 @@ void smallestInterval(const TH1* h, double frac, int &binMin, int &binMax) {
 	if( binMaxTmp < h->GetNbinsX() ) ++binMaxTmp;
 	currFrac = h->Integral(binMinTmp,binMaxTmp)/tot;
       }
+      //std::cout << startBinTmp << ": " << binMinTmp << " (" << h->GetBinCenter(binMinTmp) << ") - " << binMaxTmp << " (" << h->GetBinCenter(binMaxTmp) << ")" << std::endl;
       if( binMaxTmp-binMinTmp < binMax-binMin ) {
 	binMin = binMinTmp;
 	binMax = binMaxTmp;
@@ -66,12 +69,12 @@ void smallestInterval(const TH1* h, double frac, int &binMin, int &binMax) {
 
 
 // ------------------------------------------------------------
-void chi2Test(const TH1* h, const TH1* f, double frac, double &chi2, int &n, int &min, int &max) {
+void chi2Test(const TH1* h, const TH1* f, bool isSymmetric, double frac, double &chi2, int &n, int &min, int &max) {
   chi2 = 0.;
   n = 0;
   min = 0;
   max = 0;
-  smallestInterval(h,frac,min,max);
+  smallestInterval(h,frac,min,max,isSymmetric);
   for(int i = min; i <= max; ++i) {
     if( h->GetBinContent(i) > 0. && h->GetBinError(i) > 0. ) {
       ++n;
@@ -85,7 +88,7 @@ void chi2Test(const TH1* h, const TH1* f, double frac, double &chi2, int &n, int
 
 
 // ------------------------------------------------------------
-void printChi2Test(const TString &var, const TH1* h, const TH1* f) {
+void printChi2Test(const TString &var, const TH1* h, const TH1* f, bool isSymmetric = false) {
   std::cout.setf(std::ios::fixed,std::ios::floatfield);
   std::cout << std::endl << " "+var+":" << std::endl;
   for(int i = 0; i < 4; ++i) {
@@ -94,21 +97,22 @@ void printChi2Test(const TString &var, const TH1* h, const TH1* f) {
     int n = 0;
     int min = 1;
     int max = 1;
-    chi2Test(h,f,frac,chi2,n,min,max);
-    std::cout << std::setprecision(1) << "  " << frac << " & ";
+    chi2Test(h,f,isSymmetric,frac,chi2,n,min,max);
+    std::cout << std::setprecision(2) << "  " << frac << " & ";
     std::cout << h->GetXaxis()->GetBinLowEdge(min) << " & " <<  h->GetXaxis()->GetBinUpEdge(max) << " & ";
     std::cout << std::setprecision(2) << chi2 << " & ";
     std::cout << std::setprecision(0) << n << " & ";
-    std::cout << std::setprecision(2) << TMath::Prob(chi2,n) << " \\\\ " << std::endl;
+    std::cout << std::setprecision(2) << chi2/n << " \\\\ " << std::endl;
   }
   std::cout << std::endl;
 }
 
 
 // ------------------------------------------------------------
-void plotDisVsPdf(TH1* hDis, TH1* hPdf, const TString &disVar, const TString &outName) {
-  TPaveText* label = util::LabelFactory::createPaveText(1);
-  label->AddText(LABEL_MC+",  "+LABEL_PT_BIN);
+void plotDisVsPdf(TH1* hDis, TH1* hPdf, const TString &disVar, const TString &model, const TString &outName) {
+  TPaveText* label = util::LabelFactory::createPaveText(2);
+  label->AddText(LABEL_MC+", "+model);
+  label->AddText(LABEL_PT_BIN);
 
   TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,-0.6,label->GetSize());
   leg->AddEntry(hDis,"Selected events","P");
@@ -147,7 +151,7 @@ void plotDisVsPdf(TH1* hDis, TH1* hPdf, const TString &disVar, const TString &ou
 
 
 // ------------------------------------------------------------
-void plotToyMCResults(const TString &fileNameResults, const TString &outNamePrefix) {
+void plotToyMCResults(const TString &fileNameResults, const TString &model, const TString &outNamePrefix) {
   gErrorIgnoreLevel = 1001;
   util::StyleSettings::setStyleNoteNoTitle();
 
@@ -167,7 +171,7 @@ void plotToyMCResults(const TString &fileNameResults, const TString &outNamePref
   util::HistOps::setXRange(hSpecDis,10);
   TH1* hSpecPdf = util::FileOps::readTH1(fileNameResults,"hTruthPDF_0");
   util::HistOps::normHist(hSpecPdf,"width");
-  plotDisVsPdf(hSpecDis,hSpecPdf,LABEL_TRUTH,outNamePrefix+"_Spectrum");
+  plotDisVsPdf(hSpecDis,hSpecPdf,LABEL_TRUTH,model,outNamePrefix+"_Spectrum");
 
   // Plot DeltaX
   TH1* hDeltaXDis = util::FileOps::readTH1(fileNameResults,"hDeltaPtJet12_0");
@@ -176,7 +180,7 @@ void plotToyMCResults(const TString &fileNameResults, const TString &outNamePref
   for(int i = 1; i <= hDeltaXPdf->GetNbinsX(); ++i) {
     hDeltaXPdf->SetBinContent(i,2.*TMath::Gaus(hDeltaXPdf->GetBinCenter(i),0.,fitRes/sqrt(2.),true));
   }
-  plotDisVsPdf(hDeltaXDis,hDeltaXPdf,LABEL_DELTA_PT,outNamePrefix+"_DeltaX");
+  plotDisVsPdf(hDeltaXDis,hDeltaXPdf,LABEL_DELTA_PT,model,outNamePrefix+"_DeltaX");
 
   // Plot asymmetry
   TH1* hAsymDis = util::FileOps::readTH1(fileNameResults,"hPtAsym_0");
@@ -185,7 +189,7 @@ void plotToyMCResults(const TString &fileNameResults, const TString &outNamePref
   for(int i = 1; i <= hAsymPdf->GetNbinsX(); ++i) {
     hAsymPdf->SetBinContent(i,TMath::Gaus(hAsymPdf->GetBinCenter(i),0.,fitResRel/sqrt(2.),true));
   }
-  plotDisVsPdf(hAsymDis,hAsymPdf,LABEL_ASYMMETRY,outNamePrefix+"_Asymmetry");
+  plotDisVsPdf(hAsymDis,hAsymPdf,LABEL_ASYMMETRY,model,outNamePrefix+"_Asymmetry");
 
   // Plot response
   TH1* hRespDis = util::FileOps::readTH1(fileNameResults,"hRespMeas_0");
@@ -194,21 +198,21 @@ void plotToyMCResults(const TString &fileNameResults, const TString &outNamePref
   for(int i = 1; i <= hRespPdf->GetNbinsX(); ++i) {
     hRespPdf->SetBinContent(i,TMath::Gaus(hRespPdf->GetBinCenter(i),1.,fitResRel,true));
   }
-  plotDisVsPdf(hRespDis,hRespPdf,LABEL_RESPONSE,outNamePrefix+"_Response");
+  plotDisVsPdf(hRespDis,hRespPdf,LABEL_RESPONSE,model,outNamePrefix+"_Response");
 
   // Plot likelihood
   TH1* hParScan = util::FileOps::readTH1(fileNameResults,"hParScan_Par0");
   TF1* parabola = util::FileOps::readTF1(fileNameResults,"ParabolaParScan_Par0");
   
   TPaveText* label = util::LabelFactory::createPaveText(1);
-  label->AddText(LABEL_MC);
+  label->AddText(LABEL_MC+", "+model);
 
   TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,-0.6,label->GetSize());
   leg->AddEntry(hParScan,"Likelihood L(#sigma)","L");
-  leg->AddEntry(parabola,"Quadratic model","L");
+  leg->AddEntry(parabola,"Gaussian likelihood","L");
 
   hParScan->SetTitle("");
-  util::HistOps::setAxisTitles(hParScan,"#sigma","","-2#upoint#Deltaln(L)");
+  util::HistOps::setAxisTitles(hParScan,"#sigma","","#DeltaF = -2#upoint[lnL(#sigma) - lnL(#hat{#sigma})]");
   hParScan->GetXaxis()->SetNdivisions(505);
   hParScan->SetLineWidth(LINE_WIDTH);
   hParScan->SetLineColor(COLOR_DIS);
@@ -231,8 +235,8 @@ void plotToyMCResults(const TString &fileNameResults, const TString &outNamePref
   // Goodness-of-fit
   printChi2Test("Spectrum",hSpecDis,hSpecPdf);
   printChi2Test("DeltaX",hDeltaXDis,hDeltaXPdf);
-  printChi2Test("Asymmetry",hAsymDis,hAsymPdf);
-  printChi2Test("Response",hRespDis,hRespPdf);
+  printChi2Test("Asymmetry",hAsymDis,hAsymPdf,true);
+  printChi2Test("Response",hRespDis,hRespPdf,true);
 
 
   std::cout << std::endl << " Mean ptGen = " << meanPtGen << std::endl;
