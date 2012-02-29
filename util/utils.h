@@ -1,4 +1,4 @@
-// $Id: utils.h,v 1.14 2012/02/29 16:48:56 mschrode Exp $
+// $Id: utils.h,v 1.15 2012/02/29 20:39:39 mschrode Exp $
 
 #ifndef UTILS_H
 #define UTILS_H
@@ -17,7 +17,7 @@
 //!
 //!  \author   Matthias Schroeder (www.desy.de/~matsch)
 //!  \date     2010/03/09
-//!  $Id: utils.h,v 1.14 2012/02/29 16:48:56 mschrode Exp $
+//!  $Id: utils.h,v 1.15 2012/02/29 20:39:39 mschrode Exp $
 // -------------------------------------------------------------------------------------
 namespace util {
 
@@ -99,12 +99,7 @@ namespace util {
 
   // -------------------------------------------------------------------------------------
   static inline TString baseName(const TString &name) {
-    TString baseName = name;
-    if( baseName.Contains(".") ) {
-      baseName = baseName(0,baseName.First('.'));
-    }
-
-    return baseName;
+    return name.Contains(".") ? name(0,name.First('.')) : name;
   }
 
 
