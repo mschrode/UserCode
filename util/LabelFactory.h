@@ -1,4 +1,4 @@
-//  $Id: LabelFactory.h,v 1.21 2011/08/26 10:21:56 mschrode Exp $
+//  $Id: LabelFactory.h,v 1.22 2012/01/24 10:10:15 mschrode Exp $
 
 #ifndef LABEL_FACTORY_H
 #define LABEL_FACTORY_H
@@ -22,7 +22,7 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: LabelFactory.h,v 1.21 2011/08/26 10:21:56 mschrode Exp $
+  //!  $Id: LabelFactory.h,v 1.22 2012/01/24 10:10:15 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class LabelFactory {
   public:
@@ -172,7 +172,7 @@ namespace util {
     static TString labelJetAlgo(const TString &name) {
       TString algo = "default jets";
       if( jetAlgo(name) == "AK5" ) {
-	algo = "Anti k_{T} (R=0.5)";
+	algo = "Anti-k_{T} (R=0.5)";
       } else {
 	std::cerr << "WARNING in LabelFactory::jetAlgo(): unknown jet algorithm in name '" << name << "'" << std::endl;
       }
@@ -200,9 +200,9 @@ namespace util {
     static TString labelJetType(const TString &name) {
       TString algo = "default jets";
       if( jetType(name) == "Calo" ) {
-	algo = "Calo-Jets";
+	algo = "Calo Jets";
       } else if( jetType(name) == "PF" ) {
-	algo = "PF-Jets";
+	algo = "PF Jets";
       } else {
 	std::cerr << "WARNING in LabelFactory::jetType(): unknown jet type in name '" << name << "'" << std::endl;
       }
@@ -242,6 +242,15 @@ namespace util {
     // -------------------------------------------------------------------------------------
     static TString labelEtaGen(double etaMin, double etaMax) {
       return labelEta(etaMin,etaMax,"gen");
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static TString labelPtAve(double ptMin, double ptMax) {
+      TString min = util::toTString(ptMin,1);
+      TString max = util::toTString(ptMax,1);
+
+      return min+" < p^{ave}_{T} < "+max+" GeV";
     }
 
 
