@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.41 2012/02/04 21:47:26 mschrode Exp $
+// $Id: HistOps.h,v 1.42 2012/02/05 21:38:43 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.41 2012/02/04 21:47:26 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.42 2012/02/05 21:38:43 mschrode Exp $
   class HistOps
   {
   public:
@@ -262,6 +262,33 @@ namespace util
     }
 
 
+    // Create TGraphAsymmErrors from histogram
+    // -------------------------------------------------------------------------------------
+    static TGraphAsymmErrors *createTGraph(const TH1* h) {
+      std::vector<double> x;
+      std::vector<double> xe;
+      std::vector<double> y;
+      std::vector<double> ye;
+      
+      for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
+	x.push_back(h->GetBinCenter(bin));
+	xe.push_back(0.5*h->GetBinWidth(bin));
+	y.push_back(h->GetBinContent(bin));
+	ye.push_back(h->GetBinError(bin));
+      }
+      TGraphAsymmErrors* g = new TGraphAsymmErrors(x.size(),&(x.front()),&(y.front()),&(xe.front()),&(xe.front()),&(ye.front()),&(ye.front()));
+      g->SetMarkerStyle(h->GetMarkerStyle());
+      g->SetMarkerColor(h->GetMarkerColor());
+      g->SetMarkerSize(h->GetMarkerSize());
+      g->SetLineStyle(h->GetLineStyle());
+      g->SetLineWidth(h->GetLineWidth());
+      g->SetLineColor(h->GetLineColor());
+      
+      return g;
+    }
+
+
+
     // -------------------------------------------------------------------------------------
     static TGraphAsymmErrors* combineTGraphs(const TGraphAsymmErrors* g1, const TGraphAsymmErrors* g2) {
       std::vector<double> x;
@@ -330,6 +357,7 @@ namespace util
       name += h->GetName();
       name += COUNT_;
       TH1* hFrame = static_cast<TH1*>(h->Clone(name));
+      hFrame->SetLineWidth(h->GetLineWidth());
       hFrame->SetLineStyle(2);
       hFrame->GetYaxis()->SetRangeUser(yMin,yMax);
       hFrame->GetYaxis()->SetTitle(yTitle);
@@ -410,6 +438,34 @@ namespace util
 
       return hRatio;
     }
+
+
+    // -------------------------------------------------------------------------------------
+    static TGraphAsymmErrors *createRatioGraph(const TGraphAsymmErrors *g, const TH1 *h) {
+      TGraphAsymmErrors *gRatio = new TGraphAsymmErrors(g->GetN());
+      for(int i = 0; i < g->GetN(); ++i) {
+	TH1* hTmp = static_cast<TH1*>(h->Clone("hTmp")); // Why is TH1::FindBin non-const???
+	double yTrue = h->GetBinContent(hTmp->FindBin(g->GetX()[i]));
+	delete hTmp;
+	if( yTrue != 0. ) {
+	  gRatio->SetPoint(i,g->GetX()[i],g->GetY()[i]/yTrue);
+	  gRatio->SetPointError(i,g->GetEXhigh()[i],g->GetEXlow()[i],g->GetEYhigh()[i]/yTrue,g->GetEYlow()[i]/yTrue);
+	} else {
+	  gRatio->SetPoint(i,g->GetX()[i],0.);
+	  gRatio->SetPointError(i,g->GetEXhigh()[i],g->GetEXlow()[i],0.,0.);
+	}
+      }
+      gRatio->SetMarkerStyle(g->GetMarkerStyle());
+      gRatio->SetMarkerColor(g->GetMarkerColor());
+      gRatio->SetLineColor(g->GetLineColor());
+      gRatio->SetLineWidth(g->GetLineWidth());
+      gRatio->SetLineStyle(g->GetLineStyle());
+      gRatio->SetFillStyle(g->GetFillStyle());
+      gRatio->SetFillColor(g->GetFillColor());
+      
+      return gRatio;
+    }
+
 
     // -------------------------------------------------------------------------------------
     static TGraphAsymmErrors *createRatioGraph(const TGraphAsymmErrors *g, const TF1 *f) {
@@ -526,9 +582,9 @@ namespace util
     }
 
     // -------------------------------------------------------------------------------------
-    static TCanvas *createRatioTopCanvas() {
+    static TCanvas *createRatioTopCanvas(const TString &name = "") {
       COUNT_++;      
-      TCanvas *topCan = new TCanvas("TopRatio"+toTString(COUNT_),"",500,500);
+      TCanvas *topCan = new TCanvas(name==""?"TopRatio"+toTString(COUNT_):name,name,500,500);
       topCan->SetBottomMargin(0.2 + 0.8*topCan->GetBottomMargin()-0.2*topCan->GetTopMargin());
       return topCan;
     }
@@ -865,21 +921,11 @@ namespace util
     // the error band
     // -------------------------------------------------------------------------------------
     static TGraphAsymmErrors *getUncertaintyBand(const TH1* h, int color = -1, int fillStyle = -1) {
-      std::vector<double> x;
-      std::vector<double> xe;
-      std::vector<double> y;
-      std::vector<double> ye;
-
-      for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
-	x.push_back(h->GetBinCenter(bin));
-	xe.push_back(0.5*h->GetBinWidth(bin));
-	y.push_back(h->GetBinContent(bin));
-	ye.push_back(h->GetBinError(bin));
-      }
-      TGraphAsymmErrors* g = new TGraphAsymmErrors(x.size(),&(x.front()),&(y.front()),&(xe.front()),&(xe.front()),&(ye.front()),&(ye.front()));
+      TGraphAsymmErrors* g = createTGraph(h);
       g->SetMarkerStyle(0);
+      g->SetLineWidth(1);
       g->SetFillColor((color < 0) ? kBlack : color);
-      if( fillStyle > 0 ) g->SetFillStyle(fillStyle);
+      g->SetFillStyle( (fillStyle > 0 ) ? fillStyle : 1001 );
       g->SetMarkerColor(g->GetFillColor());
       
       return g;
