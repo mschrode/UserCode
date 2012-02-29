@@ -1,4 +1,4 @@
-// $Id: utils.h,v 1.13 2012/01/24 10:10:15 mschrode Exp $
+// $Id: utils.h,v 1.14 2012/02/29 16:48:56 mschrode Exp $
 
 #ifndef UTILS_H
 #define UTILS_H
@@ -17,7 +17,7 @@
 //!
 //!  \author   Matthias Schroeder (www.desy.de/~matsch)
 //!  \date     2010/03/09
-//!  $Id: utils.h,v 1.13 2012/01/24 10:10:15 mschrode Exp $
+//!  $Id: utils.h,v 1.14 2012/02/29 16:48:56 mschrode Exp $
 // -------------------------------------------------------------------------------------
 namespace util {
 
@@ -86,7 +86,7 @@ namespace util {
 
 
   // -------------------------------------------------------------------------------------
-  static inline TString extractFileName(const TString &name) {
+  static inline TString fileName(const TString &name) {
     TString fileName = name;
     if( fileName.Contains("/") ) {
       Ssiz_t pos = fileName.Last('/');
@@ -94,6 +94,17 @@ namespace util {
     }
 
     return fileName;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  static inline TString baseName(const TString &name) {
+    TString baseName = name;
+    if( baseName.Contains(".") ) {
+      baseName = baseName(0,baseName.First('.'));
+    }
+
+    return baseName;
   }
 
 
