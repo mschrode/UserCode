@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.8 2012/02/27 18:54:52 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.9 2012/02/29 16:52:20 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -31,10 +31,11 @@
 #include "../util/StyleSettings.h"
 
 
+const bool DEBUG = false;
+
 const bool SHOW_HEADER = false;
 const TString LUMI = util::StyleSettings::luminosity(4598);
 
-const bool DEBUG = false;
 const double BINLABEL_WIDTH = -0.52;
 const double LEG_WIDTH = 0.48;
 const TString PT3RELVAR = "p_{T,3} / p^{ave}_{T} threshold";
@@ -45,8 +46,10 @@ const TString FASYMDATA = "f^{data}_{asym}";
 const TString FASYMGAUSS = "f^{gauss}_{asym}";
 const TString FASYMTOY = "f^{toy}_{asym}";
 const TString MCSMEAR = "Corrected MC";
+const TString SCALE = "#rho_{tail}";
 
 const TString LUMI_LABEL = SHOW_HEADER ? "CMS preliminary, L = "+LUMI+",  #sqrt{s} = 7 TeV" : "#sqrt{s} = 7 TeV,  L = "+LUMI;
+//const TString LUMI_LABEL = "#sqrt{s} = 7 TeV";  // For lumi-evolution plots
 const TString HEADER = SHOW_HEADER ? LUMI_LABEL : "";
 
 const int COLOR_GAUSS = 46;
@@ -54,14 +57,16 @@ const int COLOR_FILLED_ASYM = 38;
 const int COLOR_FILLED_ASYM_SMEAR = 29;
 const int COLOR_LINE_ASYM_SMEAR = 30;
 const double MARKER_SIZE = SHOW_HEADER ? 1. : 1.4;
-const int LINE_WIDTH = SHOW_HEADER ? 1 : 2;
+const int LINE_WIDTH = 2;
 
-bool EPS_OUTPUT = true;
-const bool ROOT_OUTPUT = true;
-TFile* ROOT_OUT_FILE = 0;
 
 
 ///////////////////////// TYPE DEFINITIONS /////////////////////////////////////////////////
+
+
+const bool ROOT_OUTPUT = true;
+bool EPS_OUTPUT = true;
+TFile* ROOT_OUT_FILE = 0;
 
 class Pt3Bin;
 class EtaPtBin;
@@ -473,12 +478,12 @@ void getTailScalingFactors(double  nSigTailStart,
     hPtAveMeanData->SetMarkerStyle(20);
 
     TH1* hDelta = new TH1D("hDelta_Eta"+util::toTString(etaBin),
-			   HEADER+";p^{ave}_{T} (GeV);#Delta = f^{Data}_{Asym}(0) - f^{MC}_{Asym}(0)",
+			   HEADER+";p^{ave}_{T} (GeV);#Delta = "+FASYMDATA+"(0) - "+FASYMMC+"(0)",
 			   binAdm->nPtBins(etaBin),&(binAdm->ptBinEdges(etaBin).front()));
     hDelta->SetMarkerStyle(20);
 
     TH1* hScale = new TH1D("hScale_Eta"+util::toTString(etaBin),
-			   HEADER+";p^{ave}_{T} (GeV);Scale Factor",
+			   HEADER+";p^{ave}_{T} (GeV);"+SCALE,
 			   binAdm->nPtBins(etaBin),&(binAdm->ptBinEdges(etaBin).front()));
     hScale->SetMarkerStyle(20);
     hScale->GetXaxis()->SetMoreLogLabels();
@@ -719,7 +724,7 @@ void getTailScalingFactors(double  nSigTailStart,
 void getTailScalingFactors() {
 
   std::vector<double> nSigTailStart;
-  //nSigTailStart.push_back(2.5);
+  nSigTailStart.push_back(2.5);
   nSigTailStart.push_back(3.0);
   nSigTailStart.push_back(3.5);
 
@@ -1910,7 +1915,7 @@ void Pt3Bin::plotSpectra(const TString &outNameId) const {
   delete leg;
   leg = util::LabelFactory::createLegendCol(2,LEG_WIDTH);
   leg->AddEntry(hPtAveSpecData_,"Data, N = "+util::toTString(hPtAveSpecData_->GetEntries()),"P");
-  leg->AddEntry(hPtAveSpecMC_,"MC, N = "+util::toTString(hPtAveSpecData_->GetEntries()),"F");
+  leg->AddEntry(hPtAveSpecMC_,"MC, N = "+util::toTString(hPtAveSpecMC_->GetEntries()),"F");
   double scaleData = hPtAveSpecData_->Integral("width");
   double scaleMC = hPtAveSpecMC_->Integral("width");
   if( scaleData > 0. && scaleMC > 0. ) {
@@ -2293,7 +2298,7 @@ TString labelWindow(double nSigMin, double nSigMax) {
 
 // ------------------------------------------------------------------------------------
 void toFiles(TNamed* obj, const TString &name) {
-  if( ROOT_OUTPUT ) {
+  if( ROOT_OUTPUT && ROOT_OUT_FILE ) {
     TString objName = obj->GetName();
     TString objTitle = obj->GetTitle();
     if( name != "" ) {
@@ -2307,16 +2312,18 @@ void toFiles(TNamed* obj, const TString &name) {
 }
 
 void toFiles(TCanvas* obj, const TString &name) {
-  TString objName = obj->GetName();
-  TString objTitle = obj->GetTitle();
-  if( name != "" ) {
-    obj->SetName(name);
-    obj->SetTitle(name);
+  if( EPS_OUTPUT ) {
+    TString objName = obj->GetName();
+    TString objTitle = obj->GetTitle();
+    if( name != "" ) {
+      obj->SetName(name);
+      obj->SetTitle(name);
+    }
+    obj->SaveAs(name+".eps","eps");
+    if( ROOT_OUTPUT && ROOT_OUT_FILE ) ROOT_OUT_FILE->WriteTObject(obj);
+    obj->SetName(objName);
+    obj->SetTitle(objTitle);
   }
-  if( ROOT_OUTPUT ) ROOT_OUT_FILE->WriteTObject(obj);
-  if( EPS_OUTPUT ) obj->SaveAs(name+".eps","eps");
-  obj->SetName(objName);
-  obj->SetTitle(objTitle);
 }
 
 
@@ -2423,7 +2430,7 @@ TGraphAsymmErrors* uncertaintyBand(const TH1* hNom, const TGraphAsymmErrors* gRe
   
 
 // ------------------------------------------------------------------------------------
-void plotFinalResult() {
+void plotFinalResult(const TString &fileName) {
   if( SHOW_HEADER ) {
     util::StyleSettings::setStylePAS();
   } else {
@@ -2432,9 +2439,12 @@ void plotFinalResult() {
   gErrorIgnoreLevel = 1001;
 
   sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("BinningAdmin.cfg");  
+  const TString fileNamePrefix = util::baseName(fileName);
+  const TString outNamePrefix = util::fileName(fileNamePrefix+"_ScaleFactors");
 
-  const TString fileNamePrefix = "Tail_163337-180252_Sig25-Inf_PF";
-  const TString outNamePrefix = "Tail_163337-180252_Sig25-Inf_PF_ScaleFactors";
+
+  // ROOT output
+  ROOT_OUT_FILE = new TFile(outNamePrefix+".root","RECREATE");
 
   std::vector<EtaPtBin*> etaPtBins;
   unsigned int nEtaBins = binAdm->nEtaBins();
@@ -2512,7 +2522,7 @@ void plotFinalResult() {
     }
 
     TLegend* legScale = util::LabelFactory::createLegendCol(2,LEG_WIDTH);
-    legScale->AddEntry(gNomRatio,"Scale factor","P");
+    legScale->AddEntry(gNomRatio,"Stat. uncertainty","L");
     legScale->AddEntry(gUncertAbs,"Syst. uncertainty","F");
 
     TLegend* legUncert = util::LabelFactory::createLegendCol(uncerts.size()+1,LEG_WIDTH);
@@ -2526,10 +2536,10 @@ void plotFinalResult() {
     hScaleFrame->SetTitle(HEADER);
     hScaleFrame->GetYaxis()->SetRangeUser(0.01,2.99);
     if( gNomRatio->GetY()[0] > 2. ) hScaleFrame->GetYaxis()->SetRangeUser(0.01,6.99);
-    hScaleFrame->GetYaxis()->SetTitle("Scale factor");
+    hScaleFrame->GetYaxis()->SetTitle(SCALE);
     hScaleFrame->GetXaxis()->SetMoreLogLabels();
     hScaleFrame->GetXaxis()->SetNoExponent();
-    TCanvas* canScale = new TCanvas("canScale"+util::toTString(etaBin),"Scale Factors Eta "+util::toTString(etaBin),500,500);
+    TCanvas* canScale = new TCanvas(outNamePrefix+"_canScale_"+util::toTString(etaBin),"Scale Factors Eta "+util::toTString(etaBin),500,500);
     canScale->cd();
     hScaleFrame->Draw("HIST");
     gUncertAbs->Draw("E2same");
@@ -2539,7 +2549,7 @@ void plotFinalResult() {
     legScale->Draw("same");
     canScale->SetLogx();
     gPad->RedrawAxis();
-    canScale->SaveAs(outNamePrefix+"_Eta"+util::toTString(etaBin)+".eps","eps");
+    toFiles(canScale,outNamePrefix+"_Eta"+util::toTString(etaBin));
 
     // Plot relative uncertainties
     TH1* hUncertsFrame = static_cast<TH1D*>(hScaleFrame->Clone("hUncertsFrame"+util::toTString(etaBin)));
@@ -2550,7 +2560,7 @@ void plotFinalResult() {
     hUncertsFrame->GetXaxis()->SetMoreLogLabels();
     hUncertsFrame->GetXaxis()->SetNoExponent();
     hUncertsFrame->GetYaxis()->SetTitle("Relative uncertainty");
-    TCanvas* canRelUncerts = new TCanvas("canRelUncerts"+util::toTString(etaBin),"Relative Uncertainties Eta "+util::toTString(etaBin),500,500);
+    TCanvas* canRelUncerts = new TCanvas(outNamePrefix+"_canRelUncerts_"+util::toTString(etaBin),"Relative Uncertainties Eta "+util::toTString(etaBin),500,500);
     canRelUncerts->cd();
     hUncertsFrame->Draw("HIST");
     for(unsigned int i = 0; i < uncerts.size(); ++i) {
@@ -2562,7 +2572,7 @@ void plotFinalResult() {
     legUncert->Draw("same");
     canRelUncerts->SetLogx();
     gPad->RedrawAxis();
-    canRelUncerts->SaveAs(outNamePrefix+"_Uncertainties_Eta"+util::toTString(etaBin)+".eps","eps");
+    toFiles(canRelUncerts,outNamePrefix+"_Uncertainties_Eta"+util::toTString(etaBin));
 
     
     // store factors and total uncertainties for evolution plots
@@ -2574,11 +2584,8 @@ void plotFinalResult() {
       hOutSyst->SetBinContent(1+i,gNomRatio->GetY()[i]);
       hOutSyst->SetBinError(1+i,gUncertAbs->GetEYhigh()[i]);
     }
-    TFile* out = new TFile(outNamePrefix+".root","UPDATE");
-    out->WriteTObject(hOutStat);
-    out->WriteTObject(hOutSyst);
-    out->Close();
-    delete out;
+    toFiles(hOutStat);
+    toFiles(hOutSyst);
     delete hOutStat;
     delete hOutSyst;
     
@@ -2609,6 +2616,9 @@ void plotFinalResult() {
     if( etaBin == binAdm->nEtaBins()-1 ) std::cout << "\\end{tabular}\n";
   }
 
+  ROOT_OUT_FILE->Close();
+  delete ROOT_OUT_FILE;
+
   delete binAdm;
 }
 
@@ -2624,18 +2634,29 @@ void plotEvolution() {
   gErrorIgnoreLevel = 1001;
 
   std::vector<TString> fileNames;
-  fileNames.push_back("Tail_163337-180252_Sig25-Inf_PF_ScaleFactors.root");
-  fileNames.push_back("Tail_163337-180252_Sig25-Inf_PF_ScaleFactors.root");
-  fileNames.push_back("Tail_163337-180252_Sig25-Inf_PF_ScaleFactors.root");
 
+  // Evolution with tail region
+  fileNames.push_back("ScaleFactors_163337-180252_2012-02-29/Tail_163337-180252_Sig25-Inf_PF_ScaleFactors.root");
+  fileNames.push_back("ScaleFactors_163337-180252_2012-02-29/Tail_163337-180252_Sig30-Inf_PF_ScaleFactors.root");
+  fileNames.push_back("ScaleFactors_163337-180252_2012-02-29/Tail_163337-180252_Sig35-Inf_PF_ScaleFactors.root");
   const TString xAxisLabel = "Tail start #hat{A}_{tail} (#sigma_{A})";
   const int nBins = 3;
-  const double xMin = 2.;
-  const double xMax = 5.;
-
+  const double xBinEdges[nBins+1] = { 2., 3., 4., 5. };
   const TString outNamePrefix = "Tail_163337-180252_SigEvolution_PF_ScaleFactors";
 
+//   // Evolution with luminosity
+//   fileNames.push_back("ScaleFactors_163337-167151_2011-07-21_UpdatedCoreUncerts/Tail_163337-167151_Sig25-Inf_PF_ScaleFactors.root");
+//   fileNames.push_back("ScaleFactors_163337-180252_2012-02-29/Tail_163337-180252_Sig25-Inf_PF_ScaleFactors.root");
+//   const TString xAxisLabel = "Luminosity (fb^{-1})";
+//   const int nBins = 2;
+//   const double xBinEdges[nBins+1] = { 0.04, 1.64, 7.56 };
+//   const TString outNamePrefix = "Tail_LumiEvolution_PF_ScaleFactors";
+
   assert( nBins == static_cast<int>(fileNames.size()) );
+
+  // ROOT output
+  ROOT_OUT_FILE = new TFile(outNamePrefix+".root","RECREATE");
+  EPS_OUTPUT = true;
 
   sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("BinningAdmin.cfg");  
   std::vector<EtaPtBin*> etaPtBins;
@@ -2652,14 +2673,18 @@ void plotEvolution() {
 
     // Plot evolution
     for(unsigned int ptBin = 0; ptBin < binAdm->nPtBins(etaBin); ++ptBin) {
-      TH1* hEvo = new TH1D("hEvolutionOfScaleFactors",";"+xAxisLabel+";Scale factor",nBins,xMin,xMax);
+      TH1* hEvoFrame = new TH1D("hEvolutionOfScaleFactorsFrame",";"+xAxisLabel+";"+SCALE,nBins,xBinEdges);
+      hEvoFrame->SetLineWidth(LINE_WIDTH);
+      hEvoFrame->SetTitle(HEADER);
+      hEvoFrame->SetLineStyle(2);
+      hEvoFrame->GetYaxis()->SetRangeUser(0.01,2.99);
+      TH1* hEvo = static_cast<TH1*>(hEvoFrame->Clone("hEvolutionOfScaleFactors"));
+      hEvo->SetLineStyle(1);
       hEvo->SetMarkerStyle(20);
       hEvo->SetMarkerSize(MARKER_SIZE);
-      hEvo->SetLineWidth(LINE_WIDTH);
-      hEvo->SetTitle(HEADER);
-      hEvo->GetYaxis()->SetRangeUser(0.01,2.99);
       TH1* hEvoSyst = static_cast<TH1*>(hEvo->Clone("hEvoSyst"));
       for(int bin = 1; bin <= hEvo->GetNbinsX(); ++bin) {
+	hEvoFrame->SetBinContent(bin,1.);
 	TH1* hStat = hScaleFactorsStat.at(bin-1);
 	TH1* hSyst = hScaleFactorsSyst.at(bin-1);
 	hEvo->SetBinContent(bin,hStat->GetBinContent(ptBin+1));
@@ -2682,12 +2707,14 @@ void plotEvolution() {
 
       TCanvas* can = new TCanvas("can","Scale factor evolution (Eta "+util::toTString(etaBin)+", Pt "+util::toTString(ptBin),500,500);
       can->cd();
-      hEvoSyst->Draw("PE");
+      hEvoFrame->Draw("HIST");
+      hEvoSyst->Draw("PEsame");
       hEvo->Draw("PE1same");
       label->Draw("same");
       gPad->RedrawAxis();
-      can->SaveAs(outNamePrefix+"_Eta"+util::toTString(etaBin)+"_Pt"+util::toTString(ptBin)+".eps","eps");
+      toFiles(can,outNamePrefix+"_Eta"+util::toTString(etaBin)+"_Pt"+util::toTString(ptBin));
 
+      delete hEvoFrame;
       delete hEvo;
       delete hEvoSyst;
       delete label;
@@ -2699,4 +2726,7 @@ void plotEvolution() {
       delete hScaleFactorsSyst.at(i);
     }
   } // End of loop over eta bins
+
+  ROOT_OUT_FILE->Close();
+  delete ROOT_OUT_FILE;
 }
