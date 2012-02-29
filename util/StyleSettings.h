@@ -1,4 +1,4 @@
-// $Id: StyleSettings.h,v 1.16 2012/01/24 10:10:15 mschrode Exp $
+// $Id: StyleSettings.h,v 1.17 2012/02/04 21:47:26 mschrode Exp $
 
 #ifndef STYLE_SETTINGS_H
 #define STYLE_SETTINGS_H
@@ -18,7 +18,7 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: StyleSettings.h,v 1.16 2012/01/24 10:10:15 mschrode Exp $
+  //!  $Id: StyleSettings.h,v 1.17 2012/02/04 21:47:26 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class StyleSettings {
   public:
@@ -199,7 +199,9 @@ namespace util {
       //  For the histo:
       gStyle->SetHistLineColor(kBlack);
       gStyle->SetHistLineStyle(0);
-      gStyle->SetHistLineWidth(1);
+      gStyle->SetHistLineWidth(2);
+      gStyle->SetMarkerSize(1.4);
+      gStyle->SetEndErrorSize(4);
     
       //  For the statistics box:
       if( mode == Screen ) {
