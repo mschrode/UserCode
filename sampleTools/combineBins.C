@@ -1,4 +1,4 @@
-// $Id: combineBins.C,v 1.6 2011/08/26 10:16:22 mschrode Exp $
+// $Id: combineBins.C,v 1.7 2012/01/24 10:07:27 mschrode Exp $
 
 //! Combine Kalibri output histograms from different
 //! eta, pt, and ptSoft bins
@@ -123,7 +123,7 @@ void combineBins(const TString &binningConfig, const TString &dirPrefix, const T
   std::cout << "Preparing parameters" << std::endl;
 
   const TString absFileName = util::absolutePath(dirPrefix);
-  const TString relFileName = util::extractFileName(dirPrefix);
+  const TString relFileName = util::fileName(dirPrefix);
   sampleTools::BinningAdmin admin(binningConfig);
   std::vector<TString> missingFiles;
 

@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: mergePtBins.C,v 1.1 2011/06/23 17:49:52 mschrode Exp $
 
 #include <cassert>
 #include <iostream>
@@ -111,9 +111,9 @@ void mergeBins(const TString &fileNameData, const TString &fileNameMC, const TSt
   std::cout << "Preparing script" << std::endl;
 
   // Names of output files
-  TString outFileNameData = util::extractFileName(fileNameData);
+  TString outFileNameData = util::fileName(fileNameData);
   outFileNameData.ReplaceAll(".root","_REBINNED.root");
-  TString outFileNameMC = util::extractFileName(fileNameMC);
+  TString outFileNameMC = util::fileName(fileNameMC);
   outFileNameMC.ReplaceAll(".root","_REBINNED.root");
 
 
