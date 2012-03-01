@@ -1,4 +1,4 @@
-//  $Id: LabelFactory.h,v 1.22 2012/01/24 10:10:15 mschrode Exp $
+//  $Id: LabelFactory.h,v 1.23 2012/02/29 16:48:14 mschrode Exp $
 
 #ifndef LABEL_FACTORY_H
 #define LABEL_FACTORY_H
@@ -22,7 +22,7 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: LabelFactory.h,v 1.22 2012/01/24 10:10:15 mschrode Exp $
+  //!  $Id: LabelFactory.h,v 1.23 2012/02/29 16:48:14 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class LabelFactory {
   public:
@@ -256,7 +256,7 @@ namespace util {
 
     // -------------------------------------------------------------------------------------
     static TString labelPt3(double pt3) {
-      return "p_{T,3} < "+util::toTString(pt3)+" #upoint p^{ave}_{T}";
+      return "p_{T,3} < "+util::toTString(pt3)+" p^{ave}_{T}";
     }
     
     
