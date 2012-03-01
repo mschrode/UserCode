@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.42 2012/02/05 21:38:43 mschrode Exp $
+// $Id: HistOps.h,v 1.43 2012/02/29 16:48:56 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.42 2012/02/05 21:38:43 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.43 2012/02/29 16:48:56 mschrode Exp $
   class HistOps
   {
   public:
@@ -151,15 +151,21 @@ namespace util
 
 
     // -------------------------------------------------------------------------------------
-    static void findYRange(const TH1 *h, int nLabelLines, double& min, double& max, double logMin = -1.) {
-      findYRange(h,min,max);
+    static void findYRange(const TH1 *h, int nLabelLines, double& min, double& max, double logMin = -1., bool setMin = true) {
+      double tmpMin = 0.;
+      double tmpMax = 0.;
+      findYRange(h,tmpMin,tmpMax);
       double relHistHeight = 1. - (gStyle->GetPadTopMargin() + gStyle->GetPadBottomMargin() + util::LabelFactory::lineHeight()*nLabelLines + util::LabelFactory::labelTopOffset());
       if( logMin > 0. ) {
- 	min = logMin;
-	max = min * pow(max/min,1./relHistHeight);
+ 	tmpMin = logMin;
+	tmpMax = tmpMin * pow(tmpMax/tmpMin,1./relHistHeight);
+      } else if( !setMin ) {
+	tmpMax = (tmpMax-min)/relHistHeight + min;
       } else {
-	max = (max-min)/relHistHeight + min;
+	tmpMax = (tmpMax-tmpMin)/relHistHeight + tmpMin;
       }
+      if( setMin ) min = tmpMin;
+      max = tmpMax;
     }
 
 
@@ -187,6 +193,15 @@ namespace util
       double max = 0.;
       findYRange(h,nLabelLines,min,max,logMin);
       h->GetYaxis()->SetRangeUser(min,max);
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static void setYRangeLinear(TH1 *h, int nLabelLines, double min) {
+      double ymin = min;
+      double ymax = 0.;
+      findYRange(h,nLabelLines,ymin,ymax,-1,false);
+      h->GetYaxis()->SetRangeUser(ymin,ymax);
     }
 
 
