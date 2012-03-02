@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.11 2012/03/01 19:59:44 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.12 2012/03/01 23:14:40 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -87,6 +87,7 @@ void printExtrapolation(const std::vector<EtaPtBin*> &bins, const sampleTools::B
 bool completePicName(int padIdx, const sampleTools::BinningAdmin* adm, TString &picName);
 void writeLaTeXSlides(const TString &outNameId, const sampleTools::BinningAdmin* adm);
 TString labelWindow(double nSigMin, double nSigMax);
+double getTailStart(const TString &name);
 void toFiles(TNamed* obj, const TString &name = "");
 void toFiles(TCanvas* obj, const TString &name = "");
 
@@ -299,13 +300,13 @@ void getTailScalingFactors(double  nSigTailStart,
   std::cout << "Setting up parameters" << std::endl;
 
   // User specified parameters
-  const TString uid                    = "163337-180252_NVtxGreater6";
+  const TString uid                    = "163337-180252";
 
   const double  minPt3Data   = 0.;
   const bool    fixDataShape = false;
   const double  nSigCore     = 2.;
   const TString jetAlgo      = "PF";
-  const bool    archivePlots = false;
+  const bool    archivePlots = true;
 
 
   // Sanity checks
@@ -382,7 +383,7 @@ void getTailScalingFactors(double  nSigTailStart,
   std::cout << "Creating bins" << std::endl;
 
   std::vector<EtaPtBin*> etaPtBins;
-  const unsigned int nEtaBins = 1;//binAdm->nEtaBins();
+  const unsigned int nEtaBins = binAdm->nEtaBins();
   unsigned int globalBin = 0;
   for(unsigned int etaBin = 0; etaBin < nEtaBins; ++etaBin) {
     double coreScaling = 0.;
@@ -415,30 +416,30 @@ void getTailScalingFactors(double  nSigTailStart,
     for(unsigned int ptBin = 0; ptBin < binAdm->nPtBins(etaBin); ++ptBin) {
       if( DEBUG ) std::cout << "Setting up bin (" << etaBin << ", " << ptBin << ")" << std::endl;
 
-//         TString fileNameData = "~/results/ResolutionFit/Run2011_163337-180252_V10/ResTails_PtAveBins_Data2011_PF_L1FastJet_V10_REBINNED.root";
-//         TString fileNameMC = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_REBINNED.root";
-//         if( variationPUDown ) {
-//    	fileNameMC = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_PUDn_REBINNED.root";
-//         } else if( variationPUUp ) {
-//    	fileNameMC = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_PUUp_REBINNED.root";
-//         }
-//         TString fileNameMCTruth = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtGenAveBins_MCFall11_PF_L1FastJet_V10_REBINNED.root";
-
-         TString fileNameData = "~/results/ResolutionFit/Run2011_163337-180252_V10/ResTails_PtAveBins_Data2011_PF_L1FastJet_V10_NVtxGreater6_REBINNED.root";
-         TString fileNameMC = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtxGreater6_REBINNED.root";
-         if( variationPUDown ) {
-   	fileNameMC = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtxGreater6_REBINNED.root";
-         } else if( variationPUUp ) {
-   	fileNameMC = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtxGreater6_REBINNED.root";
-         }
-         TString fileNameMCTruth = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtGenAveBins_MCFall11_PF_L1FastJet_V10_REBINNED.root";
+      TString fileNameData = "~/results/ResolutionFit/Run2011_163337-180252_V10/ResTails_PtAveBins_Data2011_PF_L1FastJet_V10_REBINNED.root";
+      TString fileNameMC = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_REBINNED.root";
+      if( variationPUDown ) {
+     	fileNameMC = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_PUDn_REBINNED.root";
+      } else if( variationPUUp ) {
+     	fileNameMC = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_PUUp_REBINNED.root";
+      }
+      TString fileNameMCTruth = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtGenAveBins_MCFall11_PF_L1FastJet_V10_REBINNED.root";
+      
+//       TString fileNameData = "~/results/ResolutionFit/Run2011_163337-180252_V10/ResTails_PtAveBins_Data2011_PF_L1FastJet_V10_NVtxLess7_REBINNED.root";
+//       TString fileNameMC = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtxLess7_REBINNED.root";
+//        if( variationPUDown ) {
+//     	fileNameMC = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtxLess7_REBINNED.root";
+//           } else if( variationPUUp ) {
+//     	fileNameMC = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtxLess7_REBINNED.root";
+//           }
+//           TString fileNameMCTruth = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtGenAveBins_MCFall11_PF_L1FastJet_V10_REBINNED.root";
 
       // Create eta-pt bin
       EtaPtBin* bin = new EtaPtBin(etaBin,ptBin,nSigCore,coreScaling,binAdm,jetLabel);
 
       // Define window
-      //bin->findWindow(fileNameMC,0,nSigTailStart,nSigTailEnd);
-      bin->setWindow("Tail_163337-180252_Sig25-Inf_PF.root",nSigTailStart,nSigTailEnd);
+      bin->findWindow(fileNameMC,0,nSigTailStart,nSigTailEnd);
+      //bin->setWindow("ScaleFactors_163337-180252_2012-02-29/Tail_163337-180252_Sig25-Inf_PF.root",nSigTailStart,nSigTailEnd);
       ++globalBin;
 
       // Add pt3 bins
@@ -529,7 +530,7 @@ void getTailScalingFactors(double  nSigTailStart,
 
     TH1* hAsymTailStartEff = static_cast<TH1*>(hAsymTailStart->Clone("hAsymTailStartEff_EtaBin"+util::toTString(etaBin)));
     hAsymTailStartEff->SetLineStyle(2);
-    hAsymTailStartEff->SetLineColor(COLOR_GAUSS);
+    hAsymTailStartEff->SetLineColor(kBlue);
 
     for(std::vector<EtaPtBin*>::const_iterator it = etaPtBins.begin();
 	it != etaPtBins.end(); ++it) {
@@ -799,7 +800,7 @@ void getTailScalingFactors() {
 
   std::vector<double> nSigTailStart;
   nSigTailStart.push_back(2.5);
-  //  nSigTailStart.push_back(3.0);
+  nSigTailStart.push_back(3.0);
   nSigTailStart.push_back(3.5);
 
   double  nSigTailEnd = 1000.;
@@ -2369,6 +2370,26 @@ TString labelWindow(double nSigMin, double nSigMax) {
 
 
 // ------------------------------------------------------------------------------------
+double getTailStart(const TString &name) {
+  double tailStart = 0.;
+  if( name.Contains("Sig15") ) {
+    tailStart = 1.5;
+  } else if( name.Contains("Sig20") ) {
+    tailStart = 2.0;
+  } else if( name.Contains("Sig25") ) {
+    tailStart = 2.5;
+  } else if( name.Contains("Sig30") ) {
+    tailStart = 3.0;
+  } else if( name.Contains("Sig35") ) {
+    tailStart = 3.5;
+  }
+
+  return tailStart;
+}
+
+
+
+// ------------------------------------------------------------------------------------
 void toFiles(TNamed* obj, const TString &name) {
   if( ROOT_OUTPUT && ROOT_OUT_FILE ) {
     TString objName = obj->GetName();
@@ -2585,17 +2606,7 @@ void plotFinalResult(const TString &fileName) {
     }
     label->AddText(util::LabelFactory::labelJet("AK5PF"));
     label->AddText(util::LabelFactory::labelEta(binAdm->etaMin(etaBin),binAdm->etaMax(etaBin)));
-    if( fileNamePrefix.Contains("Sig15") ) {
-      label->AddText(labelWindow(1.5,1000.));
-    } else if( fileNamePrefix.Contains("Sig20") ) {
-      label->AddText(labelWindow(2.0,1000.));
-    } else if( fileNamePrefix.Contains("Sig25") ) {
-      label->AddText(labelWindow(2.5,1000.));
-    } else if( fileNamePrefix.Contains("Sig30") ) {
-      label->AddText(labelWindow(3.0,1000.));
-    } else if( fileNamePrefix.Contains("Sig35") ) {
-      label->AddText(labelWindow(3.5,1000.));
-    }
+    label->AddText(labelWindow(getTailStart(fileNamePrefix),1000.));
 
     TLegend* legScale = util::LabelFactory::createLegendCol(2,LEG_WIDTH);
     legScale->AddEntry(gNomRatio,"Stat. uncertainty","L");
@@ -2711,6 +2722,158 @@ void plotEvolution() {
   }
   gErrorIgnoreLevel = 1001;
 
+  // Evolution with NVtx
+  std::vector<TString> fileNames;
+  fileNames.push_back("ScaleFactors_163337-180252_2012-02-29/Tail_163337-180252_NVtxLess7_Sig25-Inf_PF.root");
+  fileNames.push_back("ScaleFactors_163337-180252_2012-02-29/Tail_163337-180252_Sig25-Inf_PF.root");
+  fileNames.push_back("ScaleFactors_163337-180252_2012-02-29/Tail_163337-180252_NVtxGreater6_Sig25-Inf_PF.root");
+  const TString outNamePrefix = "Tail_163337-180252_NVtxEvolution_Sig25_PF";
+
+  // Binning
+  std::vector<double> xBinEdges;
+  for(unsigned int f = 0; f <= fileNames.size(); ++f) {
+    xBinEdges.push_back(f);
+  }
+  std::vector<TString> xBinLabels;
+  xBinLabels.push_back("#leq 6");
+  xBinLabels.push_back("all");
+  xBinLabels.push_back("#geq 7");
+
+  assert( xBinLabels.size()+1 == xBinEdges.size() );
+
+  // ROOT output
+  ROOT_OUT_FILE = new TFile(outNamePrefix+".root","RECREATE");
+  EPS_OUTPUT = true;
+
+  sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("BinningAdmin.cfg");  
+  std::vector<EtaPtBin*> etaPtBins;
+  unsigned int nEtaBins = binAdm->nEtaBins();
+  for(unsigned int etaBin = 0; etaBin < nEtaBins; ++etaBin) {
+    for(unsigned int pt3Bin = 0; pt3Bin < binAdm->nPtSoftBins(); ++pt3Bin) {
+
+      // Read histograms      
+      std::vector<TH1*> hFAsymData;
+      std::vector<TH1*> hFAsymMC;
+      std::vector<TH1*> hFAsymGauss;
+      for(unsigned int f = 0; f < fileNames.size(); ++f) {
+	const TString binId = "_EtaBin"+util::toTString(etaBin)+"_Pt3Bin"+util::toTString(pt3Bin);
+	hFAsymData.push_back(util::FileOps::readTH1(fileNames.at(f),"hFAsymData"+binId,"hFAsymData"+binId+"_"+util::toTString(f),false));
+	hFAsymMC.push_back(util::FileOps::readTH1(fileNames.at(f),"hFAsymMCSmeared"+binId,"hFAsymMCSmeared"+binId+"_"+util::toTString(f),false));
+	hFAsymGauss.push_back(util::FileOps::readTH1(fileNames.at(f),"hFAsymMCSmearedGauss"+binId,"hFAsymMCSmearedGauss"+binId+"_"+util::toTString(f),false));
+      }
+
+      // Plot evolution
+      for(unsigned int ptBin = 0; ptBin < binAdm->nPtBins(etaBin); ++ptBin) {
+	const TString binId = "_EtaBin"+util::toTString(etaBin)+"_PtBin"+util::toTString(ptBin)+"_Pt3Bin"+util::toTString(pt3Bin);
+
+	TH1* hEvoFAsymData = new TH1D("hEvolutionOfFAsymData"+binId,HEADER+";Number of Vertices",fileNames.size(),&(xBinEdges.front()));
+	for(int bin = 1; bin <= hEvoFAsymData->GetNbinsX(); ++bin) {
+	  hEvoFAsymData->GetXaxis()->SetBinLabel(bin,xBinLabels.at(bin-1));
+	}
+	hEvoFAsymData->SetLabelSize(0.07,"X");
+	hEvoFAsymData->GetYaxis()->SetTitle(hFAsymData.front()->GetYaxis()->GetTitle());
+	hEvoFAsymData->SetMarkerStyle(hFAsymData.front()->GetMarkerStyle());
+	hEvoFAsymData->SetMarkerColor(hFAsymData.front()->GetMarkerColor());
+	hEvoFAsymData->SetMarkerSize(hFAsymData.front()->GetMarkerSize());
+	hEvoFAsymData->SetLineWidth(hFAsymData.front()->GetLineWidth());
+
+	TH1* hEvoFAsymMC = static_cast<TH1*>(hEvoFAsymData->Clone("hEvolutionOfFAsymMCSmeared"+binId));
+	hEvoFAsymMC->GetYaxis()->SetTitle(hFAsymMC.front()->GetYaxis()->GetTitle());
+	hEvoFAsymMC->SetMarkerStyle(hFAsymMC.front()->GetMarkerStyle());
+	hEvoFAsymMC->SetMarkerColor(hFAsymMC.front()->GetMarkerColor());
+	hEvoFAsymMC->SetLineStyle(hFAsymMC.front()->GetLineStyle());
+	hEvoFAsymMC->SetLineColor(hFAsymMC.front()->GetLineColor());
+	hEvoFAsymMC->SetFillColor(hFAsymMC.front()->GetFillColor());
+	hEvoFAsymMC->SetFillStyle(hFAsymMC.front()->GetFillStyle());
+
+	TH1* hEvoFAsymGauss = static_cast<TH1*>(hEvoFAsymData->Clone("hEvolutionOfFAsymMCSmearedGauss"+binId));
+	hEvoFAsymGauss->GetYaxis()->SetTitle(hFAsymGauss.front()->GetYaxis()->GetTitle());
+	hEvoFAsymGauss->SetMarkerStyle(hFAsymGauss.front()->GetMarkerStyle());
+	hEvoFAsymGauss->SetMarkerColor(hFAsymGauss.front()->GetMarkerColor());
+	hEvoFAsymGauss->SetLineStyle(hFAsymGauss.front()->GetLineStyle());
+	hEvoFAsymGauss->SetLineColor(hFAsymGauss.front()->GetLineColor());
+
+	// Fill plots
+	for(unsigned int f = 0; f < fileNames.size(); ++f) {
+	  int binEvo = 1+f;
+	  int binIn = 1+ptBin;
+	  hEvoFAsymData->SetBinContent(binEvo,hFAsymData.at(f)->GetBinContent(binIn));
+	  hEvoFAsymData->SetBinError(binEvo,hFAsymData.at(f)->GetBinError(binIn));
+	  hEvoFAsymMC->SetBinContent(binEvo,hFAsymMC.at(f)->GetBinContent(binIn));
+	  hEvoFAsymMC->SetBinError(binEvo,hFAsymMC.at(f)->GetBinError(binIn));
+	  hEvoFAsymGauss->SetBinContent(binEvo,hFAsymGauss.at(f)->GetBinContent(binIn));
+	  hEvoFAsymGauss->SetBinError(binEvo,hFAsymGauss.at(f)->GetBinError(binIn));
+	}
+
+	// Convert hEvoFAsymMC to graph to be able to plot error band
+	TGraphAsymmErrors* gEvoFAsymMC = util::HistOps::getUncertaintyBand(hEvoFAsymMC,COLOR_FILLED_ASYM_SMEAR);	
+
+	
+	// Label
+	TPaveText* label = 0;
+	if( SHOW_HEADER ) {
+	  label = util::LabelFactory::createPaveText(6,BINLABEL_WIDTH);
+	} else {
+	  label = util::LabelFactory::createPaveText(7,BINLABEL_WIDTH);
+	  label->AddText(LUMI_LABEL);
+	}
+	label->AddText(util::LabelFactory::labelJet("AK5PF"));
+	label->AddText(util::LabelFactory::labelEta(binAdm->etaMin(etaBin),binAdm->etaMax(etaBin)));
+	label->AddText(util::LabelFactory::labelPtAve(binAdm->ptMin(etaBin,ptBin),binAdm->ptMax(etaBin,ptBin)));
+	label->AddText(util::LabelFactory::labelPt3(binAdm->ptSoftMax(pt3Bin)));
+	label->AddText(labelWindow(getTailStart(fileNames.front()),1000.));
+		       
+
+	TLegend* leg = util::LabelFactory::createLegendCol(3,LEG_WIDTH);
+	leg->AddEntry(hEvoFAsymData,"Data","P");
+	leg->AddEntry(gEvoFAsymMC,MCSMEAR,"LF");
+	leg->AddEntry(hEvoFAsymGauss,"Gauss","L");
+	
+	util::HistOps::setYRange(hEvoFAsymMC,label->GetSize(),0.7*hEvoFAsymGauss->GetBinContent(hEvoFAsymGauss->GetMinimumBin()));
+	TCanvas* can = new TCanvas("can","",500,500);
+	can->cd();
+	hEvoFAsymMC->Draw("HIST");
+	hEvoFAsymGauss->Draw("HISTsame");
+	gEvoFAsymMC->Draw("E2same");
+	hEvoFAsymMC->Draw("HISTsame");
+	hEvoFAsymData->Draw("PE1same");
+	label->Draw("same");
+	leg->Draw("same");
+	gPad->RedrawAxis();
+	toFiles(can,outNamePrefix+binId+"_FAsym");
+	
+	delete hEvoFAsymData;
+	delete hEvoFAsymMC;
+	delete hEvoFAsymGauss;
+	delete gEvoFAsymMC;
+	delete label;
+	delete leg;
+	delete can;
+      } // End of loop over pt bins
+
+      for(unsigned int i = 0; i < hFAsymData.size(); ++i) {
+	delete hFAsymData.at(i);
+	delete hFAsymMC.at(i);
+	delete hFAsymGauss.at(i);
+      }
+    }// End of loop over pt3 bins
+  } // End of loop over eta bins
+  
+  ROOT_OUT_FILE->Close();
+  delete ROOT_OUT_FILE;
+}
+
+
+
+// ------------------------------------------------------------------------------------
+void plotEvolutionFinalPlots() {
+  if( SHOW_HEADER ) {
+    util::StyleSettings::setStylePAS();
+  } else {
+    util::StyleSettings::setStyleNoteNoTitle();
+  }
+  gErrorIgnoreLevel = 1001;
+
   std::vector<TString> fileNames;
 
 //   // Evolution with tail region
@@ -2759,7 +2922,7 @@ void plotEvolution() {
 	for(int bin = 1; bin <= hEvoFrame->GetNbinsX(); ++bin) {
 	  hEvoFrame->GetXaxis()->SetBinLabel(bin,binLabels[bin-1]);
 	}
-	hEvoFrame->SetLabelSize(0.04,"X");
+	hEvoFrame->SetLabelSize(0.07,"X");
       }
       hEvoFrame->SetLineWidth(LINE_WIDTH);
       hEvoFrame->SetTitle(HEADER);
