@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.13 2012/03/02 13:35:43 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.14 2012/03/02 14:20:32 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -2822,16 +2822,16 @@ void plotEvolution() {
 	label->AddText(labelWindow(getTailStart(fileNames.front()),1000.));
 		       
 
-	TLegend* leg = util::LabelFactory::createLegendCol(3,LEG_WIDTH);
+	TLegend* leg = util::LabelFactory::createLegendCol(2,LEG_WIDTH);
 	leg->AddEntry(hEvoFAsymData,"Data","P");
 	leg->AddEntry(gEvoFAsymMC,MCSMEAR,"LF");
-	leg->AddEntry(hEvoFAsymGauss,"Gauss","L");
+	//leg->AddEntry(hEvoFAsymGauss,"Gauss","L");
 	
 	util::HistOps::setYRange(hEvoFAsymMC,label->GetSize(),0.7*hEvoFAsymGauss->GetBinContent(hEvoFAsymGauss->GetMinimumBin()));
 	TCanvas* can = new TCanvas("can","",500,500);
 	can->cd();
 	hEvoFAsymMC->Draw("HIST");
-	hEvoFAsymGauss->Draw("HISTsame");
+	//hEvoFAsymGauss->Draw("HISTsame");
 	gEvoFAsymMC->Draw("E2same");
 	hEvoFAsymMC->Draw("HISTsame");
 	hEvoFAsymData->Draw("PE1same");
