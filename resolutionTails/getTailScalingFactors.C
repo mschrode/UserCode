@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.12 2012/03/01 23:14:40 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.13 2012/03/02 13:35:43 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -2725,7 +2725,6 @@ void plotEvolution() {
   // Evolution with NVtx
   std::vector<TString> fileNames;
   fileNames.push_back("ScaleFactors_163337-180252_2012-02-29/Tail_163337-180252_NVtxLess7_Sig25-Inf_PF.root");
-  fileNames.push_back("ScaleFactors_163337-180252_2012-02-29/Tail_163337-180252_Sig25-Inf_PF.root");
   fileNames.push_back("ScaleFactors_163337-180252_2012-02-29/Tail_163337-180252_NVtxGreater6_Sig25-Inf_PF.root");
   const TString outNamePrefix = "Tail_163337-180252_NVtxEvolution_Sig25_PF";
 
@@ -2736,7 +2735,6 @@ void plotEvolution() {
   }
   std::vector<TString> xBinLabels;
   xBinLabels.push_back("#leq 6");
-  xBinLabels.push_back("all");
   xBinLabels.push_back("#geq 7");
 
   assert( xBinLabels.size()+1 == xBinEdges.size() );
