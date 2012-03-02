@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.14 2012/03/02 14:20:32 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.15 2012/03/02 15:00:52 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -2886,12 +2886,11 @@ void plotEvolutionFinalPlots() {
 
   // Evolution with NVtx
   fileNames.push_back("ScaleFactors_163337-180252_2012-02-29/Tail_163337-180252_NVtxLess7_Sig25-Inf_PF_ScaleFactors.root");
-  fileNames.push_back("ScaleFactors_163337-180252_2012-02-29/Tail_163337-180252_Sig25-Inf_PF_ScaleFactors.root");
   fileNames.push_back("ScaleFactors_163337-180252_2012-02-29/Tail_163337-180252_NVtxGreater6_Sig25-Inf_PF_ScaleFactors.root");
   const TString xAxisLabel = "Number of Vertices";
-  const int nBins = 3;
-  const double xBinEdges[nBins+1] = { 0., 1., 2., 3. };
-  const TString binLabels[nBins+1] = { "#leq 6", "all", "#geq 7" };
+  const int nBins = 2;
+  const double xBinEdges[nBins+1] = { 0., 1., 2. };
+  const TString binLabels[nBins+1] = { "#leq 6", "#geq 7" };
   const TString outNamePrefix = "Tail_163337-180252_NVtxEvolution_Sig25_PF_ScaleFactors";
 
   assert( nBins == static_cast<int>(fileNames.size()) );
