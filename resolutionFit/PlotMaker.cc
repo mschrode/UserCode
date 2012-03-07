@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.25 2012/02/04 21:51:49 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.26 2012/03/07 13:51:05 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -52,7 +52,11 @@ namespace resolutionFit {
 	lineWidth_ = 2;
 	markerSize_ = 0.9;
       }
+    } else if( util::StyleSettings::style() == util::StyleSettings::Note ) {
+	lineWidth_ = 2;
+	markerSize_ = 1.4;
     }
+
     if( util::StyleSettings::style() == util::StyleSettings::PAS )
       title_ = util::StyleSettings::title(par_->lumi(),true);
     else
@@ -72,10 +76,10 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------------------------
   void PlotMaker::makeAllPlots() const {
-    //    plotAsymmetry();
+    plotAsymmetry();
     //    plotAsymmetryComparison();
     //     plotAsymmetryTails();
-    plotPtSpectra();
+    //plotPtSpectra();
     //    plotExtrapolation();
     //     //plotSlopes();
     //    plotPtGenSpectra();
@@ -214,7 +218,7 @@ namespace resolutionFit {
 	    // Asymmetry distribution for different ptSoft
 	    std::vector<TH1*> hPtAsyms;
 	    std::vector<TString> labels;
-	    unsigned int step = (par_->nPtSoftBins() > 4 ? 3 : 1);
+	    unsigned int step = (par_->nPtSoftBins() > 5 ? 4 : 1);
 	    for(unsigned int ptSoftBinIdx = 0; ptSoftBinIdx < par_->nPtSoftBins(); ptSoftBinIdx += step) {
 	      TH1* h = sample->histPtAsym(ptSoftBinIdx);
 	      util::HistOps::normHist(h,"width");
@@ -224,13 +228,14 @@ namespace resolutionFit {
 
 	    // Labels and style
 	    TPaveText* label = labelMk_->ptBin(sample->label(),etaBin->etaBin(),ptBin->ptBin());
-	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(labels.size(),-0.35,label->GetSize());
+	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(labels.size(),-0.4,label->GetSize());
 
 	    for(unsigned int i = 0; i < hPtAsyms.size(); ++i) {
 	      util::HistOps::setAxisTitles(hPtAsyms.at(i),"Asymmetry","","events",true);
 	      hPtAsyms.at(i)->GetXaxis()->SetRangeUser(-asymMax,asymMax);
 	      setStyle(sample,hPtAsyms.at(i));
 	      hPtAsyms.at(i)->SetLineColor(util::StyleSettings::color(i));
+	      hPtAsyms.at(i)->SetLineStyle(1+i);
 	      util::HistOps::setYRange(hPtAsyms.at(i),label->GetSize()+1);
 	      leg->AddEntry(hPtAsyms.at(i),labels.at(i),"L");
 	    }
@@ -307,7 +312,11 @@ namespace resolutionFit {
 		if( hPtAsym2->Integral() ) hPtAsym2->Scale(1./hPtAsym2->Integral("width"));
 		util::HistOps::setAxisTitles(hPtAsym2,"Asymmetry","","events",true);
 		hPtAsym2->GetXaxis()->SetRangeUser(-asymMax,asymMax);
-		setStyle(sample2,hPtAsym2);
+		hPtAsym2->SetLineColor(kBlack);
+		hPtAsym2->SetLineWidth(lineWidth_);
+		hPtAsym2->SetMarkerStyle(0);
+		hPtAsym2->SetFillColor(38);
+
 
 		sigma = sample2->fittedValue(*rIt,ptSoftBinIdx)/sqrt(2.);
 		TF1* fit2 = new TF1("AsymmetryFit_Sample2","gaus",-1.,1.);
@@ -320,18 +329,20 @@ namespace resolutionFit {
 			      
 		// Labels
 		TPaveText* label = labelMk_->ptSoftBin(etaBin->etaBin(),ptBin->ptBin(),ptSoftBinIdx);
-		TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,labelMk_->start(),label->GetSize());
-		leg->AddEntry(hPtAsym1,sLabel1,"P");
-		leg->AddEntry(hPtAsym2,sLabel2,"P");
+		TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,-0.65*labelMk_->start(),label->GetSize());
+		leg->AddEntry(hPtAsym1,labelMk_->label(sLabel1),"P");
+		leg->AddEntry(hPtAsym2,labelMk_->label(sLabel2),"F");
 	    
 		util::HistOps::setYRange(hPtAsym1,label->GetSize()+leg->GetNRows()+1);
 		out_->nextMultiPad(sLabel1+" vs "+sLabel2+": PtAsym "+ptBin->toTString()+", PtSoftBin "+util::toTString(ptSoftBinIdx));
 		hPtAsym1->Draw("PE1");
-		hPtAsym2->Draw("PE1same");
-		fit1->Draw("same");
-		fit2->Draw("same");
+		hPtAsym2->Draw("HISTsame");
+		hPtAsym1->Draw("PE1same");
+// 		fit1->Draw("same");
+// 		fit2->Draw("same");
 		label->Draw("same");
 		leg->Draw("same");
+		gPad->RedrawAxis();
 		out_->saveCurrentPad(histFileName("PtAsym",ptBin,sLabel1,sLabel2,*rIt,ptSoftBinIdx));
 
 		delete hPtAsym1;
