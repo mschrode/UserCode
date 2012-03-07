@@ -1,4 +1,4 @@
-// $Id: run.cc,v 1.62 2011/11/21 17:18:05 mschrode Exp $
+// $Id: run.cc,v 1.63 2012/02/04 21:51:49 mschrode Exp $
 
 #include <iostream>
 
@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
   //Parameters* par = new Parameters("ResSUS-11-004","config/Analysis2011/Binning/BinningAdmin2011_v2.cfg",0);
   //Parameters* par = new Parameters("ResNewBinning","config/Analysis2011/Binning/BinningAdmin2011_v3.cfg",0);
   //Parameters* par = new Parameters("PileUpStudy","config/Analysis2011/Binning/BinningAdmin2011_v4.cfg",0);
-  //par->setNEtaBinsUser(1);
+  par->setNEtaBinsUser(1);
   par->setJetProperties(JetProperties::AK5,JetProperties::PF);
   //par->setOutMode(OutputManager::PSAllInOne);
   par->setOutMode(OutputManager::EPSSingleFiles);
@@ -45,15 +45,15 @@ int main(int argc, char *argv[]) {
      //TString pathToFitResultsMC = pathToHome+"results/ResolutionFit/PileUpStudy/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Summer11-PU_S3_START42_V11-v2_V5_PU-2011_to_172255_LP_LumiScale";
 
      // Summ11 results
-     TString pathToFitResultsData = pathToHome+"results/ResolutionFit/Run2011A_163337-167151";
-     TString pathToFitResultsMC = pathToHome+"results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV-pythia6_Summer11-PU_S3_START42_V11-v2";
+//      TString pathToFitResultsData = pathToHome+"results/ResolutionFit/Run2011A_163337-167151";
+//      TString pathToFitResultsMC = pathToHome+"results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV-pythia6_Summer11-PU_S3_START42_V11-v2";
 //      // Summer11 control plots (inclusive pt spectra)
-//      TString pathToFitResultsData = pathToHome+"results/ResolutionFit/NewControlPlots";
-//      TString pathToFitResultsMC = pathToHome+"results/ResolutionFit/NewControlPlots";
+     TString pathToFitResultsData = pathToHome+"results/ResolutionFit/NewControlPlots";
+     TString pathToFitResultsMC = pathToHome+"results/ResolutionFit/NewControlPlots";
 
 
-     FitResult::Type nominalFitResType = FitResult::FullMaxLikeAbs;
-     //FitResult::Type nominalFitResType = FitResult::PtAsym;
+     //FitResult::Type nominalFitResType = FitResult::FullMaxLikeAbs;
+     FitResult::Type nominalFitResType = FitResult::PtAsym;
 
 
      CommanderCool* cmd = new CommanderCool(par);

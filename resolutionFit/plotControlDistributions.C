@@ -1,4 +1,4 @@
-// $Id: plotControlDistributions.C,v 1.1 2012/02/02 13:20:42 mschrode Exp $
+// $Id: plotControlDistributions.C,v 1.2 2012/02/04 21:51:49 mschrode Exp $
 
 //!  Control and n-1 distributions for
 //!  histograms in Kalibri skims from
@@ -43,9 +43,9 @@ TPaveText* createLabel(double etaMin, double etaMax, double ptAveMin, double ptA
   } else {
     label = util::LabelFactory::createPaveText(3,-0.9);
   }
-  label->AddText("#sqrt{s} = 7 TeV,  Anti-k_{T} (R=0.5) PF Jets");
+  label->AddText("#sqrt{s} = 7 TeV,  "+util::LabelFactory::labelJet("AK5PF"));
   if( ptAveMax > ptAveMin ) {
-    label->AddText(util::LabelFactory::labelEta(etaMin,etaMax)+",  "+util::toTString(ptAveMin)+" < p^{ave}_{T} < "+util::toTString(ptAveMax)+" GeV");
+    label->AddText(util::LabelFactory::labelEta(etaMin,etaMax)+",  "+util::LabelFactory::labelPtAve(ptAveMin,ptAveMax));
   } else {
     label->AddText(util::LabelFactory::labelEta(etaMin,etaMax));
   }
@@ -347,7 +347,7 @@ void plotControlDistributions() {
   const sampleTools::BinningAdmin binAdmin("config/Analysis2011/Binning/BinningAdmin2011_v2.cfg");
   const TString outNamePrefix = "DijetSel_163337-167151_";
   const TString ptRelVar = "p_{T,3} / p^{ave}_{T}";
-  const TString ptRelLabel = ptRelVar+" < 0.14";
+  const TString ptRelLabel = util::LabelFactory::labelPt3(0.14);
   const TString deltaPhiVar = "|#Delta#phi|";
   const TString deltaPhiLabel = deltaPhiVar+" > 2.7";
 
@@ -357,7 +357,7 @@ void plotControlDistributions() {
   for(int i = 0; i < 2; ++i) {
     // N-1 plots
     plotNMinus1(fileNameData,fileNameMC,"hDeltaPhiNMin1",binAdmin,0,ptBin[i],2,2.1,3.5,false,deltaPhiVar,"","events",ptRelLabel,outNamePrefix+"NMin1DeltaPhi");
-    plotNMinus1(fileNameData,fileNameMC,"hPtRelNMin1",binAdmin,0,ptBin[i],3,0.,1.,false,ptRelVar,"","events",ptRelLabel,outNamePrefix+"NMin1PtRel");
+    plotNMinus1(fileNameData,fileNameMC,"hPtRelNMin1",binAdmin,0,ptBin[i],3,0.,1.,false,ptRelVar,"","events",deltaPhiLabel,outNamePrefix+"NMin1PtRel");
     plotPt3RelRecoVsGen(fileNameMC,binAdmin,0,ptBin[i],1,0.,0.35,false,deltaPhiLabel,outNamePrefix+"Pt3RelRecoVsGen");
   }
   

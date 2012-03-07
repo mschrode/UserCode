@@ -1,4 +1,4 @@
-// $Id: OutputManager.cc,v 1.5 2011/09/16 13:59:31 mschrode Exp $
+// $Id: OutputManager.cc,v 1.6 2011/09/21 13:19:04 mschrode Exp $
 
 #include "OutputManager.h"
 
@@ -228,7 +228,6 @@ namespace resolutionFit {
       TString nameTmp = lastPad_->GetName();
       lastPad_->SetName(name);
       TFile outFile(rootOutFileName,"UPDATE");
-      //    lastPad_->SaveAs(rootOutFileName,"UPDATE");
       if( outFile.IsOpen() ) {
 	outFile.WriteTObject(lastPad_);
 	outFile.Close();

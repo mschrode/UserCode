@@ -1,4 +1,4 @@
-// $Id: utils.h,v 1.15 2012/02/29 20:39:39 mschrode Exp $
+// $Id: utils.h,v 1.16 2012/02/29 20:43:35 mschrode Exp $
 
 #ifndef UTILS_H
 #define UTILS_H
@@ -17,7 +17,7 @@
 //!
 //!  \author   Matthias Schroeder (www.desy.de/~matsch)
 //!  \date     2010/03/09
-//!  $Id: utils.h,v 1.15 2012/02/29 20:39:39 mschrode Exp $
+//!  $Id: utils.h,v 1.16 2012/02/29 20:43:35 mschrode Exp $
 // -------------------------------------------------------------------------------------
 namespace util {
 
@@ -64,10 +64,13 @@ namespace util {
 
   //! Convert double to TString, rounded to decPlaces  
   // -------------------------------------------------------------------------------------
-  static inline TString toTString(double d, int decPlaces) {
+  static inline TString toTString(double d, int decPlaces, bool appendZeros = true) {
     TString str = toString(d,decPlaces);
-    while( str(str.Last('.')+1,str.Length()).Length() < decPlaces ) {
-      str += "0";
+    if( appendZeros && decPlaces > 0 ) {
+      if( !str.Contains(".") ) str += ".";
+      while( str(str.Last('.')+1,str.Length()).Length() < decPlaces ) {
+	str += "0";
+      }
     }
 
     return str;

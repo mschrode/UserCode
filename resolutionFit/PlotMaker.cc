@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.24 2011/11/22 17:39:26 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.25 2012/02/04 21:51:49 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -75,16 +75,16 @@ namespace resolutionFit {
     //    plotAsymmetry();
     //    plotAsymmetryComparison();
     //     plotAsymmetryTails();
-    //plotPtSpectra();
+    plotPtSpectra();
     //    plotExtrapolation();
     //     //plotSlopes();
     //    plotPtGenSpectra();
     //     plotMCEventInfo();
-    plotParticleLevelImbalance();
+    //    plotParticleLevelImbalance();
     //    plotControlDistributions();
     plotResolution();
     plotScaledMCTruth();
-    plotSystematicUncertainties();
+    //plotSystematicUncertainties();
   }
 
 
@@ -1873,7 +1873,7 @@ namespace resolutionFit {
 		  
 		// Labels
 		TPaveText* label = labelMk_->ptSoftBin(etaBin->etaBin(),ptBin->ptBin(),ptSoftBinIdx);	    
-		TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,0.65*labelMk_->start(),label->GetSize());
+		TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,-0.65*labelMk_->start(),label->GetSize());
 		leg->AddEntry(hPtSpecS1.front(),labelMk_->label(sLabel1),"P");
 		leg->AddEntry(hPtSpecS2.front(),labelMk_->label(sLabel2),"F");
 
@@ -1944,13 +1944,13 @@ namespace resolutionFit {
 	      
 	      // Labels
 	      TPaveText* label = labelMk_->ptSoftBin(etaBin->etaBin(),ptSoftBinIdx);
-	      TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,0.65*labelMk_->start(),label->GetSize());
+	      TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,-0.65*labelMk_->start(),label->GetSize());
 	      leg->AddEntry(hPtSpecInclS1.front(),labelMk_->label(sLabel1),"P");
 	      leg->AddEntry(hPtSpecInclS2.front(),labelMk_->label(sLabel2),"F");
 	      
 	      // Plot
 	      for(unsigned int i = 0; i < hPtSpecInclS2.size(); ++i) {
-		util::HistOps::setYRange(hPtSpecInclS2.at(i),label->GetSize(),3E-1);
+		util::HistOps::setYRange(hPtSpecInclS2.at(i),label->GetSize()+leg->GetNRows(),3E-1);
 		  
 		out_->nextMultiPad(sLabel1+" vs "+sLabel2+": Inclusive Spectrum "+etaBin->toString()+", PtSoftBin "+util::toTString(ptSoftBinIdx));
 		hPtSpecInclS2.at(i)->Draw("HIST");
@@ -2510,7 +2510,7 @@ namespace resolutionFit {
 	    hFrame->SetLineWidth(lineWidth_);
 	    hFrame->SetLineStyle(2);
 	    hFrame->GetYaxis()->SetRangeUser(-0.32,0.96);
-	    util::HistOps::setAxisTitles(hFrame,"p^{ref}_{T}","GeV","Relative Uncertainty");
+	    util::HistOps::setAxisTitles(hFrame,"p^{ave}_{T}","GeV","Relative Uncertainty");
 	     
 	    out_->nextPad(sampleLabel+": Systematic uncertainties "+etaBin->toString());
 	    hFrame->Draw("][");
@@ -3068,8 +3068,10 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------------------------
   TPaveText* PlotMaker::LabelMaker::ptSoftBin(unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int ptSoftBinIdx) const {
-    TPaveText* lab = etaBin(etaBinIdx,1);
-    lab->AddText(ptRange(etaBinIdx,ptBinIdx)+",  "+ptSoftRange(ptSoftBinIdx));
+    TPaveText* lab = util::LabelFactory::createPaveText(3);
+    lab->AddText("#sqrt{s} = 7 TeV,  "+jets());
+    lab->AddText(etaRange(etaBinIdx)+",  "+ptRange(etaBinIdx,ptBinIdx));
+    lab->AddText(ptSoftRange(ptSoftBinIdx));
 
     return lab;
   }
@@ -3077,8 +3079,9 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------------------------
   TPaveText* PlotMaker::LabelMaker::ptSoftBin(unsigned int etaBinIdx, unsigned int ptSoftBinIdx) const {
-    TPaveText* lab = etaBin(etaBinIdx,1);
-    lab->AddText(ptSoftRange(ptSoftBinIdx));
+    TPaveText* lab = util::LabelFactory::createPaveText(2);
+    lab->AddText("#sqrt{s} = 7 TeV,  "+jets());
+    lab->AddText(etaRange(etaBinIdx)+",  "+ptSoftRange(ptSoftBinIdx));
 
     return lab;
   }
@@ -3086,9 +3089,10 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------
-  TPaveText* PlotMaker::LabelMaker::ptBin(unsigned int etaBinIdx, unsigned int ptBinIdx) const {
-    TPaveText* lab = etaBin(etaBinIdx,1);
-    lab->AddText(ptRange(etaBinIdx,ptBinIdx));
+  TPaveText* PlotMaker::LabelMaker::ptBin(unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int nExtraEntries) const {
+    TPaveText* lab = util::LabelFactory::createPaveText(2+nExtraEntries);
+    lab->AddText("#sqrt{s} = 7 TeV,  "+jets());
+    lab->AddText(etaRange(etaBinIdx)+", "+ptRange(etaBinIdx,ptBinIdx));
 
     return lab;
   }
@@ -3143,24 +3147,17 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------------------------
   TPaveText* PlotMaker::LabelMaker::etaBin(unsigned int etaBinIdx, unsigned int nExtraEntries) const {
-    TPaveText* lab = util::LabelFactory::createPaveText(1+nExtraEntries);
-    lab->AddText(jets()+",  "+etaRange(etaBinIdx));
-
+    TPaveText* lab = util::LabelFactory::createPaveText(2+nExtraEntries);
+    lab->AddText("#sqrt{s} = 7 TeV,  "+jets());
+    lab->AddText(etaRange(etaBinIdx));
+    
     return lab;
   }
 
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::LabelMaker::etaRange(unsigned int etaBinIdx, const TString &superscript) const {
-    TString min = util::toTString(par_->etaMin(etaBinIdx),1);
-    TString max = util::toTString(par_->etaMax(etaBinIdx),1);
-    if( min.Length() == 1 ) min += ".0";
-    if( max.Length() == 1 ) max += ".0";
-    TString etaLabel = "|#eta";
-    if( superscript != "" ) etaLabel+= "^{gen}";
-    etaLabel += "|";
-
-    return min+" < "+etaLabel+" < "+max;
+    return util::LabelFactory::labelEta(par_->etaMin(etaBinIdx),par_->etaMax(etaBinIdx),superscript);
   }
 
 
@@ -3172,24 +3169,22 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::LabelMaker::ptSoftRange(unsigned int ptSoftBinIdx) const {
-    return "p_{T,3} / p^{ave}_{T} < "+util::toTString(par_->ptSoftMax(ptSoftBinIdx));
-    //    return "p_{||,3} / #LTp^{ave}_{T}#GT < "+util::toTString(par_->ptSoftMax(ptSoftBinIdx));
+    return util::LabelFactory::labelPt3(par_->ptSoftMax(ptSoftBinIdx));
   }
 
 
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::LabelMaker::jets() const {
-    TString lab = "";
-    if( par_->jetAlgo() == JetProperties::AK5 ) {
-      lab += "Anti-k_{T} (R=0.5)";
-    }
-    lab += " ";
-    if( par_->jetType() == JetProperties::Calo ) lab += "Calo Jets";
-    else if( par_->jetType() == JetProperties::PF ) lab += "PF Jets";
-    else if( par_->jetType() == JetProperties::JPT ) lab += "JPT Jets";
+    TString id = "";
+    if( par_->jetAlgo() == JetProperties::AK5 ) id += "AK5";
+    
+    if( par_->jetType() == JetProperties::Calo ) id += "Calo";
+    else if( par_->jetType() == JetProperties::PF ) id += "PF";
+    else if( par_->jetType() == JetProperties::JPT ) id += "JPT";
+    
 
-    return lab;
+    return util::LabelFactory::labelJet(id);
   }
 
 
@@ -3202,7 +3197,7 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::LabelMaker::ptSoft() const { 
-    return "p^{rel}_{T,3} = p_{T,3} / p^{ave}_{T}";
+    return "p_{T,3} / p^{ave}_{T}";
   }
 
 
