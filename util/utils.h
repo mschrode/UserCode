@@ -1,4 +1,4 @@
-// $Id: utils.h,v 1.16 2012/02/29 20:43:35 mschrode Exp $
+// $Id: utils.h,v 1.17 2012/03/07 13:48:43 mschrode Exp $
 
 #ifndef UTILS_H
 #define UTILS_H
@@ -17,7 +17,7 @@
 //!
 //!  \author   Matthias Schroeder (www.desy.de/~matsch)
 //!  \date     2010/03/09
-//!  $Id: utils.h,v 1.16 2012/02/29 20:43:35 mschrode Exp $
+//!  $Id: utils.h,v 1.17 2012/03/07 13:48:43 mschrode Exp $
 // -------------------------------------------------------------------------------------
 namespace util {
 
@@ -26,6 +26,18 @@ namespace util {
   // -------------------------------------------------------------------------------------
   static inline double ratioError(double A, double AE, double B, double BE) {
     return sqrt( AE*AE/B/B + BE*BE*A*A/B/B/B/B );
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  static inline int firstSigDigit(double d) {
+    int idx = 0;
+    while( std::abs(d) < 1. ) {
+      d *= 10.;
+      idx++;
+    }
+
+    return idx;
   }
 
 
