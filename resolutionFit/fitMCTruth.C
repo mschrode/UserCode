@@ -1,4 +1,4 @@
-// $Id: fitMCTruth.C,v 1.14 2012/02/04 21:51:49 mschrode Exp $
+// $Id: fitMCTruth.C,v 1.15 2012/02/29 20:49:01 mschrode Exp $
 
 //!  Fit mean response and resolution from MC truth
 //!  histograms in Kalibri skims from
@@ -49,6 +49,8 @@ void fitProfile(const TH2* h2, std::vector<TH1*> &hProf, double nSigCore, std::v
   hMean = new TH1D(name+"_YMean",";"+xTitle+";Gauss Mean",
 		   h2->GetNbinsX(),h2->GetXaxis()->GetXbins()->GetArray());
   hMean->SetMarkerStyle(20);
+  hMean->SetMarkerSize(1.4);
+  hMean->SetLineWidth(2);
 
   hSigma = static_cast<TH1*>(hMean->Clone(name+"_YSigma"));
   hSigma->SetYTitle("Gauss Width");
@@ -100,17 +102,18 @@ TF1* fitResolution(TH1* h, const TString &name, double min, double max) {
   TF1* fit = new TF1(name,"sqrt(((TMath::Sign(1,[0])*sq([0]/x))+(sq([1])*(x^([3]-1))))+sq([2]))",min,max);
   fit->SetParameter(0,1.5);
   fit->SetParameter(1,0.5);
-  fit->FixParameter(2,0.);
+  fit->SetParameter(2,0.03);
   fit->SetParameter(3,0.3);
+  //fit->FixParameter(3,0.);
 
-  //    TF1* fit = new TF1(name,"sqrt( sq([0]/x) + sq([1])/x + sq([2]) )",min,max);
-  //    fit->SetParameter(0,1.);
-  //    fit->SetParameter(1,0.1);
-  //    fit->SetParameter(2,0.01);
+//      TF1* fit = new TF1(name,"sqrt( sq([0]/x) + sq([1])/x + sq([2]) )",min,max);
+//      fit->SetParameter(0,1.);
+//      fit->SetParameter(1,0.1);
+//      fit->SetParameter(2,0.01);
 
-  fit->SetLineWidth(1);
+  fit->SetLineWidth(2);
   fit->SetLineColor(kRed);
-  h->Fit(fit,"BINR");		// Option "B" to consider fixed parameters
+  h->Fit(fit,"INR");		// Option "B" to consider fixed parameters
 
 
   return fit;
@@ -177,18 +180,21 @@ void fitResolutionVsPtGen(const TString &fileName,
       hChi2NdofTmp->SetBinContent(bin,0);
       hChi2NdofTmp->SetBinError(bin,0);
     }
+    double maxRelErr = 0.15;
     int startOfPrecisionRegion = 1;
     int endOfPrecisionRegion = 10000;
     for(int bin = hMeanTmp->GetNbinsX()/2; bin >= 1; --bin) {
       if( hSigmaTmp->GetBinContent(bin) &&
-	  hSigmaTmp->GetBinError(bin) / hSigmaTmp->GetBinContent(bin) > 0.15 ) {
+	  (hSigmaTmp->GetBinError(bin) / hSigmaTmp->GetBinContent(bin) > maxRelErr ||
+	   hSigmaTmp->GetBinContent(bin) < 0.05)
+	  ) {
 	startOfPrecisionRegion = bin;
 	break;
       }
     }
     for(int bin = hMeanTmp->GetNbinsX()/2; bin <= hMeanTmp->GetNbinsX(); ++bin) {
       if( hSigmaTmp->GetBinContent(bin) &&
-	  hSigmaTmp->GetBinError(bin) / hSigmaTmp->GetBinContent(bin) > 0.15 ) {
+	  hSigmaTmp->GetBinError(bin) / hSigmaTmp->GetBinContent(bin) > maxRelErr ) {
 	endOfPrecisionRegion = bin;
 	break;
       }
@@ -209,7 +215,7 @@ void fitResolutionVsPtGen(const TString &fileName,
     hSigma.push_back(hSigmaTmp);
     hChi2Ndof.push_back(hChi2NdofTmp);
 
-    fSigma.push_back(fitResolution(hSigmaTmp,histNamePrefix+"_ResolutionFit",minPt,std::min(hSigmaTmp->GetBinCenter(endOfPrecisionRegion),hSigmaTmp->GetXaxis()->GetBinUpEdge(hSigmaTmp->GetNbinsX()))));
+    fSigma.push_back(fitResolution(hSigmaTmp,histNamePrefix+"_ResolutionFit",std::max(minPt,hSigmaTmp->GetBinCenter(startOfPrecisionRegion)),std::min(hSigmaTmp->GetBinCenter(endOfPrecisionRegion),hSigmaTmp->GetXaxis()->GetBinUpEdge(hSigmaTmp->GetNbinsX()))));
 
     delete h2;
   }
@@ -545,10 +551,14 @@ void plotMCTruth(const TString &fileName, const TString &histNamePrefix, const s
   }
 
   // Print fit parameters
+  std::cout << "\n\n\\begin{tabular}{cr@{$\\;\\pm\\;$}lr@{$\\;\\pm\\;$}lr@{$\\;\\pm\\;$}lr@{$\\;\\pm\\;$}l}\n\\toprule\n$|\\eta|$ & \\multicolumn{2}{c}{$N\\,(\\gevnospace)$} & \\multicolumn{2}{c}{$S\\,(\\sqrt{\\gevnospace})$} & \\multicolumn{2}{c}{$C$} & \\multicolumn{2}{c}{$m$} \\\\\n\\midrule" << std::endl;
   for(unsigned int etaBin = 0; etaBin < binningAdmin.nEtaBins(); ++etaBin) {
-    std::cout << "$" << binningAdmin.etaMin(etaBin) << " - " << binningAdmin.etaMax(etaBin) << std::flush;
+    std::cout << "$" << util::toTString(binningAdmin.etaMin(etaBin),1,true) << "$ -- $" << util::toTString(binningAdmin.etaMax(etaBin),1,true) << std::flush;
     for(int i = 0; i < fSigma.at(etaBin)->GetNpar(); ++i) {
-      std::cout << "$ & $" << util::toTString(fSigma.at(etaBin)->GetParameter(i),3) << " \\pm " << util::toTString(fSigma.at(etaBin)->GetParError(i),3) << std::flush;
+      double val = fSigma.at(etaBin)->GetParameter(i);
+      if( i == 2 ) val = std::abs(val);
+      double err = fSigma.at(etaBin)->GetParError(i);
+      std::cout << "$ & $" << util::toTString(val,1+util::firstSigDigit(err)) << "$ & $" << util::toTString(err,1+util::firstSigDigit(err)) << std::flush;
     }
     std::cout << "$ \\\\" << std::endl;
   }
@@ -1305,9 +1315,9 @@ void fitMCTruth() {
   TString file = "Kalibri_MCTruthResponse_MCSummer11_AK5PF.root";
   TString name = "MCTruthSummer11";
 
-  //plotMCTruth(file,"hRespVsPtGen",admin,2.,10.,name);
+  plotMCTruth(file,"hRespVsPtGen",admin,2.,10.,name);
   //plotDeltaR(file,"hDeltaRVsPtGen",admin,100.,200.,name);
-  //  plotGaussianFitRange(file,"hRespVsPtGen",admin,10.,name);
+  //plotGaussianFitRange(file,"hRespVsPtGen",admin,10.,name);
   //plotTwoGaussFit(file,"hRespVsPtGenUncorrected",admin,2.,10.,name);
   //plotMCTruth(file,"hRespVsPtGenUncorrected",admin,2.,10.,name+"_Uncorr");
 
@@ -1341,20 +1351,20 @@ void fitMCTruth() {
 //    legEntries.push_back("C_{off}");
 //    plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_UncorrVsLowPUVsL1Corr",true);
 
-    histNamePrefix.clear();
-    legEntries.clear();
-    //   histNamePrefix.push_back("hRespVsPtGen");
-    histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId1:hRespVsPtGenVsPdgId_Eta?_PdgId2:hRespVsPtGenVsPdgId_Eta?_PdgId3:hRespVsPtGenVsPdgId_Eta?_PdgId4:hRespVsPtGenVsPdgId_Eta?_PdgId5:hRespVsPtGenVsPdgId_Eta?_PdgId21");
-    histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId1:hRespVsPtGenVsPdgId_Eta?_PdgId2:hRespVsPtGenVsPdgId_Eta?_PdgId3");
-    histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId4");
-    histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId5");
-    histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId21");
-    legEntries.push_back("All");
-    legEntries.push_back("u,d,s");
-    legEntries.push_back("c");
-    legEntries.push_back("b");
-    legEntries.push_back("g");
-    plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_Flavour",false);
+//     histNamePrefix.clear();
+//     legEntries.clear();
+//     //   histNamePrefix.push_back("hRespVsPtGen");
+//     histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId1:hRespVsPtGenVsPdgId_Eta?_PdgId2:hRespVsPtGenVsPdgId_Eta?_PdgId3:hRespVsPtGenVsPdgId_Eta?_PdgId4:hRespVsPtGenVsPdgId_Eta?_PdgId5:hRespVsPtGenVsPdgId_Eta?_PdgId21");
+//     histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId1:hRespVsPtGenVsPdgId_Eta?_PdgId2:hRespVsPtGenVsPdgId_Eta?_PdgId3");
+//     histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId4");
+//     histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId5");
+//     histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId21");
+//     legEntries.push_back("All");
+//     legEntries.push_back("u,d,s");
+//     legEntries.push_back("c");
+//     legEntries.push_back("b");
+//     legEntries.push_back("g");
+//     plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_Flavour",false);
 
 //    histNamePrefix.clear();
 //    legEntries.clear();
@@ -1382,22 +1392,22 @@ void fitMCTruth() {
 //    fileNames.push_back("Kalibri_MCTruthResponse_Summer11_AK5Calo.root");
 //    plotMCTruth(fileNames,histNamePrefix,legEntries,admin,2.,10.,name+"_PFVsCalo");
 
-//      histNamePrefix.clear();
-//      legEntries.clear();
-//       histNamePrefix.push_back("hRespVsPtGenDeltaRLess05");
-//       histNamePrefix.push_back("hRespVsPtGenDeltaRLess10");
-//       histNamePrefix.push_back("hRespVsPtGenDeltaRLess15");
-//       histNamePrefix.push_back("hRespVsPtGenDeltaRLess20");
-//       histNamePrefix.push_back("hRespVsPtGenDeltaRLess25");
-//       //  histNamePrefix.push_back("hRespVsPtGenDeltaRLess30");
-//       legEntries.push_back("#DeltaR_{max} = 0.05");
-//       legEntries.push_back("#DeltaR_{max} = 0.10");
-//       legEntries.push_back("#DeltaR_{max} = 0.15");
-//       legEntries.push_back("#DeltaR_{max} = 0.20");
-//       legEntries.push_back("#DeltaR_{max} = 0.25");
-//       //  legEntries.push_back("#DeltaR_{max} = 0.30");
-//       plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionVsDeltaR");
-
+//    histNamePrefix.clear();
+//    legEntries.clear();
+//    histNamePrefix.push_back("hRespVsPtGenDeltaRLess05");
+//    histNamePrefix.push_back("hRespVsPtGenDeltaRLess10");
+//    histNamePrefix.push_back("hRespVsPtGenDeltaRLess15");
+//    histNamePrefix.push_back("hRespVsPtGenDeltaRLess20");
+//    histNamePrefix.push_back("hRespVsPtGenDeltaRLess25");
+//    //  histNamePrefix.push_back("hRespVsPtGenDeltaRLess30");
+//    legEntries.push_back("#DeltaR_{max} = 0.05");
+//    legEntries.push_back("#DeltaR_{max} = 0.10");
+//    legEntries.push_back("#DeltaR_{max} = 0.15");
+//    legEntries.push_back("#DeltaR_{max} = 0.20");
+//    legEntries.push_back("#DeltaR_{max} = 0.25");
+//    //  legEntries.push_back("#DeltaR_{max} = 0.30");
+//    plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionVsDeltaR");
+   
   //     histNamePrefix.clear();
   //     legEntries.clear();
   //     histNamePrefix.push_back("hRespVsPtGen");
@@ -1414,26 +1424,26 @@ void fitMCTruth() {
 //        legEntries.push_back("No PU reweighting");
 //        plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionPU");
 
-//        histNamePrefix.clear();
-//        legEntries.clear();
-//        histNamePrefix.push_back("hRespVsPtGen");
-//        //   histNamePrefix.push_back("hRespVsPtGenVsPtSoft_Eta?_PtSoft4");
-//        histNamePrefix.push_back("hRespVsPtGenVsPtSoft_Eta?_PtSoft6");
-//        legEntries.push_back("QCD multijets");
-//        legEntries.push_back("QCD dijets");
-//        plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionDijetSelection",true);
- 
-//      histNamePrefix.clear();
-//      legEntries.clear();
-//      histNamePrefix.push_back("hRespVsPtGenPULess05");
-//      histNamePrefix.push_back("hRespVsPtGenPULess10");
-//      histNamePrefix.push_back("hRespVsPtGenPULess15");
-//      histNamePrefix.push_back("hRespVsPtGenPULess99");
-//      legEntries.push_back("N(PU) #leq 4");
-//      legEntries.push_back("4 < N(PU) #leq 9");
-//      legEntries.push_back("9 < N(PU) #leq 14");
-//      legEntries.push_back("N(PU) > 14");
-//      plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionNPU");
+//         histNamePrefix.clear();
+//         legEntries.clear();
+//         histNamePrefix.push_back("hRespVsPtGen");
+//         //   histNamePrefix.push_back("hRespVsPtGenVsPtSoft_Eta?_PtSoft4");
+//         histNamePrefix.push_back("hRespVsPtGenVsPtSoft_Eta?_PtSoft6");
+//         legEntries.push_back("QCD multijets");
+//         legEntries.push_back("QCD dijets");
+//         plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionDijetSelection",true);
+
+//       histNamePrefix.clear();
+//       legEntries.clear();
+//       histNamePrefix.push_back("hRespVsPtGenPULess05");
+//       histNamePrefix.push_back("hRespVsPtGenPULess10");
+//       histNamePrefix.push_back("hRespVsPtGenPULess15");
+//       histNamePrefix.push_back("hRespVsPtGenPULess99");
+//       legEntries.push_back("N(PU) #leq 4");
+//       legEntries.push_back("4 < N(PU) #leq 9");
+//       legEntries.push_back("9 < N(PU) #leq 14");
+//       legEntries.push_back("N(PU) > 14");
+//       plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionNPU");
 }
 
 
