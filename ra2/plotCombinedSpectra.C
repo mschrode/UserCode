@@ -1,4 +1,4 @@
-// $Id: plotCombinedSpectra.C,v 1.9 2011/12/05 16:55:32 mschrode Exp $
+// $Id: plotCombinedSpectra.C,v 1.10 2012/01/25 11:48:47 mschrode Exp $
 
 // Compare HT and MHT spectra in data with bkg. prediction
 
@@ -21,46 +21,72 @@
 #include "../util/StyleSettings.h"
 
 
-// Event yields and uncertainties
-// Baseline 4.65/fb 2011
-const double BKG_ZTOINV        = 591.2807;
-const double BKG_ZTOINV_STAT   = 16.;
-const double BKG_ZTOINV_SYSTUP = 81.;
-const double BKG_ZTOINV_SYSTDN = 81.;
-
-const double BKG_LL        = 426.8;
-const double BKG_LL_STAT   = 22.4;
-const double BKG_LL_SYSTUP = 55.2;
-const double BKG_LL_SYSTDN = 53.7;
-
-const double BKG_HADTAU        = 552.;
-const double BKG_HADTAU_STAT   = 16.;
-const double BKG_HADTAU_SYSTUP = 38.2;
-const double BKG_HADTAU_SYSTDN = 35.6;
-
-const double BKG_QCD        = 200.;
-const double BKG_QCD_STAT   = 21.38;
-const double BKG_QCD_SYSTUP = 188.03;
-const double BKG_QCD_SYSTDN = 186.43;
-
-const double BKG_TOTAL = BKG_ZTOINV +
-                         BKG_LL  +
-                         BKG_HADTAU +
-			 BKG_QCD;
-
-double tmp1 = sqrt( pow(BKG_ZTOINV_STAT,2) + pow(0.5*(BKG_ZTOINV_SYSTUP+BKG_ZTOINV_SYSTDN),2) );
-double tmp2 = sqrt( pow(BKG_LL_STAT,2) + pow(0.5*(BKG_LL_SYSTUP+BKG_LL_SYSTDN),2) );
-double tmp3 = sqrt( pow(BKG_HADTAU_STAT,2) + pow(0.5*(BKG_HADTAU_SYSTUP+BKG_HADTAU_SYSTDN),2) );
-double tmp4 = sqrt( pow(BKG_QCD_STAT,2) + pow(0.5*(BKG_QCD_SYSTUP+BKG_QCD_SYSTDN),2) );
-
-const double BKG_TOTAL_UNCERT = sqrt( pow(tmp1,2) + pow(tmp2,2) + pow(tmp3,2) + pow(tmp4,2) );
 
 
 
 
 // --------------------------------------------------------------
 // --------------------------------------------------------------
-enum Bkg { ZInv, LostLepton, HadronicTau, QCD };
+enum Bkg { ZInv, HadronicTau, LostLepton, QCD }; // Determines plotting order
+
+
+
+// --------------------------------------------------------------
+class UncertaintyManager {
+public:
+  // --------------------------------------------------------------
+  UncertaintyManager() {}
+
+
+  // --------------------------------------------------------------
+  void scaleUncertainties(TH1* &h) const {
+    std::cout << "\n  ------ Scaling uncertainties ------------------------" << std::endl;
+    int binMin = 1;
+    int binMax = binMin;
+    for(size_t intervalIdx = 0; intervalIdx < intervalMax_.size(); ++intervalIdx) {
+      double sumErr = 0.;
+      for(int bin = binMin; bin <= h->GetNbinsX(); ++bin,++binMax) {
+	if( h->GetXaxis()->GetBinUpEdge(bin) > intervalMax_.at(intervalIdx) ) {
+	  break;
+	} else {
+	  sumErr += h->GetBinContent(bin);
+	}	
+      }
+      --binMax;
+      sumErr = sqrt(sumErr);
+      if( sumErr > 0. ) {
+	double scale = targetUncert_.at(intervalIdx)/sumErr;
+
+	std::cout << "     " << h->GetXaxis()->GetBinLowEdge(binMin) << " - " << h->GetXaxis()->GetBinUpEdge(binMax) << " (bins " << binMin << " - " << binMax << "):  target uncertainty = " << targetUncert_.at(intervalIdx) << ",  scale = " << scale << std::endl;
+
+	for(int bin = binMin; bin <= binMax; ++bin) {
+	  h->SetBinError(bin,scale*sqrt(h->GetBinContent(bin)));
+	}
+      }
+      binMin = binMax+1;
+      binMax = binMin;
+    }
+  }
+
+
+  // --------------------------------------------------------------
+  void addTargetUncertaintyInInterval(double intervalMax, double targetUncert) {
+    if( intervalMax_.size() > 0 ) {
+      if( intervalMax < intervalMax_.back() ) {
+	std::cerr << "ERROR in UncertaintyManager::addTargetUncertaintyInInterval(): max=" << intervalMax << " > previous threshold (" << intervalMax_.back() << ")" << std::endl;
+      }
+    }
+    intervalMax_.push_back(intervalMax);
+    targetUncert_.push_back(targetUncert);
+  }
+
+
+private:
+  std::vector<double> intervalMax_;
+  std::vector<double> targetUncert_;
+};
+
+
 
 // --------------------------------------------------------------
 class HistContainer {
@@ -69,12 +95,12 @@ public:
   HistContainer(const TString &id, const TString &dataFileName, const TString &dataHistName, const TString &xTitle, const TString &xUnit, int rebin, double xMax)
     : id_(id), rebin_(rebin), xMax_(xMax) {
     
-    std::cout << "\n\n*****  Constructing spectra '" << id_ << "' ********************" << std::endl;
+    std::cout << "\n\n*****  Constructing " << id << " spectra ********************" << std::endl;
 
     data_ = util::FileOps::readTH1(dataFileName,dataHistName,id_+"data");
     util::HistOps::shiftStartOfXAxisToFirstPopulatedBin(data_);
     data_->UseCurrentStyle();
-    data_->SetTitle(util::StyleSettings::title(4600,true)); // Lumi rounded to one digit
+    data_->SetTitle(util::StyleSettings::title(4700,true)); // Lumi rounded to one digit
     data_->SetMarkerStyle(20);
     data_->SetNdivisions(505);
     if( rebin_ > 1 ) data_->Rebin(rebin_);
@@ -82,8 +108,8 @@ public:
     util::HistOps::setAxisTitles(data_,xTitle,xUnit,"events");
     util::HistOps::setYRange(data_,1,3E-1);
 
-    bkgStack_ = new THStack(id_+"BkgStack","");
     totalBkg_ = 0;
+    signal_ = 0;
   }
 
 
@@ -114,10 +140,8 @@ public:
   // --------------------------------------------------------------
   TLegend* legend() const {
     TLegend* leg = util::LabelFactory::createLegendColWithOffset(bkgs_.size(),0.6,0.06);
-    for(std::vector<Bkg>::const_reverse_iterator rit = bkgs_.rbegin();
-	rit != bkgs_.rend(); ++rit) {
-      const TH1* h = bkgHists_.find(*rit)->second;
-      leg->AddEntry(h,bkgLabel(*rit),"F");
+    for(BkgCIt it = bkgs_.begin(); it != bkgs_.end(); ++it) {
+      leg->AddEntry(it->second,bkgLabel(it->first),"F");
     }
 
     return leg;
@@ -125,13 +149,23 @@ public:
 
 
   // --------------------------------------------------------------
-  TGraphAsymmErrors* totalBkg() const {
+  THStack* bkgStack() const {
+    THStack* h = new THStack(id_+"BkgStack"+util::toTString(++COUNT),"");
+    for(BkgCRIt rit = bkgs_.rbegin(); rit != bkgs_.rend(); ++rit) {
+      TString name = rit->second->GetName();
+      h->Add(static_cast<TH1*>(rit->second->Clone(name+"InStack"+util::toTString(COUNT))));
+    }
+
+    return h;
+  }
+
+  // --------------------------------------------------------------
+  TGraphAsymmErrors* bkgUncertaintyBand() const {
     return util::HistOps::getUncertaintyBand(totalBkg_,kBlue+2,3004);
   }
 
-
   // --------------------------------------------------------------
-  TGraphAsymmErrors* bkgForRatio() const {
+  TGraphAsymmErrors* bkgRatio() const {
     TH1* h = static_cast<TH1*>(totalBkg_->Clone("tmp"));
     for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
       double relUncert = h->GetBinError(bin);
@@ -147,8 +181,13 @@ public:
 
 
   // --------------------------------------------------------------
-  TH1* dataForRatio() const {
-    TH1* h = static_cast<TH1*>(data_->Clone(id_+"dataInRatio"));
+  TH1* data() const {
+    return static_cast<TH1*>(data_->Clone(id_+"Data"+util::toTString(++COUNT)));
+  }
+
+  // --------------------------------------------------------------
+  TH1* dataRatio() const {
+    TH1* h = static_cast<TH1*>(data_->Clone(id_+"DataRatio"+util::toTString(++COUNT)));
     for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
       double relVal = h->GetBinContent(bin);
       double relUncert = h->GetBinError(bin);
@@ -164,11 +203,24 @@ public:
     return h;
   }
 
+  // --------------------------------------------------------------
+  TH1* signalExpectation() const {
+    return static_cast<TH1*>(signal_->Clone(id_+"SignalExpectation"+util::toTString(++COUNT)));
+  }
+
+
+  // --------------------------------------------------------------
+  void print() const {
+    std::cout << "\n  ------ Event yields ---------------------------------" << std::endl;
+    std::cout << "    Data: " << data_->Integral(1,10000) << std::endl;
+    for(BkgCIt it = bkgs_.begin(); it != bkgs_.end(); ++it) {
+      std::cout << "     " << bkgLabel(it->first) << ": " << it->second->Integral(1,10000) << std::endl;
+    }
+  }
+
 
   // --------------------------------------------------------------
   void addBkg(Bkg bkg, const TString &fileName, const TString &histName, double scale = 1.) {
-    bkgs_.push_back(bkg);
-
     TH1* h = util::FileOps::readTH1(fileName,histName,id_+"Bkg"+util::toTString(bkgs_.size()));
     util::HistOps::shiftStartOfXAxisToFirstPopulatedBin(h);
     h->UseCurrentStyle();
@@ -179,13 +231,10 @@ public:
     if( rebin_ > 1 && bkg != QCD ) h->Rebin(rebin_);
     h->GetXaxis()->SetRange(1,h->FindBin(xMax_));
     if( scale != 1. ) h->Scale(scale);
-
-    bkgHists_[bkg] = h;
-    bkgStack_->Add(h);
-
+    
     if( totalBkg_ == 0 ) {
       totalBkg_ = static_cast<TH1*>(h->Clone(id_+"TotalBkg"));
-      totalBkg_->Sumw2();
+      //totalBkg_->Sumw2();
       totalBkg_->SetMarkerStyle(0);
       //totalBkg_->SetFillStyle(3004);
       totalBkg_->SetFillStyle(3354);
@@ -193,160 +242,109 @@ public:
     } else {
       totalBkg_->Add(h);
     }
+
+    bkgs_[bkg] = h;
   }
-
-
-  // Scale integral of sum of background histograms
-  // to the total bkg prediction from the proper 
-  // combination
-  // --------------------------------------------------------------
-  void scaleTotalBkgTo(double targetTotalBkg) {
-    std::cout << "  Scaling the total background prediction from " << totalBkg_->Integral() << std::flush;
-    if( totalBkg_->Integral() ) totalBkg_->Scale(targetTotalBkg/totalBkg_->Integral());
-    std::cout << " to " << totalBkg_->Integral() << std::endl;
-  }
-
-
-  // Scale statistical uncertainty of background prediction
-  // in each bin such that the quadratic sum of all statistical
-  // uncertainties equals the target uncertainty
-  // --------------------------------------------------------------
-  void scaleTotalBkgStatUncertaintyTo(double bkgN, double targetStatUncert) {
-    std::cout << "  Scaling the total statistical uncertainty of the background" << std::endl;
-    double scale = 0.;
-    for(int bin = 1; bin <= totalBkg_->GetNbinsX(); ++bin) {
-      scale += pow(totalBkg_->GetBinError(bin),2);
-    }
-    scale = targetStatUncert/sqrt(scale);
-    for(int bin = 1; bin <= totalBkg_->GetNbinsX(); ++bin) {
-      totalBkg_->SetBinError(bin,scale*totalBkg_->GetBinError(bin));
-    }
-  }
-
 
 
   // --------------------------------------------------------------
-  void setTotalBkgSystUncertainty(double bkgN, double systUncert) { 
-    relBkgSystUncert_ = systUncert/bkgN;
+  void scaleBkgUncertainty(const UncertaintyManager* um) {
+    um->scaleUncertainties(totalBkg_);
   }
 
 
-  // Add statistical and systematic uncertainties to set total
-  // background uncertainty
   // --------------------------------------------------------------
-  void applyTotalBkgUncertainty() {
-    std::cout << "  Combining statistical and systematic uncertainty on background" << std::endl;
-    for(int bin = 1; bin <= totalBkg_->GetNbinsX(); ++bin) {
-      totalBkg_->SetBinError(bin,sqrt(pow(totalBkg_->GetBinError(bin),2)+pow(totalBkg_->GetBinContent(bin)*relBkgSystUncert_,2)));
-    }
+  void addSignalExpectation(const TString &fileName, const TString &histName) {
+    if( signal_ ) delete signal_;
+    signal_ = util::FileOps::readTH1(fileName,histName,id_+"SignalExpectation");
+    util::HistOps::shiftStartOfXAxisToFirstPopulatedBin(signal_);
+    signal_->UseCurrentStyle();
+    signal_->SetTitle("");
+    signal_->SetLineColor(600);
+    signal_->SetNdivisions(505);
+    if( rebin_ > 1 ) signal_->Rebin(rebin_);
+    signal_->GetXaxis()->SetRange(1,signal_->FindBin(xMax_));
   }
-
-
-
-  TH1* data_;
-  THStack* bkgStack_;
 
   
 private:
+  typedef std::map<Bkg,TH1*> Bkgs;
+  typedef std::map<Bkg,TH1*>::const_iterator BkgCIt;
+  typedef std::map<Bkg,TH1*>::const_reverse_iterator BkgCRIt;
+
+  mutable unsigned int COUNT;
+
   const TString id_;
   const int rebin_;
   const double xMax_;
+
+  TH1* data_;
   TH1* totalBkg_;
-  double relBkgSystUncert_;
-  std::vector<Bkg> bkgs_;
-  std::map<Bkg,TH1*> bkgHists_;
+  Bkgs bkgs_;
+  TH1* signal_;
 };
-
-
-// Set target values for the total background prediction
-// and the uncertainties. This is to ensure that the integrated
-// uncertainties of the final plot corresponds to the 
-// properly combined values which take into account correlations.
-// --------------------------------------------------------------
-void setBkgUncertainties(double &bkgN, double &bkgStatUncert, double &bkgSystUncert) {
-  // This is the total event yield from the proper combination
-  bkgN = BKG_TOTAL;		
-  // Approximated total stat uncertainty as quadratic sum of 
-  // individual bkg stat uncertainties (neglects e.g. correlation
-  // between control samples of lost-lepton and hadronic-tau methods)
-  bkgStatUncert = sqrt( pow(BKG_ZTOINV_STAT,2) + 
-			pow(BKG_LL_STAT,2)     +
-			pow(BKG_HADTAU_STAT,2) +
-			pow(BKG_QCD_STAT,2)      );
-  // Approximated total systematic uncertainty such that when
-  // adding the approximated total stat uncertainty the properly
-  // combined total uncertainty is regained
-  bkgSystUncert = sqrt( pow(BKG_TOTAL_UNCERT,2) - pow(bkgStatUncert,2) ); 
-}
   
 
 // --------------------------------------------------------------
-void plotSpectrum(const TString &id, const TString &xTitle, const TString &xUnit, int rebin, double xMax) {
+void plotSpectrum(const TString &id, const UncertaintyManager* um, const TString &xTitle, const TString &xUnit, int rebin, double xMax) {
   // Data
-  HistContainer spectra(id,"RA2Hists/Paper2011_PreApproval/hist_DataBaseline_4p65ifb.root","h_"+id,xTitle,xUnit,rebin,xMax);
+  HistContainer spectra(id,"RA2Hists/hist_DataBaseline_4p65ifb.root","h_"+id,xTitle,xUnit,rebin,xMax);
 
   // Add bkgs
   spectra.addBkg(QCD,"RA2Hists/QCD.root","QCD_"+id);
-  spectra.addBkg(LostLepton,"RA2Hists/Paper2011_PreApproval/LostLepton.root","LostLepton_"+id);
+  spectra.addBkg(LostLepton,"RA2Hists/LostLepton.root","LostLepton_"+id,1.04);
   spectra.addBkg(HadronicTau,"RA2Hists/HadTau.root","HadTau_"+id);
   spectra.addBkg(ZInv,"RA2Hists/Paper2011_PreApproval/hist_ZInvPredictedFromGJets_4p65ifb.root","h_RA2_"+id);
+  spectra.print();
 
-  // Scale uncertainties to baseline prediciton
-  double bkgN = 0.;
-  double bkgStatUncert = 0.;
-  double bkgSystUncert = 0.;
-  setBkgUncertainties(bkgN,bkgStatUncert,bkgSystUncert);
-  std::cout << "Total bkg: " << bkgN << " +/-" << bkgStatUncert << " (stat) +/-" << bkgSystUncert << " (syst)" << std::endl;
-  spectra.scaleTotalBkgTo(bkgN);
-  spectra.scaleTotalBkgStatUncertaintyTo(bkgN,bkgStatUncert);
-  spectra.setTotalBkgSystUncertainty(bkgN,bkgSystUncert);
-  spectra.applyTotalBkgUncertainty();
+  // Scale uncertainties
+  spectra.scaleBkgUncertainty(um);
 
+  // Add signal point
+  spectra.addSignalExpectation("LM5BaselineHisto_4p65_NLO.root","h_"+id);
 
-  // Do plots
-//   TCanvas* can = new TCanvas("can"+id,id,500,500);
-//   can->cd();
-//   spectra.data_->Draw("PE1");
-//   spectra.bkgStack_->Draw("HISTsame");
-//   spectra.data_->Draw("PE1same");
-//   spectra.legend()->Draw("same");
-//   can->SetLogy();
-//   gPad->RedrawAxis();
-//   can->SaveAs("RA2DataVsEstimatedBkg_"+id+".eps","eps");
-//   can->SaveAs("RA2DataVsEstimatedBkg_"+id+".root");
+  // Plots
+  TH1* hData = spectra.data();
+  TH1* hDataRatio = spectra.dataRatio();
+  THStack* sBkg = spectra.bkgStack();
+  TGraphAsymmErrors* gBkgUncert = spectra.bkgUncertaintyBand();
+  TGraphAsymmErrors* gBkgRatio = spectra.bkgRatio();
+  TH1* hSignal = spectra.signalExpectation();
+
+  // Labels
+  TPaveText* line = util::LabelFactory::createPaveTextWithOffset(1,0.7,0.006);
+  line->AddText("Bkg. predicted from data:");
+  line->SetTextSize(0.045);
+  TLegend* legBkg = spectra.legend();
+  TLegend* legData = util::LabelFactory::createLegendCol(2,-0.3);
+  legData->AddEntry(hData,"Data","P");
+  legData->AddEntry(hSignal,"LM5","L");
+  legData->SetTextSize(0.045);
 
   TCanvas* canRatio = util::HistOps::createRatioTopCanvas();
   TPad *bPad = util::HistOps::createRatioBottomPad();
-  TH1 *tFrame = util::HistOps::createRatioTopHist(spectra.data_);
-  TH1 *bFrame = util::HistOps::createRatioBottomFrame(spectra.data_,spectra.data_->GetXaxis()->GetTitle(),"",0.01,1.99);
-  bFrame->GetYaxis()->SetNdivisions(505);
+  TH1 *tFrame = util::HistOps::createRatioTopHist(hData);
+  TH1 *bFrame = util::HistOps::createRatioBottomFrame(hData,0.01,2.49);
+  bFrame->GetYaxis()->SetNdivisions(404);
   bFrame->GetYaxis()->SetTitle("Data / Bkg.");
 
   canRatio->cd();
   util::HistOps::setYRange(tFrame,1,3E-1);
   tFrame->Draw("PE1");
-  spectra.bkgStack_->Draw("HISTsame");
-  spectra.totalBkg()->Draw("E2same");
+  sBkg->Draw("HISTsame");
+  gBkgUncert->Draw("E2same");
+  hSignal->Draw("HISTsame");
   tFrame->Draw("PE1same");
-
-  // Label
-  TPaveText* line = util::LabelFactory::createPaveTextWithOffset(1,0.7,0.006);
-  line->AddText("Bkg. predicted from data:");
-  line->SetTextSize(0.045);
+  legData->Draw("same");
   line->Draw("same");
-  spectra.legend()->Draw("same");
-  TLegend* leg = util::LabelFactory::createLegendCol(1,-0.3);
-  leg->AddEntry(spectra.data_,"Data","P");
-  leg->SetTextSize(0.045);
-  leg->Draw("same");
-
+  legBkg->Draw("same");
   canRatio->SetLogy();
   gPad->RedrawAxis();
   bPad->Draw();
   bPad->cd();
   bFrame->Draw();
-  spectra.bkgForRatio()->Draw("E2same");
-  spectra.dataForRatio()->Draw("PE1same");
+  gBkgRatio->Draw("E2same");
+  hDataRatio->Draw("PE1same");
   canRatio->SaveAs("RA2DataVsEstimatedBkg_"+id+".eps","eps");
   canRatio->SaveAs("RA2DataVsEstimatedBkg_"+id+".png");
   canRatio->SaveAs("RA2DataVsEstimatedBkg_"+id+".root");
@@ -357,7 +355,20 @@ void plotSpectrum(const TString &id, const TString &xTitle, const TString &xUnit
 void plotCombinedSpectra() {
   util::StyleSettings::setStylePAS();
 
-  plotSpectrum("HT","H_{T}","GeV",2,2300);
-  plotSpectrum("MHT","#slash{H}_{T}","GeV",5,950);
-  //  plotSpectrum("MEff","M_{eff}","GeV",2,2000);
+  // HT spectrum
+  UncertaintyManager umHT;
+  umHT.addTargetUncertaintyInInterval(800.,128.98);
+  umHT.addTargetUncertaintyInInterval(1000.,36.29);
+  umHT.addTargetUncertaintyInInterval(1200.,16.88);
+  umHT.addTargetUncertaintyInInterval(1400.,9.36);
+  umHT.addTargetUncertaintyInInterval(100000.,9.6);
+  plotSpectrum("HT",&umHT,"H_{T}","GeV",2,2300);
+
+  // MHT spectrum
+  UncertaintyManager umMHT;
+  umMHT.addTargetUncertaintyInInterval(350.,131.67);
+  umMHT.addTargetUncertaintyInInterval(500.,31.43);
+  umMHT.addTargetUncertaintyInInterval(600.,8.65);
+  umMHT.addTargetUncertaintyInInterval(100000.,4.22);
+  plotSpectrum("MHT",&umMHT,"#slash{H}_{T}","GeV",5,950);
 }
