@@ -1,4 +1,4 @@
-// $Id: plotCombinedSpectra.C,v 1.11 2012/03/15 23:08:34 mschrode Exp $
+// $Id: plotCombinedSpectra.C,v 1.12 2012/03/18 20:16:47 mschrode Exp $
 
 // Compare HT and MHT spectra in data with bkg. prediction
 
@@ -28,7 +28,7 @@
 // --------------------------------------------------------------
 // --------------------------------------------------------------
 enum Bkg { ZInv, HadronicTau, LostLepton, QCD }; // Determines plotting order
-enum UncertaintyCombinationMethod { BinsStat, InclSystStat };
+enum UncertaintyCombinationMethod { Stat, PredSystStat };
 
 
 
@@ -49,36 +49,67 @@ public:
     std::cout << "\n  ------ Scaling uncertainties ------------------------" << std::endl;
 
     for(std::map<Bkg,TH1*>::iterator bit = bkgs.begin(); bit != bkgs.end(); ++bit) {
-      std::map<Bkg,double>::const_iterator systIt = systUncerts_.find(bit->first);
-      std::map<Bkg,double>::const_iterator statIt = statUncerts_.find(bit->first);
-      if( systIt == systUncerts_.end() || statIt == statUncerts_.end() ) {
+      std::cout << "     Bkg '" << bit->first << "':" << std::endl;
+      BkgMap::const_iterator intvIt = intervalMax_.find(bit->first);
+      BkgMap::const_iterator predIt = centralPred_.find(bit->first);
+      BkgMap::const_iterator systIt = systUncerts_.find(bit->first);
+      BkgMap::const_iterator statIt = statUncerts_.find(bit->first);
+      if( intvIt == intervalMax_.end() || systIt == systUncerts_.end() || statIt == statUncerts_.end() ) {
 	std::cerr << "ERROR: missing target uncertainties for bkg '" << bit->first << "'" << std::endl;
 	exit(1);
       } else {
-	// Total target uncertainty 
-	double totS = sqrt( pow(statIt->second,2.) + pow(systIt->second,2.) );
-	// Scale factor for bin uncertainties
-	double scale = 0.;
-	for(int bin = 1; bin <= bit->second->GetNbinsX(); ++bin) {
-	  double n = bit->second->GetBinContent(bin);
-	  scale += n + n*n;
-	}
-	scale = totS / sqrt(scale);
-	// Scale bin uncertainties
-	for(int bin = 1; bin <= bit->second->GetNbinsX(); ++bin) {
-	  double n = bit->second->GetBinContent(bin);
-	  double e = scale*sqrt(n + n*n);
-	  bit->second->SetBinError(bin,e);
-	}	  
-      }
-    }
+	int binMin = 1;
+	int binMax = binMin;
+	for(size_t intervalIdx = 0; intervalIdx < intvIt->second.size(); ++intervalIdx) {
+	  // Scale bin content
+	  double totP = predIt->second.at(intervalIdx);
+	  double scalePred = 0.;
+	  for(int bin = binMin; bin <= bit->second->GetNbinsX(); ++bin,++binMax) {
+	    if( bit->second->GetXaxis()->GetBinUpEdge(bin) > intvIt->second.at(intervalIdx) ) {
+	      break;
+	    } else {
+	      scalePred += bit->second->GetBinContent(bin);
+	    }
+	  }
+	  --binMax;
+	  scalePred = totP/scalePred;
+	  for(int bin = binMin; bin <= binMax; ++bin) {
+	    double n = bit->second->GetBinContent(bin);
+	    bit->second->SetBinContent(bin,scalePred*n);
+	  }	  
+
+	  // Scale bin uncertainties
+	  double totS = sqrt( pow(statIt->second.at(intervalIdx),2.) + pow(systIt->second.at(intervalIdx),2.) );
+	  double scaleUncert = 0.;
+	  for(int bin = binMin; bin <= binMax; ++bin) {
+	    double n = bit->second->GetBinContent(bin);
+	    scaleUncert += n + n*n;
+	  }	
+	  scaleUncert = totS / sqrt(scaleUncert);
+	  for(int bin = binMin; bin <= binMax; ++bin) {
+	    double n = bit->second->GetBinContent(bin);
+	    double e = scaleUncert*sqrt(n + n*n);
+	    bit->second->SetBinError(bin,e);
+	  }	  
+	  binMin = binMax+1;
+	  binMax = binMin;
+
+	  std::cout << "       " << bit->second->GetXaxis()->GetBinLowEdge(binMin) << " - " << bit->second->GetXaxis()->GetBinUpEdge(binMax) << " (bins " << binMin << " - " << binMax << ")" << std::endl;
+	  std::cout << "         target central value = " << totP << ",  scale = " << scalePred << std::endl;
+	  std::cout << "         target uncertainty   = " << totS << ",  scale = " << scaleUncert << std::endl;
+	} // End of loop over intervals
+      } // End if all bkgs are defined
+    } // End of loop over all bkgs
 
     for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
+      double totEntries = 0;
       double totUncert = 0.;
       for(std::map<Bkg,TH1*>::iterator bit = bkgs.begin(); bit != bkgs.end(); ++bit) {
+	totEntries += bit->second->GetBinContent(bin);
 	totUncert += pow(bit->second->GetBinError(bin),2);
       }
       totUncert = sqrt(totUncert);
+      h->SetBinContent(bin,totEntries);
       h->SetBinError(bin,totUncert);
     }
   }
@@ -89,10 +120,10 @@ public:
     std::cout << "\n  ------ Scaling uncertainties ------------------------" << std::endl;
     int binMin = 1;
     int binMax = binMin;
-    for(size_t intervalIdx = 0; intervalIdx < intervalMax_.size(); ++intervalIdx) {
+    for(size_t intervalIdx = 0; intervalIdx < intervalMax_.begin()->second.size(); ++intervalIdx) {
       double sumErr = 0.;
       for(int bin = binMin; bin <= h->GetNbinsX(); ++bin,++binMax) {
-	if( h->GetXaxis()->GetBinUpEdge(bin) > intervalMax_.at(intervalIdx) ) {
+	if( h->GetXaxis()->GetBinUpEdge(bin) > intervalMax_.begin()->second.at(intervalIdx) ) {
 	  break;
 	} else {
 	  sumErr += h->GetBinContent(bin);
@@ -106,7 +137,7 @@ public:
 	std::cout << "     " << h->GetXaxis()->GetBinLowEdge(binMin) << " - " << h->GetXaxis()->GetBinUpEdge(binMax) << " (bins " << binMin << " - " << binMax << "):  target uncertainty = " << targetUncert_.at(intervalIdx) << ",  scale = " << scale << ",  sumErr = " << sumErr << std::endl;
 
 	for(int bin = binMin; bin <= binMax; ++bin) {
-	  std::cout << "       > " << bin << ": e = " << scale*sqrt(h->GetBinContent(bin)) << std::endl;
+	  //	  std::cout << "       > " << bin << ": e = " << scale*sqrt(h->GetBinContent(bin)) << std::endl;
 	  h->SetBinError(bin,scale*sqrt(h->GetBinContent(bin)));
 	}
       }
@@ -117,28 +148,37 @@ public:
 
 
   // --------------------------------------------------------------
-  void addTargetUncertainties(Bkg bkg, double syst, double stat) {
-    if( statUncerts_.find(bkg) != statUncerts_.end() ) {
-      std::cerr << "WARNING: uncertainties already added for bkg '" << bkg << "': Ignoring input" << std::endl;
+  void addTargetUncertainties(double intervalMax, Bkg bkg, double pred, double syst, double stat) {
+    if( method_ != PredSystStat ) {
+      std::cerr << "ERROR: incompatible uncertainty combination method" << std::endl;
+      exit(1);
+    }
+
+    if( intervalMax_.find(bkg) == intervalMax_.end() ) {
+      intervalMax_[bkg] = std::vector<double>(1,intervalMax);
+      centralPred_[bkg] = std::vector<double>(1,pred);
+      statUncerts_[bkg] = std::vector<double>(1,stat);
+      systUncerts_[bkg] = std::vector<double>(1,syst);
     } else {
-      statUncerts_[bkg] = stat;
-      systUncerts_[bkg] = syst;
+      intervalMax_.find(bkg)->second.push_back(intervalMax);
+      centralPred_.find(bkg)->second.push_back(pred);
+      statUncerts_.find(bkg)->second.push_back(stat);
+      systUncerts_.find(bkg)->second.push_back(syst);
     }
   }
 
 
   // --------------------------------------------------------------
   void addTargetUncertaintyInInterval(double intervalMax, double targetUncert) {
-    if( method_ != BinsStat ) {
+    if( method_ != Stat ) {
       std::cerr << "ERROR: incompatible uncertainty combination method" << std::endl;
       exit(1);
     }
-    if( intervalMax_.size() > 0 ) {
-      if( intervalMax < intervalMax_.back() ) {
-	std::cerr << "ERROR in UncertaintyManager::addTargetUncertaintyInInterval(): max=" << intervalMax << " > previous threshold (" << intervalMax_.back() << ")" << std::endl;
-      }
+    if( intervalMax_.size() == 0 ) {
+      intervalMax_[QCD] = std::vector<double>(1,intervalMax);
+    } else {
+      intervalMax_.begin()->second.push_back(intervalMax);
     }
-    intervalMax_.push_back(intervalMax);
     targetUncert_.push_back(targetUncert);
   }
 
@@ -148,11 +188,11 @@ public:
     std::cout << "\n  ------ Scaled uncertainties -------------------------" << std::endl;
     int binMin = 1;
     int binMax = binMin;
-    for(size_t intervalIdx = 0; intervalIdx < intervalMax_.size(); ++intervalIdx) {
+    for(size_t intervalIdx = 0; intervalIdx < intervalMax_.begin()->second.size(); ++intervalIdx) {
       double sumVal = 0.;
       double sumErr = 0.;
       for(int bin = binMin; bin <= h->GetNbinsX(); ++bin,++binMax) {
-	if( h->GetXaxis()->GetBinUpEdge(bin) > intervalMax_.at(intervalIdx) ) {
+	if( h->GetXaxis()->GetBinUpEdge(bin) > intervalMax_.begin()->second.at(intervalIdx) ) {
 	  break;
 	} else {
 	  sumVal += h->GetBinContent(bin);
@@ -172,28 +212,54 @@ public:
     std::cout << "\n  ------ Scaled uncertainties -------------------------" << std::endl;
 
     for(std::map<Bkg,TH1*>::const_iterator bit = bkgs.begin(); bit != bkgs.end(); ++bit) {
-      double totErr = 0.;
-      for(int bin = 1; bin <= bit->second->GetNbinsX(); ++bin) {
-	totErr += pow(bit->second->GetBinError(bin),2.);
-      }
-      double syst = systUncerts_.find(bit->first)->second;
-      double stat = statUncerts_.find(bit->first)->second;
-      std::cout << "     Bkg '" << bit->first << "': target uncertainty = " << sqrt( pow(stat,2.) + pow(syst,2.) ) << " ( = sqrt( " << syst << "^2 + " << stat << "^2 ) ),  err = " << sqrt(totErr) << std::endl;
-    }
-    double totErr = 0.;
-    for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
-      totErr += pow(h->GetBinError(bin),2.);
-    }
-    std::cout << "     err = " << sqrt(totErr) << std::endl;
-  }
-  
+      std::cout << "     Bkg '" << bit->first << "':" << std::endl;
+
+      BkgMap::const_iterator intvIt = intervalMax_.find(bit->first);
+      BkgMap::const_iterator predIt = centralPred_.find(bit->first);
+      BkgMap::const_iterator systIt = systUncerts_.find(bit->first);
+      BkgMap::const_iterator statIt = statUncerts_.find(bit->first);
+
+      int binMin = 1;
+      int binMax = binMin;
+      double totEntriesAllInt = 0.;
+      double totErrAllInt = 0.;
+      for(size_t intervalIdx = 0; intervalIdx < intvIt->second.size(); ++intervalIdx) {
+	double totEntries = 0.;
+	double totErr = 0.;
+	for(int bin = binMin; bin <= bit->second->GetNbinsX(); ++bin,++binMax) {
+	  if( bit->second->GetXaxis()->GetBinUpEdge(bin) > intvIt->second.at(intervalIdx) ) {
+	    break;
+	  } else {
+	    totEntries += bit->second->GetBinContent(bin);
+	    totErr += pow(bit->second->GetBinError(bin),2.);
+	  }	
+	}
+	--binMax;
+	totEntriesAllInt += totEntries;
+	totErrAllInt += totErr;
+
+	double pred = predIt->second.at(intervalIdx);
+	double syst = systIt->second.at(intervalIdx);
+	double stat = statIt->second.at(intervalIdx);
+	std::cout << "       " << h->GetXaxis()->GetBinLowEdge(binMin) << " - " << h->GetXaxis()->GetBinUpEdge(binMax) << " (bins " << binMin << " - " << binMax << ")" << std::endl;
+	std::cout << "          target central value = " << pred << ",  val = " << totEntries << std::endl;
+	std::cout << "          target uncertainty   = " << sqrt( pow(stat,2.) + pow(syst,2.) ) << " ( = sqrt( " << syst << "^2 + " << stat << "^2 ) ),  err = " << sqrt(totErr) << std::endl;
+	binMin = binMax+1;
+	binMax = binMin;
+      } // End of loop over intervals
+      std::cout << "       Total bkg '" << bit->first << "': " << totEntriesAllInt << " +/- " << sqrt(totErrAllInt) << std::endl;
+    } // End of loop over bkgs
+  }  
 
 private:
+  typedef std::map< Bkg, std::vector<double> > BkgMap;
+
   const UncertaintyCombinationMethod method_;
 
-  std::map<Bkg,double> statUncerts_;
-  std::map<Bkg,double> systUncerts_;  
-  std::vector<double> intervalMax_;
+  BkgMap intervalMax_;  
+  BkgMap centralPred_;
+  BkgMap statUncerts_;
+  BkgMap systUncerts_;  
   std::vector<double> targetUncert_;
 };
 
@@ -360,10 +426,10 @@ public:
 
   // --------------------------------------------------------------
   void scaleBkgUncertainty(const UncertaintyManager* um) {
-    if( um->method() == BinsStat ) {
+    if( um->method() == Stat ) {
       um->scaleUncertainties(totalBkg_);
       um->printUncertainties(totalBkg_);
-    } else if( um->method() == InclSystStat ) {
+    } else if( um->method() == PredSystStat ) {
       um->scaleUncertainties(bkgs_,totalBkg_);
       um->printUncertainties(bkgs_,totalBkg_);
     }
@@ -472,35 +538,93 @@ void plotSpectrum(const TString &id, const UncertaintyManager* um, const TString
 void plotCombinedSpectra() {
   util::StyleSettings::setStylePAS();
 
-  // HT spectrum
-  UncertaintyManager um(InclSystStat);
-   um.addTargetUncertainties(ZInv,81.,16.);
-   um.addTargetUncertainties(LostLepton,0.5*(55.2+53.7),22.4);
-   um.addTargetUncertainties(HadronicTau,0.5*(38.2+35.6),16.);
-   um.addTargetUncertainties(QCD,0.5*(188.03+186.43),21.38);
-  plotSpectrum("HT",&um,"H_{T}","GeV",2,2300);
+//   // HT spectrum
+//   UncertaintyManager um(InclPredSystStat);
+//    um.addTargetUncertainties(ZInv,81.,16.);
+//    um.addTargetUncertainties(LostLepton,0.5*(55.2+53.7),22.4);
+//    um.addTargetUncertainties(HadronicTau,0.5*(38.2+35.6),16.);
+//    um.addTargetUncertainties(QCD,0.5*(188.03+186.43),21.38);
+//   plotSpectrum("HT",&um,"H_{T}","GeV",2,2300);
 
-  // MHT spectrum
-  plotSpectrum("MHT",&um,"#slash{H}_{T}","GeV",5,950);
-
-
-
+//   // MHT spectrum
+//   plotSpectrum("MHT",&um,"#slash{H}_{T}","GeV",5,950);
 
 
 //   // HT spectrum
-//   UncertaintyManager umHT(BinsStat);
+//   UncertaintyManager umHT(Stat);
 //   umHT.addTargetUncertaintyInInterval(800.,128.98);
 //   umHT.addTargetUncertaintyInInterval(1000.,36.29);
 //   umHT.addTargetUncertaintyInInterval(1200.,16.88);
 //   umHT.addTargetUncertaintyInInterval(1400.,9.36);
 //   umHT.addTargetUncertaintyInInterval(100000.,9.6);
 //   plotSpectrum("HT",&umHT,"H_{T}","GeV",2,2300);
-
+  
 //   // MHT spectrum
-//   UncertaintyManager umMHT;
+//   UncertaintyManager umMHT(Stat);
 //   umMHT.addTargetUncertaintyInInterval(350.,131.67);
 //   umMHT.addTargetUncertaintyInInterval(500.,31.43);
 //   umMHT.addTargetUncertaintyInInterval(600.,8.65);
 //   umMHT.addTargetUncertaintyInInterval(100000.,4.22);
 //   plotSpectrum("MHT",&umMHT,"#slash{H}_{T}","GeV",5,950);
+
+
+
+  // HT spectrum
+  UncertaintyManager umHT(PredSystStat);
+
+  umHT.addTargetUncertainties(	800	,       ZInv	,	494.1	,	85.2601313627888	,	13.3311664905964	);
+  umHT.addTargetUncertainties(	1000	,	ZInv	,	74.8	,	20.42914584607	,	5.09607692249636	);
+  umHT.addTargetUncertainties(	1200	,	ZInv	,	18.7	,	6.63626400921482	,	2.6134268690744	);
+  umHT.addTargetUncertainties(	1400	,	ZInv	,	5.4	,	2.70185121722126	,	1.34536240470737	);
+  umHT.addTargetUncertainties(	100000	,	ZInv	,	3.2	,	2.2	,	0.7	);
+										
+  umHT.addTargetUncertainties(	800	,	LostLepton	,      376.8	,	40.8800684930933	,	22.8354986807821	);
+  umHT.addTargetUncertainties(	1000	,	LostLepton	,	65.4	,	7.15891053163818	,	13.6436798555229	);
+  umHT.addTargetUncertainties(	1200	,	LostLepton	,	19.2	,	1.86279360101972	,	5.37680202350803	);
+  umHT.addTargetUncertainties(	1400	,	LostLepton	,	6.2	,	0.58309518948453	,	2.30217288664427	);
+  umHT.addTargetUncertainties(	100000	,	LostLepton	,	2.6	,	0.4	,	1.5	);
+										
+  umHT.addTargetUncertainties(	800	,	HadronicTau	,	422.16	,	27.954195856794	,	15.4300226830682	);
+  umHT.addTargetUncertainties(	1000	,	HadronicTau	,	65.72	,	5.00833345535219	,	5.55847829895917	);
+  umHT.addTargetUncertainties(	1200	,	HadronicTau	,	27.11	,	2.11494633501656	,	4.01393821576765	);
+  umHT.addTargetUncertainties(	1400	,	HadronicTau	,	6.769	,	0.740121611628792	,	1.70789461033168	);
+  umHT.addTargetUncertainties(	100000	,	HadronicTau	,	1.08	,	0.159	,	0.481	);
+										
+  umHT.addTargetUncertainties(	800	,	QCD	,	120.12	,	76.00947572507	,	12.1070062360602	);
+  umHT.addTargetUncertainties(	1000	,	QCD	,	36.24	,	24.0133566999701	,	5.41653948568641	);
+  umHT.addTargetUncertainties(	1200	,	QCD	,	20.18	,	12.0029204779504	,	4.44658295773283	);
+  umHT.addTargetUncertainties(	1400	,	QCD	,	11.84	,	7.60263112349929	,	3.4410608829255	);
+  umHT.addTargetUncertainties(	100000	,	QCD	,	11.9	,	8.1	,	3.8	);
+
+  plotSpectrum("HT",&umHT,"H_{T}","GeV",2,2300);
+  
+
+  // MHT spectrum
+  UncertaintyManager umMHT(PredSystStat);
+  umMHT.addTargetUncertainties(	350	,	ZInv	,	424.7	,	83.3394264439107	,	11.8570654042221	);
+  umMHT.addTargetUncertainties(	500	,	ZInv	,	135.8	,	27.170940359141	,	7.60394634384015	);
+  umMHT.addTargetUncertainties(	600	,	ZInv	,	26.9	,	6.96921803361037	,	3.38378486313773	);
+  umMHT.addTargetUncertainties(	100000	,	ZInv	,	8.8	,	3.24499614791759	,	1.72046505340853	);
+  
+  
+  umMHT.addTargetUncertainties(	350	,	LostLepton	,	400.5	,	40.9609570200697	,	25.9984614929422	);
+  umMHT.addTargetUncertainties(	500	,	LostLepton	,	59.5	,	6.88912185985993	,	7.75370878999205	);
+  umMHT.addTargetUncertainties(	600	,	LostLepton	,	8.7	,	1.0295630140987	,	2.62678510731274	);
+  umMHT.addTargetUncertainties(	100000	,	LostLepton	,	1.5	,	0.282842712474619	,	1.06301458127347	);
+  
+  
+  umMHT.addTargetUncertainties(	350	,	HadronicTau	,	434.45	,	27.9305276892507	,	15.8426153459585	);
+  umMHT.addTargetUncertainties(	500	,	HadronicTau	,	73.139	,	5.47683932574254	,	5.36030820009447	);
+  umMHT.addTargetUncertainties(	600	,	HadronicTau	,	12.25	,	1.09719551584939	,	2.36450438781576	);
+  umMHT.addTargetUncertainties(	100000	,	HadronicTau	,	3	,	0.502538555734781	,	1.71172427686237	);
+										
+  
+  umMHT.addTargetUncertainties(	350	,	QCD	,	196.2	,	81.3595108146552	,	14.7461859475595	);
+  umMHT.addTargetUncertainties(	500	,	QCD	,	3.98	,	1.47905375155875	,	2.10309296038002	);
+  umMHT.addTargetUncertainties(	600	,	QCD	,	0.09	,	0.0616441400296898	,	0.29748949561287	);
+  umMHT.addTargetUncertainties(	100000	,	QCD	,	0.01	,	0.02	,	0.1	);
+  
+  plotSpectrum("MHT",&umMHT,"#slash{H}_{T}","GeV",5,950);
+
+
 }
