@@ -1,4 +1,4 @@
-// $Id: plotToyMCResults.C,v 1.1 2012/02/05 21:37:09 mschrode Exp $
+// $Id: plotToyMCResults.C,v 1.2 2012/02/06 14:25:12 mschrode Exp $
 
 #include <iomanip>
 #include <iostream>
@@ -28,10 +28,10 @@
 const double PT_CUT_MIN = 250.;
 const double PT_CUT_MAX = 300.;
 const TString LABEL_MC = "Toy Simulation";
-const TString LABEL_TRUTH = "x^{true}";
-const TString LABEL_PT_CUT = "x^{true}";
-const TString LABEL_DELTA_PT = "|#Deltax|";
-const TString LABEL_PT_BIN = util::toTString(PT_CUT_MIN)+" < "+LABEL_PT_CUT+" < "+util::toTString(PT_CUT_MAX);
+const TString LABEL_TRUTH = "p^{true}_{T} GeV";
+const TString LABEL_PT_CUT = "p^{true}_{T}";
+const TString LABEL_DELTA_PT = "|#Deltap_{T}| GeV";
+const TString LABEL_PT_BIN = util::toTString(PT_CUT_MIN)+" < "+LABEL_PT_CUT+" < "+util::toTString(PT_CUT_MAX)+" GeV";
 const TString LABEL_ASYMMETRY = "Asymmetry";
 const TString LABEL_RESPONSE = "Response";
 const int MARKER_STYLE_DIS = 21;
@@ -209,7 +209,7 @@ void plotToyMCResults(const TString &fileNameResults, const TString &model, cons
 
   TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,-0.6,label->GetSize());
   leg->AddEntry(hParScan,"Likelihood L(#sigma)","L");
-  leg->AddEntry(parabola,"Gaussian likelihood","L");
+  leg->AddEntry(parabola,"Parabolic likelihood","L");
 
   hParScan->SetTitle("");
   util::HistOps::setAxisTitles(hParScan,"#sigma","","#DeltaF = -2#upoint[lnL(#sigma) - lnL(#hat{#sigma})]");
@@ -242,4 +242,100 @@ void plotToyMCResults(const TString &fileNameResults, const TString &model, cons
   std::cout << std::endl << " Mean ptGen = " << meanPtGen << std::endl;
   std::cout << " Expected resolution = " << sqrt( 4.*4. + 1.2*1.2*meanPtGen + 0.05*0.05*meanPtGen*meanPtGen ) << std::endl;
   
+}
+
+
+// ------------------------------------------------------------
+void plotPullDistribution(const TString &fileNamePrefix, unsigned int nFiles, const TString &model, const TString &outNamePrefix) {
+  gErrorIgnoreLevel = 1001;
+  util::StyleSettings::setStyleNoteNoTitle();
+
+  // determine expected resolution
+  double expReso = 0.;
+  if( model.Contains("1") ) {
+    expReso = 20.;
+  } else if( model.Contains("2") ) {
+    TH1* h = new TH1D("hSpec","",1000,200.,500.);
+    for(unsigned int n = 0; n < nFiles; ++n) {
+      // PtGenSpectrum
+      TH1* hPtGen = util::FileOps::readTH1(fileNamePrefix+util::toTString(n)+".root","hPtGen");
+      h->Fill(hPtGen->GetMean());
+      delete hPtGen;
+    }
+    double p = h->GetMean();
+    delete h;
+    expReso = p*sqrt( 4.*4./p/p + 1.2*1.2/p + 0.05*0.05 );
+  }
+
+  // fill pull and resolution
+  TH1* hPull = new TH1D("hPull",";(#hat{#sigma} - #LT#sigma#GT) / #delta#hat{#sigma};Number of Fits",100,-5.,5.);
+  TH1* hReso = new TH1D("hReso",";#hat{#sigma} (GeV);Number of Fits",50,expReso-0.9,expReso+0.9);
+
+  for(unsigned int n = 0; n < nFiles; ++n) {
+    // Fitted resolution
+    TH1* hParameters = util::FileOps::readTH1(fileNamePrefix+util::toTString(n)+".root","hAbsoluteParameters");
+    const double fitRes = hParameters->GetBinContent(1);
+    const double fitErr = hParameters->GetBinError(1);
+    delete hParameters;
+    hPull->Fill((fitRes-expReso)/fitErr);
+    hReso->Fill(fitRes);
+  } // End of loop over files
+
+  // Gaussian fit to distributions
+  hReso->Fit("gaus","0ILL");
+  TF1* fReso = hReso->GetFunction("gaus");
+  fReso->SetName("fReso");
+  fReso->SetLineColor(kBlue);
+  fReso->SetLineWidth(2);
+
+  hPull->Fit("gaus","0ILL");
+  TF1* fPull = hPull->GetFunction("gaus");
+  fPull->SetName("fPull");
+  fPull->SetLineColor(kBlue);
+  fPull->SetLineWidth(2);
+
+  // position of expected resolution
+  TLine* lExpRes = new TLine(expReso,0.,expReso,1.05*hReso->GetBinContent(hReso->GetMaximumBin()));
+  lExpRes->SetLineWidth(2);
+  lExpRes->SetLineStyle(2);
+  lExpRes->SetLineColor(hReso->GetLineColor());
+
+  // Labels
+  TPaveText* label = util::LabelFactory::createPaveText(1);
+  label->AddText(LABEL_MC+", "+model);
+
+  TLegend* legReso = util::LabelFactory::createLegendWithOffset(5,label->GetSize());
+  legReso->AddEntry(lExpRes,"Expected resolution #LT#sigma#GT = "+util::toTString(expReso,util::firstSigDigit(fReso->GetParError(1))+1)+" GeV","L");
+  legReso->AddEntry(hReso,"Fitted resolution #hat{#sigma}","L");
+  legReso->AddEntry(fReso,"Gaussian fit to distribution","L");
+  util::LabelFactory::addExtraLegLine(legReso," mean = "+util::toTString(fReso->GetParameter(1),util::firstSigDigit(fReso->GetParError(1))+1)+" #pm "+util::toTString(fReso->GetParError(1),util::firstSigDigit(fReso->GetParError(1))+1)+" GeV");
+  util::LabelFactory::addExtraLegLine(legReso," width = "+util::toTString(fReso->GetParameter(2),util::firstSigDigit(fReso->GetParError(2))+1)+" #pm "+util::toTString(fReso->GetParError(2),util::firstSigDigit(fReso->GetParError(2))+1)+" GeV");
+
+  TLegend* legPull = util::LabelFactory::createLegendColWithOffset(4,-0.75,label->GetSize());
+  legPull->AddEntry(hReso,"Fitted pull (#hat{#sigma} - #LT#sigma#GT) / #delta#hat{#sigma}","L");
+  legPull->AddEntry(fReso,"Gaussian fit to distribution","L");
+  util::LabelFactory::addExtraLegLine(legPull," mean = "+util::toTString(fPull->GetParameter(1),util::firstSigDigit(fPull->GetParError(1))+1)+" #pm "+util::toTString(fPull->GetParError(1),util::firstSigDigit(fPull->GetParError(1))+1)+" GeV");
+  util::LabelFactory::addExtraLegLine(legPull," width = "+util::toTString(fPull->GetParameter(2),util::firstSigDigit(fPull->GetParError(2))+1)+" #pm "+util::toTString(fPull->GetParError(2),util::firstSigDigit(fPull->GetParError(2))+1)+" GeV");
+
+  util::HistOps::setYRange(hReso,label->GetSize()+legReso->GetNRows());
+  util::HistOps::setYRange(hPull,label->GetSize()+legPull->GetNRows());
+
+  TCanvas* canPull = new TCanvas("canPull","Pull",500,500);
+  canPull->cd();
+  hPull->Draw("HIST");
+  fPull->Draw("same");
+  label->Draw("same");
+  legPull->Draw("same");
+  gPad->RedrawAxis();
+  canPull->SaveAs(outNamePrefix+"_Pull.eps","eps");
+
+  TCanvas* canReso = new TCanvas("canReso","Reso",500,500);
+			     canReso->cd();
+  hReso->Draw("HIST");
+  lExpRes->Draw("same");
+  fReso->Draw("same");
+  label->Draw("same");
+  legReso->Draw("same");
+  gPad->RedrawAxis();
+  canReso->SaveAs(outNamePrefix+"_Sigma.eps","eps");
 }
