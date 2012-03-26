@@ -1,4 +1,4 @@
-// $Id: plotToyMCResults.C,v 1.2 2012/02/06 14:25:12 mschrode Exp $
+// $Id: plotToyMCResults.C,v 1.3 2012/03/22 19:24:52 mschrode Exp $
 
 #include <iomanip>
 #include <iostream>
@@ -28,9 +28,9 @@
 const double PT_CUT_MIN = 250.;
 const double PT_CUT_MAX = 300.;
 const TString LABEL_MC = "Toy Simulation";
-const TString LABEL_TRUTH = "p^{true}_{T} GeV";
+const TString LABEL_TRUTH = "p^{true}_{T} (GeV)";
 const TString LABEL_PT_CUT = "p^{true}_{T}";
-const TString LABEL_DELTA_PT = "|#Deltap_{T}| GeV";
+const TString LABEL_DELTA_PT = "|#Deltap_{T}| (GeV)";
 const TString LABEL_PT_BIN = util::toTString(PT_CUT_MIN)+" < "+LABEL_PT_CUT+" < "+util::toTString(PT_CUT_MAX)+" GeV";
 const TString LABEL_ASYMMETRY = "Asymmetry";
 const TString LABEL_RESPONSE = "Response";
@@ -212,7 +212,7 @@ void plotToyMCResults(const TString &fileNameResults, const TString &model, cons
   leg->AddEntry(parabola,"Parabolic likelihood","L");
 
   hParScan->SetTitle("");
-  util::HistOps::setAxisTitles(hParScan,"#sigma","","#DeltaF = -2#upoint[lnL(#sigma) - lnL(#hat{#sigma})]");
+  util::HistOps::setAxisTitles(hParScan,"#sigma (GeV)","","#DeltaF = -2#upoint[lnL(#sigma) - lnL(#hat{#sigma})]");
   hParScan->GetXaxis()->SetNdivisions(505);
   hParScan->SetLineWidth(LINE_WIDTH);
   hParScan->SetLineColor(COLOR_DIS);
@@ -250,15 +250,26 @@ void plotPullDistribution(const TString &fileNamePrefix, unsigned int nFiles, co
   gErrorIgnoreLevel = 1001;
   util::StyleSettings::setStyleNoteNoTitle();
 
+  // set of input files
+  std::vector<TString> fileNames;
+  for(unsigned int n = 0; n < nFiles; ++n) {
+    TString tmp = fileNamePrefix+util::toTString(n)+".root";
+    TFile f(tmp,"READ");
+    if( f.IsOpen() ) {
+      f.Close();
+      fileNames.push_back(tmp);
+    }
+  }
+
   // determine expected resolution
   double expReso = 0.;
   if( model.Contains("1") ) {
     expReso = 20.;
   } else if( model.Contains("2") ) {
     TH1* h = new TH1D("hSpec","",1000,200.,500.);
-    for(unsigned int n = 0; n < nFiles; ++n) {
+    for(unsigned int n = 0; n < fileNames.size(); ++n) {
       // PtGenSpectrum
-      TH1* hPtGen = util::FileOps::readTH1(fileNamePrefix+util::toTString(n)+".root","hPtGen");
+      TH1* hPtGen = util::FileOps::readTH1(fileNames.at(n),"hPtGen");
       h->Fill(hPtGen->GetMean());
       delete hPtGen;
     }
@@ -268,12 +279,16 @@ void plotPullDistribution(const TString &fileNamePrefix, unsigned int nFiles, co
   }
 
   // fill pull and resolution
-  TH1* hPull = new TH1D("hPull",";(#hat{#sigma} - #LT#sigma#GT) / #delta#hat{#sigma};Number of Fits",100,-5.,5.);
-  TH1* hReso = new TH1D("hReso",";#hat{#sigma} (GeV);Number of Fits",50,expReso-0.9,expReso+0.9);
+  TH1* hPull = new TH1D("hPull",";(#hat{#sigma} - #LT#sigma#GT) / #delta#hat{#sigma};Number of Fits",31,-4.5,4.5);
+  hPull->SetMarkerStyle(21);
+  hPull->SetMarkerSize(1.4);
+  TH1* hReso = new TH1D("hReso",";#hat{#sigma} (GeV);Number of Fits",31,expReso-0.9,expReso+0.9);
+  hReso->SetMarkerStyle(21);
+  hReso->SetMarkerSize(1.4);
 
-  for(unsigned int n = 0; n < nFiles; ++n) {
+  for(unsigned int n = 0; n < fileNames.size(); ++n) {
     // Fitted resolution
-    TH1* hParameters = util::FileOps::readTH1(fileNamePrefix+util::toTString(n)+".root","hAbsoluteParameters");
+    TH1* hParameters = util::FileOps::readTH1(fileNames.at(n),"hAbsoluteParameters");
     const double fitRes = hParameters->GetBinContent(1);
     const double fitErr = hParameters->GetBinError(1);
     delete hParameters;
@@ -305,24 +320,24 @@ void plotPullDistribution(const TString &fileNamePrefix, unsigned int nFiles, co
   label->AddText(LABEL_MC+", "+model);
 
   TLegend* legReso = util::LabelFactory::createLegendWithOffset(5,label->GetSize());
-  legReso->AddEntry(lExpRes,"Expected resolution #LT#sigma#GT = "+util::toTString(expReso,util::firstSigDigit(fReso->GetParError(1))+1)+" GeV","L");
-  legReso->AddEntry(hReso,"Fitted resolution #hat{#sigma}","L");
+  legReso->AddEntry(lExpRes,"Expected #LT#sigma#GT = "+util::toTString(expReso,util::firstSigDigit(fReso->GetParError(1)))+" GeV","L");
+  legReso->AddEntry(hReso,"Fitted #hat{#sigma}","P");
   legReso->AddEntry(fReso,"Gaussian fit to distribution","L");
-  util::LabelFactory::addExtraLegLine(legReso," mean = "+util::toTString(fReso->GetParameter(1),util::firstSigDigit(fReso->GetParError(1))+1)+" #pm "+util::toTString(fReso->GetParError(1),util::firstSigDigit(fReso->GetParError(1))+1)+" GeV");
-  util::LabelFactory::addExtraLegLine(legReso," width = "+util::toTString(fReso->GetParameter(2),util::firstSigDigit(fReso->GetParError(2))+1)+" #pm "+util::toTString(fReso->GetParError(2),util::firstSigDigit(fReso->GetParError(2))+1)+" GeV");
+  util::LabelFactory::addExtraLegLine(legReso," mean = "+util::toTString(fReso->GetParameter(1),util::firstSigDigit(fReso->GetParError(1)))+" #pm "+util::toTString(fReso->GetParError(1),util::firstSigDigit(fReso->GetParError(1)))+" GeV");
+  util::LabelFactory::addExtraLegLine(legReso," width = "+util::toTString(fReso->GetParameter(2),util::firstSigDigit(fReso->GetParError(2)))+" #pm "+util::toTString(fReso->GetParError(2),util::firstSigDigit(fReso->GetParError(2)))+" GeV");
 
   TLegend* legPull = util::LabelFactory::createLegendColWithOffset(4,-0.75,label->GetSize());
-  legPull->AddEntry(hReso,"Fitted pull (#hat{#sigma} - #LT#sigma#GT) / #delta#hat{#sigma}","L");
+  legPull->AddEntry(hReso,"Fitted pull (#hat{#sigma} - #LT#sigma#GT) / #delta#hat{#sigma}","P");
   legPull->AddEntry(fReso,"Gaussian fit to distribution","L");
-  util::LabelFactory::addExtraLegLine(legPull," mean = "+util::toTString(fPull->GetParameter(1),util::firstSigDigit(fPull->GetParError(1))+1)+" #pm "+util::toTString(fPull->GetParError(1),util::firstSigDigit(fPull->GetParError(1))+1)+" GeV");
-  util::LabelFactory::addExtraLegLine(legPull," width = "+util::toTString(fPull->GetParameter(2),util::firstSigDigit(fPull->GetParError(2))+1)+" #pm "+util::toTString(fPull->GetParError(2),util::firstSigDigit(fPull->GetParError(2))+1)+" GeV");
+  util::LabelFactory::addExtraLegLine(legPull," mean = "+util::toTString(fPull->GetParameter(1),util::firstSigDigit(fPull->GetParError(1)))+" #pm "+util::toTString(fPull->GetParError(1),util::firstSigDigit(fPull->GetParError(1)))+" GeV");
+  util::LabelFactory::addExtraLegLine(legPull," width = "+util::toTString(fPull->GetParameter(2),util::firstSigDigit(fPull->GetParError(2)))+" #pm "+util::toTString(fPull->GetParError(2),util::firstSigDigit(fPull->GetParError(2)))+" GeV");
 
   util::HistOps::setYRange(hReso,label->GetSize()+legReso->GetNRows());
   util::HistOps::setYRange(hPull,label->GetSize()+legPull->GetNRows());
 
   TCanvas* canPull = new TCanvas("canPull","Pull",500,500);
   canPull->cd();
-  hPull->Draw("HIST");
+  hPull->Draw("PE1");
   fPull->Draw("same");
   label->Draw("same");
   legPull->Draw("same");
@@ -331,7 +346,7 @@ void plotPullDistribution(const TString &fileNamePrefix, unsigned int nFiles, co
 
   TCanvas* canReso = new TCanvas("canReso","Reso",500,500);
 			     canReso->cd();
-  hReso->Draw("HIST");
+  hReso->Draw("PE1");
   lExpRes->Draw("same");
   fReso->Draw("same");
   label->Draw("same");
