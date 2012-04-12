@@ -1,4 +1,4 @@
-// $Id: FileOps.h,v 1.13 2012/02/04 21:47:52 mschrode Exp $
+// $Id: FileOps.h,v 1.14 2012/03/02 13:40:25 mschrode Exp $
 
 #ifndef FileOps_h
 #define FileOps_h
@@ -11,8 +11,10 @@
 #include "TF1.h"
 #include "TFile.h"
 #include "TGraph.h"
+#include "TGraphAsymmErrors.h"
 #include "TH1.h"
 #include "TObject.h"
+#include "THStack.h"
 #include "TString.h"
 
 #include "utils.h"
@@ -25,12 +27,14 @@ namespace util
   public:
     static TF1* readTF1(const TString &fileName, const TString &fName, const TString &newFName = "");
     static TGraph* readTGraph(const TString &fileName, const TString &gName, const TString &newGName = "");
+    static TGraphAsymmErrors* readTGraphAsymmErrors(const TString &fileName, const TString &gName, const TString &newGName = "");
     static TH2* readTH2(const TString &fileName, const TString &hName, const TString &newHName = "", bool useCurrentStyle = true);
     static TH1* readTH1(const TString &fileName, const TString &histName, const TString &newHistName = "", bool useCurrentStyle = true);
     static util::HistVec readTH1(const std::vector<TString> &fileNames, const TString &histName, const TString &newHistName = "", bool useCurrentStyle = true);
     static util::HistVec readHistVec(const TString &fileName, const std::vector<TString> &histNames, const TString &newHistNameSuffix = "", bool useCurrentStyle = true);
     static util::HistVec readHistVec(const TString &fileName, const TString &histName, const TString &newHistName = "", bool useCurrentStyle = true);
     static std::vector<TF1*> readTF1Vec(const TString &fileName, const TString &fName, const TString &newFName = "");
+    static THStack* readTHStack(const TString &fileName, const TString &stackName, const TString &newStackName = "");
     static TChain* createTChain(const TString &fileName, const TString &treeName = "", unsigned int verbosity = 1);
   };
 
@@ -76,6 +80,27 @@ namespace util
   }
 
 
+  //! Read THStack from file
+  // -------------------------------------------------------------------------------------
+  THStack* FileOps::readTHStack(const TString &fileName, const TString &stackName, const TString &newStackName) {
+    TFile file(fileName,"READ");
+    THStack *s = 0;
+    file.GetObject(stackName,s);
+    if( s ) {
+      //      s->SetDirectory(0);
+      if( newStackName.Length() ) s->SetName(newStackName);
+    } else {
+      std::cerr << "ERROR in FileOps::readTHStack: THStack with name '" << stackName << "' does not exist in file '" << fileName << "'\n.";
+      file.Close();
+      exit(-1);
+    }
+    file.Close();
+    
+    return s;
+  }
+
+
+
   //! Read TGraph from file
   // -------------------------------------------------------------------------------------
   TGraph* FileOps::readTGraph(const TString &fileName, const TString &gName, const TString &newGName) {
@@ -86,6 +111,25 @@ namespace util
       if( newGName.Length() ) g->SetName(newGName);
     } else {
       std::cerr << "ERROR in FileOps::readTGraph: TGraph with name '" << gName << "' does not exist in file '" << fileName << "'\n.";
+      file.Close();
+      exit(-1);
+    }
+    file.Close();
+    
+    return g;
+  }
+  
+  
+  //! Read TGraphAsymmErrors from file
+  // -------------------------------------------------------------------------------------
+  TGraphAsymmErrors* FileOps::readTGraphAsymmErrors(const TString &fileName, const TString &gName, const TString &newGName) {
+    TFile file(fileName,"READ");
+    TGraphAsymmErrors *g = 0;
+    file.GetObject(gName,g);
+    if( g ) {
+      if( newGName.Length() ) g->SetName(newGName);
+    } else {
+      std::cerr << "ERROR in FileOps::readTGraph: TGraphAsymmErrors with name '" << gName << "' does not exist in file '" << fileName << "'\n.";
       file.Close();
       exit(-1);
     }

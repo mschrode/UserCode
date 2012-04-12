@@ -1,4 +1,4 @@
-// $Id: StyleSettings.h,v 1.17 2012/02/04 21:47:26 mschrode Exp $
+// $Id: StyleSettings.h,v 1.18 2012/02/29 16:47:32 mschrode Exp $
 
 #ifndef STYLE_SETTINGS_H
 #define STYLE_SETTINGS_H
@@ -18,7 +18,7 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: StyleSettings.h,v 1.17 2012/02/04 21:47:26 mschrode Exp $
+  //!  $Id: StyleSettings.h,v 1.18 2012/02/29 16:47:32 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class StyleSettings {
   public:
@@ -74,10 +74,7 @@ namespace util {
     // a nicely formatted TString
     static TString luminosity(double lumi) {
       TString lab = "";
-      if( lumi > 2000. ) {
-	lumi /= 1000.;
-	lab = toTString(lumi,1)+" fb^{-1}";
-      } else if( lumi > 800. ) {
+      if( lumi > 800. ) {
 	lumi /= 1000.;
 	lab = toTString(lumi,2)+" fb^{-1}";
       } else {
