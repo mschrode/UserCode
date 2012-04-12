@@ -1,4 +1,4 @@
-// $Id: plotCombinedSpectra.C,v 1.12 2012/03/18 20:16:47 mschrode Exp $
+// $Id: plotCombinedSpectra.C,v 1.13 2012/03/21 20:20:19 mschrode Exp $
 
 // Compare HT and MHT spectra in data with bkg. prediction
 
@@ -12,6 +12,7 @@
 #include "THStack.h"
 #include "TPad.h"
 #include "TString.h"
+#include "TVirtualPad.h"
 
 #define UTILS_AS_HEADER_FILE
 #include "../util/utils.h"
@@ -277,12 +278,13 @@ public:
     data_ = util::FileOps::readTH1(dataFileName,dataHistName,id_+"data");
     util::HistOps::shiftStartOfXAxisToFirstPopulatedBin(data_);
     data_->UseCurrentStyle();
-    data_->SetTitle(util::StyleSettings::title(4700,true)); // Lumi rounded to one digit
+    data_->SetTitle(util::StyleSettings::title(4980,true));
     data_->SetMarkerStyle(20);
     data_->SetNdivisions(505);
     if( rebin_ > 1 ) data_->Rebin(rebin_);
     data_->GetXaxis()->SetRange(1,data_->FindBin(xMax_));
     util::HistOps::setAxisTitles(data_,xTitle,xUnit,"events");
+    data_->GetXaxis()->SetTitle(xTitle+" ["+xUnit+"]");
     util::HistOps::setYRange(data_,1,3E-1);
 
     totalBkg_ = 0;
@@ -469,7 +471,7 @@ private:
   
 
 // --------------------------------------------------------------
-void plotSpectrum(const TString &id, const UncertaintyManager* um, const TString &xTitle, const TString &xUnit, int rebin, double xMax) {
+void plotSpectrum(const TString &id, const UncertaintyManager* um, const TString &xTitle, const TString &xUnit, int rebin, double xMax, bool recreateOutputFile = false) {
   // Data
   HistContainer spectra(id,"RA2Hists/hist_DataBaseline_4p65ifb.root","h_"+id,xTitle,xUnit,rebin,xMax);
 
@@ -477,7 +479,7 @@ void plotSpectrum(const TString &id, const UncertaintyManager* um, const TString
   spectra.addBkg(QCD,"RA2Hists/QCD.root","QCD_"+id);
   spectra.addBkg(LostLepton,"RA2Hists/LostLepton.root","LostLepton_"+id,1.04);
   spectra.addBkg(HadronicTau,"RA2Hists/HadTau.root","HadTau_"+id);
-  spectra.addBkg(ZInv,"RA2Hists/Paper2011_PreApproval/hist_ZInvPredictedFromGJets_4p65ifb.root","h_RA2_"+id);
+  spectra.addBkg(ZInv,"RA2Hists/hist_ZInvPredictedFromGJets_4p65ifb.root","h_RA2_"+id);
   spectra.print();
 
   // Scale uncertainties
@@ -531,6 +533,21 @@ void plotSpectrum(const TString &id, const UncertaintyManager* um, const TString
   canRatio->SaveAs("RA2DataVsEstimatedBkg_"+id+".eps","eps");
   canRatio->SaveAs("RA2DataVsEstimatedBkg_"+id+".png");
   canRatio->SaveAs("RA2DataVsEstimatedBkg_"+id+".root");
+
+  const TString outputName = "RA2DataVsEstimatedBkg.root";
+  TFile* f = 0;
+  if( recreateOutputFile ) f = new TFile(outputName,"recreate");
+  else f = new TFile(outputName,"update");
+  f->WriteTObject(hData,id+"Data");
+  f->WriteTObject(sBkg,id+"BkgStack");
+  f->WriteTObject(hSignal,id+"SignalExpectation");
+  f->WriteTObject(hDataRatio,id+"DataRatio");
+  f->WriteTObject(gBkgUncert,id+"BkgUncert");
+  f->WriteTObject(gBkgRatio,id+"BkgUncertRatio");
+  f->WriteTObject(legData,id+"SignalLegend");
+  f->WriteTObject(legBkg,id+"BkgLegend");
+  f->Close();
+  delete f;
 }
 
 
@@ -538,93 +555,264 @@ void plotSpectrum(const TString &id, const UncertaintyManager* um, const TString
 void plotCombinedSpectra() {
   util::StyleSettings::setStylePAS();
 
-//   // HT spectrum
-//   UncertaintyManager um(InclPredSystStat);
-//    um.addTargetUncertainties(ZInv,81.,16.);
-//    um.addTargetUncertainties(LostLepton,0.5*(55.2+53.7),22.4);
-//    um.addTargetUncertainties(HadronicTau,0.5*(38.2+35.6),16.);
-//    um.addTargetUncertainties(QCD,0.5*(188.03+186.43),21.38);
-//   plotSpectrum("HT",&um,"H_{T}","GeV",2,2300);
-
-//   // MHT spectrum
-//   plotSpectrum("MHT",&um,"#slash{H}_{T}","GeV",5,950);
-
-
-//   // HT spectrum
-//   UncertaintyManager umHT(Stat);
-//   umHT.addTargetUncertaintyInInterval(800.,128.98);
-//   umHT.addTargetUncertaintyInInterval(1000.,36.29);
-//   umHT.addTargetUncertaintyInInterval(1200.,16.88);
-//   umHT.addTargetUncertaintyInInterval(1400.,9.36);
-//   umHT.addTargetUncertaintyInInterval(100000.,9.6);
-//   plotSpectrum("HT",&umHT,"H_{T}","GeV",2,2300);
-  
-//   // MHT spectrum
-//   UncertaintyManager umMHT(Stat);
-//   umMHT.addTargetUncertaintyInInterval(350.,131.67);
-//   umMHT.addTargetUncertaintyInInterval(500.,31.43);
-//   umMHT.addTargetUncertaintyInInterval(600.,8.65);
-//   umMHT.addTargetUncertaintyInInterval(100000.,4.22);
-//   plotSpectrum("MHT",&umMHT,"#slash{H}_{T}","GeV",5,950);
-
-
-
   // HT spectrum
   UncertaintyManager umHT(PredSystStat);
-
-  umHT.addTargetUncertainties(	800	,       ZInv	,	494.1	,	85.2601313627888	,	13.3311664905964	);
-  umHT.addTargetUncertainties(	1000	,	ZInv	,	74.8	,	20.42914584607	,	5.09607692249636	);
-  umHT.addTargetUncertainties(	1200	,	ZInv	,	18.7	,	6.63626400921482	,	2.6134268690744	);
-  umHT.addTargetUncertainties(	1400	,	ZInv	,	5.4	,	2.70185121722126	,	1.34536240470737	);
+  umHT.addTargetUncertainties(	800	,	ZInv	,	494.1	,	114.7	,	13.3311664905964	);
+  umHT.addTargetUncertainties(	1000	,	ZInv	,	74.8	,	31.5	,	5.09607692249636	);
+  umHT.addTargetUncertainties(	1200	,	ZInv	,	18.7	,	11	,	2.6134268690744	);
+  umHT.addTargetUncertainties(	1400	,	ZInv	,	5.4	,	3.8	,	1.34536240470737	);
   umHT.addTargetUncertainties(	100000	,	ZInv	,	3.2	,	2.2	,	0.7	);
 										
-  umHT.addTargetUncertainties(	800	,	LostLepton	,      376.8	,	40.8800684930933	,	22.8354986807821	);
-  umHT.addTargetUncertainties(	1000	,	LostLepton	,	65.4	,	7.15891053163818	,	13.6436798555229	);
-  umHT.addTargetUncertainties(	1200	,	LostLepton	,	19.2	,	1.86279360101972	,	5.37680202350803	);
-  umHT.addTargetUncertainties(	1400	,	LostLepton	,	6.2	,	0.58309518948453	,	2.30217288664427	);
+  umHT.addTargetUncertainties(	800	,	LostLepton	,	376.8	,	48.5	,	22.8354986807821	);
+  umHT.addTargetUncertainties(	1000	,	LostLepton	,	65.4	,	8.55	,	13.6436798555229	);
+  umHT.addTargetUncertainties(	1200	,	LostLepton	,	19.2	,	2.7	,	5.37680202350803	);
+  umHT.addTargetUncertainties(	1400	,	LostLepton	,	6.2	,	0.8	,	2.30217288664427	);
   umHT.addTargetUncertainties(	100000	,	LostLepton	,	2.6	,	0.4	,	1.5	);
 										
-  umHT.addTargetUncertainties(	800	,	HadronicTau	,	422.16	,	27.954195856794	,	15.4300226830682	);
-  umHT.addTargetUncertainties(	1000	,	HadronicTau	,	65.72	,	5.00833345535219	,	5.55847829895917	);
-  umHT.addTargetUncertainties(	1200	,	HadronicTau	,	27.11	,	2.11494633501656	,	4.01393821576765	);
-  umHT.addTargetUncertainties(	1400	,	HadronicTau	,	6.769	,	0.740121611628792	,	1.70789461033168	);
-  umHT.addTargetUncertainties(	100000	,	HadronicTau	,	1.08	,	0.159	,	0.481	);
+  umHT.addTargetUncertainties(	800	,	HadronicTau	,	422.16	,	35.391	,	15.4300226830682	);
+  umHT.addTargetUncertainties(	1000	,	HadronicTau	,	65.72	,	6.134	,	5.55847829895917	);
+  umHT.addTargetUncertainties(	1200	,	HadronicTau	,	27.11	,	2.8035	,	4.01393821576765	);
+  umHT.addTargetUncertainties(	1400	,	HadronicTau	,	6.769	,	0.8705	,	1.70789461033168	);
+  umHT.addTargetUncertainties(	100000	,	HadronicTau	,	1.08	,	0.154	,	0.481	);
 										
-  umHT.addTargetUncertainties(	800	,	QCD	,	120.12	,	76.00947572507	,	12.1070062360602	);
-  umHT.addTargetUncertainties(	1000	,	QCD	,	36.24	,	24.0133566999701	,	5.41653948568641	);
-  umHT.addTargetUncertainties(	1200	,	QCD	,	20.18	,	12.0029204779504	,	4.44658295773283	);
-  umHT.addTargetUncertainties(	1400	,	QCD	,	11.84	,	7.60263112349929	,	3.4410608829255	);
-  umHT.addTargetUncertainties(	100000	,	QCD	,	11.9	,	8.1	,	3.8	);
+  umHT.addTargetUncertainties(	800	,	QCD	,	120.12	,	77.52	,	12.1070062360602	);
+  umHT.addTargetUncertainties(	1000	,	QCD	,	36.24	,	24.3	,	5.41653948568641	);
+  umHT.addTargetUncertainties(	1200	,	QCD	,	20.18	,	12.82	,	4.44658295773283	);
+  umHT.addTargetUncertainties(	1400	,	QCD	,	11.84	,	7.725	,	3.4410608829255	);
+  umHT.addTargetUncertainties(	100000	,	QCD	,	11.9	,	8.25	,	3.8	);
 
-  plotSpectrum("HT",&umHT,"H_{T}","GeV",2,2300);
+  plotSpectrum("HT",&umHT,"H_{T}","GeV",2,2300,true);
   
 
   // MHT spectrum
   UncertaintyManager umMHT(PredSystStat);
-  umMHT.addTargetUncertainties(	350	,	ZInv	,	424.7	,	83.3394264439107	,	11.8570654042221	);
-  umMHT.addTargetUncertainties(	500	,	ZInv	,	135.8	,	27.170940359141	,	7.60394634384015	);
-  umMHT.addTargetUncertainties(	600	,	ZInv	,	26.9	,	6.96921803361037	,	3.38378486313773	);
-  umMHT.addTargetUncertainties(	100000	,	ZInv	,	8.8	,	3.24499614791759	,	1.72046505340853	);
-  
-  
-  umMHT.addTargetUncertainties(	350	,	LostLepton	,	400.5	,	40.9609570200697	,	25.9984614929422	);
-  umMHT.addTargetUncertainties(	500	,	LostLepton	,	59.5	,	6.88912185985993	,	7.75370878999205	);
-  umMHT.addTargetUncertainties(	600	,	LostLepton	,	8.7	,	1.0295630140987	,	2.62678510731274	);
-  umMHT.addTargetUncertainties(	100000	,	LostLepton	,	1.5	,	0.282842712474619	,	1.06301458127347	);
-  
-  
-  umMHT.addTargetUncertainties(	350	,	HadronicTau	,	434.45	,	27.9305276892507	,	15.8426153459585	);
-  umMHT.addTargetUncertainties(	500	,	HadronicTau	,	73.139	,	5.47683932574254	,	5.36030820009447	);
-  umMHT.addTargetUncertainties(	600	,	HadronicTau	,	12.25	,	1.09719551584939	,	2.36450438781576	);
-  umMHT.addTargetUncertainties(	100000	,	HadronicTau	,	3	,	0.502538555734781	,	1.71172427686237	);
+  umMHT.addTargetUncertainties(	350	,	ZInv	,	424.7	,	108.8	,	11.8570654042221	);
+  umMHT.addTargetUncertainties(	500	,	ZInv	,	135.8	,	38.2	,	7.60394634384015	);
+  umMHT.addTargetUncertainties(	600	,	ZInv	,	26.9	,	11.7	,	3.38378486313773	);
+  umMHT.addTargetUncertainties(	100000	,	ZInv	,	8.8	,	4.5	,	1.72046505340853	);
 										
-  
-  umMHT.addTargetUncertainties(	350	,	QCD	,	196.2	,	81.3595108146552	,	14.7461859475595	);
-  umMHT.addTargetUncertainties(	500	,	QCD	,	3.98	,	1.47905375155875	,	2.10309296038002	);
-  umMHT.addTargetUncertainties(	600	,	QCD	,	0.09	,	0.0616441400296898	,	0.29748949561287	);
-  umMHT.addTargetUncertainties(	100000	,	QCD	,	0.01	,	0.02	,	0.1	);
+										
+  umMHT.addTargetUncertainties(	350	,	LostLepton	,	400.5	,	50.35	,	25.9984614929422	);
+  umMHT.addTargetUncertainties(	500	,	LostLepton	,	59.5	,	8.6	,	7.75370878999205	);
+  umMHT.addTargetUncertainties(	600	,	LostLepton	,	8.7	,	1.6	,	2.62678510731274	);
+  umMHT.addTargetUncertainties(	100000	,	LostLepton	,	1.5	,	0.4	,	1.06301458127347	);
+										
+										
+  umMHT.addTargetUncertainties(	350	,	HadronicTau	,	434.45	,	36.185	,	15.8426153459585	);
+  umMHT.addTargetUncertainties(	500	,	HadronicTau	,	73.139	,	6.892	,	5.36030820009447	);
+  umMHT.addTargetUncertainties(	600	,	HadronicTau	,	12.25	,	1.6095	,	2.36450438781576	);
+  umMHT.addTargetUncertainties(	100000	,	HadronicTau	,	3	,	0.6665	,	1.71172427686237	);
+										
+										
+  umMHT.addTargetUncertainties(	350	,	QCD	,	196.2	,	127.8	,	14.7461859475595	);
+  umMHT.addTargetUncertainties(	500	,	QCD	,	3.98	,	2.705	,	2.10309296038002	);
+  umMHT.addTargetUncertainties(	600	,	QCD	,	0.09	,	0.095	,	0.29748949561287	);
+  umMHT.addTargetUncertainties(	100000	,	QCD	,	0.01	,	0.015	,	0.1	);
   
   plotSpectrum("MHT",&umMHT,"#slash{H}_{T}","GeV",5,950);
 
 
 }
+
+
+
+// Both plots on one canvas, common y axis
+void plotCombinedSpectra(const TString &inputPlots) {
+  util::StyleSettings::setStylePAS();
+
+  gStyle->SetLabelSize(0.05,"XYZ");
+  gStyle->SetTitleSize(0.055,"XYZ");
+  gStyle->SetTitleXOffset(1.2);
+  gStyle->SetTitleYOffset(1.3);
+  gStyle->SetPadTopMargin(0.0);
+  gStyle->SetPadBottomMargin(0.0);
+  gStyle->SetPadLeftMargin(0.0);
+  gStyle->SetPadRightMargin(0.0);
+
+  const double t_ = 0.02;
+  const double b_ = 0.15;
+  const double y_ = (1.-t_-b_);
+  const double l_ = 0.07;
+  const double r_ = 0.01;
+  const double x_ = (1.-l_-r_)/2.;
+  const double fracHeightTopPad = 0.8;
+  const double ratioMin = 0.1;
+  const double ratioMax = 2.4;
+
+  TCanvas* canComb = new TCanvas("canComb","HT + MHT",500*y_/x_,500);
+
+  TPad* HTPad = new TPad("HTPad","",0.,0.,l_+x_,1.);
+  HTPad->SetTopMargin(t_);
+  HTPad->SetLeftMargin(2.*l_);
+  HTPad->SetBottomMargin(0.2 + 0.8*b_-0.2*t_);
+  HTPad->SetRightMargin(0.);
+  HTPad->SetFillStyle(0);
+  HTPad->SetFrameFillColor(10);
+  HTPad->SetFrameBorderMode(0);
+  HTPad->SetRightMargin(0.);
+
+  TPad* HTRatioPad = static_cast<TPad*>(HTPad->Clone("HTRatioPad"));
+  HTRatioPad->SetTopMargin(t_);
+  HTRatioPad->SetBottomMargin(b_);
+  HTRatioPad->SetTopMargin(0.8 - 0.8*b_+0.2*t_);
+
+  TH1* HTFrame = new TH1D("HTFrame",";;Events",19,500,2400);
+  //TH1* HTFrame = new TH1D("HTFrame",";;Events",1899,501,2399);
+  HTFrame->GetYaxis()->SetRangeUser(3E-1,3E4);
+  HTFrame->GetXaxis()->SetLabelSize(0);
+  HTFrame->SetNdivisions(505);
+  HTFrame->GetYaxis()->SetTickLength(gStyle->GetTickLength("Y")/fracHeightTopPad);
+  HTFrame->SetLineWidth(2);
+
+  TH1* HTRatioFrame = static_cast<TH1*>(HTFrame->Clone("HTRatioFrame"));
+  HTRatioFrame->GetXaxis()->SetTitle("H_{T} [GeV]");
+  HTRatioFrame->GetYaxis()->SetTitle("Data / Pred.");
+  HTRatioFrame->GetYaxis()->SetRangeUser(ratioMin,ratioMax);
+  HTRatioFrame->GetYaxis()->SetNdivisions(404);
+  HTRatioFrame->GetYaxis()->SetTickLength(gStyle->GetTickLength("Y")/(1.-fracHeightTopPad));
+  HTRatioFrame->GetXaxis()->SetLabelSize(gStyle->GetLabelSize("X"));
+  HTRatioFrame->SetLineStyle(2);
+  for(int bin = 1; bin <= HTRatioFrame->GetNbinsX(); ++bin) {
+    HTRatioFrame->SetBinContent(bin,1.);
+    HTRatioFrame->SetBinError(bin,0.);
+  }
+
+
+  TPad* MHTPad = new TPad("MHTPad","",l_+x_,0.,1,1.);
+  MHTPad->SetLeftMargin(0.);
+  MHTPad->SetBottomMargin(0.2 + 0.8*b_-0.2*t_);
+  MHTPad->SetTopMargin(t_);
+  MHTPad->SetRightMargin(2.*r_);
+  MHTPad->SetFillStyle(0);
+  MHTPad->SetFrameFillColor(10);
+  MHTPad->SetFrameBorderMode(0);
+
+  TPad* MHTRatioPad = static_cast<TPad*>(MHTPad->Clone("MHTRatioPad"));
+  MHTRatioPad->SetBottomMargin(b_);
+  MHTRatioPad->SetTopMargin(0.8 - 0.8*b_+0.2*t_);
+
+  TH1* MHTFrame = new TH1D("MHTFrame","",16,200,1000);
+  //TH1* MHTFrame = new TH1D("MHTFrame","",1598,200.5,999.5);
+  MHTFrame->GetYaxis()->SetRangeUser(3E-1,3E4);
+  MHTFrame->GetXaxis()->SetLabelSize(0);
+  MHTFrame->GetYaxis()->SetLabelSize(0);
+  MHTFrame->SetNdivisions(505);
+  MHTFrame->GetYaxis()->SetTickLength(gStyle->GetTickLength("Y")/fracHeightTopPad);
+  MHTFrame->SetLineWidth(2);
+
+  TH1* MHTRatioFrame = static_cast<TH1*>(MHTFrame->Clone("MHTRatioFrame"));
+  MHTRatioFrame->GetXaxis()->SetTitle("#slash{H}_{T} [GeV]");
+  MHTRatioFrame->GetYaxis()->SetLabelSize(0);
+  MHTRatioFrame->GetYaxis()->SetRangeUser(ratioMin,ratioMax);
+  MHTRatioFrame->GetYaxis()->SetNdivisions(404);
+  MHTRatioFrame->GetYaxis()->SetTickLength(gStyle->GetTickLength("Y")/(1.-fracHeightTopPad));
+  MHTRatioFrame->GetXaxis()->SetLabelSize(gStyle->GetLabelSize("X"));
+  MHTRatioFrame->SetLineStyle(2);
+  for(int bin = 1; bin <= MHTRatioFrame->GetNbinsX(); ++bin) {
+    MHTRatioFrame->SetBinContent(bin,1.);
+    MHTRatioFrame->SetBinError(bin,0.);
+  }
+  double scaleLabels = (l_+x_)/(x_+r_);
+  //MHTRatioFrame->GetXaxis()->SetTitleOffset(HTRatioFrame->GetXaxis()->GetTitleOffset()*scaleLabels);
+  MHTRatioFrame->GetXaxis()->SetTitleOffset(1.);
+  MHTRatioFrame->GetXaxis()->SetTitleSize(HTRatioFrame->GetXaxis()->GetTitleSize()*scaleLabels);
+  //MHTRatioFrame->GetXaxis()->SetLabelOffset(HTRatioFrame->GetXaxis()->GetLabelOffset()*scaleLabels);
+  MHTRatioFrame->GetXaxis()->SetLabelOffset(0.004);
+  MHTRatioFrame->GetXaxis()->SetLabelSize(HTRatioFrame->GetXaxis()->GetLabelSize()*scaleLabels);
+
+  // Get plots from file
+  TH1* HTData = util::FileOps::readTH1(inputPlots,"HTData","",false);
+  THStack* HTBkg = util::FileOps::readTHStack(inputPlots,"HTBkgStack");
+  TH1* HTSignal = util::FileOps::readTH1(inputPlots,"HTSignalExpectation","",false);
+  TH1* HTDataRatio = util::FileOps::readTH1(inputPlots,"HTDataRatio","",false);
+  TGraphAsymmErrors* HTBkgUncert = util::FileOps::readTGraphAsymmErrors(inputPlots,"HTBkgUncert");
+  TGraphAsymmErrors* HTBkgUncertRatio = util::FileOps::readTGraphAsymmErrors(inputPlots,"HTBkgUncertRatio");
+  TH1* MHTData = util::FileOps::readTH1(inputPlots,"MHTData","",false);
+  THStack* MHTBkg = util::FileOps::readTHStack(inputPlots,"MHTBkgStack");
+  TH1* MHTSignal = util::FileOps::readTH1(inputPlots,"MHTSignalExpectation","",false);
+  TH1* MHTDataRatio = util::FileOps::readTH1(inputPlots,"MHTDataRatio","",false);
+  TGraphAsymmErrors* MHTBkgUncert = util::FileOps::readTGraphAsymmErrors(inputPlots,"MHTBkgUncert");
+  TGraphAsymmErrors* MHTBkgUncertRatio = util::FileOps::readTGraphAsymmErrors(inputPlots,"MHTBkgUncertRatio");
+
+  // Labels
+  TLegend* legSignal = 0;
+  TLegend* legBkg = 0;
+
+  TFile f(inputPlots,"READ");
+  f.GetObject("HTSignalLegend",legSignal);
+  f.GetObject("HTBkgLegend",legBkg);
+  f.Close();
+
+  legSignal->SetTextSize(0.06);
+  legSignal->SetX1NDC(0.05);
+  legSignal->SetX2NDC(0.3);
+  legSignal->SetY1NDC(0.78);
+  legSignal->SetY2NDC(0.95);
+
+  legBkg->SetX1NDC(0.50);
+  legBkg->SetX2NDC(0.95);
+  legBkg->SetY1NDC(0.65);
+  legBkg->SetY2NDC(0.93);
+
+  TPaveText* cmsLabel = new TPaveText(0.2,0.88,0.93,0.95,"NDC");
+  cmsLabel->SetBorderSize(0);
+  cmsLabel->SetFillColor(0);
+  cmsLabel->SetTextFont(42);
+  cmsLabel->SetTextSize(0.06);
+  cmsLabel->AddText("CMS,  L = 4.98 fb^{-1},  #sqrt{s} = 7 TeV");
+
+  TPaveText* cover1 = new TPaveText(0.92,0.09,1.,0.145,"NDC");
+  cover1->SetBorderSize(0);
+  cover1->SetFillColor(0);
+  TPaveText* cover2 = new TPaveText(0.,0.09,0.1,0.145,"NDC");
+  cover2->SetBorderSize(0);
+  cover2->SetFillColor(0);
+  TPaveText* cover3 = new TPaveText(0.1,0.09,0.2,0.145,"NDC");
+  cover3->SetBorderSize(0);
+  cover3->SetFillColor(0);
+
+  canComb->cd();
+  HTPad->Draw();
+  HTPad->cd();
+  HTFrame->Draw();
+  HTBkg->Draw("HISTsame");
+  HTBkgUncert->Draw("E2same");
+  HTSignal->Draw("HISTsame");
+  HTData->Draw("PE1same");
+  cmsLabel->Draw("same");
+  HTPad->SetLogy();
+  HTPad->RedrawAxis();
+  canComb->cd();
+  HTRatioPad->Draw();
+  HTRatioPad->cd();
+  HTRatioFrame->Draw();
+  HTBkgUncertRatio->Draw("E2same");
+  HTDataRatio->Draw("PE1same");
+  cover3->Draw("same");
+
+  canComb->cd();
+  MHTPad->Draw();
+  MHTPad->cd();
+  MHTFrame->Draw();
+  MHTBkg->Draw("HISTsame");
+  MHTBkgUncert->Draw("E2same");
+  MHTSignal->Draw("HISTsame");
+  MHTData->Draw("PE1same");
+  legSignal->Draw("same");
+  legBkg->Draw("same");
+  MHTPad->SetLogy();
+  MHTPad->RedrawAxis();
+  canComb->cd();
+  MHTRatioPad->Draw();
+  MHTRatioPad->cd();
+  MHTRatioFrame->Draw();
+  MHTBkgUncertRatio->Draw("E2same");
+  MHTDataRatio->Draw("PE1same");
+  cover1->Draw("same");
+  cover2->Draw("same");
+
+  canComb->SaveAs("RA2DataVsEstimatedBkg.eps","eps");
+  canComb->SaveAs("RA2DataVsEstimatedBkg.png");
+}
+
+
