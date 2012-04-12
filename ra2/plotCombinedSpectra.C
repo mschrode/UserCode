@@ -1,4 +1,4 @@
-// $Id: plotCombinedSpectra.C,v 1.13 2012/03/21 20:20:19 mschrode Exp $
+// $Id: plotCombinedSpectra.C,v 1.14 2012/04/12 12:46:46 mschrode Exp $
 
 // Compare HT and MHT spectra in data with bkg. prediction
 
@@ -486,7 +486,7 @@ void plotSpectrum(const TString &id, const UncertaintyManager* um, const TString
   spectra.scaleBkgUncertainty(um);
 
   // Add signal point
-  spectra.addSignalExpectation("LM5BaselineHisto_4p65_NLO.root","h_"+id);
+  spectra.addSignalExpectation("RA2Hists/LM5BaselineHisto_4p65_NLO.root","h_"+id);
 
   // Plots
   TH1* hData = spectra.data();
