@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.44 2012/03/01 23:11:57 mschrode Exp $
+// $Id: HistOps.h,v 1.45 2012/03/07 13:48:43 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.44 2012/03/01 23:11:57 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.45 2012/03/07 13:48:43 mschrode Exp $
   class HistOps
   {
   public:
@@ -838,6 +838,24 @@ namespace util
       delete h;
       hTmp->SetName(name);
       h = hTmp;
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static int firstPopulatedBin(const TH1* h) {
+      int bin = 1;
+      while( h->GetBinContent(bin) == 0. && bin < h->GetNbinsX() ) ++bin;
+
+      return bin;
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static int lastPopulatedBin(const TH1* h) {
+      int bin = h->GetNbinsX();
+      while( h->GetBinContent(bin) == 0. && bin > 1 ) --bin;
+
+      return bin;
     }
 
 
