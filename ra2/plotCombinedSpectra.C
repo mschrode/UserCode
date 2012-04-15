@@ -1,4 +1,4 @@
-// $Id: plotCombinedSpectra.C,v 1.14 2012/04/12 12:46:46 mschrode Exp $
+// $Id: plotCombinedSpectra.C,v 1.15 2012/04/12 12:53:22 mschrode Exp $
 
 // Compare HT and MHT spectra in data with bkg. prediction
 
@@ -286,6 +286,7 @@ public:
     util::HistOps::setAxisTitles(data_,xTitle,xUnit,"events");
     data_->GetXaxis()->SetTitle(xTitle+" ["+xUnit+"]");
     util::HistOps::setYRange(data_,1,3E-1);
+    setLastShownBinAsOverflow(data_);
 
     totalBkg_ = 0;
     signal_ = 0;
@@ -368,12 +369,12 @@ public:
   TH1* dataRatio() const {
     TH1* h = static_cast<TH1*>(data_->Clone(id_+"DataRatio"+util::toTString(++COUNT)));
     for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
-      double relVal = h->GetBinContent(bin);
-      double relUncert = h->GetBinError(bin);
+      double relVal = 0.;
+      double relUncert = 0.;
       double pred = totalBkg_->GetBinContent(bin);
       if( pred > 0. ) {
-	relVal /= pred;
-	relUncert /= pred;
+	relVal = h->GetBinContent(bin)/pred;
+	relUncert = h->GetBinError(bin)/pred;
       }
       h->SetBinContent(bin,relVal);
       h->SetBinError(bin,relUncert);
@@ -410,6 +411,7 @@ public:
     if( rebin_ > 1 && bkg != QCD ) h->Rebin(rebin_);
     h->GetXaxis()->SetRange(1,h->FindBin(xMax_));
     if( scale != 1. ) h->Scale(scale);
+    setLastShownBinAsOverflow(h);
     
     if( totalBkg_ == 0 ) {
       totalBkg_ = static_cast<TH1*>(h->Clone(id_+"TotalBkg"));
@@ -449,6 +451,7 @@ public:
     signal_->SetNdivisions(505);
     if( rebin_ > 1 ) signal_->Rebin(rebin_);
     signal_->GetXaxis()->SetRange(1,signal_->FindBin(xMax_));
+    setLastShownBinAsOverflow(signal_);
   }
 
   
@@ -467,6 +470,21 @@ private:
   TH1* totalBkg_;
   Bkgs bkgs_;
   TH1* signal_;
+
+  // --------------------------------------------------------------
+  void setLastShownBinAsOverflow(TH1* h) const {
+    int binMax = h->FindBin(xMax_);
+    h->SetBinContent(binMax,h->Integral(binMax,h->GetNbinsX()+1));
+    double err = 0.;
+    for(int bin = binMax; bin <= h->GetNbinsX(); ++bin) {
+      err += pow(h->GetBinError(bin),2.);
+      if( bin > binMax ) {
+	h->SetBinContent(bin,0.);
+	h->SetBinError(bin,0.);
+      }
+    }
+    h->SetBinError(binMax,sqrt(err));
+  }
 };
   
 
@@ -581,7 +599,7 @@ void plotCombinedSpectra() {
   umHT.addTargetUncertainties(	1400	,	QCD	,	11.84	,	7.725	,	3.4410608829255	);
   umHT.addTargetUncertainties(	100000	,	QCD	,	11.9	,	8.25	,	3.8	);
 
-  plotSpectrum("HT",&umHT,"H_{T}","GeV",2,2300,true);
+  plotSpectrum("HT",&umHT,"H_{T}","GeV",2,2200,true);
   
 
   // MHT spectrum
@@ -641,6 +659,21 @@ void plotCombinedSpectra(const TString &inputPlots) {
 
   TCanvas* canComb = new TCanvas("canComb","HT + MHT",500*y_/x_,500);
 
+  // Get plots from file
+  TH1* HTData = util::FileOps::readTH1(inputPlots,"HTData","",false);
+  THStack* HTBkg = util::FileOps::readTHStack(inputPlots,"HTBkgStack");
+  TH1* HTSignal = util::FileOps::readTH1(inputPlots,"HTSignalExpectation","",false);
+  TH1* HTDataRatio = util::FileOps::readTH1(inputPlots,"HTDataRatio","",false);
+  TGraphAsymmErrors* HTBkgUncert = util::FileOps::readTGraphAsymmErrors(inputPlots,"HTBkgUncert");
+  TGraphAsymmErrors* HTBkgUncertRatio = util::FileOps::readTGraphAsymmErrors(inputPlots,"HTBkgUncertRatio");
+  TH1* MHTData = util::FileOps::readTH1(inputPlots,"MHTData","",false);
+  THStack* MHTBkg = util::FileOps::readTHStack(inputPlots,"MHTBkgStack");
+  TH1* MHTSignal = util::FileOps::readTH1(inputPlots,"MHTSignalExpectation","",false);
+  TH1* MHTDataRatio = util::FileOps::readTH1(inputPlots,"MHTDataRatio","",false);
+  TGraphAsymmErrors* MHTBkgUncert = util::FileOps::readTGraphAsymmErrors(inputPlots,"MHTBkgUncert");
+  TGraphAsymmErrors* MHTBkgUncertRatio = util::FileOps::readTGraphAsymmErrors(inputPlots,"MHTBkgUncertRatio");
+
+
   TPad* HTPad = new TPad("HTPad","",0.,0.,l_+x_,1.);
   HTPad->SetTopMargin(t_);
   HTPad->SetLeftMargin(2.*l_);
@@ -656,8 +689,10 @@ void plotCombinedSpectra(const TString &inputPlots) {
   HTRatioPad->SetBottomMargin(b_);
   HTRatioPad->SetTopMargin(0.8 - 0.8*b_+0.2*t_);
 
-  TH1* HTFrame = new TH1D("HTFrame",";;Events",19,500,2400);
-  //TH1* HTFrame = new TH1D("HTFrame",";;Events",1899,501,2399);
+  //TH1* HTFrame = new TH1D("HTFrame",";;Events",19,500,2400);
+  int firstBin = util::HistOps::firstPopulatedBin(HTData);
+  int lastBin = util::HistOps::lastPopulatedBin(HTData);
+  TH1* HTFrame = new TH1D("HTFrame",";;Events",lastBin-firstBin+1,HTData->GetXaxis()->GetBinLowEdge(firstBin),HTData->GetXaxis()->GetBinUpEdge(lastBin));
   HTFrame->GetYaxis()->SetRangeUser(3E-1,3E4);
   HTFrame->GetXaxis()->SetLabelSize(0);
   HTFrame->SetNdivisions(505);
@@ -691,8 +726,10 @@ void plotCombinedSpectra(const TString &inputPlots) {
   MHTRatioPad->SetBottomMargin(b_);
   MHTRatioPad->SetTopMargin(0.8 - 0.8*b_+0.2*t_);
 
-  TH1* MHTFrame = new TH1D("MHTFrame","",16,200,1000);
-  //TH1* MHTFrame = new TH1D("MHTFrame","",1598,200.5,999.5);
+  //  TH1* MHTFrame = new TH1D("MHTFrame","",16,200,1000);
+  firstBin = util::HistOps::firstPopulatedBin(MHTData);
+  lastBin = util::HistOps::lastPopulatedBin(MHTData);
+  TH1* MHTFrame = new TH1D("MHTFrame","",lastBin-firstBin+1,MHTData->GetXaxis()->GetBinLowEdge(firstBin),MHTData->GetXaxis()->GetBinUpEdge(lastBin));
   MHTFrame->GetYaxis()->SetRangeUser(3E-1,3E4);
   MHTFrame->GetXaxis()->SetLabelSize(0);
   MHTFrame->GetYaxis()->SetLabelSize(0);
@@ -720,20 +757,6 @@ void plotCombinedSpectra(const TString &inputPlots) {
   MHTRatioFrame->GetXaxis()->SetLabelOffset(0.004);
   MHTRatioFrame->GetXaxis()->SetLabelSize(HTRatioFrame->GetXaxis()->GetLabelSize()*scaleLabels);
 
-  // Get plots from file
-  TH1* HTData = util::FileOps::readTH1(inputPlots,"HTData","",false);
-  THStack* HTBkg = util::FileOps::readTHStack(inputPlots,"HTBkgStack");
-  TH1* HTSignal = util::FileOps::readTH1(inputPlots,"HTSignalExpectation","",false);
-  TH1* HTDataRatio = util::FileOps::readTH1(inputPlots,"HTDataRatio","",false);
-  TGraphAsymmErrors* HTBkgUncert = util::FileOps::readTGraphAsymmErrors(inputPlots,"HTBkgUncert");
-  TGraphAsymmErrors* HTBkgUncertRatio = util::FileOps::readTGraphAsymmErrors(inputPlots,"HTBkgUncertRatio");
-  TH1* MHTData = util::FileOps::readTH1(inputPlots,"MHTData","",false);
-  THStack* MHTBkg = util::FileOps::readTHStack(inputPlots,"MHTBkgStack");
-  TH1* MHTSignal = util::FileOps::readTH1(inputPlots,"MHTSignalExpectation","",false);
-  TH1* MHTDataRatio = util::FileOps::readTH1(inputPlots,"MHTDataRatio","",false);
-  TGraphAsymmErrors* MHTBkgUncert = util::FileOps::readTGraphAsymmErrors(inputPlots,"MHTBkgUncert");
-  TGraphAsymmErrors* MHTBkgUncertRatio = util::FileOps::readTGraphAsymmErrors(inputPlots,"MHTBkgUncertRatio");
-
   // Labels
   TLegend* legSignal = 0;
   TLegend* legBkg = 0;
@@ -754,12 +777,12 @@ void plotCombinedSpectra(const TString &inputPlots) {
   legBkg->SetY1NDC(0.65);
   legBkg->SetY2NDC(0.93);
 
-  TPaveText* cmsLabel = new TPaveText(0.2,0.88,0.93,0.95,"NDC");
+  TPaveText* cmsLabel = new TPaveText(0.23,0.88,0.9,0.95,"NDC");
   cmsLabel->SetBorderSize(0);
   cmsLabel->SetFillColor(0);
   cmsLabel->SetTextFont(42);
   cmsLabel->SetTextSize(0.06);
-  cmsLabel->AddText("CMS,  L = 4.98 fb^{-1},  #sqrt{s} = 7 TeV");
+  cmsLabel->AddText("CMS,  4.98 fb^{-1},  #sqrt{s} = 7 TeV");
 
   TPaveText* cover1 = new TPaveText(0.92,0.09,1.,0.145,"NDC");
   cover1->SetBorderSize(0);
