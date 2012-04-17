@@ -1,4 +1,4 @@
-// $Id: plotCombinedSpectra.C,v 1.15 2012/04/12 12:53:22 mschrode Exp $
+// $Id: plotCombinedSpectra.C,v 1.16 2012/04/15 17:44:40 mschrode Exp $
 
 // Compare HT and MHT spectra in data with bkg. prediction
 
@@ -638,10 +638,11 @@ void plotCombinedSpectra() {
 void plotCombinedSpectra(const TString &inputPlots) {
   util::StyleSettings::setStylePAS();
 
+  gStyle->SetLabelOffset(0.007,"XYZ");
   gStyle->SetLabelSize(0.05,"XYZ");
-  gStyle->SetTitleSize(0.055,"XYZ");
-  gStyle->SetTitleXOffset(1.2);
-  gStyle->SetTitleYOffset(1.3);
+  gStyle->SetTitleSize(0.06,"XYZ");
+  gStyle->SetTitleXOffset(1.1);
+  gStyle->SetTitleYOffset(1.2);
   gStyle->SetPadTopMargin(0.0);
   gStyle->SetPadBottomMargin(0.0);
   gStyle->SetPadLeftMargin(0.0);
@@ -657,7 +658,7 @@ void plotCombinedSpectra(const TString &inputPlots) {
   const double ratioMin = 0.1;
   const double ratioMax = 2.4;
 
-  TCanvas* canComb = new TCanvas("canComb","HT + MHT",500*y_/x_,500);
+  TCanvas* canComb = new TCanvas("canComb","HT + MHT",800,800*x_/y_);
 
   // Get plots from file
   TH1* HTData = util::FileOps::readTH1(inputPlots,"HTData","",false);
@@ -751,7 +752,7 @@ void plotCombinedSpectra(const TString &inputPlots) {
   }
   double scaleLabels = (l_+x_)/(x_+r_);
   //MHTRatioFrame->GetXaxis()->SetTitleOffset(HTRatioFrame->GetXaxis()->GetTitleOffset()*scaleLabels);
-  MHTRatioFrame->GetXaxis()->SetTitleOffset(1.);
+  MHTRatioFrame->GetXaxis()->SetTitleOffset(0.9);
   MHTRatioFrame->GetXaxis()->SetTitleSize(HTRatioFrame->GetXaxis()->GetTitleSize()*scaleLabels);
   //MHTRatioFrame->GetXaxis()->SetLabelOffset(HTRatioFrame->GetXaxis()->GetLabelOffset()*scaleLabels);
   MHTRatioFrame->GetXaxis()->SetLabelOffset(0.004);
@@ -767,22 +768,36 @@ void plotCombinedSpectra(const TString &inputPlots) {
   f.Close();
 
   legSignal->SetTextSize(0.06);
-  legSignal->SetX1NDC(0.05);
-  legSignal->SetX2NDC(0.3);
-  legSignal->SetY1NDC(0.78);
-  legSignal->SetY2NDC(0.95);
+  legSignal->SetX1NDC(0.25);
+  legSignal->SetX2NDC(0.50);
+  legSignal->SetY1NDC(0.79);
+  legSignal->SetY2NDC(0.94);
 
   legBkg->SetX1NDC(0.50);
   legBkg->SetX2NDC(0.95);
   legBkg->SetY1NDC(0.65);
   legBkg->SetY2NDC(0.93);
 
-  TPaveText* cmsLabel = new TPaveText(0.23,0.88,0.9,0.95,"NDC");
+  TPaveText* cmsLabel = new TPaveText(0.3,0.88,0.95,0.95,"NDC");
   cmsLabel->SetBorderSize(0);
   cmsLabel->SetFillColor(0);
   cmsLabel->SetTextFont(42);
-  cmsLabel->SetTextSize(0.06);
-  cmsLabel->AddText("CMS,  4.98 fb^{-1},  #sqrt{s} = 7 TeV");
+  cmsLabel->SetTextSize(0.055);
+  cmsLabel->AddText("CMS, 4.98 fb^{-1},  #sqrt{s} = 7 TeV");
+
+  TPaveText* padLabelA = new TPaveText(0.19,0.88,0.24,0.95,"NDC");
+  padLabelA->SetBorderSize(0);
+  padLabelA->SetFillColor(0);
+  padLabelA->SetTextFont(42);
+  padLabelA->SetTextSize(0.055);
+  padLabelA->AddText("(a)");
+
+  TPaveText* padLabelB = new TPaveText(0.06,0.88,0.11,0.95,"NDC");
+  padLabelB->SetBorderSize(0);
+  padLabelB->SetFillColor(0);
+  padLabelB->SetTextFont(42);
+  padLabelB->SetTextSize(0.06);
+  padLabelB->AddText("(b)");
 
   TPaveText* cover1 = new TPaveText(0.92,0.09,1.,0.145,"NDC");
   cover1->SetBorderSize(0);
@@ -802,6 +817,7 @@ void plotCombinedSpectra(const TString &inputPlots) {
   HTBkgUncert->Draw("E2same");
   HTSignal->Draw("HISTsame");
   HTData->Draw("PE1same");
+  padLabelA->Draw("same");
   cmsLabel->Draw("same");
   HTPad->SetLogy();
   HTPad->RedrawAxis();
@@ -821,6 +837,7 @@ void plotCombinedSpectra(const TString &inputPlots) {
   MHTBkgUncert->Draw("E2same");
   MHTSignal->Draw("HISTsame");
   MHTData->Draw("PE1same");
+  padLabelB->Draw("same");
   legSignal->Draw("same");
   legBkg->Draw("same");
   MHTPad->SetLogy();
