@@ -1,0 +1,19 @@
+# MC Truth parameters for modified NSC formula
+# /QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6/Summer11-PU_S3_START42_V11-v2/AODSIM
+# AK5 Jets, L1FastJet
+# PU scenario as in May10ReReco data
+# 
+# Parametrization function
+# sqrt(((TMath::Sign(1,[0])*sq([0]/x))+(sq([1])*(x^([3]-1))))+sq([2]))
+#
+# Eta binning:
+#  0: 0.0 - 0.5
+#  1: 0.5 - 1.1
+#  2: 1.1 - 1.7
+#  3: 1.7 - 2.3
+#  4: 2.3 - 5.0
+PFEta0:   10. 1500.  -1.13   0.611   0.03121   0.143 
+PFEta1:   10. 1500.  -0.44   0.625   0.03401   0.136 
+PFEta2:   10. 1500.  -3.20   1.529   0.04100  -0.196
+PFEta3:   10. 1500.  -3.37   2.08    0.0321   -0.416
+PFEta4:   10. 1500.  -1.45   1.034   0.0000   -0.085
