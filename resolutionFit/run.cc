@@ -1,4 +1,4 @@
-// $Id: run_163337-167151_V3_Summer11-ThesisResults.cc,v 1.1 2012/05/31 20:17:43 mschrode Exp $
+// $Id: run_163337-167151_V3_Summer11-ThesisResults.cc,v 1.2 2012/05/31 20:46:50 mschrode Exp $
 
 #include <iostream>
 
@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
   par->setOutMode(OutputManager::EPSSingleFiles);
   par->setLumi(855.);
   par->setPtSoftAbsMin(10.);
-  //par->setNEtaBinsUser(1);
+  par->setNEtaBinsUser(1);
   
   TString pathToHome = "/afs/naf.desy.de/user/m/mschrode/";
   TString pathToConfig = pathToHome+"UserCode/mschrode/resolutionFit/config/Analysis2011/";
