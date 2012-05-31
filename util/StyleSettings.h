@@ -1,4 +1,4 @@
-// $Id: StyleSettings.h,v 1.18 2012/02/29 16:47:32 mschrode Exp $
+// $Id: StyleSettings.h,v 1.19 2012/04/12 12:55:18 mschrode Exp $
 
 #ifndef STYLE_SETTINGS_H
 #define STYLE_SETTINGS_H
@@ -6,6 +6,7 @@
 #include <cmath>
 #include <iostream>
 
+#include "TGaxis.h"
 #include "TString.h"
 #include "TStyle.h"
 
@@ -18,7 +19,7 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: StyleSettings.h,v 1.18 2012/02/29 16:47:32 mschrode Exp $
+  //!  $Id: StyleSettings.h,v 1.19 2012/04/12 12:55:18 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class StyleSettings {
   public:
@@ -74,9 +75,11 @@ namespace util {
     // a nicely formatted TString
     static TString luminosity(double lumi) {
       TString lab = "";
-      if( lumi > 800. ) {
+      if( lumi > 900. ) {
 	lumi /= 1000.;
 	lab = toTString(lumi,2)+" fb^{-1}";
+      } else if( lumi > 100. ) {
+	lab = toTString(lumi,0)+" pb^{-1}";
       } else {
 	lab = toTString(lumi,3)+" pb^{-1}";
       }
@@ -115,7 +118,9 @@ namespace util {
 
       //  For 'colz' TH2
       gStyle->SetPalette(1);
-    
+
+      TGaxis::SetMaxDigits(5);
+
       //  For the canvas
       gStyle->SetCanvasBorderMode(0);
       gStyle->SetCanvasColor(kWhite);
@@ -174,10 +179,10 @@ namespace util {
 	  gStyle->SetPadLeftMargin(0.2);
 	  gStyle->SetPadRightMargin(0.04);
 	} else {
-	  gStyle->SetPadTopMargin(0.05);
-	  gStyle->SetPadBottomMargin(0.17);
-	  gStyle->SetPadLeftMargin(0.18);
-	  gStyle->SetPadRightMargin(0.04);
+	  gStyle->SetPadTopMargin(0.04);
+	  gStyle->SetPadBottomMargin(0.18);
+	  gStyle->SetPadLeftMargin(0.19);
+	  gStyle->SetPadRightMargin(0.03);
 	}
       } else {
 	if( spaceForTitle ) {
@@ -262,15 +267,15 @@ namespace util {
       } else if ( mode == Note || mode == PAS ) {
 	// For the axis labels:
 	gStyle->SetLabelFont(42,"XYZ");
-	gStyle->SetLabelOffset(0.007,"XYZ");
-	gStyle->SetLabelSize(0.04,"XYZ");
+	gStyle->SetLabelOffset(0.01,"XYZ");
+	gStyle->SetLabelSize(0.046,"XYZ");
       
 	// For the axis titles:
 	gStyle->SetTitleFont(42,"XYZ");
-	gStyle->SetTitleSize(0.045,"XYZ");
+	gStyle->SetTitleSize(0.055,"XYZ");
 	gStyle->SetTitleXOffset(1.5);
 	if( spaceForTitle ) gStyle->SetTitleYOffset(2.1);
-	else                gStyle->SetTitleYOffset(1.8);
+	else                gStyle->SetTitleYOffset(1.7);
       } else {
 	// For the axis labels:
 	gStyle->SetLabelFont(42,"XYZ");

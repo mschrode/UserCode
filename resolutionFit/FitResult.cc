@@ -1,4 +1,4 @@
-// $Id: FitResult.cc,v 1.9 2011/06/23 18:07:37 mschrode Exp $
+// $Id: FitResult.cc,v 1.10 2011/11/21 17:18:05 mschrode Exp $
 
 #include "FitResult.h"
 
@@ -291,10 +291,16 @@ namespace resolutionFit {
 	values_.push_back((*it)->fittedValue(0)/meanPt_);
 	statUncerts_.push_back((*it)->fittedUncert(0)/meanPt_);
       }
-      extrapolatedValue_ /= meanPt_;
-      extrapolatedStatUncert_ /= meanPt_;
-      extrapolatedSystUncert_ /= meanPt_;
-    
+      if( extrapolation_->GetParameter(1) > 0. ) { // want positive slope
+	extrapolatedValue_ /= meanPt_;
+	extrapolatedStatUncert_ /= meanPt_;
+	extrapolatedSystUncert_ /= meanPt_;
+      } else {
+	meanPt_ = 1.;
+	extrapolatedValue_ = 0.;
+	extrapolatedStatUncert_ = 1000.;
+	extrapolatedSystUncert_ = 1000.;
+      }
       return true;
     } else {
       return false;

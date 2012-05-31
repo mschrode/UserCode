@@ -1,4 +1,4 @@
-// $Id: FileOps.h,v 1.14 2012/03/02 13:40:25 mschrode Exp $
+// $Id: FileOps.h,v 1.15 2012/04/12 12:55:18 mschrode Exp $
 
 #ifndef FileOps_h
 #define FileOps_h
@@ -7,12 +7,14 @@
 #include <iostream>
 #include <vector>
 
+#include "TCanvas.h"
 #include "TChain.h"
 #include "TF1.h"
 #include "TFile.h"
 #include "TGraph.h"
 #include "TGraphAsymmErrors.h"
 #include "TH1.h"
+#include "TNamed.h"
 #include "TObject.h"
 #include "THStack.h"
 #include "TString.h"
@@ -36,6 +38,8 @@ namespace util
     static std::vector<TF1*> readTF1Vec(const TString &fileName, const TString &fName, const TString &newFName = "");
     static THStack* readTHStack(const TString &fileName, const TString &stackName, const TString &newStackName = "");
     static TChain* createTChain(const TString &fileName, const TString &treeName = "", unsigned int verbosity = 1);
+    static void toFiles(TNamed* obj, TFile* file, const TString &objName = "");
+    static void toFiles(TCanvas* can, TFile* file, const TString &canName = "", const TString &option = "root+eps");
   };
 
 
@@ -293,6 +297,39 @@ namespace util
     }
     
     return chain;
+  }
+
+
+
+  // --------------------------------------------------
+  void FileOps::toFiles(TNamed* obj, TFile* file, const TString &objName) {
+    if( file->IsZombie() ) {
+      std::cerr << "ERROR: unable to write to file '" << file->GetName() << std::endl;
+      exit(1);
+    } else {
+      TString name = obj->GetName();
+      TString title = obj->GetTitle();
+      if( objName != "" ) {
+	obj->SetName(objName);
+	obj->SetTitle(objName);
+      }
+      file->WriteTObject(obj);
+      obj->SetName(name);
+      obj->SetTitle(title);
+    }
+  }
+  
+
+  void FileOps::toFiles(TCanvas* can, TFile* file, const TString &canName, const TString &option) {
+    if( file->IsZombie() ) {
+      std::cerr << "ERROR: unable to write to file '" << file->GetName() << std::endl;
+      exit(1);
+    } else {
+      TString name = can->GetName();
+      if( canName != "" ) name = canName;
+      if( option.Contains("root") ) file->WriteTObject(can,name);
+      if( option.Contains("eps") ) can->SaveAs(name+".eps","eps");
+    }
   }
 }
 #endif

@@ -1,4 +1,4 @@
-// $Id: ResolutionFunction.cc,v 1.5 2011/11/21 17:18:05 mschrode Exp $
+// $Id: ResolutionFunction.cc,v 1.6 2012/02/04 21:51:49 mschrode Exp $
 
 #include <algorithm>
 
@@ -95,7 +95,7 @@ namespace resolutionFit {
     } else if( type == ResolutionFunction::ModifiedNSC ) {
       param.push_back(4.);
       param.push_back(0.7);
-      param.push_back(0.);
+      param.push_back(0.01);
       param.push_back(0.2);
     }
     std::vector<double> paramErr(param.size(),0.);
@@ -103,8 +103,8 @@ namespace resolutionFit {
 
     // Get TF1 to fit
     TF1* fit = f->func("tmp");
-    if( type == ResolutionFunction::ModifiedNSC ) fit->FixParameter(2,0.);
-    gc->Fit(fit,"0QBR");
+    //if( type == ResolutionFunction::ModifiedNSC ) fit->FixParameter(2,0.);
+    gc->Fit(fit,"0QR");
     std::cout << "Parameters of fitted resolution:\n";
     for(int i = 0; i < fit->GetNpar(); ++i) {
       std::cout << "  " << i << ": " << fit->GetParameter(i) << " +/- " << fit->GetParError(i) << std::endl;

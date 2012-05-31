@@ -1,4 +1,4 @@
-// $Id: OutputManager.h,v 1.3 2011/06/07 18:23:30 mschrode Exp $
+// $Id: OutputManager.h,v 1.4 2011/09/16 13:59:31 mschrode Exp $
 
 #ifndef OUTPUT_MANAGER_H
 #define OUTPUT_MANAGER_H
@@ -36,10 +36,18 @@ namespace resolutionFit {
     virtual void saveCurrentPad(const TString &name) = 0;
 
     TH1* mainFrame(double xMin, double xMax, double yMin, double yMax, const TString &yTitle) const {
-      return util::HistOps::createRatioTopFrame(xMin,xMax,yMin,yMax,yTitle); }
+      return util::HistOps::createRatioTopFrame(xMin,xMax,yMin,yMax,yTitle);
+    }
     TH1* mainFrame(const TH1* h) const;
+    TH1* ratioFrame(const TH1 *h, const TString &xTitle, const TString &xUnit, const TString &yTitle, double yMin, double yMax) const {
+      return util::HistOps::createRatioBottomFrame(h,xTitle,xUnit,yTitle,yMin,yMax);
+    }
     TH1* ratioFrame(const TH1 *h, const TString &xTitle, const TString &xUnit, double yMin, double yMax) const {
-      return util::HistOps::createRatioBottomFrame(h,xTitle,xUnit,yMin,yMax); }
+      return util::HistOps::createRatioBottomFrame(h,xTitle,xUnit,yMin,yMax);
+    }
+    TH1* ratioFrame(const TH1 *h, double yMin, double yMax) const {
+      return util::HistOps::createRatioBottomFrame(h,yMin,yMax); 
+    }
 
 
   protected:

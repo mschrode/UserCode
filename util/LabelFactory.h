@@ -1,4 +1,4 @@
-//  $Id: LabelFactory.h,v 1.23 2012/02/29 16:48:14 mschrode Exp $
+//  $Id: LabelFactory.h,v 1.24 2012/03/01 23:13:41 mschrode Exp $
 
 #ifndef LABEL_FACTORY_H
 #define LABEL_FACTORY_H
@@ -22,12 +22,12 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: LabelFactory.h,v 1.23 2012/02/29 16:48:14 mschrode Exp $
+  //!  $Id: LabelFactory.h,v 1.24 2012/03/01 23:13:41 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class LabelFactory {
   public:
     static double lineHeight() {
-      double height = 0.044;
+      double height = 0.048;
       TString mode = "Presentation";
       if( mode.CompareTo(gStyle->GetTitle()) == 0 ) {
 	height = 0.05;
@@ -57,6 +57,7 @@ namespace util {
       leg->SetBorderSize(0);
       leg->SetFillColor(0);
       leg->SetTextFont(42);
+      leg->SetTextSize(0.04);
       return leg;
     }
     static TLegend *createLegend(int nEntries) {
@@ -121,6 +122,7 @@ namespace util {
       txt->SetFillColor(0);
       txt->SetTextFont(42);
       txt->SetTextAlign(12);
+      txt->SetTextSize(0.04);
       return txt;
     }
 
@@ -152,6 +154,22 @@ namespace util {
       txt->SetTextFont(42);
       txt->SetTextAlign(12);
       return txt;
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static TString dataMC(const TString &id, const TString &lumi) {
+      TString label = "";
+      if( id == "DATA" || id == "data" || id == "Data" ) label = data(lumi);
+      else if( id == "MC" || id == "mc" || id == "Mc" ) label = mc();
+
+      return label;
+    }
+    static TString data(const TString & lumi) {
+      return "Data ("+lumi+")";
+    }
+    static TString mc() {
+      return "CMS Simulation";
     }
 
 
@@ -229,36 +247,63 @@ namespace util {
 
 
     // -------------------------------------------------------------------------------------
-    static TString labelEta(double etaMin, double etaMax, const TString &etaExp = "") {
+    static TString eta(const TString &etaExp = "") {
+      return etaExp == "" ? "|#eta|":"|#eta^{"+etaExp+"}|";
+    }
+    static TString etaCut(double etaMin, double etaMax, const TString &etaExp = "") {
       TString min = util::toTString(etaMin,1);
       TString max = util::toTString(etaMax,1);
       if( min.Length() == 1 ) min += ".0";
       if( max.Length() == 1 ) max += ".0";
 
-      return etaExp == "" ? min+" < |#eta| < "+max :  min+" < |#eta^{"+etaExp+"}| < "+max;
+      return min+" < "+eta(etaExp)+" < "+max;
+    }
+    static TString etaGenCut(double etaMin, double etaMax) {
+      return etaCut(etaMin,etaMax,"gen");
     }
 
 
     // -------------------------------------------------------------------------------------
-    static TString labelEtaGen(double etaMin, double etaMax) {
-      return labelEta(etaMin,etaMax,"gen");
+    static TString ptAve() {
+      return "p^{ave}_{T}";
+    }
+    static TString ptAveCut(double ptMin, double ptMax) {
+      TString min = util::toTString(ptMin,0);
+      TString max = util::toTString(ptMax,0);
+
+      return min+" < "+ptAve()+" < "+max+" GeV";
     }
 
 
     // -------------------------------------------------------------------------------------
-    static TString labelPtAve(double ptMin, double ptMax) {
-      TString min = util::toTString(ptMin,1);
-      TString max = util::toTString(ptMax,1);
-
-      return min+" < p^{ave}_{T} < "+max+" GeV";
+    static TString pt3Rel() {
+      return "p_{T,3} / p^{ave}_{T}";
+    }
+    static TString pt3RelCut(double cut) {
+      return pt3Rel()+" < "+util::toTString(cut);
+    }
+    static TString pt3RelGen() {
+      return "p^{gen}_{T,3} / p^{gen,ave}_{T}";
+    }
+    static TString pt3RelGenCut(double cut) {
+      return pt3RelGen()+" < "+util::toTString(cut);
     }
 
 
     // -------------------------------------------------------------------------------------
-    static TString labelPt3(double pt3) {
-      return "p_{T,3} < "+util::toTString(pt3)+" p^{ave}_{T}";
+    static TString deltaPhi() {
+      return "#Delta#phi";
     }
-    
+    static TString deltaPhiGen() {
+      return "#Delta#phi^{gen}";
+    }
+    static TString deltaPhiCut(double cut) {
+      return deltaPhi()+" > "+util::toTString(cut);
+    }
+    static TString deltaPhiGenCut(double cut) {
+      return deltaPhiGen()+" > "+util::toTString(cut);
+    }
+
     
     
   private:

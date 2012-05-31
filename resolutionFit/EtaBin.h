@@ -1,4 +1,4 @@
-// $Id: EtaBin.h,v 1.10 2011/06/23 18:07:37 mschrode Exp $
+// $Id: EtaBin.h,v 1.11 2011/11/21 17:18:04 mschrode Exp $
 
 #ifndef ETA_BIN_H
 #define ETA_BIN_H
@@ -86,8 +86,8 @@ namespace resolutionFit {
 
     TGraphAsymmErrors* ratioGraph(const SampleLabel &label1, const SampleLabel &label2, FitResult::Type type) const;
 
-    bool addDataSample(const TString &label, const TString &fileName);
-    bool addMCSample(const TString &label, const TString &fileName);
+    bool addDataSample(const TString &label, const TString &fileName, const TString &printLabel);
+    bool addMCSample(const TString &label, const TString &fileName, const TString &printLabel);
     bool addFitResult(FitResult::Type type);
 
     bool addExtrapolationUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color);

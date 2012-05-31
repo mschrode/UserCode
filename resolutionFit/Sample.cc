@@ -74,6 +74,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------
   Sample::Sample(const TString &label, unsigned int verbosity)
     : label_(label), verbosity_(verbosity) {
+    printLabel_ = label;
   }
 
 
@@ -349,6 +350,26 @@ namespace resolutionFit {
       TH1* hPtAsym = meas_.at(ptSoftBin)->histPtAsym();
       hPtAsym->GetXaxis()->SetRangeUser(-1.,1.);
       if( hPtAsym->Integral(1,hPtAsym->GetNbinsX()) > 0. ) {
+	// Check for symmetric filling scheme
+	// and adjust uncertainties
+	bool isSymmetric = false;
+	if( hPtAsym->GetNbinsX() % 2 == 1 ) {
+	  isSymmetric = true;
+	  int binUp = hPtAsym->GetNbinsX()/2+1;
+	  int binDown = binUp;
+	  for(; binUp <= hPtAsym->GetNbinsX(); ++binUp, --binDown) {
+	    if( hPtAsym->GetBinContent(binUp) != hPtAsym->GetBinContent(binDown) ) {
+	      isSymmetric = false;
+	      break;
+	    }
+	  }
+	}
+	if( isSymmetric ) {
+	  for(int bin = 1; bin <= hPtAsym->GetNbinsX(); ++bin) {
+	    hPtAsym->SetBinError(bin,sqrt(2.)*hPtAsym->GetBinError(bin));
+	  }
+	}
+	// Fit width
 	if( util::HistOps::fitCoreWidth(hPtAsym,2.,width,widthErr) ) {
 	  asymmetryWidths_.push_back(width);
 	  asymmetryWidthErrs_.push_back(widthErr);
@@ -366,6 +387,17 @@ namespace resolutionFit {
   }
 
 
+  // -------------------------------------------------------------------
+  void Sample::cureStatUncerts() {
+    for(unsigned int i = 1; i < meas_.size()-1; ++i) {
+      if( meas_.at(i)->fittedUncert(0) == 0. ) {
+	double newUncert = 0.5*(  meas_.at(i-1)->fittedUncert(0) +  meas_.at(i+1)->fittedUncert(0) );
+	meas_.at(i)->setFittedUncert(0,newUncert);
+      }
+    }
+  }
+
+
 
   // -------------------------------------------------------------------
   DataSample::DataSample(const TString &label, unsigned int etaBin, unsigned int ptBin, double ptMin, double ptMax, const std::vector<double> &ptSoft, const TString &fileName, unsigned int verbosity)
@@ -374,6 +406,7 @@ namespace resolutionFit {
     for(unsigned int i = 0; i < ptSoft.size(); ++i) {
       meas_.push_back(new Measurement(fileName,etaBin,ptBin,i,ptMin,ptMax,ptSoft.at(i),verbosity));
     }
+    cureStatUncerts();
     fitAsymmetryWidths();
 
     // Style
@@ -395,12 +428,14 @@ namespace resolutionFit {
     for(unsigned int i = 0; i < ptSoft.size(); ++i) {
       meas_.push_back(new Measurement(fileName,etaBin,ptBin,i,ptMin,ptMax,ptSoft.at(i),verbosity));
     }
+    cureStatUncerts();
     fitAsymmetryWidths();
 
     // Style
     if( Sample::type(label) == Sample::NONE ) {
       TYPE[label] = Sample::MC;
       MARKER_STYLE[label] = 25 + N_MC_SAMPLES;
+      //MARKER_STYLE[label] = 23 - N_MC_SAMPLES;
       COLOR[label] = color(1+2*N_MC_SAMPLES);
       ++N_MC_SAMPLES;
     }

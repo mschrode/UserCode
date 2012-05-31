@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.31 2011/08/15 15:55:09 mschrode Exp $
+// $Id: Parameters.h,v 1.32 2011/11/21 17:18:04 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -59,6 +59,7 @@ namespace resolutionFit {
     double ptSoftMin(unsigned int ptSoftBin) const { return binAdm_->ptSoftMin(ptSoftBin); }
     double ptSoftMax(unsigned int ptSoftBin) const { return binAdm_->ptSoftMax(ptSoftBin); }
     double ptSoftAbsMin() const { return ptSoftAbsMin_; }
+    double deltaPhi() const { return 2.7; }
 
     void printBinning() const { binAdm_->printBinning(); }
 

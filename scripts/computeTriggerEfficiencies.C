@@ -1,4 +1,4 @@
-// $Id: computeTriggerEfficiencies.C,v 1.4 2011/05/17 16:39:11 mschrode Exp $
+// $Id: computeTriggerEfficiencies.C,v 1.5 2012/01/24 10:16:38 mschrode Exp $
 
 #include <algorithm>
 #include <cassert>
@@ -10,6 +10,7 @@
 
 #include "TCanvas.h"
 #include "TChain.h"
+#include "TFile.h"
 #include "TGraphAsymmErrors.h"
 #include "TH1.h"
 #include "TH1D.h"
@@ -19,6 +20,7 @@
 
 #define UTILS_AS_HEADER_FILE
 #include "../util/utils.h"
+#include "../util/FileOps.h"
 #include "../util/HistOps.h"
 #include "../util/LabelFactory.h"
 #include "../util/StyleSettings.h"
@@ -307,6 +309,7 @@ void computeTriggerEfficiences(const TString &fileNames, double lumi, int nEvts 
   // Plot efficiencies
   TString outNamePrefix = "TurnOn_"+jetType;
   if( etaMin > 0. ) outNamePrefix += "_MinEta"+util::toTStringNoPoint(etaMin,1);
+  TFile* outFile = new TFile(outNamePrefix+".root","RECREATE");
 
   for(size_t i = 0; i < probeTriggers.size(); ++i) {
 
@@ -318,25 +321,24 @@ void computeTriggerEfficiences(const TString &fileNames, double lumi, int nEvts 
     label->AddText("p^{ave}_{T}(#epsilon > 99%) = "+util::toTString(ptAve99.at(i))+" GeV");
     label->GetLine(2)->SetTextColor(lPtAve99.at(i)->GetLineColor());
   
-    TH1 *hFrame = util::HistOps::createRatioFrame(ptMin.at(i),ptMax.at(i),0.,1.6*plateauVals.at(i),
-						  "p^{ave}_{T} (GeV)",probeTriggers.at(i)+" Efficiency");
+    TH1 *hFrame = util::HistOps::createRatioFrame(ptMin.at(i),ptMax.at(i),0.,1.6*plateauVals.at(i),"p^{ave}_{T} (GeV)",probeTriggers.at(i)+" Efficiency");
     hFrame->SetLineColor(fEff.at(i)->GetLineColor());
     for(int bin = 1; bin <= hFrame->GetNbinsX(); ++bin) {
       hFrame->SetBinContent(bin,plateauVals.at(i));
     }
     
-    TCanvas *canEff = new TCanvas("canEff_"+probeTriggers.at(i)+"_Eta"+util::toTString(etaMin),probeTriggers.at(i)+" efficiency",500,500);
+    TCanvas *canEff = new TCanvas("canEff_"+probeTriggers.at(i)+"_Eta"+util::toTString(etaMin),probeTriggers.at(i)+" #hat{#epsilon}",500,500);
     canEff->cd();
     hFrame->Draw();
     hEff.at(i)->Draw("PE1same");
     fEff.at(i)->Draw("same");
     lPtAve99.at(i)->Draw("same");
     label->Draw("same");
-    canEff->SaveAs(outNamePrefix+"_"+probeTriggers.at(i)+".eps","eps");
+    util::FileOps::toFiles(canEff,outFile,outNamePrefix+"_"+probeTriggers.at(i));
   }
 
   // All in one plot
-  TH1 *hFrame = util::HistOps::createRatioFrame(histMin,histMax,0.,2.45,"p^{ave}_{T} (GeV)","Efficiency");
+  TH1 *hFrame = util::HistOps::createRatioFrame(histMin,histMax,0.,2.45,"p^{ave}_{T} (GeV)","#hat{#epsilon}");
   for(int bin = 1; bin <= hFrame->GetNbinsX(); ++bin) {
     hFrame->SetBinContent(bin,1.);
   }
@@ -356,8 +358,8 @@ void computeTriggerEfficiences(const TString &fileNames, double lumi, int nEvts 
     fEff.at(i)->Draw("same");
   }
   TPaveText *label = util::LabelFactory::createPaveText(1);
-  if( etaMin > 0. ) label->AddText(jetLabel+",  |#eta_{1,2}| > "+util::toTString(etaMin)+",  L = "+util::StyleSettings::luminosity(lumi));
-  else label->AddText(jetLabel+",  L = "+util::StyleSettings::luminosity(lumi));
+  if( etaMin > 0. ) label->AddText("|#eta_{1,2}| > "+util::toTString(etaMin)+",  "+util::LabelFactory::labelData(util::StyleSettings::luminosity(lumi)));
+  else label->AddText(util::LabelFactory::labelData(util::StyleSettings::luminosity(lumi)));
   label->Draw("same");
   TLegend* leg1 = util::LabelFactory::createLegendColWithOffset(4,-0.5,1);
   TLegend* leg2 = util::LabelFactory::createLegendColWithOffset(4,0.5,1);
@@ -370,7 +372,7 @@ void computeTriggerEfficiences(const TString &fileNames, double lumi, int nEvts 
   }
   leg1->Draw("same");
   leg2->Draw("same");
-  canEff->SaveAs(outNamePrefix+".eps","eps");
+  util::FileOps::toFiles(canEff,outFile,outNamePrefix);
 
 
   // Print efficiencies
@@ -382,13 +384,15 @@ void computeTriggerEfficiences(const TString &fileNames, double lumi, int nEvts 
   for(size_t i = 0; i < probeTriggers.size(); ++i) {
     std::cout << probeTriggers.at(i) << " : " << util::toTString(ptAve99.at(i),1) << std::endl;
   }
+
+  delete outFile;
 }
 
 
 // --------------------------------------------------
 void run(int nEvts = -1) {
   TString input = "~/UserCode/mschrode/resolutionFit/input/Analysis2011/Kalibri_JetRun2011A_V3_163337-167151_L1FastJet_AK5PF";
-  double lumi = 838.;
+  double lumi = 855.;
 
   computeTriggerEfficiences(input,lumi,nEvts);
 //   computeTriggerEfficiences(input,lumi,nEvts,1.7);

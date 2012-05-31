@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: SystematicUncertainty.cc,v 1.1 2011/02/28 10:53:05 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -68,19 +68,21 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   TGraphAsymmErrors* SystematicUncertainty::relUncertSteps() const {
     std::vector<double> x;
-    std::vector<double> xe;
+    std::vector<double> xed;
+    std::vector<double> xeu;
     std::vector<double> y;
     std::vector<double> yed;
     std::vector<double> yeu;
     for(size_t i = 0; i < ptMean_.size(); ++i) {
-      x.push_back(0.5*(ptMin_.at(i)+ptMax_.at(i)));
-      xe.push_back(ptMax_.at(i)-x.at(i));
+      x.push_back(ptMean_.at(i));
+      xed.push_back(x.at(i)-ptMin_.at(i));
+      xed.push_back(ptMax_.at(i)-x.at(i));
       y.push_back(0.);
       yed.push_back(relUncertDown_.at(i));
       yeu.push_back(relUncertUp_.at(i));
     }
     TGraphAsymmErrors* g = new TGraphAsymmErrors(x.size(),&(x.front()),&(y.front()),
-						 &(xe.front()),&(xe.front()),&(yed.front()),&(yeu.front()));
+						 &(xed.front()),&(xeu.front()),&(yed.front()),&(yeu.front()));
     g->SetFillStyle(1001);
     g->SetFillColor(color_);
     g->SetLineColor(color_);

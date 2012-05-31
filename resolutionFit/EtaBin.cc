@@ -1,4 +1,4 @@
-// $Id: EtaBin.cc,v 1.14 2011/11/21 17:18:05 mschrode Exp $
+// $Id: EtaBin.cc,v 1.15 2012/02/04 21:51:49 mschrode Exp $
 
 #include <algorithm>
 #include <iostream>
@@ -51,10 +51,10 @@ namespace resolutionFit{
 
 
   // -------------------------------------------------------------------------------------
-  bool EtaBin::addDataSample(const TString &label, const TString &fileName) {
+  bool EtaBin::addDataSample(const TString &label, const TString &fileName, const TString &printLabel) {
     bool result = true;
     for(std::vector<PtBin*>::iterator it = ptBins_.begin(); it != ptBins_.end(); ++it) {
-      bool status = (*it)->addDataSample(label,fileName);
+      bool status = (*it)->addDataSample(label,fileName,printLabel);
       result = result && status;
     }
     sampleTypes_[label] = Sample::Data;
@@ -64,10 +64,10 @@ namespace resolutionFit{
 
 
   // -------------------------------------------------------------------------------------
-  bool EtaBin::addMCSample(const TString &label, const TString &fileName) {
+  bool EtaBin::addMCSample(const TString &label, const TString &fileName, const TString &printLabel) {
     bool result = true;
     for(std::vector<PtBin*>::iterator it = ptBins_.begin(); it != ptBins_.end(); ++it) {
-      bool status = (*it)->addMCSample(label,fileName);
+      bool status = (*it)->addMCSample(label,fileName,printLabel);
       result = result && status;
     }
     sampleTypes_[label] = Sample::MC;
@@ -397,9 +397,7 @@ namespace resolutionFit{
 
       kValTotalDown_ = sqrt( kValStat_*kValStat_ + kValSystDown_*kValSystDown_ );
       kValTotalUp_ = sqrt( kValStat_*kValStat_ + kValSystUp_*kValSystUp_ );
-
-      scaledMCTruthReso_ = ResolutionFunction::createScaledResolutionFunction(mcTruthReso_,kVal_,kValTotalDown_,kValTotalUp_);
-
+      scaledMCTruthReso_ = ResolutionFunction::createScaledResolutionFunction(mcTruthReso_,kVal_,kValStat_,kValTotalDown_,kValTotalUp_);
       kValType_ = type;
 
       delete g1;

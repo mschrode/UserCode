@@ -39,18 +39,20 @@ namespace resolutionFit{
 
 
   // -------------------------------------------------------------------------------------
-  bool PtBin::addSample(Sample::Type type, const TString &label, const TString &fileName) {
+  bool PtBin::addSample(Sample::Type type, const TString &label, const TString &fileName, const TString &printLabel) {
     bool result = true;
     if( type == Sample::Data ) {
       DataSample* s = new DataSample(label,etaBin(),ptBin(),par_->ptMin(etaBin(),ptBin()),
 				     par_->ptMax(etaBin(),ptBin()),
 				     par_->ptSoft(),fileName,par_->verbosity());
+      if( printLabel != "" ) s->setPrintLabel(printLabel);
       dataSamples_[label] = s;
       samples_[label] = s;
     } else if( type == Sample::MC ) {
       MCSample* s = new MCSample(label,etaBin(),ptBin(),par_->ptMin(etaBin(),ptBin()),
 				 par_->ptMax(etaBin(),ptBin()),
 				 par_->ptSoft(),fileName,par_->verbosity());
+      if( printLabel != "" ) s->setPrintLabel(printLabel);
       mcSamples_[label] = s;
       samples_[label] = s;
     } else {

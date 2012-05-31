@@ -1,4 +1,4 @@
-// $Id:  $
+// $Id: $
 
 #include <iostream>
 
@@ -27,14 +27,16 @@ int main(int argc, char *argv[]) {
   //par->setOutMode(OutputManager::EPSSingleFilesPlusROOT);
   par->setLumi(855.);
   par->setPtSoftAbsMin(10.);
-  //par->setNEtaBinsUser(1);
+  par->setNEtaBinsUser(1);
   
   TString pathToHome = "/afs/naf.desy.de/user/m/mschrode/";
   TString pathToConfig = pathToHome+"UserCode/mschrode/resolutionFit/config/Analysis2011/";
-  TString pathToFitResultsData = pathToHome+"results/ResolutionFit/Run2011A_163337-167151";
-  TString pathToFitResultsMC = pathToHome+"results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV-pythia6_Summer11-PU_S3_START42_V11-v2";
 
-  FitResult::Type nominalFitResType = FitResult::FullMaxLikeAbs;
+  // Updated Summer11 control plots (inclusive pt spectra)
+  TString pathToFitResultsData = pathToHome+"results/ResolutionFit/NewControlPlots";
+  TString pathToFitResultsMC = pathToHome+"results/ResolutionFit/NewControlPlots";
+
+  FitResult::Type nominalFitResType = FitResult::PtAsym;
 
   CommanderCool* cmd = new CommanderCool(par);
   
@@ -49,36 +51,17 @@ int main(int argc, char *argv[]) {
   
   
   // Particle level imbalance
-  //cmd->fitPLI("CMS Simulation ",pathToFitResultsMC+"/ResFit_PtGenAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet.root",ResolutionFunction::ModifiedNSC);
   cmd->setPLI(pathToConfig+"Parameters_PLI_Summer11_PythiaZ2.txt",ResolutionFunction::ModifiedNSC);
   
   // Samples
   TString idData = "Data";
   TString idMC = "CMS Simulation";
 
-  // Summer11 primary result
+  // Summer11: updated pt control plots
   cmd->addDataSample(idData,pathToFitResultsData+"/ResFit_PtAveBins_Data_163337-167151_V3_"+jetTypeStr+"_L1FastJet.root");
   cmd->addMCSample(idMC,pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet_Nominal.root");
-  cmd->addMCSample("JES Down",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet_JESDown.root");
-  cmd->addMCSample("JES Up",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet_JESUp.root");
-  cmd->addMCSample("PU Up",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet_PUUp.root");
-  cmd->addMCSample("Spec Herwig",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet_SpectrumHerwigpp.root");
-       
+  
   cmd->addFitResult(nominalFitResType);
-
-  // Systematic uncertainties
-//   cmd->addExtrapolationUncertainty(idMC,nominalFitResType,kBlue-4);
-//   cmd->addPLIUncertainty(idMC,nominalFitResType,kBlue+2);
-//   cmd->addUncertaintyFromVariedSample("PU",1.,idMC,nominalFitResType,"PU Up",kRed+1);
-//   cmd->addUncertaintyFromVariedSample("Spectrum",1.,idMC,nominalFitResType,"Spec Herwig",kOrange-1);
-//   cmd->addUncertaintyFromVariedSample("JES",1.,idMC,nominalFitResType,"JES Down","JES Up",kRed+3);
-
-  cmd->addExtrapolationUncertainty(idMC,nominalFitResType,kRed+2);
-  cmd->addPLIUncertainty(idMC,nominalFitResType,kRed+4);
-  cmd->addUncertaintyFromVariedSample("PU",1.,idMC,nominalFitResType,"PU Up",kBlue);
-  cmd->addUncertaintyFromVariedSample("Spectrum",1.,idMC,nominalFitResType,"Spec Herwig",kBlue-10);
-  cmd->addUncertaintyFromVariedSample("JES",1.,idMC,nominalFitResType,"JES Down","JES Up",kBlue+3);
-
 
   // Samples to be compared
   cmd->compareSamples(idData,idMC);
@@ -87,12 +70,9 @@ int main(int argc, char *argv[]) {
   // Output
   cmd->printSetup();
   cmd->makeAllPlots();
-  cmd->printResult();
-  cmd->printPLI();
-  //cmd->printRatioToCombinationFormat();
 
   delete cmd;
   delete par;
-  
+
   return 0;
 }

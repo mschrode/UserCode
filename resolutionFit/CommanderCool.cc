@@ -1,4 +1,4 @@
-// $Id: CommanderCool.cc,v 1.10 2011/11/21 17:18:05 mschrode Exp $
+// $Id: CommanderCool.cc,v 1.11 2012/02/04 21:51:49 mschrode Exp $
 
 #include <iomanip>
 #include <iostream>
@@ -95,14 +95,14 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------
-  void CommanderCool::addDataSample(const TString &label, const TString &fileName) {
+  void CommanderCool::addDataSample(const TString &label, const TString &fileName, const TString &printLabel) {
     if( !isConsistentInputName(fileName) ) {
       std::cerr << "WARNING in CommanderCool::addDataSample(): name of file contains a jet type string different than the current type '" << JetProperties::toString(par_->jetType()) << "'" << std::endl;
       exit(1);
     }
     std::cout << "Adding DataSample '" << label << "'" << std::endl;
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
-      if( !((*it)->addDataSample(label,fileName) ) ) {
+      if( !((*it)->addDataSample(label,fileName,printLabel) ) ) {
 	std::cerr << "ERROR adding DataSample '" << label << "'" << std::endl;
 	exit(1);
       }
@@ -112,7 +112,7 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------
-  void CommanderCool::addMCSample(const TString &label, const TString &fileName) {
+  void CommanderCool::addMCSample(const TString &label, const TString &fileName, const TString &printLabel) {
     if( !isConsistentInputName(fileName) ) {
       std::cerr << "WARNING in CommanderCool::addMCSample(): name of file contains a jet type string different than the current type '" << JetProperties::toString(par_->jetType()) << "'" << std::endl;
       exit(1);
@@ -120,7 +120,7 @@ namespace resolutionFit {
 
     std::cout << "Adding MCSample '" << label << "'" << std::endl;
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
-      if( !((*it)->addMCSample(label,fileName) ) ) {
+      if( !((*it)->addMCSample(label,fileName,printLabel) ) ) {
 	std::cerr << "ERROR adding MCSample '" << label << "'" << std::endl;
 	exit(1);
       }
@@ -207,6 +207,8 @@ namespace resolutionFit {
   //! Also, if only two samples are added (i.e. if this method gets
   //! only called once), k-values can be fitted from the resolution
   //! ratio of 'sample1' and 'sample2' (\sa CommanderCool::fitKValues)
+  //! \todo Should be simplified: one vector of samples that are compared
+  //! to one reference sample
   // -------------------------------------------------------------------
   void CommanderCool::compareSamples(const SampleLabel &label1, const SampleLabel &label2) {
     for(EtaBinIt it = etaBins_.begin(); it != etaBins_.end(); ++it) {
@@ -363,9 +365,9 @@ namespace resolutionFit {
       const EtaBin* etaBin = *etaBinIt;
       TF1* pli = etaBin->pliFunc("PLIFuncTmp");
       std::cout << std::setprecision(0) << "   " << etaBin->toString() << ":   \t$ ";
-      std::cout << std::setprecision(1) << par_->etaMin(etaBin->etaBin()) << " < |\\eta| < " << par_->etaMax(etaBin->etaBin());
+      std::cout << std::setprecision(1) << par_->etaMin(etaBin->etaBin()) << "$ -- $" << par_->etaMax(etaBin->etaBin());
       for(int i = 0; i < pli->GetNpar(); ++i) {
-	std::cout << std::setprecision(4) << "$ & $" << pli->GetParameter(i) << " \\pm ";
+	std::cout << std::setprecision(4) << "$ & $" << pli->GetParameter(i) << "$ & $";
 	std::cout << std::setprecision(4) << pli->GetParError(i);
       }
       std::cout << "$ \\\\" << std::endl;

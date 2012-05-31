@@ -1,4 +1,4 @@
-// $Id: Measurement.h,v 1.10 2011/08/19 08:33:56 mschrode Exp $
+// $Id: Measurement.h,v 1.11 2012/02/04 21:51:49 mschrode Exp $
 
 #ifndef MEASUREMENT_H
 #define MEASUREMENT_H
@@ -50,7 +50,7 @@ namespace resolutionFit {
 
     TH1* histPdfPtAsym() const { return getClone("hFitPtAsym"); }
     TH1* histPdfPtTrue() const { return getClone("hTruthPDF"); }
-    TH1* histPtAsym() const { return getClone("hPtAbsAsym"); }
+    TH1* histPtAsym() const { return getClone("hPtAsym"); }
     TH1* histPtGenAsym() const { return getClone("hPtGenAsym"); }
     TH1* histPtGen() const { return getClone("hPtGen"); }
     TH1* histPtAve() const { return getClone("hPtAveAbs"); }
@@ -62,6 +62,7 @@ namespace resolutionFit {
     TH1* histMCNumPU() const { return getClone("hNumPU"); }
     TH1* histDeltaPt() const { return getClone("hDeltaPtJet12"); }
 
+    void setFittedUncert(unsigned int i, double uncert) { statUncert_.at(i) = uncert; }
 
 
 

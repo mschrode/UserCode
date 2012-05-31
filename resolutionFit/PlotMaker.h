@@ -1,4 +1,4 @@
-// $Id: PlotMaker.h,v 1.21 2012/02/04 21:51:49 mschrode Exp $
+// $Id: PlotMaker.h,v 1.22 2012/03/07 13:51:05 mschrode Exp $
 
 #ifndef PLOT_MAKER_H
 #define PLOT_MAKER_H
@@ -48,12 +48,24 @@ namespace resolutionFit {
 
       TPaveText* ptSoftBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int ptSoftBinIdx, unsigned int nExtraEntries = 0) const;
       TPaveText* ptSoftBin(unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int ptSoftBinIdx) const;
+      TPaveText* ptSoftBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptSoftBinIdx) const;
       TPaveText* ptSoftBin(unsigned int etaBinIdx, unsigned int ptSoftBinIdx) const;
       TPaveText* ptBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptBinIdx) const;
       TPaveText* ptBin(unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int nExtraEntries = 0) const;
-      TPaveText* etaBin(SampleLabel label, unsigned int etaBinIdx, unsigned int nExtraEntries = 0) const;
-      TPaveText* etaBin(unsigned int etaBinIdx, unsigned int nExtraEntries = 0) const;
+      TPaveText* etaBin(SampleLabel label, unsigned int etaBinIdx, unsigned int nExtraEntries) const;
+      TPaveText* etaBin(unsigned int etaBinIdx, unsigned int nExtraEntries) const;
+
       TPaveText* inclusiveLabel(SampleLabel label, unsigned int nExtraEntries = 0) const;
+
+      TPaveText* etaPtAvePtSoftBin(unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int ptSoftBinIdx) const;
+      TPaveText* etaPtAvePtSoftBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int ptSoftBinIdx) const;
+      TPaveText* etaPtSoftBin(unsigned int etaBinIdx, unsigned int ptSoftBinIdx) const;
+      TPaveText* etaPtAveBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptBinIdx) const;
+      TPaveText* etaPtAveBin(unsigned int etaBinIdx, unsigned int ptBinIdx) const;
+      TPaveText* etaBin(SampleLabel label, unsigned int etaBinIdx) const;
+      TPaveText* etaBin(unsigned int etaBinIdx) const;
+      TPaveText* sampleBin(SampleLabel label) const;
+
       TString etaRange(unsigned int etaBin, const TString &superscript = "") const;
       TString ptRange(unsigned int etaBin, unsigned int ptBin) const;
       TString ptSoftRange(unsigned int ptSoftBinIdx) const;
@@ -61,8 +73,8 @@ namespace resolutionFit {
       TString lumi() const;
       TString pt() const;
       TString ptSoft() const;
-      TString label(FitResult::Type type) const;
-      TString label(const SampleLabel &label) const;
+      TString type(FitResult::Type type) const;
+      TString sample(const SampleLabel &label) const;
       
 
     private:

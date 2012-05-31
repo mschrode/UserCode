@@ -1,4 +1,4 @@
-// $Id: Measurement.cc,v 1.7 2011/08/19 08:33:56 mschrode Exp $
+// $Id: Measurement.cc,v 1.8 2011/11/21 17:18:05 mschrode Exp $
 
 #include "Measurement.h"
 
@@ -33,7 +33,7 @@ namespace resolutionFit {
     hists_[("hPtGenJet1"+hnSuffix_)] = 0;
     hists_[("hPtAveAbs"+hnSuffix_)] = 0;
     hists_[("hTruthPDF"+hnSuffix_)] = 0;
-    hists_[("hPtAbsAsym"+hnSuffix_)] = 0;
+    hists_[("hPtAsym"+hnSuffix_)] = 0;
     hists_[("hFitPtAsym"+hnSuffix_)] = 0;
     hists_[("hRespMeas"+hnSuffix_)] = 0;
     hists_[("hRespFit"+hnSuffix_)] = 0;
@@ -219,6 +219,13 @@ namespace resolutionFit {
     }
 
     file.Close();
+
+    // Evil hack to test different MC weights
+    std::map<TString,TH1*>::const_iterator it = hists_.find("hNumVtx"+hnSuffix_);
+    if( it != hists_.end() ) {
+      double w = it->second->GetEntries()/it->second->Integral();
+      statUncert_.at(0) /= sqrt(w);
+    }
 
     return statusIsGood;
   }

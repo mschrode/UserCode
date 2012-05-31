@@ -36,11 +36,11 @@ namespace resolutionFit {
     bool hasMCTruthSample() const { return mcTruthSample_; }
     const Sample* mcTruthSample() const { return mcTruthSample_; }
     
-    bool addDataSample(const TString &label, const TString &fileName) {
-      return addSample(Sample::Data,label,fileName);
+    bool addDataSample(const TString &label, const TString &fileName, const TString &printLabel) {
+      return addSample(Sample::Data,label,fileName,printLabel);
     }
-    bool addMCSample(const TString &label, const TString &fileName) {
-      return addSample(Sample::MC,label,fileName);
+    bool addMCSample(const TString &label, const TString &fileName, const TString &printLabel) {
+      return addSample(Sample::MC,label,fileName,printLabel);
     }
     bool addMCTruthSample(const TString &label, const TString &fileName);
     bool addFitResult(FitResult::Type type);
@@ -59,7 +59,7 @@ namespace resolutionFit {
     Sample* mcTruthSample_;
     Samples samples_;
 
-    bool addSample(Sample::Type type, const TString &label, const TString &fileName);
+    bool addSample(Sample::Type type, const TString &label, const TString &fileName, const TString &printLabel);
   };
 
   typedef std::vector<PtBin*> PtBins;

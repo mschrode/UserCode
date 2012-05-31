@@ -1,4 +1,4 @@
-// $Id: Sample.h,v 1.14 2011/11/21 17:18:05 mschrode Exp $
+// $Id: Sample.h,v 1.15 2012/02/04 21:51:49 mschrode Exp $
 
 #ifndef SAMPLE_H
 #define SAMPLE_H
@@ -38,6 +38,7 @@ namespace resolutionFit {
     virtual double relativeWeightTo(const SampleLabel &other, unsigned int ptSoftBin) const;
 
     TString label() const { return label_; }
+    TString printLabel() const { return printLabel_; }
     int color() const { return color(label()); }
     int markerStyle() const { return markerStyle(label()); }
 
@@ -54,6 +55,7 @@ namespace resolutionFit {
     TH1* histMCNumPU(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histMCNumPU(); }
     TH1* histDeltaPt(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histDeltaPt(); }
 
+    void setPrintLabel(const TString &printLabel) { printLabel_ = printLabel; }
     bool addFitResult(FitResult::Type type, double minPt3);
     bool setKSoftFit(FitResult::Type type, const TF1* fit);
     void addSystematicUncertainty(FitResult::Type type, const TString &label, double variedValue, double fraction);
@@ -99,6 +101,7 @@ namespace resolutionFit {
     const TString label_;
     const unsigned int verbosity_;
 
+    TString printLabel_;
     Meas meas_;
     FitResultMap fitResult_;
     std::map<SampleLabel, std::vector<double> > relWeightToOtherSample_;
@@ -106,6 +109,7 @@ namespace resolutionFit {
     int color(unsigned int idx) const;
     bool findFitResult(FitResult::Type type, FitResult* &fitResult) const;
     void fitAsymmetryWidths();
+    void cureStatUncerts();
 
 
   private:
@@ -135,6 +139,9 @@ namespace resolutionFit {
 
     SampleLabel label1() const { return label1_; }
     SampleLabel label2() const { return label2_; }
+    bool contains(const SampleLabel &label) const {
+      return (label == label1()) || (label == label2());
+    }
 
   private:
     const SampleLabel label1_;

@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.45 2012/03/07 13:48:43 mschrode Exp $
+// $Id: HistOps.h,v 1.46 2012/04/15 17:45:43 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.45 2012/03/07 13:48:43 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.46 2012/04/15 17:45:43 mschrode Exp $
   class HistOps
   {
   public:
@@ -267,8 +267,13 @@ namespace util
       if( yTitle == "jets" || yTitle == "events" || yTitle == "Jets" || yTitle == "Events" ) {
 	if( yTitle == "jets" || yTitle == "Jets" )        yAxisTitle += "Jets";
 	else if( yTitle == "events" || yTitle == "Events" ) yAxisTitle += "Events";
-	yAxisTitle += " / ";
-	if( h->GetBinWidth(1) != 1. ) yAxisTitle += util::toTString(h->GetBinWidth(1),3,false);
+	double w = h->GetBinWidth(1);
+	if( w != 1. ) {
+	  yAxisTitle += " / ";
+	  if( w >= 10. ) yAxisTitle += util::toTString(w,0,false);
+	  else if( w >= 1. ) yAxisTitle += util::toTString(w,1,false);
+	  else yAxisTitle += util::toTString(w,3,false);
+	}
 	if( xUnit.Length() ) yAxisTitle += " "+xUnit;
       } else {
 	yAxisTitle = yTitle;
@@ -659,11 +664,19 @@ namespace util
       return hFrame;
     }
 
-
     // -------------------------------------------------------------------------------------
     static TH1 *createRatioBottomFrame(const TH1 *h, const TString &xTitle, const TString &xUnit, double yMin = 0.81, double yMax = 1.19) {
       TH1 *hFrame = createRatioBottomFrame(h,yMin,yMax);
       setAxisTitles(hFrame,xTitle,xUnit,"");
+
+      return hFrame;
+    }
+
+    // -------------------------------------------------------------------------------------
+    static TH1 *createRatioBottomFrame(const TH1 *h, const TString &xTitle, const TString &xUnit, const TString &yTitle, double yMin = 0.81, double yMax = 1.19) {
+      TH1 *hFrame = createRatioBottomFrame(h,yMin,yMax);
+      setAxisTitles(hFrame,xTitle,xUnit,yTitle);
+      hFrame->GetYaxis()->CenterTitle();
 
       return hFrame;
     }
@@ -1014,6 +1027,25 @@ namespace util
       }
 
       return getUncertaintyBandSym(hNominal,hTotalUp,hTotalDown,color,fillStyle);
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static void *getUncertaintyBand(TGraphAsymmErrors* band, const TString &name, TH1* &hUp, TH1* &hDn) {
+
+      std::vector<double> binEdges;
+      binEdges.push_back(band->GetX()[0]-band->GetEXlow()[0]);
+      for(int i = 0; i < band->GetN(); ++i) {
+	binEdges.push_back(band->GetX()[i]+band->GetEXhigh()[i]);
+      }
+      hUp = new TH1D(name+"Up","",binEdges.size()-1,&(binEdges.front()));
+      hUp->SetLineColor(band->GetFillColor());
+      hUp->SetLineWidth(2);
+      hDn = static_cast<TH1*>(hUp->Clone(name+"Dn"));
+      for(int i = 0; i < band->GetN(); ++i) {
+	hUp->SetBinContent(1+i,band->GetY()[i]+band->GetEYhigh()[i]);
+	hDn->SetBinContent(1+i,band->GetY()[i]-band->GetEYlow()[i]);
+      }
     }
 
 
