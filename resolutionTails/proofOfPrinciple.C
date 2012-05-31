@@ -1,4 +1,4 @@
-// $Id: proofOfPrinciple.C,v 1.1 2012/01/05 11:35:41 mschrode Exp $
+// $Id: proofOfPrinciple.C,v 1.2 2012/02/27 15:16:13 mschrode Exp $
 
 #include <cassert>
 #include <iostream>
@@ -80,8 +80,6 @@ void getTails(const TH1* hResp, const TH1* hAsym, TH1* &hRespTail, double &fTail
     hRespTail->SetBinError(bin,0.);
   }
 
-//   double asymCoreStart = -gaussWidthNSig_*sigma_/sqrt(2.);
-//   double asymCoreEnd = -asymCoreStart;
   for(int bin = hAsymTail->FindBin(gaussStartAsym_); bin <= hAsymTail->FindBin(gaussEndAsym_); ++bin) {
     hAsymTail->SetBinContent(bin,0.);
     hAsymTail->SetBinError(bin,0.);
