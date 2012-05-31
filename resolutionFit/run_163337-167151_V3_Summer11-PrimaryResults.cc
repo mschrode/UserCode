@@ -1,4 +1,4 @@
-// $Id:  $
+// $Id: run_163337-167151_V3_Summer11-PrimaryResults.cc,v 1.1 2012/05/31 20:17:43 mschrode Exp $
 
 #include <iostream>
 
@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
   //par->setOutMode(OutputManager::PSAllInOne);
   par->setOutMode(OutputManager::EPSSingleFiles);
   //par->setOutMode(OutputManager::EPSSingleFilesPlusROOT);
-  par->setLumi(855.);
+  par->setLumi(838.);
   par->setPtSoftAbsMin(10.);
   //par->setNEtaBinsUser(1);
   
@@ -67,18 +67,12 @@ int main(int argc, char *argv[]) {
   cmd->addFitResult(nominalFitResType);
 
   // Systematic uncertainties
-//   cmd->addExtrapolationUncertainty(idMC,nominalFitResType,kBlue-4);
-//   cmd->addPLIUncertainty(idMC,nominalFitResType,kBlue+2);
-//   cmd->addUncertaintyFromVariedSample("PU",1.,idMC,nominalFitResType,"PU Up",kRed+1);
-//   cmd->addUncertaintyFromVariedSample("Spectrum",1.,idMC,nominalFitResType,"Spec Herwig",kOrange-1);
-//   cmd->addUncertaintyFromVariedSample("JES",1.,idMC,nominalFitResType,"JES Down","JES Up",kRed+3);
-
-  cmd->addExtrapolationUncertainty(idMC,nominalFitResType,kRed+2);
-  cmd->addPLIUncertainty(idMC,nominalFitResType,kRed+4);
-  cmd->addUncertaintyFromVariedSample("PU",1.,idMC,nominalFitResType,"PU Up",kBlue);
-  cmd->addUncertaintyFromVariedSample("Spectrum",1.,idMC,nominalFitResType,"Spec Herwig",kBlue-10);
-  cmd->addUncertaintyFromVariedSample("JES",1.,idMC,nominalFitResType,"JES Down","JES Up",kBlue+3);
-
+  cmd->addExtrapolationUncertainty(idMC,nominalFitResType,kCyan+2);
+  //cmd->addMCClosureUncertainty(idMC,nominalFitResType,46);
+  cmd->addUncertaintyFromVariedSample("JES",1.,idMC,nominalFitResType,"JES Down","JES Up",kBlue-9);
+  cmd->addPLIUncertainty(idMC,nominalFitResType,kGreen-1);
+  cmd->addUncertaintyFromVariedSample("Spectrum",1.,idMC,nominalFitResType,"Spec Herwig",kBlue-2);
+  cmd->addUncertaintyFromVariedSample("PU",1.,idMC,nominalFitResType,"PU Up",kBlue+1);
 
   // Samples to be compared
   cmd->compareSamples(idData,idMC);
