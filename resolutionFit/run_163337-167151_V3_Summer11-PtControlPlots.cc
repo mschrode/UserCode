@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: run_163337-167151_V3_Summer11-PtControlPlots.cc,v 1.1 2012/05/31 20:17:43 mschrode Exp $
 
 #include <iostream>
 
@@ -22,19 +22,17 @@ int main(int argc, char *argv[]) {
   
   Parameters* par = new Parameters("Res_163337-167151","config/Analysis2011/Binning/BinningAdmin2011_v2.cfg",0);
   par->setJetProperties(JetProperties::AK5,JetProperties::PF);
-  //par->setOutMode(OutputManager::PSAllInOne);
-  par->setOutMode(OutputManager::EPSSingleFiles);
-  //par->setOutMode(OutputManager::EPSSingleFilesPlusROOT);
+  par->setOutMode(OutputManager::EPSSingleFilesPlusROOT);
   par->setLumi(855.);
   par->setPtSoftAbsMin(10.);
   par->setNEtaBinsUser(1);
   
-  TString pathToHome = "/afs/naf.desy.de/user/m/mschrode/";
-  TString pathToConfig = pathToHome+"UserCode/mschrode/resolutionFit/config/Analysis2011/";
+  TString pathToSrc = "/afs/naf.desy.de/user/m/mschrode/UserCode/mschrode/";
+  TString pathToConfig = pathToSrc+"resolutionFit/config/Analysis2011/";
 
   // Updated Summer11 control plots (inclusive pt spectra)
-  TString pathToFitResultsData = pathToHome+"results/ResolutionFit/NewControlPlots";
-  TString pathToFitResultsMC = pathToHome+"results/ResolutionFit/NewControlPlots";
+  TString pathToFitResultsData = pathToSrc+"results/Analysis2011/ControlPlots";
+  TString pathToFitResultsMC = pathToSrc+"results/Analysis2011/ControlPlots";
 
   FitResult::Type nominalFitResType = FitResult::PtAsym;
 
@@ -47,7 +45,7 @@ int main(int argc, char *argv[]) {
   else if( par->jetType() == JetProperties::PF )  jetTypeStr = "PF";
   
   // MC truth resolution
-  cmd->setMCTruthResolution(pathToConfig+"Parameters_MCTruthResolution_Summer11_PythiaZ2_L1FastJet_NumPUMay10ReReco_v2.txt",ResolutionFunction::ModifiedNSC);
+  cmd->setMCTruthResolution(pathToConfig+"Parameters_MCTruthResolution_Summer11_PythiaZ2_L1FastJet_ThesisResults.txt",ResolutionFunction::ModifiedNSC);
   
   
   // Particle level imbalance

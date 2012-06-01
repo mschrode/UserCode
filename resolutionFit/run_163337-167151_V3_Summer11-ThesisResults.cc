@@ -1,4 +1,4 @@
-// $Id: run_163337-167151_V3_Summer11-ThesisResults.cc,v 1.2 2012/05/31 20:46:50 mschrode Exp $
+// $Id: run_163337-167151_V3_Summer11-ThesisResults.cc,v 1.3 2012/05/31 21:45:52 mschrode Exp $
 
 #include <iostream>
 
@@ -20,17 +20,19 @@ int main(int argc, char *argv[]) {
   
   gErrorIgnoreLevel = 1001;
   
+  //Parameters* par = new Parameters("~/scratch/ThesisPlots/Res_163337-167151","config/Analysis2011/Binning/BinningAdmin2011_v2.cfg",0);
   Parameters* par = new Parameters("Res_163337-167151","config/Analysis2011/Binning/BinningAdmin2011_v2.cfg",0);
   par->setJetProperties(JetProperties::AK5,JetProperties::PF);
+  //par->setOutMode(OutputManager::EPSSingleFilesPlusROOT);
   par->setOutMode(OutputManager::EPSSingleFiles);
   par->setLumi(855.);
   par->setPtSoftAbsMin(10.);
   par->setNEtaBinsUser(1);
   
-  TString pathToHome = "/afs/naf.desy.de/user/m/mschrode/";
-  TString pathToConfig = pathToHome+"UserCode/mschrode/resolutionFit/config/Analysis2011/";
-  TString pathToFitResultsData = pathToHome+"results/ResolutionFit/Run2011A_163337-167151";
-  TString pathToFitResultsMC = pathToHome+"results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV-pythia6_Summer11-PU_S3_START42_V11-v2";
+  TString pathToSrc = "/afs/naf.desy.de/user/m/mschrode/UserCode/mschrode/";
+  TString pathToConfig = pathToSrc+"resolutionFit/config/Analysis2011/";
+  TString pathToFitResultsData = pathToSrc+"results/Analysis2011/Run2011A_163337-167151";
+  TString pathToFitResultsMC = pathToSrc+"results/Analysis2011/QCD_Pt-15to3000_TuneZ2_Flat_7TeV-pythia6_Summer11-PU_S3_START42_V11-v2";
 
   FitResult::Type nominalFitResType = FitResult::FullMaxLikeAbs;
 
@@ -47,8 +49,8 @@ int main(int argc, char *argv[]) {
   
   
   // Particle level imbalance
-  //cmd->fitPLI("CMS Simulation ",pathToFitResultsMC+"/ResFit_PtGenAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet.root",ResolutionFunction::ModifiedNSC);
-  cmd->setPLI(pathToConfig+"Parameters_PLI_Summer11_PythiaZ2.txt",ResolutionFunction::ModifiedNSC);
+  cmd->fitPLI("CMS Simulation ",pathToFitResultsMC+"/ResFit_PtGenAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet.root",ResolutionFunction::ModifiedNSC);
+  //cmd->setPLI(pathToConfig+"Parameters_PLI_Summer11_PythiaZ2.txt",ResolutionFunction::ModifiedNSC);
   
   // Samples
   TString idData = "Data";

@@ -1,4 +1,4 @@
-// $Id: run_163337-167151_V3_Summer11-PileUpStudy.cc,v 1.1 2012/05/31 20:17:43 mschrode Exp $
+// $Id: run_163337-167151_V3_Summer11-PileUpStudy.cc,v 1.2 2012/05/31 20:56:08 mschrode Exp $
 
 #include <iostream>
 
@@ -22,14 +22,14 @@ int main(int argc, char *argv[]) {
   
   Parameters* par = new Parameters("Res_163337-167151","config/Analysis2011/Binning/BinningAdmin2011_v2.cfg",0);
   par->setJetProperties(JetProperties::AK5,JetProperties::PF);
-  par->setOutMode(OutputManager::EPSSingleFiles);
+  par->setOutMode(OutputManager::EPSSingleFilesPlusROOT);
   par->setNEtaBinsUser(1);
   par->setLumi(855.);
   par->setPtSoftAbsMin(10.);
   
-  TString pathToHome = "/afs/naf.desy.de/user/m/mschrode/";
-  TString pathToConfig = pathToHome+"UserCode/mschrode/resolutionFit/config/Analysis2011/";
-  TString pathToFitResultsMC = pathToHome+"results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV-pythia6_Summer11-PU_S3_START42_V11-v2";
+  TString pathToSrc = "/afs/naf.desy.de/user/m/mschrode/UserCode/mschrode/";
+  TString pathToConfig = pathToSrc+"resolutionFit/config/Analysis2011/";
+  TString pathToFitResultsMC = pathToSrc+"results/Analysis2011/QCD_Pt-15to3000_TuneZ2_Flat_7TeV-pythia6_Summer11-PU_S3_START42_V11-v2";
 
   FitResult::Type nominalFitResType = FitResult::FullMaxLikeAbs;
 
