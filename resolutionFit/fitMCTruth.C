@@ -1,4 +1,4 @@
-// $Id: fitMCTruth.C,v 1.15 2012/02/29 20:49:01 mschrode Exp $
+// $Id: fitMCTruth.C,v 1.16 2012/03/08 20:30:15 mschrode Exp $
 
 //!  Fit mean response and resolution from MC truth
 //!  histograms in Kalibri skims from
@@ -34,8 +34,10 @@ const bool archivePlots_ = false;
 const TString jetLabel_ = "Anti-k_{T} (R=0.5) PF Jets";
 const double labelResponseMin_ = 0.61;
 const double labelResponseMax_ = 1.39;
-const double labelResponseLogMin_ = 0.09;
-const double labelResponseLogMax_ = 1.91;
+// const double labelResponseLogMin_ = 0.09;
+// const double labelResponseLogMax_ = 1.91;
+const double labelResponseLogMin_ = 0.41;
+const double labelResponseLogMax_ = 1.59;
 
 
 // ------------------------------------------------------------
@@ -317,15 +319,14 @@ void plotMCTruth(const TString &fileName, const TString &histNamePrefix, const s
 
 
   // Labels for plots with all eta bins in one
-  TPaveText* label = util::LabelFactory::createPaveText(2,-0.58);
-  label->AddText("CMS Simulation,  #sqrt{s} = 7 TeV");
-  label->AddText(jetLabel_);
+  TPaveText* label = util::LabelFactory::createPaveText(1,-0.58);
+  label->AddText(util::LabelFactory::mc());
 
   TLegend* leg = util::LabelFactory::createLegendCol(binningAdmin.nEtaBins(),0.4);
   TLegend* legLines = util::LabelFactory::createLegendCol(binningAdmin.nEtaBins(),0.4);
   for(unsigned int etaBin = 0; etaBin < binningAdmin.nEtaBins(); ++etaBin) {
-    leg->AddEntry(hSigma.at(etaBin),util::LabelFactory::labelEtaGen(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin)),"P");
-    legLines->AddEntry(fSigma.at(etaBin),util::LabelFactory::labelEtaGen(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin)),"L");
+    leg->AddEntry(hSigma.at(etaBin),util::LabelFactory::etaGenCut(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin)),"P");
+    legLines->AddEntry(fSigma.at(etaBin),util::LabelFactory::etaGenCut(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin)),"L");
   }
 
   // Canvases
@@ -419,10 +420,9 @@ void plotMCTruth(const TString &fileName, const TString &histNamePrefix, const s
   // Resolution plots per etaBin
   for(unsigned int etaBin = 0; etaBin < binningAdmin.nEtaBins(); ++etaBin) {
     delete label;
-    label = util::LabelFactory::createPaveText(3,-0.58);
-    label->AddText("CMS Simulation,  #sqrt{s} = 7 TeV");
-    label->AddText(jetLabel_);
-    label->AddText(util::LabelFactory::labelEtaGen(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin)));
+    label = util::LabelFactory::createPaveText(2,-0.58);
+    label->AddText(util::LabelFactory::mc());
+    label->AddText(util::LabelFactory::etaGenCut(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin)));
     
     canRatio->cd();
     tFrame->Draw();
@@ -454,10 +454,10 @@ void plotMCTruth(const TString &fileName, const TString &histNamePrefix, const s
   for(unsigned int etaBin = 0; etaBin < binningAdmin.nEtaBins(); ++etaBin) {
     for(unsigned int ptBin = 0; ptBin < hProf.at(etaBin).size(); ++ptBin) {
       delete label;
-      label = util::LabelFactory::createPaveText(3,-0.8);
-      label->AddText("CMS Simulation,  #sqrt{s} = 7 TeV");
+      label = util::LabelFactory::createPaveText(2,-0.8);
+      label->AddText(util::LabelFactory::mc());
       label->AddText(jetLabel_);
-      label->AddText(util::LabelFactory::labelEtaGen(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin))+", "+util::toTString(hSigma.at(etaBin)->GetXaxis()->GetBinLowEdge(ptBin+1),0)+" < p^{gen}_{T} < "+util::toTString(hSigma.at(etaBin)->GetXaxis()->GetBinUpEdge(ptBin+1),0)+" GeV");
+      label->AddText(util::LabelFactory::etaGenCut(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin))+",  "+util::LabelFactory::ptGenCut(hSigma.at(etaBin)->GetXaxis()->GetBinLowEdge(ptBin+1),hSigma.at(etaBin)->GetXaxis()->GetBinUpEdge(ptBin+1)));
 
       TH1* hRespDist = hProf.at(etaBin).at(ptBin);
       canPlain->cd();
@@ -494,11 +494,10 @@ void plotMCTruth(const TString &fileName, const TString &histNamePrefix, const s
  	double xMax = fitRestricted->GetParameter(1)+nSigCore*fitRestricted->GetParameter(2);
  	fitRestricted->SetRange(xMin,xMax);
 
-	label = util::LabelFactory::createPaveText(3,-0.8);
-	label->AddText("CMS Simulation,  #sqrt{s} = 7 TeV");
-	label->AddText(jetLabel_);
-	label->AddText(util::LabelFactory::labelEtaGen(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin))+", "+util::toTString(hSigma.at(etaBin)->GetXaxis()->GetBinLowEdge(ptBin+1),0)+" < p^{gen}_{T} < "+util::toTString(hSigma.at(etaBin)->GetXaxis()->GetBinUpEdge(ptBin+1),0)+" GeV");
-	leg = util::LabelFactory::createLegendColWithOffset(1,-0.43,3);
+	label = util::LabelFactory::createPaveText(2,-0.8);
+	label->AddText(util::LabelFactory::mc());
+	label->AddText(util::LabelFactory::etaGenCut(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin))+",  "+util::LabelFactory::ptGenCut(hSigma.at(etaBin)->GetXaxis()->GetBinLowEdge(ptBin+1),hSigma.at(etaBin)->GetXaxis()->GetBinUpEdge(ptBin+1)));
+	leg = util::LabelFactory::createLegendColWithOffset(1,-0.43,label->GetSize());
 	leg->AddEntry(fitRestricted,"#chi^{2} / ndof = "+util::toTString(hChi2Ndof.at(etaBin)->GetBinContent(ptBin+1),2),"L");
 	
 	canRatio->cd();
@@ -523,10 +522,9 @@ void plotMCTruth(const TString &fileName, const TString &histNamePrefix, const s
  	label->Draw("same");
  	canRatio->SaveAs(outNamePrefix+"_ResponseFitLog_EtaBin"+util::toTString(etaBin)+"_PtBin"+util::toTString(ptBin)+".eps","eps");
 
-	label = util::LabelFactory::createPaveText(3,-0.8);
-	label->AddText("CMS Simulation,  #sqrt{s} = 7 TeV");
-	label->AddText(jetLabel_);
-	label->AddText(util::LabelFactory::labelEtaGen(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin))+", "+util::toTString(hSigma.at(etaBin)->GetXaxis()->GetBinLowEdge(ptBin+1),0)+" < p^{gen}_{T} < "+util::toTString(hSigma.at(etaBin)->GetXaxis()->GetBinUpEdge(ptBin+1),0)+" GeV");
+	label = util::LabelFactory::createPaveText(2,-0.8);
+	label->AddText(util::LabelFactory::mc());
+	label->AddText(util::LabelFactory::etaGenCut(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin))+",  "+util::LabelFactory::ptGenCut(hSigma.at(etaBin)->GetXaxis()->GetBinLowEdge(ptBin+1),hSigma.at(etaBin)->GetXaxis()->GetBinUpEdge(ptBin+1)));
 	canRatio->cd();
 	canRatio->SetLogy(0);
 	util::HistOps::setYRange(tFrame,4);
@@ -609,6 +607,8 @@ void plotMCTruth(const std::vector<TString> &fileName, const std::vector<TString
   std::vector< std::vector<TF1*> > fSigma;
   std::vector< std::vector<TH1*> > hMeanRel; // mean response relative to selection 0
   std::vector< std::vector<TH1*> > hNumFrac; // fractional number of entries per selection
+  std::vector< std::vector< std::vector<TH1*> > > hNumFracProf;
+
   for(unsigned int i = 0; i < histNamePrefix.size(); ++i) {
     std::vector<TH1*> tmpHMean;
     std::vector<TH1*> tmpHSigma;
@@ -642,7 +642,7 @@ void plotMCTruth(const std::vector<TString> &fileName, const std::vector<TString
     }
     hMeanRel.push_back(tmpHMeanRel);
 
-    // fractional number of entries per selection
+    // fractional number of entries per selection: vs pt
     for(unsigned int etaBin = 0; etaBin < tmpHMean.size(); ++etaBin) {
       TString name = tmpHMean.at(etaBin)->GetName();
       TH1* h = static_cast<TH1*>(tmpHMean.at(etaBin)->Clone(name+"NumFrac"));
@@ -662,14 +662,27 @@ void plotMCTruth(const std::vector<TString> &fileName, const std::vector<TString
       tmpHNumFrac.push_back(h);
     }
     hNumFrac.push_back(tmpHNumFrac);
-  }
 
+    // prepare fractional number of entries per selection: vs response
+    std::vector< std::vector<TH1*> > tmpHNumFracProf;
+    for(unsigned int etaBin = 0; etaBin < hProf.front().size(); ++etaBin) {
+      std::vector<TH1*> tmp2HNumFracProf;
+      for(unsigned int ptBin = 0; ptBin < hProf.front().at(etaBin).size(); ++ptBin) {
+ 	TString name = hProf.at(i).at(etaBin).at(ptBin)->GetName();
+	TH1* h = static_cast<TH1*>(hProf.at(i).at(etaBin).at(ptBin)->Clone(name+"NumFrac"));
+	h->Rebin(3);
+	tmp2HNumFracProf.push_back(h);
+      }
+      tmpHNumFracProf.push_back(tmp2HNumFracProf);
+    }
+    hNumFracProf.push_back(tmpHNumFracProf);
+  }
+  
   TCanvas* can = new TCanvas("can","",500,500);
   for(unsigned int etaBin = 0; etaBin < binningAdmin.nEtaBins(); ++etaBin) {
-    TPaveText* label = util::LabelFactory::createPaveText(3,-0.58);
-    label->AddText("CMS Simulation,  #sqrt{s} = 7 TeV");
-    label->AddText(jetLabel_);
-    label->AddText(util::LabelFactory::labelEtaGen(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin)));
+    TPaveText* label = util::LabelFactory::createPaveText(2,-0.58);
+    label->AddText(util::LabelFactory::mc());
+    label->AddText(util::LabelFactory::etaGenCut(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin)));
 
     TLegend* leg = util::LabelFactory::createLegendCol(histNamePrefix.size(),0.4);
     TLegend* legRel = util::LabelFactory::createLegendCol(histNamePrefix.size()-1,0.4);
@@ -789,10 +802,9 @@ void plotMCTruth(const std::vector<TString> &fileName, const std::vector<TString
  	delete label;
 	delete leg;
 
- 	label = util::LabelFactory::createPaveText(3,-0.8);
- 	label->AddText("CMS Simulation,  #sqrt{s} = 7 TeV");
- 	label->AddText(jetLabel_);
- 	label->AddText(util::LabelFactory::labelEtaGen(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin))+", "+util::toTString(hSigma.front().at(etaBin)->GetXaxis()->GetBinLowEdge(ptBin+1),0)+" < p^{gen}_{T} < "+util::toTString(hSigma.front().at(etaBin)->GetXaxis()->GetBinUpEdge(ptBin+1),0)+" GeV");
+ 	label = util::LabelFactory::createPaveText(2,-0.8);
+ 	label->AddText(util::LabelFactory::mc());
+ 	label->AddText(util::LabelFactory::etaGenCut(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin))+",  "+util::LabelFactory::ptGenCut(hSigma.front().at(etaBin)->GetXaxis()->GetBinLowEdge(ptBin+1),hSigma.front().at(etaBin)->GetXaxis()->GetBinUpEdge(ptBin+1)));
 
 	leg = util::LabelFactory::createLegendColWithOffset(histNamePrefix.size(),-0.4,label->GetSize());
 	for(unsigned int i = 0; i < legEntries.size(); ++i) {
@@ -842,6 +854,54 @@ void plotMCTruth(const std::vector<TString> &fileName, const std::vector<TString
  	can->SetLogy(1);
 	gPad->RedrawAxis();
  	can->SaveAs(outNamePrefix+"_ResponseLog_EtaBin"+util::toTString(etaBin)+"_PtBin"+util::toTString(ptBin)+".eps","eps");
+
+	
+	// relative number of events from each selection
+	// Total number of events
+	TH1* hNorm = static_cast<TH1*>(hNumFracProf.at(0).at(etaBin).at(ptBin)->Clone("hNorm"));
+ 	for(unsigned int i = 1; i < hNumFracProf.size(); ++i) {
+	  hNorm->Add(hNumFracProf.at(i).at(etaBin).at(ptBin));
+	}
+	// Set relative number per selection and fix style
+ 	for(unsigned int i = 0; i < hNumFracProf.size(); ++i) {
+	  hNumFracProf.at(i).at(etaBin).at(ptBin)->Divide(hNorm);
+ 	  hNumFracProf.at(i).at(etaBin).at(ptBin)->SetLineColor(util::StyleSettings::color(i+colorOffset));
+ 	  hNumFracProf.at(i).at(etaBin).at(ptBin)->SetLineStyle(1+i);
+ 	  hNumFracProf.at(i).at(etaBin).at(ptBin)->SetLineWidth(2);
+	}
+// 	// Stack relative contributions
+//  	for(unsigned int i = 0; i < hNumFracProf.size(); ++i) {
+// 	  for(unsigned int k = i+1; k < hNumFracProf.size(); ++k) {
+// 	    hNumFracProf.at(i).at(etaBin).at(ptBin)->Add(hNumFracProf.at(k).at(etaBin).at(ptBin));
+// 	  }
+// 	}	
+
+ 	can->cd();
+ 	hRef = hNumFracProf.front().at(etaBin).at(ptBin);
+ 	util::HistOps::setAxisTitles(hRef,"Response","","Fractional Number of Jets");
+ 	hRef->GetXaxis()->SetRangeUser(labelResponseLogMin_,labelResponseLogMax_);
+ 	util::HistOps::setYRange(hRef,label->GetSize()+leg->GetNRows()-2);
+ 	hRef->Draw("HIST");
+ 	for(unsigned int i = hNumFracProf.size()-1; i >= 1; --i) {
+ 	  hNumFracProf.at(i).at(etaBin).at(ptBin)->Draw("HISTsame");
+ 	}	
+ 	label->Draw("same");
+ 	leg->Draw("same");
+ 	can->SetLogy(0);
+ 	can->SaveAs(outNamePrefix+"_FractionalResponse_EtaBin"+util::toTString(etaBin)+"_PtBin"+util::toTString(ptBin)+".eps","eps");
+
+ 	can->cd();
+ 	hRef->GetXaxis()->SetRangeUser(labelResponseLogMin_,labelResponseLogMax_);
+ 	util::HistOps::setYRange(hRef,label->GetSize()+leg->GetNRows(),8E-3);
+ 	hRef->Draw("HIST");
+ 	for(unsigned int i = hNumFracProf.size()-1; i >= 1; --i) {
+ 	  hNumFracProf.at(i).at(etaBin).at(ptBin)->Draw("HISTsame");
+ 	}	
+ 	label->Draw("same");
+ 	leg->Draw("same");
+ 	can->SetLogy(1);
+	gPad->RedrawAxis();
+ 	can->SaveAs(outNamePrefix+"_FractionalResponseLog_EtaBin"+util::toTString(etaBin)+"_PtBin"+util::toTString(ptBin)+".eps","eps");
       }
     }
     
@@ -863,6 +923,7 @@ void plotMCTruth(const std::vector<TString> &fileName, const std::vector<TString
     for(unsigned int j = 0; j < hProf.at(i).size(); ++j) {
       for(unsigned int k = 0; k < hProf.at(i).at(j).size(); ++k) {
 	delete hProf.at(i).at(j).at(k);
+	delete hNumFracProf.at(i).at(j).at(k);
       }
     }
   }
@@ -930,10 +991,9 @@ void plotGaussianFitRange(const TString &fileName, const TString &histNamePrefix
   hFrame->GetXaxis()->SetMoreLogLabels();
   hFrame->GetXaxis()->SetNoExponent();
   for(unsigned int etaBin = 0; etaBin < binningAdmin.nEtaBins(); ++etaBin) {
-    TPaveText* label = util::LabelFactory::createPaveText(3,-0.58);
-    label->AddText("CMS Simulation,  #sqrt{s} = 7 TeV");
-    label->AddText(jetLabel_);
-    label->AddText(util::LabelFactory::labelEtaGen(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin)));
+    TPaveText* label = util::LabelFactory::createPaveText(2,-0.58);
+    label->AddText(util::LabelFactory::mc());
+    label->AddText(util::LabelFactory::etaGenCut(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin)));
 
     can->cd();
     hFrame->Draw();
@@ -990,10 +1050,9 @@ void plotDeltaR(const TString &fileName, const TString &histNamePrefix, const sa
     }
 
     // Set style
-    TPaveText* label = util::LabelFactory::createPaveText(3,-0.8);
-    label->AddText("CMS Simulation,  #sqrt{s} = 7 TeV");
-    label->AddText(jetLabel_);
-    label->AddText(util::LabelFactory::labelEtaGen(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin))+", "+util::toTString(minPt)+" < p^{gen}_{T} < "+util::toTString(maxPt)+" GeV");
+    TPaveText* label = util::LabelFactory::createPaveText(2,-0.8);
+    label->AddText(util::LabelFactory::mc());
+    label->AddText(util::LabelFactory::etaGenCut(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin))+",  "+util::LabelFactory::ptGenCut(minPt,maxPt));
 
     util::HistOps::setAxisTitles(hDeltaR,"#DeltaR(jet^{gen},jet^{det})","","jets",true);
     hDeltaR->UseCurrentStyle();
@@ -1008,7 +1067,7 @@ void plotDeltaR(const TString &fileName, const TString &histNamePrefix, const sa
     }
     hDeltaRSel->SetFillColor(33);
 
-    TLegend* leg = util::LabelFactory::createLegendColWithOffset(1,-0.4,3);
+    TLegend* leg = util::LabelFactory::createLegendColWithOffset(1,-0.4,label->GetSize());
     leg->AddEntry(hDeltaRSel,"= "+util::toTString(100.*hDeltaRSel->Integral("width"),0)+"%","F");
     
     TCanvas* can = new TCanvas("can","DeltaR EtaBin"+util::toTString(etaBin),500,500);
@@ -1179,11 +1238,10 @@ void plotTwoGaussFit(const TString &fileName, const TString &histNamePrefix, con
       hProfOver2Gauss.at(ptBin)->SetLineStyle(2);
 
       // Labels
-      TPaveText* label = util::LabelFactory::createPaveText(3,-0.8);
-      label->AddText("CMS Simulation,  #sqrt{s} = 7 TeV");
-      label->AddText(jetLabel_);
-      label->AddText(util::LabelFactory::labelEtaGen(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin))+", "+util::toTString(hChi2Ndof.at(etaBin)->GetXaxis()->GetBinLowEdge(ptBin+1),0)+" < p^{gen}_{T} < "+util::toTString(hChi2Ndof.at(etaBin)->GetXaxis()->GetBinUpEdge(ptBin+1),0)+" GeV");
-      TLegend* leg = util::LabelFactory::createLegendColWithOffset(1,-0.9,3);
+      TPaveText* label = util::LabelFactory::createPaveText(2,-0.8);
+      label->AddText(util::LabelFactory::mc());
+      label->AddText(util::LabelFactory::etaGenCut(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin))+",  "+util::LabelFactory::ptGenCut(hChi2Ndof.at(etaBin)->GetXaxis()->GetBinLowEdge(ptBin+1),hChi2Ndof.at(etaBin)->GetXaxis()->GetBinUpEdge(ptBin+1)));
+      TLegend* leg = util::LabelFactory::createLegendColWithOffset(1,-0.9,label->GetSize());
       leg->AddEntry(fitRestricted,"G_{A}(#mu,#sigma):  #chi^{2} / ndof = "+util::toTString(hChi2Ndof.at(etaBin)->GetBinContent(ptBin+1),2),"L");
       //leg->AddEntry(fitRestricted2Gauss,"G_{A}(#mu,#sigma_{A}) + G_{B}(#mu,#sigma_{B}):  #chi^{2} / ndof = "+util::toTString(hChi2Ndof2Gauss.at(etaBin)->GetBinContent(ptBin+1),2),"L");
 
@@ -1266,12 +1324,11 @@ void plotTwoGaussFit(const TString &fileName, const TString &histNamePrefix, con
   } // End of loop over eta bins
 
   // Plot chi2/ndof fit probability
-  TPaveText* label = util::LabelFactory::createPaveText(2,-0.58);
-  label->AddText("CMS Simulation,  #sqrt{s} = 7 TeV");
-  label->AddText(jetLabel_);
+  TPaveText* label = util::LabelFactory::createPaveText(1,-0.58);
+  label->AddText(util::LabelFactory::mc());
   TLegend* leg = util::LabelFactory::createLegendCol(binningAdmin.nEtaBins(),0.4);
   for(unsigned int etaBin = 0; etaBin < binningAdmin.nEtaBins(); ++etaBin) {
-    leg->AddEntry(hChi2Ndof.at(etaBin),util::LabelFactory::labelEtaGen(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin)),"P");
+    leg->AddEntry(hChi2Ndof.at(etaBin),util::LabelFactory::etaGenCut(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin)),"P");
   }
 
   TCanvas* can = new TCanvas("can","#chi^{2}/ndof",500,500);
@@ -1315,7 +1372,7 @@ void fitMCTruth() {
   TString file = "Kalibri_MCTruthResponse_MCSummer11_AK5PF.root";
   TString name = "MCTruthSummer11";
 
-  plotMCTruth(file,"hRespVsPtGen",admin,2.,10.,name);
+  //plotMCTruth(file,"hRespVsPtGen",admin,2.,10.,name);
   //plotDeltaR(file,"hDeltaRVsPtGen",admin,100.,200.,name);
   //plotGaussianFitRange(file,"hRespVsPtGen",admin,10.,name);
   //plotTwoGaussFit(file,"hRespVsPtGenUncorrected",admin,2.,10.,name);
@@ -1351,20 +1408,20 @@ void fitMCTruth() {
 //    legEntries.push_back("C_{off}");
 //    plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_UncorrVsLowPUVsL1Corr",true);
 
-//     histNamePrefix.clear();
-//     legEntries.clear();
-//     //   histNamePrefix.push_back("hRespVsPtGen");
-//     histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId1:hRespVsPtGenVsPdgId_Eta?_PdgId2:hRespVsPtGenVsPdgId_Eta?_PdgId3:hRespVsPtGenVsPdgId_Eta?_PdgId4:hRespVsPtGenVsPdgId_Eta?_PdgId5:hRespVsPtGenVsPdgId_Eta?_PdgId21");
-//     histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId1:hRespVsPtGenVsPdgId_Eta?_PdgId2:hRespVsPtGenVsPdgId_Eta?_PdgId3");
-//     histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId4");
-//     histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId5");
-//     histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId21");
-//     legEntries.push_back("All");
-//     legEntries.push_back("u,d,s");
-//     legEntries.push_back("c");
-//     legEntries.push_back("b");
-//     legEntries.push_back("g");
-//     plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_Flavour",false);
+   histNamePrefix.clear();
+   legEntries.clear();
+   //   histNamePrefix.push_back("hRespVsPtGen");
+   //   histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId1:hRespVsPtGenVsPdgId_Eta?_PdgId2:hRespVsPtGenVsPdgId_Eta?_PdgId3:hRespVsPtGenVsPdgId_Eta?_PdgId4:hRespVsPtGenVsPdgId_Eta?_PdgId5:hRespVsPtGenVsPdgId_Eta?_PdgId21");
+   histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId1:hRespVsPtGenVsPdgId_Eta?_PdgId2:hRespVsPtGenVsPdgId_Eta?_PdgId3");
+   histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId4");
+   histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId5");
+   histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId21");
+   //   legEntries.push_back("All");
+   legEntries.push_back("u,d,s");
+   legEntries.push_back("c");
+   legEntries.push_back("b");
+   legEntries.push_back("g");
+   plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_Flavour",true);
 
 //    histNamePrefix.clear();
 //    legEntries.clear();
@@ -1470,6 +1527,15 @@ void plotAsymmetryComponents(const TString &file) {
   hSigTotal->GetXaxis()->SetNoExponent();
   util::HistOps::setAxisTitles(hSigTotal,"p^{gen}_{T}","GeV","Standard deviation");
 
+  // fix error calculation for quadratic sum
+  for(int bin = 1; bin <= hSigTotal->GetNbinsX(); ++bin) {
+    double a1 = hSigResp->GetBinContent(bin);
+    double a2 = hSigSoft->GetBinContent(bin);
+    double a = sqrt( a1*a1 + a2*a2 );
+    hSigTotal->SetBinContent(bin,a);
+    if( a > 0. ) hSigTotal->SetBinError(bin,sqrt( pow(a1*hSigResp->GetBinError(bin),2) + pow(a2*hSigSoft->GetBinError(bin),2) )/a);
+  }
+
   hSigResp->SetLineColor(kBlue);
   hSigResp->SetLineWidth(2);
   hSigResp->SetLineStyle(2);
@@ -1478,20 +1544,19 @@ void plotAsymmetryComponents(const TString &file) {
   hSigSoft->SetLineWidth(2);
   hSigSoft->SetLineStyle(3);
 
-  TPaveText* label = util::LabelFactory::createPaveText(3,-0.7);
-  label->AddText("CMS Simulation,  #sqrt{s} = 7 TeV");
-  label->AddText(jetLabel_);
-  label->AddText("0.0 < |#eta^{gen}| < 0.5, |#Delta#phi^{gen}_{12}| > 2.7");
+  TPaveText* label = util::LabelFactory::createPaveText(2,-0.7);
+  label->AddText(util::LabelFactory::mc());
+  label->AddText(util::LabelFactory::etaGenCut(0.,0.5)+",  "+util::LabelFactory::deltaPhiGenCut(2.7));
   TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,0.45,4);
   leg->AddEntry(hSigAsym,"#sqrt{2} #upoint #sigma_{A}","P");
   leg->AddEntry(hSigResp,"#sigma_{MC}/p_{T}","L");
-  leg->AddEntry(hSigSoft,"#sigma^{rel}_{imbal}","L");
-  leg->AddEntry(hSigTotal,"#sigma_{MC}/p_{T} #oplus #sigma^{rel}_{imbal}","L");
+  leg->AddEntry(hSigSoft,"#sigma_{imbal}","L");
+  leg->AddEntry(hSigTotal,"#sigma_{MC}/p_{T} #oplus #sigma_{imbal}","L");
 
   
   TCanvas* can = new TCanvas("can","Asymmetry Components",500,500);
   can->cd();
-  hSigTotal->Draw("HIST");
+  hSigTotal->Draw("HISTE");
   hSigSoft->Draw("HISTEsame");
   hSigResp->Draw("HISTEsame");
   hSigAsym->Draw("PE1same");

@@ -1,4 +1,4 @@
-// $Id: plotToyMCResults.C,v 1.3 2012/03/22 19:24:52 mschrode Exp $
+// $Id: plotToyMCResults.C,v 1.4 2012/03/26 12:39:08 mschrode Exp $
 
 #include <iomanip>
 #include <iostream>
@@ -29,7 +29,7 @@ const double PT_CUT_MIN = 250.;
 const double PT_CUT_MAX = 300.;
 const TString LABEL_MC = "Toy Simulation";
 const TString LABEL_TRUTH = "p^{true}_{T} (GeV)";
-const TString LABEL_PT_CUT = "p^{true}_{T}";
+const TString LABEL_PT_CUT = "p^{ave}_{T}";
 const TString LABEL_DELTA_PT = "|#Deltap_{T}| (GeV)";
 const TString LABEL_PT_BIN = util::toTString(PT_CUT_MIN)+" < "+LABEL_PT_CUT+" < "+util::toTString(PT_CUT_MAX)+" GeV";
 const TString LABEL_ASYMMETRY = "Asymmetry";
@@ -116,6 +116,7 @@ void plotDisVsPdf(TH1* hDis, TH1* hPdf, const TString &disVar, const TString &mo
 
   TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,-0.6,label->GetSize());
   leg->AddEntry(hDis,"Selected events","P");
+  util::HistOps::normHist(hDis,"width");
   leg->AddEntry(hPdf,"Assumed pdf","L");
 
   hDis->SetTitle("");
@@ -209,7 +210,7 @@ void plotToyMCResults(const TString &fileNameResults, const TString &model, cons
 
   TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,-0.6,label->GetSize());
   leg->AddEntry(hParScan,"Likelihood L(#sigma)","L");
-  leg->AddEntry(parabola,"Parabolic likelihood","L");
+  leg->AddEntry(parabola,"Gaussian likelihood","L");
 
   hParScan->SetTitle("");
   util::HistOps::setAxisTitles(hParScan,"#sigma (GeV)","","#DeltaF = -2#upoint[lnL(#sigma) - lnL(#hat{#sigma})]");
@@ -325,12 +326,12 @@ void plotPullDistribution(const TString &fileNamePrefix, unsigned int nFiles, co
   legReso->AddEntry(fReso,"Gaussian fit to distribution","L");
   util::LabelFactory::addExtraLegLine(legReso," mean = "+util::toTString(fReso->GetParameter(1),util::firstSigDigit(fReso->GetParError(1)))+" #pm "+util::toTString(fReso->GetParError(1),util::firstSigDigit(fReso->GetParError(1)))+" GeV");
   util::LabelFactory::addExtraLegLine(legReso," width = "+util::toTString(fReso->GetParameter(2),util::firstSigDigit(fReso->GetParError(2)))+" #pm "+util::toTString(fReso->GetParError(2),util::firstSigDigit(fReso->GetParError(2)))+" GeV");
-
+  
   TLegend* legPull = util::LabelFactory::createLegendColWithOffset(4,-0.75,label->GetSize());
   legPull->AddEntry(hReso,"Fitted pull (#hat{#sigma} - #LT#sigma#GT) / #delta#hat{#sigma}","P");
   legPull->AddEntry(fReso,"Gaussian fit to distribution","L");
-  util::LabelFactory::addExtraLegLine(legPull," mean = "+util::toTString(fPull->GetParameter(1),util::firstSigDigit(fPull->GetParError(1)))+" #pm "+util::toTString(fPull->GetParError(1),util::firstSigDigit(fPull->GetParError(1)))+" GeV");
-  util::LabelFactory::addExtraLegLine(legPull," width = "+util::toTString(fPull->GetParameter(2),util::firstSigDigit(fPull->GetParError(2)))+" #pm "+util::toTString(fPull->GetParError(2),util::firstSigDigit(fPull->GetParError(2)))+" GeV");
+  util::LabelFactory::addExtraLegLine(legPull," mean = "+util::toTString(fPull->GetParameter(1),util::firstSigDigit(fPull->GetParError(1)))+" #pm "+util::toTString(fPull->GetParError(1),util::firstSigDigit(fPull->GetParError(1))));
+  util::LabelFactory::addExtraLegLine(legPull," width = "+util::toTString(fPull->GetParameter(2),util::firstSigDigit(fPull->GetParError(2)))+" #pm "+util::toTString(fPull->GetParError(2),util::firstSigDigit(fPull->GetParError(2))));
 
   util::HistOps::setYRange(hReso,label->GetSize()+legReso->GetNRows());
   util::HistOps::setYRange(hPull,label->GetSize()+legPull->GetNRows());

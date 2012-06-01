@@ -1,4 +1,4 @@
-// $Id: plotControlDistributions.C,v 1.3 2012/03/07 13:51:05 mschrode Exp $
+// $Id: plotControlDistributions.C,v 1.4 2012/05/31 20:18:37 mschrode Exp $
 
 //!  Control and n-1 distributions for
 //!  histograms in Kalibri skims from
@@ -583,8 +583,8 @@ void plotControlDistributions() {
   util::StyleSettings::setStyleNoteNoTitle();
 
   const TString outNamePrefix = "ControlPlots_163337-167151_Summer11-PythiaZ2";
-  const TString fileNameData = "Kalibri_ControlPlots_Run2011A-163337-167151.root";
-  const TString fileNameMC = "Kalibri_ControlPlots_MCSummer11_AK5PF.root";
+  const TString fileNameData = "../results/Analysis2011/ControlPlots/Kalibri_ControlPlots_Run2011A-163337-167151.root";
+  const TString fileNameMC = "../results/Analysis2011/ControlPlots/Kalibri_ControlPlots_MCSummer11_AK5PF.root";
   const sampleTools::BinningAdmin binAdmin("config/Analysis2011/Binning/BinningAdmin2011_v2.cfg");
 
   const TString ptRelVar = util::LabelFactory::pt3Rel();
@@ -601,16 +601,15 @@ void plotControlDistributions() {
 
   plotNMinus1Eta(fileNameData,fileNameMC,binAdmin,3,3,-5.1,-5.1,false,"#eta","","jets",deltaPhiLabel+",  "+ptRelLabel,outNamePrefix+"_NMin1Eta");
 
-  int ptBin[2] = { 3,14 };
-  for(int i = 0; i < 2; ++i) {
+  for(int ptBin = 0; ptBin < 16; ++ptBin) {
 //     // N-1 plots
-    plotNMinus1(fileNameData,fileNameMC,"hDeltaPhiNMin1",binAdmin,0,ptBin[i],2,2.1,3.5,false,deltaPhiVar,"","events",ptRelLabel,outNamePrefix+"_NMin1DeltaPhi");
-    plotNMinus1(fileNameData,fileNameMC,"hPtRelNMin1",binAdmin,0,ptBin[i],3,0.,1.,false,ptRelVar,"","events",deltaPhiLabel,outNamePrefix+"_NMin1PtRel");
+    plotNMinus1(fileNameData,fileNameMC,"hDeltaPhiNMin1",binAdmin,0,ptBin,2,2.1,3.5,false,deltaPhiVar,"","events",ptRelLabel,outNamePrefix+"_NMin1DeltaPhi");
+    plotNMinus1(fileNameData,fileNameMC,"hPtRelNMin1",binAdmin,0,ptBin,3,0.,1.,false,ptRelVar,"","events",deltaPhiLabel,outNamePrefix+"_NMin1PtRel");
 
     // Pt3 correlations
-    plotCorrelations(true,fileNameData,binAdmin,"hDeltaPhiVsPt3Rel",0,ptBin[i],-1,0.,1.,1.95,3.5,false,ptRelVar,deltaPhiVar,deltaPhiLabel,outNamePrefix+"_DeltaPhiVsPt3Rel");
-    plotCorrelations(false,fileNameMC,binAdmin,"hPt3RelGenVsReco",0,ptBin[i],-1,0.,0.35,0.,0.35,false,ptRelVar,ptGenRelVar,deltaPhiLabel,outNamePrefix+"_Pt3RelGenVsReco");
-    plotCorrelations(false,fileNameMC,binAdmin,"hPt3RelGenVsImbalGen",0,ptBin[i],-1,0.,0.35,0.,0.35,false,imbalGen,ptGenRelVar,deltaPhiGenLabel,outNamePrefix+"_Pt3RelGenVsImbalGen");
+    plotCorrelations(true,fileNameData,binAdmin,"hDeltaPhiVsPt3Rel",0,ptBin,-1,0.,1.,1.95,3.5,false,ptRelVar,deltaPhiVar,deltaPhiLabel,outNamePrefix+"_DeltaPhiVsPt3Rel");
+    plotCorrelations(false,fileNameMC,binAdmin,"hPt3RelGenVsReco",0,ptBin,-1,0.,0.35,0.,0.35,false,"#alpha","#alpha^{gen}",deltaPhiLabel,outNamePrefix+"_Pt3RelGenVsReco");
+    plotCorrelations(false,fileNameMC,binAdmin,"hPt3RelGenVsImbalGen",0,ptBin,-1,0.,0.35,0.,0.35,false,"#alpha^{imbal}","#alpha^{gen}",deltaPhiGenLabel,outNamePrefix+"_Pt3RelGenVsImbalGen");
   }
 
 
