@@ -1,10 +1,9 @@
-// $Id: OutputManager.cc,v 1.6 2011/09/21 13:19:04 mschrode Exp $
+// $Id: OutputManager.cc,v 1.7 2012/03/07 13:53:59 mschrode Exp $
 
 #include "OutputManager.h"
 
 #include <iostream>
 
-#include "TFile.h"
 
 namespace resolutionFit {
 
@@ -163,15 +162,18 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   OutputManagerEPSSingleFiles::OutputManagerEPSSingleFiles(const TString &fileNameBase, bool rootOutput) 
     : OutputManager(fileNameBase),
-      rootOutput_(rootOutput),
-      rootOutFileName(fileNameBase+".root") {
-    // ROOT file to store TPad objects
+      rootOutput_(rootOutput) {
+    if( rootOutput_ ) outFile_ = new TFile(fileNameBase+".root","UPDATE");
+  }
+  
+  // -------------------------------------------------------------------------------------
+  OutputManagerEPSSingleFiles::~OutputManagerEPSSingleFiles() {
     if( rootOutput_ ) {
-      TFile outFile(rootOutFileName,"RECREATE");
-      outFile.Close();
+      outFile_->Close();
+      delete outFile_;
     }
   }
-
+    
 
   // -------------------------------------------------------------------------------------
   void OutputManagerEPSSingleFiles::logx() {
@@ -227,10 +229,8 @@ namespace resolutionFit {
     if( rootOutput_ ) {
       TString nameTmp = lastPad_->GetName();
       lastPad_->SetName(name);
-      TFile outFile(rootOutFileName,"UPDATE");
-      if( outFile.IsOpen() ) {
-	outFile.WriteTObject(lastPad_);
-	outFile.Close();
+      if( rootOutput_ && outFile_->IsOpen() ) {
+	outFile_->WriteTObject(lastPad_);
       }
       lastPad_->SetName(nameTmp);
     }

@@ -1,9 +1,10 @@
-// $Id: OutputManager.h,v 1.4 2011/09/16 13:59:31 mschrode Exp $
+// $Id: OutputManager.h,v 1.5 2012/05/31 20:17:43 mschrode Exp $
 
 #ifndef OUTPUT_MANAGER_H
 #define OUTPUT_MANAGER_H
 
 #include "TCanvas.h"
+#include "TFile.h"
 #include "TH1.h"
 #include "TPad.h"
 #include "TPostScript.h"
@@ -90,6 +91,7 @@ namespace resolutionFit {
   class OutputManagerEPSSingleFiles : public OutputManager {
   public:
     OutputManagerEPSSingleFiles(const TString &fileNameBase, bool rootOutput);
+    ~OutputManagerEPSSingleFiles();
 
     void logx();
     void logy();
@@ -102,7 +104,7 @@ namespace resolutionFit {
 
   private:
     const bool rootOutput_;
-    const TString rootOutFileName;
+    TFile* outFile_;
   };
 }
 #endif
