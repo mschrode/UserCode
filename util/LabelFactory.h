@@ -1,4 +1,4 @@
-//  $Id: LabelFactory.h,v 1.24 2012/03/01 23:13:41 mschrode Exp $
+//  $Id: LabelFactory.h,v 1.25 2012/05/31 20:16:31 mschrode Exp $
 
 #ifndef LABEL_FACTORY_H
 #define LABEL_FACTORY_H
@@ -22,7 +22,7 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: LabelFactory.h,v 1.24 2012/03/01 23:13:41 mschrode Exp $
+  //!  $Id: LabelFactory.h,v 1.25 2012/05/31 20:16:31 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class LabelFactory {
   public:
@@ -272,6 +272,18 @@ namespace util {
       TString max = util::toTString(ptMax,0);
 
       return min+" < "+ptAve()+" < "+max+" GeV";
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static TString ptGen() {
+      return "p^{gen}_{T}";
+    }
+    static TString ptGenCut(double ptMin, double ptMax) {
+      TString min = util::toTString(ptMin,0);
+      TString max = util::toTString(ptMax,0);
+
+      return min+" < "+ptGen()+" < "+max+" GeV";
     }
 
 
