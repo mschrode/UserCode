@@ -387,6 +387,10 @@ namespace resolutionFit {
   }
 
 
+  //! Sometimes LVMINI cannot compute the uncertainty
+  //! and sets it to zero. In that case, the uncertainties
+  //! of the neighbouring (in pt3) points is interpolated
+  //! and used as uncertainty.
   // -------------------------------------------------------------------
   void Sample::cureStatUncerts() {
     for(unsigned int i = 1; i < meas_.size()-1; ++i) {

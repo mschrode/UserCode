@@ -1,4 +1,4 @@
-// $Id: Measurement.cc,v 1.8 2011/11/21 17:18:05 mschrode Exp $
+// $Id: Measurement.cc,v 1.9 2012/05/31 20:17:43 mschrode Exp $
 
 #include "Measurement.h"
 
@@ -220,12 +220,20 @@ namespace resolutionFit {
 
     file.Close();
 
-    // Evil hack to test different MC weights
+
+
+    // **** Evil hack to test different MC weights *****************************
+    //  2011 nutples have been weighted such that the largest event weigh
+    //  in each bin is 1. This is stupid, the weight should be such that
+    //  the sum of weights in each bin equals the number of actual MC events.
+    //  The required reweighting factor is applied to the fit result:
     std::map<TString,TH1*>::const_iterator it = hists_.find("hNumVtx"+hnSuffix_);
     if( it != hists_.end() ) {
       double w = it->second->GetEntries()/it->second->Integral();
       statUncert_.at(0) /= sqrt(w);
     }
+
+
 
     return statusIsGood;
   }
