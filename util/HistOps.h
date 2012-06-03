@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.46 2012/04/15 17:45:43 mschrode Exp $
+// $Id: HistOps.h,v 1.47 2012/05/31 20:16:31 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.46 2012/04/15 17:45:43 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.47 2012/05/31 20:16:31 mschrode Exp $
   class HistOps
   {
   public:
@@ -1031,7 +1031,7 @@ namespace util
 
 
     // -------------------------------------------------------------------------------------
-    static void *getUncertaintyBand(TGraphAsymmErrors* band, const TString &name, TH1* &hUp, TH1* &hDn) {
+    static void getUncertaintyBand(TGraphAsymmErrors* band, const TString &name, TH1* &hUp, TH1* &hDn) {
 
       std::vector<double> binEdges;
       binEdges.push_back(band->GetX()[0]-band->GetEXlow()[0]);
