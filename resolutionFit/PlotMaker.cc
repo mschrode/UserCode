@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.29 2012/05/31 21:44:41 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.30 2012/06/01 18:39:23 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -85,10 +85,10 @@ namespace resolutionFit {
     //plotPtGenSpectra();
     //plotMCEventInfo();
     //plotParticleLevelImbalance();
-    //    plotControlDistributions();
+    //plotControlDistributions();
     plotResolution();
-    plotScaledMCTruth();
-    plotSystematicUncertainties();
+//     plotScaledMCTruth();
+//     plotSystematicUncertainties();
   }
 
 
@@ -1762,6 +1762,27 @@ namespace resolutionFit {
 	    leg->Draw("same");
 	    gPad->RedrawAxis();
 	    out_->saveCurrentPad(histFileName("PtGen",ptBin,sample,ptSoftBinIdx));
+
+	    // Illustration of migration effects
+	    TLine* ll = new TLine(ptBin->min(),0.,ptBin->min(),hPtGen->GetBinContent(hPtGen->GetMaximumBin()));
+	    ll->SetLineWidth(4);
+	    ll->SetLineStyle(3);
+	    ll->SetLineColor(kOrange+1);
+	    TLine* lr = new TLine(ptBin->max(),0.,ptBin->max(),hPtGen->GetBinContent(hPtGen->GetMaximumBin()));
+	    lr->SetLineWidth(4);
+	    lr->SetLineStyle(3);
+	    lr->SetLineColor(kOrange+1);
+	    TLegend* legl = util::LabelFactory::createLegendWithOffset(1,label->GetSize());
+	    legl->AddEntry(ll,"p^{ave}_{T} Interval Boundaries","L");
+	    util::HistOps::setYRange(hPtGen,label->GetSize()+legl->GetNRows());
+	    out_->nextMultiPad(sample->label()+": PtGen Spectrum "+ptBin->toTString()+", PtSoftBin "+util::toTString(ptSoftBinIdx));
+	    hPtGen->Draw("PE1");
+	    ll->Draw("same");
+	    lr->Draw("same");
+	    label->Draw("same");
+	    legl->Draw("same");
+	    gPad->RedrawAxis();
+	    out_->saveCurrentPad(histFileName("PtGen-IllustrationOfMigration",ptBin,sample,ptSoftBinIdx));
 	    
 	    // Log scale
 	    util::HistOps::setYRange(hPtGen,label->GetSize()+leg->GetNRows(),3E-8);
@@ -1774,6 +1795,8 @@ namespace resolutionFit {
 	    out_->logy();
 	    out_->saveCurrentPad(histFileName("PtGenLog",ptBin,sample,ptSoftBinIdx));
 	    
+	    delete ll;
+	    delete lr;
 	    delete hPtGen;
 	    delete label;
 	    delete leg;
@@ -2312,184 +2335,189 @@ namespace resolutionFit {
   void PlotMaker::plotScaledMCTruth() const {
     if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotScaledMCTruth(): Entering" << std::endl;
     std::cout << "Plotting scaled MC truth" << std::endl;
-    out_->newPage("MCTruthScaling");
+    
+    unsigned int nComparedSamples = etaBins_.front()->nComparedSamples();
+    if( nComparedSamples > 0 ) {
+      out_->newPage("MCTruthScaling");
+
+      // +++++ Sample comparison (ratios) +++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
-    // +++++ Sample comparison (ratios) +++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    // Loop over eta bins
+      // Loop over eta bins
 
-    for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
-      const EtaBin* etaBin = *etaBinIt;
-      const unsigned int etaBinIdx = etaBin->etaBin();
-      if( par_->verbosity() > 1 ) std::cout << "  Eta " << etaBinIdx << std::endl;
+      for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+	const EtaBin* etaBin = *etaBinIt;
+	const unsigned int etaBinIdx = etaBin->etaBin();
+	if( par_->verbosity() > 1 ) std::cout << "  Eta " << etaBinIdx << std::endl;
 
-      // Loop over FitResultTypes
-      for(FitResultTypeIt rIt = etaBin->fitResultTypesBegin(); rIt != etaBin->fitResultTypesEnd(); ++rIt) {
-	FitResult::Type fitResType = *rIt;
-	if( par_->verbosity() > 1 ) std::cout << "    " << FitResult::toString(fitResType) << std::endl;
+	// Loop over FitResultTypes
+	for(FitResultTypeIt rIt = etaBin->fitResultTypesBegin(); rIt != etaBin->fitResultTypesEnd(); ++rIt) {
+	  FitResult::Type fitResType = *rIt;
+	  if( par_->verbosity() > 1 ) std::cout << "    " << FitResult::toString(fitResType) << std::endl;
 
-	// Loop over to-be-compare Samples
-	for(ComparedSamplesIt sCIt = etaBin->comparedSamplesBegin();
-	    sCIt != etaBin->comparedSamplesEnd(); ++sCIt) {
-	  SampleLabel sLabel1 = (*sCIt)->label1();
-	  SampleLabel sLabel2 = (*sCIt)->label2();
+	  // Loop over to-be-compare Samples
+	  for(ComparedSamplesIt sCIt = etaBin->comparedSamplesBegin();
+	      sCIt != etaBin->comparedSamplesEnd(); ++sCIt) {
+	    SampleLabel sLabel1 = (*sCIt)->label1();
+	    SampleLabel sLabel2 = (*sCIt)->label2();
 
-	  if( etaBin->hasKValue(sLabel1,sLabel2,fitResType) ) {
+	    if( etaBin->hasKValue(sLabel1,sLabel2,fitResType) ) {
 
-	    // Data-MC ratio (k-Value) with statistical und systematic uncertainty
-	    TGraphAsymmErrors* gRatio = etaBin->ratioGraph(sLabel1,sLabel2,fitResType);
-	    setStyle(sLabel1,gRatio);
-	    TF1* kValueLine = etaBin->kValueLine(sLabel1,sLabel2,fitResType,"kValueLine",xMinPt_,xMaxPt_);
-	    kValueLine->SetLineWidth(lineWidth_);
-	    TGraphAsymmErrors* kStatBand = etaBin->kValueStatBand(sLabel1,sLabel2,fitResType,xMinPt_,xMaxPt_);
-	    kStatBand->SetFillStyle(3444);
-	    kStatBand->SetFillColor(kValueLine->GetLineColor());
-	    kStatBand->SetLineColor(kValueLine->GetLineColor());
-	    kStatBand->SetLineWidth(lineWidth_);
-	    TGraphAsymmErrors* kSystBand = etaBin->kValueSystBand(sLabel1,sLabel2,fitResType,xMinPt_,xMaxPt_);
+	      // Data-MC ratio (k-Value) with statistical und systematic uncertainty
+	      TGraphAsymmErrors* gRatio = etaBin->ratioGraph(sLabel1,sLabel2,fitResType);
+	      setStyle(sLabel1,gRatio);
+	      TF1* kValueLine = etaBin->kValueLine(sLabel1,sLabel2,fitResType,"kValueLine",xMinPt_,xMaxPt_);
+	      kValueLine->SetLineWidth(lineWidth_);
+	      TGraphAsymmErrors* kStatBand = etaBin->kValueStatBand(sLabel1,sLabel2,fitResType,xMinPt_,xMaxPt_);
+	      kStatBand->SetFillStyle(3444);
+	      kStatBand->SetFillColor(kValueLine->GetLineColor());
+	      kStatBand->SetLineColor(kValueLine->GetLineColor());
+	      kStatBand->SetLineWidth(lineWidth_);
+	      TGraphAsymmErrors* kSystBand = etaBin->kValueSystBand(sLabel1,sLabel2,fitResType,xMinPt_,xMaxPt_);
 	    
-	    // Create frame
-	    TH1* hFrame = util::HistOps::createRatioFrame(xMinPt_,xMaxPt_,0.71,2.09,"p^{true}_{T} (GeV)","#sigma(Data) / #sigma(Simulation)");
-	    hFrame->GetYaxis()->SetRangeUser(0.71,2.1);
-	    if( etaBinIdx >= 3 ) hFrame->GetYaxis()->SetRangeUser(0.51,3.6);
-	    hFrame->SetTitle(title_);
-	    hFrame->GetXaxis()->SetMoreLogLabels();
-	    hFrame->GetXaxis()->SetNoExponent();
-	    hFrame->SetLineWidth(lineWidth_);
+	      // Create frame
+	      TH1* hFrame = util::HistOps::createRatioFrame(xMinPt_,xMaxPt_,0.71,2.09,"p^{true}_{T} (GeV)","#sigma(Data) / #sigma(Simulation)");
+	      hFrame->GetYaxis()->SetRangeUser(0.71,2.1);
+	      if( etaBinIdx >= 3 ) hFrame->GetYaxis()->SetRangeUser(0.51,3.6);
+	      hFrame->SetTitle(title_);
+	      hFrame->GetXaxis()->SetMoreLogLabels();
+	      hFrame->GetXaxis()->SetNoExponent();
+	      hFrame->SetLineWidth(lineWidth_);
 	     
-	    // Labels
-	    TPaveText* label = labelMk_->etaBin(etaBin->etaBin());
-	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,0.95,label->GetSize());
-	    if( util::StyleSettings::style() == util::StyleSettings::PAS )
-	      leg->AddEntry(gRatio,"Measurement","P");
-	    else
-	      leg->AddEntry(gRatio,"Measurement ("+labelMk_->lumi()+")","P");
-	    leg->AddEntry(kValueLine,"Fitted #rho_{res}","L");
-	    leg->AddEntry(kStatBand,"Statistical Uncertainty","F");
-	    leg->AddEntry(kSystBand,"Systematic Uncertainty","F");
+	      // Labels
+	      TPaveText* label = labelMk_->etaBin(etaBin->etaBin());
+	      TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,0.95,label->GetSize());
+	      if( util::StyleSettings::style() == util::StyleSettings::PAS )
+		leg->AddEntry(gRatio,"Measurement","P");
+	      else
+		leg->AddEntry(gRatio,"Measurement ("+labelMk_->lumi()+")","P");
+	      leg->AddEntry(kValueLine,"Fitted #rho_{res}","L");
+	      leg->AddEntry(kStatBand,"Statistical Uncertainty","F");
+	      leg->AddEntry(kSystBand,"Systematic Uncertainty","F");
 
-	    out_->nextPad(sLabel1+"Over"+sLabel2+": Resolution "+etaBin->toString());
-	    hFrame->Draw("][");
-	    kSystBand->Draw("E2same");
-	    kStatBand->Draw("E2same");
-	    kValueLine->Draw("same");
-	    gRatio->Draw("PE1same");
-	    hFrame->Draw("][same");
-	    label->Draw("same");
-	    leg->Draw("same");
-	    out_->logx();
-	    gPad->RedrawAxis();
-	    out_->saveCurrentPad(histFileName("ResolutionRatio",etaBin,sLabel1,sLabel2,fitResType));
+	      out_->nextPad(sLabel1+"Over"+sLabel2+": Resolution "+etaBin->toString());
+	      hFrame->Draw("][");
+	      kSystBand->Draw("E2same");
+	      kStatBand->Draw("E2same");
+	      kValueLine->Draw("same");
+	      gRatio->Draw("PE1same");
+	      hFrame->Draw("][same");
+	      label->Draw("same");
+	      leg->Draw("same");
+	      out_->logx();
+	      gPad->RedrawAxis();
+	      out_->saveCurrentPad(histFileName("ResolutionRatio",etaBin,sLabel1,sLabel2,fitResType));
 
-	    delete gRatio;
-	    delete kValueLine;
-	    delete kStatBand;
-	    delete hFrame;
-	    delete label;
-	    delete leg;
-	  } // End if hasKValue
-	} // End of loop over SampleLabels
-      } // End of loop over FitResultTypes
-    } // End of loop over eta bins
+	      delete gRatio;
+	      delete kValueLine;
+	      delete kStatBand;
+	      delete hFrame;
+	      delete label;
+	      delete leg;
+	    } // End if hasKValue
+	  } // End of loop over SampleLabels
+	} // End of loop over FitResultTypes
+      } // End of loop over eta bins
 
 
 
-    // +++++ Sample comparison (scaled MC truth) +++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    // Loop over eta bins
-    for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
-      const EtaBin* etaBin = *etaBinIt;
-      const unsigned int etaBinIdx = etaBin->etaBin();
-      if( par_->verbosity() > 1 ) std::cout << "  Eta " << etaBinIdx << std::endl;
+      // +++++ Sample comparison (scaled MC truth) +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      // Loop over eta bins
+      for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+	const EtaBin* etaBin = *etaBinIt;
+	const unsigned int etaBinIdx = etaBin->etaBin();
+	if( par_->verbosity() > 1 ) std::cout << "  Eta " << etaBinIdx << std::endl;
 
-      // Loop over FitResultTypes
-      for(FitResultTypeIt rIt = etaBin->fitResultTypesBegin(); rIt != etaBin->fitResultTypesEnd(); ++rIt) {
-	FitResult::Type fitResType = *rIt;
-	if( par_->verbosity() > 1 ) std::cout << "    " << FitResult::toString(fitResType) << std::endl;
+	// Loop over FitResultTypes
+	for(FitResultTypeIt rIt = etaBin->fitResultTypesBegin(); rIt != etaBin->fitResultTypesEnd(); ++rIt) {
+	  FitResult::Type fitResType = *rIt;
+	  if( par_->verbosity() > 1 ) std::cout << "    " << FitResult::toString(fitResType) << std::endl;
 
-	// Loop over to-be-compare Samples
-	for(ComparedSamplesIt sCIt = etaBin->comparedSamplesBegin();
-	    sCIt != etaBin->comparedSamplesEnd(); ++sCIt) {
-	  SampleLabel sLabel1 = (*sCIt)->label1();
-	  SampleLabel sLabel2 = (*sCIt)->label2();
+	  // Loop over to-be-compare Samples
+	  for(ComparedSamplesIt sCIt = etaBin->comparedSamplesBegin();
+	      sCIt != etaBin->comparedSamplesEnd(); ++sCIt) {
+	    SampleLabel sLabel1 = (*sCIt)->label1();
+	    SampleLabel sLabel2 = (*sCIt)->label2();
 
-	  if( etaBin->hasKValue(sLabel1,sLabel2,fitResType) ) {
+	    if( etaBin->hasKValue(sLabel1,sLabel2,fitResType) ) {
 
-	    // MC truth for comparison
-	    TF1* mcTruth = etaBin->mcTruthResoFunc("MCTruthResoFunc");
-	    mcTruth->SetLineColor(kRed);
-	    mcTruth->SetLineStyle(2);
-	    mcTruth->SetLineWidth(lineWidth_);
+	      // MC truth for comparison
+	      TF1* mcTruth = etaBin->mcTruthResoFunc("MCTruthResoFunc");
+	      mcTruth->SetLineColor(kRed);
+	      mcTruth->SetLineStyle(2);
+	      mcTruth->SetLineWidth(lineWidth_);
 
-	    // Scaled MC truth and uncertainty bands
-	    TF1* scaledMCT = etaBin->scaledMCTruthResoFunc("scaledMCTruthResoFunc");
-	    scaledMCT->SetLineColor(kRed);
-	    scaledMCT->SetLineWidth(lineWidth_);
-	    TGraphAsymmErrors* scaledMCTBand = etaBin->scaledMCTruthUncertaintyBand();
-	    TGraphAsymmErrors* scaledMCTRatioBand = etaBin->scaledMCTruthRatioBand();
+	      // Scaled MC truth and uncertainty bands
+	      TF1* scaledMCT = etaBin->scaledMCTruthResoFunc("scaledMCTruthResoFunc");
+	      scaledMCT->SetLineColor(kRed);
+	      scaledMCT->SetLineWidth(lineWidth_);
+	      TGraphAsymmErrors* scaledMCTBand = etaBin->scaledMCTruthUncertaintyBand();
+	      TGraphAsymmErrors* scaledMCTRatioBand = etaBin->scaledMCTruthRatioBand();
 
-	    // Bias corrected measurement and ratio to scaled MC truth
-	    TGraphAsymmErrors* biasCorrRes = etaBin->biasCorrectedResolution(sLabel1,sLabel2,fitResType);
-	    setStyle(sLabel1,biasCorrRes);
-	    TGraphAsymmErrors* biasCorrResRatio = util::HistOps::createRatioGraph(biasCorrRes,scaledMCT);
-	    setStyle(sLabel1,biasCorrResRatio);
+	      // Bias corrected measurement and ratio to scaled MC truth
+	      TGraphAsymmErrors* biasCorrRes = etaBin->biasCorrectedResolution(sLabel1,sLabel2,fitResType);
+	      setStyle(sLabel1,biasCorrRes);
+	      TGraphAsymmErrors* biasCorrResRatio = util::HistOps::createRatioGraph(biasCorrRes,scaledMCT);
+	      setStyle(sLabel1,biasCorrResRatio);
 
-	    // Labels
-	    TPaveText* label = util::LabelFactory::createPaveText(1);
-	    label->AddText(util::LabelFactory::etaCut(par_->etaMin(etaBinIdx),par_->etaMax(etaBinIdx))+",  "+labelMk_->lumi());
-	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,labelMk_->start(),1);
-	    if( util::StyleSettings::style() == util::StyleSettings::PAS )
-	      leg->AddEntry(biasCorrRes,"Bias corrected "+sLabel1,"P");
-	    else
-	      leg->AddEntry(biasCorrRes,"Data (Bias Corrected)","P");
-	    leg->AddEntry(mcTruth,"MC Truth","L");
-	    leg->AddEntry(scaledMCT,"Scaled MC Truth","L");
-	    leg->AddEntry(scaledMCTBand,"Systematic Uncertainty","F");
+	      // Labels
+	      TPaveText* label = util::LabelFactory::createPaveText(1);
+	      label->AddText(util::LabelFactory::etaCut(par_->etaMin(etaBinIdx),par_->etaMax(etaBinIdx))+",  "+labelMk_->lumi());
+	      TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,labelMk_->start(),1);
+	      if( util::StyleSettings::style() == util::StyleSettings::PAS )
+		leg->AddEntry(biasCorrRes,"Bias corrected "+sLabel1,"P");
+	      else
+		leg->AddEntry(biasCorrRes,"Data (Bias Corrected)","P");
+	      leg->AddEntry(mcTruth,"MC Truth","L");
+	      leg->AddEntry(scaledMCT,"Scaled MC Truth","L");
+	      leg->AddEntry(scaledMCTBand,"Systematic Uncertainty","F");
 
-	    // Create frames for main and ratio plots
-	    TH1* hFrameMain = out_->mainFrame(xMinPt_,xMaxPt_,yMinExtraRes_,0.32,"#sigma / p^{true}_{T}");
-	    hFrameMain->SetTitle(title_);
-	    hFrameMain->GetXaxis()->SetMoreLogLabels();
-	    hFrameMain->GetXaxis()->SetNoExponent();
+	      // Create frames for main and ratio plots
+	      TH1* hFrameMain = out_->mainFrame(xMinPt_,xMaxPt_,yMinExtraRes_,0.32,"#sigma / p^{true}_{T}");
+	      hFrameMain->SetTitle(title_);
+	      hFrameMain->GetXaxis()->SetMoreLogLabels();
+	      hFrameMain->GetXaxis()->SetNoExponent();
 
-	    TH1* hFrameRatio = out_->ratioFrame(hFrameMain,"p^{true}_{T}","GeV","#frac{Data}{Scaled MC}",yMinResRatio_,yMaxResRatio_);
-	    hFrameRatio->GetXaxis()->SetMoreLogLabels();
-	    hFrameRatio->GetXaxis()->SetNoExponent();
-	    hFrameRatio->SetLineWidth(lineWidth_);
-	    hFrameRatio->GetYaxis()->SetTitleOffset(0.9*hFrameRatio->GetYaxis()->GetTitleOffset());
+	      TH1* hFrameRatio = out_->ratioFrame(hFrameMain,"p^{true}_{T}","GeV","#frac{Data}{Scaled MC}",yMinResRatio_,yMaxResRatio_);
+	      hFrameRatio->GetXaxis()->SetMoreLogLabels();
+	      hFrameRatio->GetXaxis()->SetNoExponent();
+	      hFrameRatio->SetLineWidth(lineWidth_);
+	      hFrameRatio->GetYaxis()->SetTitleOffset(0.9*hFrameRatio->GetYaxis()->GetTitleOffset());
 
 	     
-	    out_->nextMainPad("Bias-corrected "+sLabel1+" vs scaled MC truth "+etaBin->toString());
-	    hFrameMain->Draw();
-	    scaledMCTBand->Draw("E3same");
-	    mcTruth->Draw("same");
-	    scaledMCT->Draw("same");
-	    biasCorrRes->Draw("PE1same");
-	    label->Draw("same");
-	    leg->Draw("same");
-	    gPad->RedrawAxis();
-	    out_->nextRatioPad();
-	    hFrameRatio->Draw("][");
-	    scaledMCTRatioBand->Draw("E3same");
-	    hFrameRatio->Draw("][same");
-	    biasCorrResRatio->Draw("PE1same");
-	    out_->logx();
-	    gPad->RedrawAxis();
-	    out_->saveCurrentPad(histFileName("ScaledMCTruthResolution",etaBin,sLabel1,fitResType));
+	      out_->nextMainPad("Bias-corrected "+sLabel1+" vs scaled MC truth "+etaBin->toString());
+	      hFrameMain->Draw();
+	      scaledMCTBand->Draw("E3same");
+	      mcTruth->Draw("same");
+	      scaledMCT->Draw("same");
+	      biasCorrRes->Draw("PE1same");
+	      label->Draw("same");
+	      leg->Draw("same");
+	      gPad->RedrawAxis();
+	      out_->nextRatioPad();
+	      hFrameRatio->Draw("][");
+	      scaledMCTRatioBand->Draw("E3same");
+	      hFrameRatio->Draw("][same");
+	      biasCorrResRatio->Draw("PE1same");
+	      out_->logx();
+	      gPad->RedrawAxis();
+	      out_->saveCurrentPad(histFileName("ScaledMCTruthResolution",etaBin,sLabel1,fitResType));
 
-	    delete biasCorrRes;
-	    delete biasCorrResRatio;
-	    delete mcTruth;
-	    delete scaledMCT;
-	    delete scaledMCTBand;
-	    delete scaledMCTRatioBand;
-	    delete label;
-	    delete leg;
-	    delete hFrameMain;
-	    delete hFrameRatio;
-	  } // End if hasKValue
-	} // End of loop over SampleLabels
-      } // End of loop over FitResultTypes
-    } // End of loop over eta bins
+	      delete biasCorrRes;
+	      delete biasCorrResRatio;
+	      delete mcTruth;
+	      delete scaledMCT;
+	      delete scaledMCTBand;
+	      delete scaledMCTRatioBand;
+	      delete label;
+	      delete leg;
+	      delete hFrameMain;
+	      delete hFrameRatio;
+	    } // End if hasKValue
+	  } // End of loop over SampleLabels
+	} // End of loop over FitResultTypes
+      } // End of loop over eta bins
+    } // End if compared samples
      
     if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotScaledMCTruth(): Leaving" << std::endl;
   }
@@ -3038,7 +3066,7 @@ namespace resolutionFit {
 		  hDeltaPt->Fit(fit,"Q0IR");
 		  fit->SetRange(0.,2.*fit->GetParameter(2));
 		  fit->SetLineWidth(2);
-		  fit->SetLineColor(kRed);
+		  fit->SetLineColor(hDeltaPt->GetLineColor());
 		  TF1* fitEx = static_cast<TF1*>(fit->Clone("fitEx"));
 		  fitEx->SetLineStyle(2);
 		  fitEx->SetRange(0.,fitEx->GetX(yMin,10.,200.));
@@ -3048,9 +3076,9 @@ namespace resolutionFit {
 		  for(unsigned int i = 0; i < 4; ++i) {
 		    double x = (2+i)*fit->GetParameter(2);
 		    lines.push_back(new TLine(x,yMin,x,0.1));
-		    lines.back()->SetLineWidth(2);
+		    lines.back()->SetLineWidth(4);
 		    lines.back()->SetLineStyle(3);
-		    lines.back()->SetLineColor(kBlue);
+		    lines.back()->SetLineColor(kOrange+1);
 		  }	      
 		
 		  // Labels
@@ -3058,7 +3086,7 @@ namespace resolutionFit {
 		
 		  TLegend* leg = util::LabelFactory::createLegendColWithOffset(3,0.7*labelMk_->start(),label->GetSize());
 		  leg->AddEntry(hDeltaPt,labelMk_->sample(sample->label()),"P");
-		  leg->AddEntry(fit,"Gaussian fit","L");
+		  leg->AddEntry(fit,"Gaussian Fit","L");
 		  leg->AddEntry(lines.front(),"n#upoint#sigma',  n = 2,3,...","L");
 		
 		  util::HistOps::setYRange(hDeltaPt,label->GetSize()+leg->GetNRows()-1,yMin);
@@ -3082,12 +3110,14 @@ namespace resolutionFit {
 		  double fittedSigma = sample->meanPt(fitResType)*sample->fittedValue(fitResType,ptSoftBinIdx)/sqrt(2.);
 		  double uncertSigma = sample->meanPt(fitResType)*sample->fittedUncert(fitResType,ptSoftBinIdx)/sqrt(2.);
 		  TF1* fitResult = static_cast<TF1*>(fit->Clone("fitResult"));
-		  fitResult->SetParameter(0,1./(sqrt(M_PI/2.)*fittedSigma*erf(sqrt(2.))));
+		  // Norm to data distribution: the data distribution is normalised
+		  // to its integral, the pdf from 0 to 2sigma.
+		  fitResult->SetParameter(0,fitEx->Integral(0.,2.*fittedSigma)/(sqrt(M_PI/2.)*fittedSigma*erf(sqrt(2.))));
 		  fitResult->SetParameter(1,0.);
 		  fitResult->SetParameter(2,fittedSigma);
 		  fitResult->SetRange(0.,2.*fittedSigma);
-		  fit->SetLineWidth(2);
-		  fit->SetLineColor(kRed);
+		  fitResult->SetLineWidth(2);
+		  fitResult->SetLineColor(kRed);
 		  TF1* fitResultEx = static_cast<TF1*>(fitResult->Clone("fitResultEx"));
 		  fitResultEx->SetLineStyle(2);
 		  fitResultEx->SetRange(0.,fitResultEx->GetX(yMin,10.,200.));

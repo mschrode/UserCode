@@ -1,4 +1,4 @@
-// $Id: plotControlDistributions.C,v 1.4 2012/05/31 20:18:37 mschrode Exp $
+// $Id: plotControlDistributions.C,v 1.5 2012/06/01 18:48:47 mschrode Exp $
 
 //!  Control and n-1 distributions for
 //!  histograms in Kalibri skims from
@@ -574,6 +574,69 @@ void plotPtHat(const TString &fileName, const TString &treeName, const TString &
   c2->SetLogx();
   gPad->RedrawAxis();
   util::FileOps::toFiles(c2,OUT_FILE);
+}
+
+
+// ------------------------------------------------------------
+void plotAsymmetryComponents(const TString &file) {
+  gErrorIgnoreLevel = 1001;
+  util::StyleSettings::setStyleNoteNoTitle();
+
+  TH1* hSigAsym = util::FileOps::readTH1(file,"Components:hSigAsym");
+  TH1* hSigResp = util::FileOps::readTH1(file,"Components:hSigResp");
+  TH1* hSigSoft = util::FileOps::readTH1(file,"Components:hSigSoft");
+  TH1* hSigTotal = util::FileOps::readTH1(file,"Components:hSigTotal");
+
+  hSigAsym->SetMarkerStyle(21);
+  hSigAsym->SetMarkerColor(kBlack);
+  hSigAsym->SetLineColor(kBlack);
+  hSigAsym->SetLineWidth(2);
+
+  hSigTotal->SetLineColor(kRed);
+  hSigTotal->SetLineWidth(2);
+  hSigTotal->GetYaxis()->SetRangeUser(3E-4,0.59);
+  hSigTotal->GetXaxis()->SetRange(1,hSigTotal->GetNbinsX()-1);
+  hSigTotal->GetXaxis()->SetMoreLogLabels();
+  hSigTotal->GetXaxis()->SetNoExponent();
+  util::HistOps::setAxisTitles(hSigTotal,"p^{gen}_{T}","GeV","Standard deviation");
+
+//   // fix error calculation for quadratic sum
+//   for(int bin = 1; bin <= hSigTotal->GetNbinsX(); ++bin) {
+//     double a1 = hSigResp->GetBinContent(bin);
+//     double a2 = hSigSoft->GetBinContent(bin);
+//     double a = sqrt( a1*a1 + a2*a2 );
+//     hSigTotal->SetBinContent(bin,a);
+//     if( a > 0. ) hSigTotal->SetBinError(bin,sqrt( pow(a1*hSigResp->GetBinError(bin),2) + pow(a2*hSigSoft->GetBinError(bin),2) )/a);
+//   }
+
+  hSigResp->SetLineColor(kBlue);
+  hSigResp->SetLineWidth(2);
+  hSigResp->SetLineStyle(2);
+
+  hSigSoft->SetLineColor(28);
+  hSigSoft->SetLineWidth(2);
+  hSigSoft->SetLineStyle(3);
+
+  TPaveText* label = util::LabelFactory::createPaveText(2,-0.7);
+  label->AddText(util::LabelFactory::mc());
+  label->AddText(util::LabelFactory::etaGenCut(0.,0.5)+",  "+util::LabelFactory::deltaPhiGenCut(2.7));
+  TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,0.45,4);
+  leg->AddEntry(hSigAsym,"#sqrt{2} #upoint #sigma_{A}","P");
+  leg->AddEntry(hSigResp,"#sigma_{MC}/p_{T}","L");
+  leg->AddEntry(hSigSoft,"#sigma_{imbal}","L");
+  leg->AddEntry(hSigTotal,"#sigma_{MC}/p_{T} #oplus #sigma_{imbal}","L");
+
+  TCanvas* can = new TCanvas("can","Asymmetry Components",500,500);
+  can->cd();
+  hSigTotal->Draw("HISTE");
+  hSigSoft->Draw("HISTEsame");
+  hSigResp->Draw("HISTEsame");
+  hSigAsym->Draw("PE1same");
+  label->Draw("same");
+  leg->Draw("same");
+  can->SetLogx();
+  gPad->RedrawAxis();
+  can->SaveAs("MCTruthSummer11_AsymmetryContributions.eps","eps");
 }
 
 
