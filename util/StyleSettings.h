@@ -1,4 +1,4 @@
-// $Id: StyleSettings.h,v 1.19 2012/04/12 12:55:18 mschrode Exp $
+// $Id: StyleSettings.h,v 1.20 2012/05/31 20:16:31 mschrode Exp $
 
 #ifndef STYLE_SETTINGS_H
 #define STYLE_SETTINGS_H
@@ -19,7 +19,7 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: StyleSettings.h,v 1.19 2012/04/12 12:55:18 mschrode Exp $
+  //!  $Id: StyleSettings.h,v 1.20 2012/05/31 20:16:31 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class StyleSettings {
   public:
@@ -89,9 +89,19 @@ namespace util {
 
     // Return a readable color; useful for loops
     static int color(int i) {
-      int col[5] = { 1, 4, 2, 8, 28 };
+      int col[5] = { kBlack, kBlue, kRed, kGreen+2, kOrange+3 };
       int idx = i%5;
       return (idx>=0 && idx<5) ? col[idx] : 1;
+    }
+    static int colorLight(int color) {
+      int idx = kGray+1;
+      if     ( color == kBlue    )  idx = kBlue-7;
+      else if( color == kRed     )  idx = kRed-9;
+      else if( color == 8        )  idx = kGreen-10;
+      else if( color == kGreen+2 )  idx = kGreen-9;
+      else if( color == 28       )  idx = kOrange-7;
+
+      return idx;
     }
 
     // Line width for histograms

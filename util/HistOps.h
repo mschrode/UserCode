@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.47 2012/05/31 20:16:31 mschrode Exp $
+// $Id: HistOps.h,v 1.48 2012/06/03 21:51:11 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.47 2012/05/31 20:16:31 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.48 2012/06/03 21:51:11 mschrode Exp $
   class HistOps
   {
   public:
@@ -665,6 +665,18 @@ namespace util
     }
 
     // -------------------------------------------------------------------------------------
+    static TH1 *createRatioBottomFrame(const TH1 *h, const TString &yTitle, double yMin = 0.81, double yMax = 1.19) {
+      COUNT_++;
+      TH1 *hFrame = createRatioBottomFrame(h,yMin,yMax);
+      hFrame->GetYaxis()->SetTitle(yTitle);
+      hFrame->GetYaxis()->CenterTitle();
+      hFrame->GetYaxis()->SetTitleOffset(0.9*hFrame->GetYaxis()->GetTitleOffset());
+
+      return hFrame;
+    }
+
+
+    // -------------------------------------------------------------------------------------
     static TH1 *createRatioBottomFrame(const TH1 *h, const TString &xTitle, const TString &xUnit, double yMin = 0.81, double yMax = 1.19) {
       TH1 *hFrame = createRatioBottomFrame(h,yMin,yMax);
       setAxisTitles(hFrame,xTitle,xUnit,"");
@@ -677,6 +689,7 @@ namespace util
       TH1 *hFrame = createRatioBottomFrame(h,yMin,yMax);
       setAxisTitles(hFrame,xTitle,xUnit,yTitle);
       hFrame->GetYaxis()->CenterTitle();
+      hFrame->GetYaxis()->SetTitleOffset(0.9*hFrame->GetYaxis()->GetTitleOffset());
 
       return hFrame;
     }
@@ -968,7 +981,7 @@ namespace util
     // -------------------------------------------------------------------------------------
     static TGraphAsymmErrors *getUncertaintyBand(const TH1* h, int color = -1, int fillStyle = -1) {
       TGraphAsymmErrors* g = createTGraph(h);
-      g->SetMarkerStyle(0);
+      g->SetMarkerStyle(1);
       g->SetLineWidth(1);
       g->SetFillColor((color < 0) ? kBlack : color);
       g->SetFillStyle( (fillStyle > 0 ) ? fillStyle : 1001 );
