@@ -1,4 +1,4 @@
-// $Id: EtaBin.cc,v 1.15 2012/02/04 21:51:49 mschrode Exp $
+// $Id: EtaBin.cc,v 1.16 2012/05/31 20:17:43 mschrode Exp $
 
 #include <algorithm>
 #include <iostream>
@@ -47,6 +47,20 @@ namespace resolutionFit{
     str += etaBin(); 
 
     return str;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  bool EtaBin::hasDataSample() const {
+    bool hasData = false;
+    for(SampleTypeIt it = sampleTypesBegin(); it != sampleTypesEnd(); ++it) {
+      if( it->second == Sample::Data ) {
+	hasData = true;
+	break;
+      }
+    }
+
+    return hasData;
   }
 
 

@@ -1,4 +1,4 @@
-// $Id: CommanderCool.cc,v 1.11 2012/02/04 21:51:49 mschrode Exp $
+// $Id: CommanderCool.cc,v 1.12 2012/05/31 20:17:43 mschrode Exp $
 
 #include <iomanip>
 #include <iostream>
@@ -468,5 +468,16 @@ namespace resolutionFit {
     }
 
     return result;
+  }
+
+
+  // -------------------------------------------------------------------
+  void CommanderCool::makeAllPlots() const {
+    if( !etaBins_.front()->hasDataSample() ) {
+      // If only MC samples, set solid marker styles
+      std::cout << "Only MC samples: setting only solid marker styles" << std::endl;
+      Sample::setOnlySolidMarkerStyles();
+    }
+    plotMaker_->makeAllPlots();
   }
 }

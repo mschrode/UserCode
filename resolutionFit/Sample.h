@@ -1,4 +1,4 @@
-// $Id: Sample.h,v 1.15 2012/02/04 21:51:49 mschrode Exp $
+// $Id: Sample.h,v 1.16 2012/05/31 20:17:43 mschrode Exp $
 
 #ifndef SAMPLE_H
 #define SAMPLE_H
@@ -30,6 +30,9 @@ namespace resolutionFit {
     static int color(const SampleLabel &label);
     static int markerStyle(const SampleLabel &label);
     static Sample::Type type(const SampleLabel &label);
+
+    static void setOnlySolidMarkerStyles();
+
 
     Sample(const SampleLabel &label, unsigned int verbosity = 0);
     virtual ~Sample();

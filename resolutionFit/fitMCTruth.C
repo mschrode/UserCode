@@ -1,4 +1,4 @@
-// $Id: fitMCTruth.C,v 1.17 2012/06/01 18:48:47 mschrode Exp $
+// $Id: fitMCTruth.C,v 1.18 2012/06/03 21:53:27 mschrode Exp $
 
 //!  Fit mean response and resolution from MC truth
 //!  histograms in Kalibri skims from
@@ -36,13 +36,12 @@ const double labelResponseMin_ = 0.61;
 const double labelResponseMax_ = 1.39;
 const double labelResponseLogMin_ = 0.09;
 const double labelResponseLogMax_ = 1.91;
-// const double labelResponseLogMin_ = 0.41;
-// const double labelResponseLogMax_ = 1.59;
+const int rebin_ = 3;
 TFile* OUT_FILE= 0;
 
 
 // ------------------------------------------------------------
-void fitProfile(const TH2* h2, std::vector<TH1*> &hProf, double nSigCore, std::vector<TF1*> &fits, TH1* &hMean, TH1* &hSigma, TH1* &hChi2Ndof) {
+void fitProfile(const TH2* h2, std::vector<TH1*> &hProf, double nSigCore, std::vector<TF1*> &fits, TH1* &hMean, TH1* &hSigma, TH1* &hChi2Ndof, std::vector<double> &entries) {
   //std::cout << "Fitting profiles of '" << h2->GetName() << "'" << std::endl;
 
   // Histograms of mean values and standard deviations
@@ -66,12 +65,12 @@ void fitProfile(const TH2* h2, std::vector<TH1*> &hProf, double nSigCore, std::v
   hChi2Ndof->GetXaxis()->SetNoExponent();
 
   // Fill y distributions per x bin
-  util::HistOps::fillSlices(h2,hProf,name+"_YDistribution");
+  util::HistOps::fillSlices(h2,hProf,name+"_YDistribution",entries);
   for(util::HistItConst hIt = hProf.begin(); hIt != hProf.end(); ++hIt) {
     util::HistOps::setAxisTitles(*hIt,yTitle,"","jets");
     (*hIt)->UseCurrentStyle();
     (*hIt)->SetMarkerStyle(20);
-    //    (*hIt)->Rebin(3);
+    //    (*hIt)->Rebin(rebin_);
   }
 
   // Fitting y distributions
@@ -135,7 +134,8 @@ void fitResolutionVsPtGen(const TString &fileName,
 			  std::vector<TH1*> &hChi2Ndof,
 			  std::vector<TH1*> &hMean,
 			  std::vector<TH1*> &hSigma,
-			  std::vector<TF1*> &fSigma
+			  std::vector<TF1*> &fSigma,
+			  std::vector< std::vector<double> > &entries
 			  ) {
 
   std::cout << "\nFitting resolution for '" << histNamePrefix << "'" << std::endl;
@@ -177,7 +177,8 @@ void fitResolutionVsPtGen(const TString &fileName,
     TH1* hMeanTmp = 0;
     TH1* hSigmaTmp = 0;
     TH1* hChi2NdofTmp = 0;
-    fitProfile(h2,hProfTmp,nSigCore,fProfTmp,hMeanTmp,hSigmaTmp,hChi2NdofTmp);
+    std::vector<double> entriesTmp;
+    fitProfile(h2,hProfTmp,nSigCore,fProfTmp,hMeanTmp,hSigmaTmp,hChi2NdofTmp,entriesTmp);
     for(int bin = 1; bin <= hMeanTmp->FindBin(minPt); ++bin) {
       hMeanTmp->SetBinContent(bin,0);
       hMeanTmp->SetBinError(bin,0);
@@ -220,6 +221,7 @@ void fitResolutionVsPtGen(const TString &fileName,
     hMean.push_back(hMeanTmp);
     hSigma.push_back(hSigmaTmp);
     hChi2Ndof.push_back(hChi2NdofTmp);
+    entries.push_back(entriesTmp);
 
     fSigma.push_back(fitResolution(hSigmaTmp,histNamePrefix+"_ResolutionFit",std::max(minPt,hSigmaTmp->GetBinCenter(startOfPrecisionRegion)),std::min(hSigmaTmp->GetBinCenter(endOfPrecisionRegion),hSigmaTmp->GetXaxis()->GetBinUpEdge(hSigmaTmp->GetNbinsX()))));
 
@@ -234,14 +236,15 @@ void fitResolutionVsPtGen(const TString &fileName,
 			  const TString &histNamePrefix, unsigned int nEtaBins,
 			  double nSigCore, double minPt,
 			  std::vector<TH1*> &hSigma,
-			  std::vector<TF1*> &fSigma
+			  std::vector<TF1*> &fSigma,
+			  std::vector< std::vector<double> > &entries
 			  ) {
 
   std::vector< std::vector<TH1*> > hProf;
   std::vector< std::vector<TF1*> > fProf;
   std::vector<TH1*> hChi2Ndof;
   std::vector<TH1*> hMean;
-  fitResolutionVsPtGen(fileName,histNamePrefix,nEtaBins,nSigCore,minPt,hProf,fProf,hChi2Ndof,hMean,hSigma,fSigma);
+  fitResolutionVsPtGen(fileName,histNamePrefix,nEtaBins,nSigCore,minPt,hProf,fProf,hChi2Ndof,hMean,hSigma,fSigma,entries);
   for(unsigned int i = 0; i < hProf.size(); ++i) {
     for(unsigned int j = 0; j < hProf.at(i).size(); ++j) {
       delete hProf.at(i).at(j);
@@ -268,8 +271,9 @@ void plotMCTruth(const TString &fileName, const TString &histNamePrefix, const s
   std::vector<TH1*> hMean;
   std::vector<TH1*> hSigma;
   std::vector<TF1*> fSigma;
+  std::vector< std::vector<double> > entries;
   fitResolutionVsPtGen(fileName,histNamePrefix,binningAdmin.nEtaBins(),nSigCore,minPt,
-		       hProf,fProf,hChi2Ndof,hMean,hSigma,fSigma);
+		       hProf,fProf,hChi2Ndof,hMean,hSigma,fSigma,entries);
 
   // Set style
   for(unsigned int etaBin = 0; etaBin < binningAdmin.nEtaBins(); ++etaBin) {
@@ -339,7 +343,7 @@ void plotMCTruth(const TString &fileName, const TString &histNamePrefix, const s
 
   // Resolution plots
   canPlain->cd();
-  TH1* hFrame = new TH1D("hFrame",";p^{gen}_{T} (GeV);Resolution",10000,
+  TH1* hFrame = new TH1D("hFrame",";p^{gen}_{T} (GeV);MC-Truth Resolution",10000,
 			 std::max(minPt-0.99,hSigma.front()->GetXaxis()->GetBinLowEdge(1)),
 			 1.2*hSigma.front()->GetXaxis()->GetBinUpEdge(hSigma.front()->GetNbinsX()));
   hFrame->GetYaxis()->SetRangeUser(3E-3,resolutionMax_);
@@ -378,7 +382,7 @@ void plotMCTruth(const TString &fileName, const TString &histNamePrefix, const s
   leg->Draw("same");
   bPad->Draw();
   bPad->cd();
-  TH1 *bFrame = util::HistOps::createRatioBottomFrame(hFrame,0.81,1.19);
+  TH1 *bFrame = util::HistOps::createRatioBottomFrame(hFrame,"#frac{Point}{Fit}",0.81,1.19);
   bFrame->SetLineWidth(2);
   bFrame->Draw();
   for(int etaBin = static_cast<int>(binningAdmin.nEtaBins()-1); etaBin >=0; --etaBin) {
@@ -617,6 +621,7 @@ void plotMCTruth(const std::vector<TString> &fileName, const std::vector<TString
   std::vector< std::vector<TH1*> > hMeanRel; // mean response relative to selection 0
   std::vector< std::vector<TH1*> > hNumFrac; // fractional number of entries per selection
   std::vector< std::vector< std::vector<TH1*> > > hNumFracProf;
+  std::vector< std::vector< std::vector<double> > > entries;
 
   for(unsigned int i = 0; i < histNamePrefix.size(); ++i) {
     std::vector<TH1*> tmpHMean;
@@ -627,7 +632,8 @@ void plotMCTruth(const std::vector<TString> &fileName, const std::vector<TString
     std::vector<TH1*> hChi2Ndof;
     std::vector<TH1*> tmpHMeanRel;
     std::vector<TH1*> tmpHNumFrac;
-    fitResolutionVsPtGen((fileName.size()>1?fileName.at(i):fileName.front()),histNamePrefix.at(i),binningAdmin.nEtaBins(),nSigCore,minPt,tmpHProf,fProf,hChi2Ndof,tmpHMean,tmpHSigma,tmpFSigma);
+    std::vector< std::vector<double> > entriesTmp;
+    fitResolutionVsPtGen((fileName.size()>1?fileName.at(i):fileName.front()),histNamePrefix.at(i),binningAdmin.nEtaBins(),nSigCore,minPt,tmpHProf,fProf,hChi2Ndof,tmpHMean,tmpHSigma,tmpFSigma,entriesTmp);
     hProf.push_back(tmpHProf);
     hMean.push_back(tmpHMean);
     hSigma.push_back(tmpHSigma);
@@ -635,18 +641,26 @@ void plotMCTruth(const std::vector<TString> &fileName, const std::vector<TString
     for(unsigned int k = 0; k < fProf.size(); ++k) {
       for(unsigned int j = 0; j < fProf.at(k).size(); ++j) {
 	delete fProf.at(k).at(j);
-	tmpHProf.at(k).at(j)->Rebin(3);
+	tmpHProf.at(k).at(j)->Rebin(rebin_);
       }
     }
     for(unsigned int k = 0; k < hChi2Ndof.size(); ++k) {
       delete hChi2Ndof.at(k);
     }
+    entries.push_back(entriesTmp);
 
     // mean values relative to first selection
     for(unsigned int etaBin = 0; etaBin < tmpHMean.size(); ++etaBin) {
       TString name = tmpHMean.at(etaBin)->GetName();
       TH1* h = static_cast<TH1*>(tmpHMean.at(etaBin)->Clone(name+"Rel"));
       h->Divide(hMean.front().at(etaBin));
+      for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
+	double c = h->GetBinContent(bin);
+	if( c > 0 && h->GetBinError(bin)/c > 0.015 ) {
+	  h->SetBinContent(bin,0.);
+	  h->SetBinError(bin,0.);
+	}
+      }
       tmpHMeanRel.push_back(h);
     }
     hMeanRel.push_back(tmpHMeanRel);
@@ -679,7 +693,7 @@ void plotMCTruth(const std::vector<TString> &fileName, const std::vector<TString
       for(unsigned int ptBin = 0; ptBin < hProf.front().at(etaBin).size(); ++ptBin) {
  	TString name = hProf.at(i).at(etaBin).at(ptBin)->GetName();
 	TH1* h = static_cast<TH1*>(hProf.at(i).at(etaBin).at(ptBin)->Clone(name+"NumFrac"));
-	h->Rebin(3);
+	h->Rebin(rebin_);
 	tmp2HNumFracProf.push_back(h);
       }
       tmpHNumFracProf.push_back(tmp2HNumFracProf);
@@ -720,7 +734,7 @@ void plotMCTruth(const std::vector<TString> &fileName, const std::vector<TString
       }
     }
 
-    TH1* hFrame = new TH1D("hFrame",";p^{gen}_{T} (GeV);Resolution",1000,
+    TH1* hFrame = new TH1D("hFrame",";p^{gen}_{T} (GeV);MC-Truth Resolution",1000,
 			   std::max(minPt-0.99,hSigma.front().front()->GetXaxis()->GetBinLowEdge(1)),1.2*hSigma.front().front()->GetXaxis()->GetBinUpEdge(hSigma.front().front()->GetNbinsX()));
     hFrame->GetYaxis()->SetRangeUser(3E-3,resolutionMax_);
     hFrame->GetXaxis()->SetNoExponent();
@@ -793,7 +807,7 @@ void plotMCTruth(const std::vector<TString> &fileName, const std::vector<TString
     util::FileOps::toFiles(can,OUT_FILE);
 
     hFrame->GetYaxis()->SetTitle("Mean Response Flavour / All");
-    hFrame->GetYaxis()->SetRangeUser(0.9,1.15);
+    hFrame->GetYaxis()->SetRangeUser(0.93,1.09);
     can->cd();
     hFrame->Draw();
     for(unsigned int i = 1; i < hMeanRel.size(); ++i ) {
@@ -869,51 +883,80 @@ void plotMCTruth(const std::vector<TString> &fileName, const std::vector<TString
  	can->SetName(outNamePrefix+"_ResponseLog_EtaBin"+util::toTString(etaBin)+"_PtBin"+util::toTString(ptBin));
 	util::FileOps::toFiles(can,OUT_FILE);
 
-	
+	gStyle->SetErrorX(0.5);
 	// relative number of events from each selection
 	// Total number of entries
-	double nTot = 0;
-	TH1* hNorm = static_cast<TH1*>(hNumFracProf.at(0).at(etaBin).at(ptBin)->Clone("hNorm"));
- 	for(unsigned int i = 0; i < hNumFracProf.size(); ++i) {
-	  nTot += hNumFracProf.at(i).at(etaBin).at(ptBin)->GetEntries();
-	  if( i > 0 ) hNorm->Add(hNumFracProf.at(i).at(etaBin).at(ptBin));
-	}
-	// Set relative number per selection and fix style
- 	for(unsigned int i = 0; i < hNumFracProf.size(); ++i) {
-	  hNumFracProf.at(i).at(etaBin).at(ptBin)->Divide(hNorm);
- 	  hNumFracProf.at(i).at(etaBin).at(ptBin)->SetLineColor(util::StyleSettings::color(i+colorOffset));
- 	  hNumFracProf.at(i).at(etaBin).at(ptBin)->SetLineStyle(1+i);
- 	  hNumFracProf.at(i).at(etaBin).at(ptBin)->SetLineWidth(2);
-	}
+ 	double nTot = 0;
+ 	TH1* hNorm = static_cast<TH1*>(hNumFracProf.at(0).at(etaBin).at(ptBin)->Clone("hNorm"));
+  	for(unsigned int i = 0; i < hNumFracProf.size(); ++i) {
+ 	  nTot += entries.at(i).at(etaBin).at(ptBin);
+ 	  if( i > 0 ) hNorm->Add(hNumFracProf.at(i).at(etaBin).at(ptBin));
+ 	}
+  	// Set relative number per selection and fix style
+	std::vector<TH1*> hFracRebin;
+ 	std::vector<TH1*> hFracRebinErr;
+	std::vector<double> binEdges;
+	binEdges.push_back(labelResponseLogMin_);
+	binEdges.push_back(0.6);
+	binEdges.push_back(0.8);
+	binEdges.push_back(1.0);
+	binEdges.push_back(1.2);
+	binEdges.push_back(1.4);
+       	binEdges.push_back(labelResponseLogMax_);
+  	for(unsigned int i = 0; i < hNumFracProf.size(); ++i) {
+ 	  TH1* hFine = hNumFracProf.at(i).at(etaBin).at(ptBin);
+	  TH1* h = new TH1D("hFracRebin"+util::toTString(i),"",binEdges.size()-1,&(binEdges.front()));
+	  for(int bin = 1; bin <= h->GetNbinsX(); ++bin) {
+	    double num = 0.;
+	    double tot = 0.;
+	    for(int binFine = hFine->FindBin(h->GetXaxis()->GetBinLowEdge(bin)); binFine <= hFine->FindBin(h->GetXaxis()->GetBinUpEdge(bin)); ++binFine) {
+	      num += hFine->GetBinContent(binFine);
+	      tot += hNorm->GetBinContent(binFine);
+	    }
+	    if( tot > 0. ) {
+	      double f = num/tot;
+	      double n = nTot*tot/hNorm->Integral();
+	      h->SetBinContent(bin,f);
+	      h->SetBinError(bin,sqrt(f*(1.-f)/n));
+	    }
+	  }	      
+  	  h->SetLineColor(util::StyleSettings::color(i+colorOffset));
+  	  h->SetLineStyle(1+i);
+  	  h->SetLineWidth(2);
+  	  h->SetMarkerStyle(1);
+  	  h->SetMarkerColor(h->GetLineColor());
+	  hFracRebin.push_back(h);
+	  hFracRebinErr.push_back(static_cast<TH1*>(h->Clone("hFracRebinErr"+util::toTString(i))));
+	  hFracRebinErr.back()->SetFillColor(h->GetLineColor());
+	  if( i%2 == 0 ) hFracRebinErr.back()->SetFillStyle(3354);
+	  else           hFracRebinErr.back()->SetFillStyle(3345);
+ 	}
 
- 	can->cd();
- 	hRef = hNumFracProf.front().at(etaBin).at(ptBin);
- 	util::HistOps::setAxisTitles(hRef,"Response","","Fractional Number of Jets");
- 	hRef->GetXaxis()->SetRangeUser(labelResponseLogMin_,labelResponseLogMax_);
- 	util::HistOps::setYRange(hRef,label->GetSize()+leg->GetNRows()-2);
- 	hRef->Draw("HIST");
- 	for(unsigned int i = hNumFracProf.size()-1; i >= 1; --i) {
- 	  hNumFracProf.at(i).at(etaBin).at(ptBin)->Draw("HISTsame");
- 	}	
- 	label->Draw("same");
- 	leg->Draw("same");
- 	can->SetLogy(0);
- 	can->SetName(outNamePrefix+"_FractionalResponse_EtaBin"+util::toTString(etaBin)+"_PtBin"+util::toTString(ptBin));
-	util::FileOps::toFiles(can,OUT_FILE);
-
- 	can->cd();
- 	hRef->GetXaxis()->SetRangeUser(labelResponseLogMin_,labelResponseLogMax_);
- 	util::HistOps::setYRange(hRef,label->GetSize()+leg->GetNRows(),8E-3);
- 	hRef->Draw("HIST");
- 	for(unsigned int i = hNumFracProf.size()-1; i >= 1; --i) {
- 	  hNumFracProf.at(i).at(etaBin).at(ptBin)->Draw("HISTsame");
- 	}	
- 	label->Draw("same");
- 	leg->Draw("same");
- 	can->SetLogy(1);
+  	can->cd();
+  	hRef = hFracRebin.front();
+  	util::HistOps::setAxisTitles(hRef,"Response","","Fractional Number of Jets");
+  	hRef->GetXaxis()->SetRangeUser(labelResponseLogMin_,labelResponseLogMax_);
+  	hRef->GetYaxis()->SetRangeUser(0.,1.5);
+  	hRef->Draw("HIST");
+  	hFracRebinErr.front()->Draw("PE2same");
+  	hFracRebin.front()->Draw("HISTsame");
+  	for(unsigned int i = hNumFracProf.size()-1; i >= 1; --i) {
+  	  hFracRebinErr.at(i)->Draw("PE2same");
+	  hFracRebin.at(i)->Draw("HISTsame");
+  	}	
+  	label->Draw("same");
+  	leg->Draw("same");
+  	can->SetLogy(0);
 	gPad->RedrawAxis();
- 	can->SetName(outNamePrefix+"_FractionalResponseLog_EtaBin"+util::toTString(etaBin)+"_PtBin"+util::toTString(ptBin));
-	util::FileOps::toFiles(can,OUT_FILE);
+  	can->SetName(outNamePrefix+"_FractionalResponse_EtaBin"+util::toTString(etaBin)+"_PtBin"+util::toTString(ptBin));
+ 	util::FileOps::toFiles(can,OUT_FILE);
+
+	delete hNorm;
+	for(unsigned int k = 0; k < hFracRebin.size(); ++k) {
+	  delete hFracRebinErr.at(k);
+	  delete hFracRebin.at(k);
+	}
+	gStyle->SetErrorX(0);
       }
     }
     
@@ -977,7 +1020,8 @@ void plotGaussianFitRange(const TString &fileName, const TString &histNamePrefix
   for(unsigned int i = 0; i < nSigCore.size(); ++i) {
     std::vector<TH1*> hSigmaTmp;
     std::vector<TF1*> fSigmaTmp;
-    fitResolutionVsPtGen(fileName,histNamePrefix,binningAdmin.nEtaBins(),nSigCore.at(i),minPt,hSigmaTmp,fSigmaTmp);
+    std::vector< std::vector<double> > entries;
+    fitResolutionVsPtGen(fileName,histNamePrefix,binningAdmin.nEtaBins(),nSigCore.at(i),minPt,hSigmaTmp,fSigmaTmp,entries);
     hSigma.push_back(hSigmaTmp);
     fSigma.push_back(fSigmaTmp);
 
@@ -997,7 +1041,7 @@ void plotGaussianFitRange(const TString &fileName, const TString &histNamePrefix
     leg->AddEntry(hSigma.at(i).front(),"#mu #pm "+util::toTString(nSigCore.at(i))+"#sigma","P");
   }
   
-  TH1* hFrame = new TH1D("hFrame",";p^{gen}_{T} (GeV);Resolution",1000,
+  TH1* hFrame = new TH1D("hFrame",";p^{gen}_{T} (GeV);MC-Truth Resolution",1000,
 			 std::max(minPt-0.99,hSigma.front().front()->GetXaxis()->GetBinLowEdge(1)),1.2*hSigma.front().front()->GetXaxis()->GetBinUpEdge(hSigma.front().front()->GetNbinsX()));
   hFrame->GetYaxis()->SetRangeUser(3E-3,resolutionMax_);
   hFrame->GetXaxis()->SetNoExponent();
@@ -1123,7 +1167,8 @@ void plotTwoGaussFit(const TString &fileName, const TString &histNamePrefix, con
     TH1* hChi2NdofTmp;
     TH1* hMean;
     TH1* hSigma;
-    fitProfile(h2,hProf,nSigCore,fProf,hMean,hSigma,hChi2NdofTmp);
+    std::vector<double> entries;
+    fitProfile(h2,hProf,nSigCore,fProf,hMean,hSigma,hChi2NdofTmp,entries);
 
     hChi2NdofTmp->GetYaxis()->SetRangeUser(3E-4,8.9);
     hChi2NdofTmp->SetMarkerStyle(20+etaBin);
@@ -1190,6 +1235,17 @@ void plotTwoGaussFit(const TString &fileName, const TString &histNamePrefix, con
       hProfOver2Gauss.push_back(util::HistOps::createRatioPlot(hProf.at(ptBin),fProf2Gauss.at(ptBin)));
     }
 
+    // Don't show ratio more than 4 sigma away from mean
+    for(unsigned int ptBin = 0; ptBin < hProf.size(); ++ptBin) {
+      for(int bin = 1; bin <= hProfOverFit.at(ptBin)->GetNbinsX(); ++bin) {
+	double binCenterDist = std::abs(1. - hProfOverFit.at(ptBin)->GetBinCenter(bin));
+	if( binCenterDist > 4.*fProf.at(ptBin)->GetParameter(2) ) {
+	  hProfOverFit.at(ptBin)->SetBinContent(bin,1000.);
+	  hProfOverFit.at(ptBin)->SetBinError(bin,0.);
+	}
+      }
+    }
+
     // Norm profile plots and fits
     for(unsigned int ptBin = 0; ptBin < hProf.size(); ++ptBin) {
       if( hProf.at(ptBin)->Integral() ) {
@@ -1210,8 +1266,8 @@ void plotTwoGaussFit(const TString &fileName, const TString &histNamePrefix, con
       fProf.at(ptBin)->SetLineColor(kRed);
       fProf.at(ptBin)->SetLineWidth(2);
       hProfOverFit.at(ptBin)->SetMarkerStyle(0);
-      hProfOverFit.at(ptBin)->SetLineColor(fProf.at(ptBin)->GetLineColor());
-      hProfOverFit.at(ptBin)->SetLineWidth(fProf.at(ptBin)->GetLineWidth());
+      hProfOverFit.at(ptBin)->SetLineColor(hProf.at(ptBin)->GetLineColor());
+      hProfOverFit.at(ptBin)->SetLineWidth(hProf.at(ptBin)->GetLineWidth());
 
       fProf2Gauss.at(ptBin)->SetLineColor(kBlue);
       fProf2Gauss.at(ptBin)->SetLineWidth(fProf.at(ptBin)->GetLineWidth());
@@ -1250,16 +1306,20 @@ void plotTwoGaussFit(const TString &fileName, const TString &histNamePrefix, con
       hProfOver2Gauss.at(ptBin)->SetLineStyle(2);
       ratioRestricted->SetMarkerStyle(1);
       ratioRestricted->SetMarkerColor(ratioRestricted->GetLineColor());
+      TH1* ratioErr = static_cast<TH1*>(hProfOverFit.at(ptBin)->Clone("ratioErr"));
+      ratioErr->SetFillColor(util::StyleSettings::colorLight(ratioRestricted->GetLineColor()));
+      ratioErr->SetFillStyle(1001);//3354);
 
       // Labels
       TPaveText* label = util::LabelFactory::createPaveText(2,-0.8);
       label->AddText(util::LabelFactory::mc());
       label->AddText(util::LabelFactory::etaGenCut(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin))+",  "+util::LabelFactory::ptGenCut(hChi2Ndof.at(etaBin)->GetXaxis()->GetBinLowEdge(ptBin+1),hChi2Ndof.at(etaBin)->GetXaxis()->GetBinUpEdge(ptBin+1)));
       TLegend* leg = util::LabelFactory::createLegendColWithOffset(1,-0.9,label->GetSize());
-      leg->AddEntry(fitRestricted,"G(#mu,#sigma):  #chi^{2} / ndof = "+util::toTString(hChi2Ndof.at(etaBin)->GetBinContent(ptBin+1),2),"L");
+      leg->AddEntry(fitRestricted,"Fit G(#mu,#sigma):  #chi^{2} / ndof = "+util::toTString(hChi2Ndof.at(etaBin)->GetBinContent(ptBin+1),2),"L");
       //leg->AddEntry(fitRestricted2Gauss,"G_{A}(#mu,#sigma_{A}) + G_{B}(#mu,#sigma_{B}):  #chi^{2} / ndof = "+util::toTString(hChi2Ndof2Gauss.at(etaBin)->GetBinContent(ptBin+1),2),"L");
 
       // Plot
+      gStyle->SetErrorX(0.5);
       TCanvas* canRatio = util::HistOps::createRatioTopCanvas();
       canRatio->cd();
       canRatio->SetLogy(1);
@@ -1277,8 +1337,9 @@ void plotTwoGaussFit(const TString &fileName, const TString &histNamePrefix, con
       TPad* bPad  = util::HistOps::createRatioBottomPad();
       bPad->Draw();
       bPad->cd();
-      TH1* bFrame = util::HistOps::createRatioBottomFrame(tFrame,"Response","",0.51,1.99);
+      TH1* bFrame = util::HistOps::createRatioBottomFrame(tFrame,"Response","","#frac{Entries}{Fit}",0.51,1.99);
       bFrame->GetXaxis()->SetRangeUser(labelResponseLogMin_,labelResponseLogMax_);     
+      bFrame->SetLineColor(fProf.at(ptBin)->GetLineColor());
       bFrame->Draw();
       hProfOverFit.at(ptBin)->Draw("HISTsameE");
       //hProfOver2Gauss.at(ptBin)->Draw("HISTsameE");
@@ -1292,7 +1353,7 @@ void plotTwoGaussFit(const TString &fileName, const TString &histNamePrefix, con
 
       canRatio->cd();
       canRatio->SetLogy(0);
-      util::HistOps::setYRange(tFrame,5);
+      util::HistOps::setYRange(tFrame,label->GetSize()+leg->GetNRows());
       tFrame->GetXaxis()->SetRangeUser(labelResponseMin_,labelResponseMax_);
       tFrame->Draw("HIST");
       fProf.at(ptBin)->SetLineStyle(2);      
@@ -1306,21 +1367,23 @@ void plotTwoGaussFit(const TString &fileName, const TString &histNamePrefix, con
       bPad->Draw();
       bPad->cd();
       delete bFrame;
-      bFrame = util::HistOps::createRatioBottomFrame(tFrame,"Response","",0.61,1.39);
+      bFrame = util::HistOps::createRatioBottomFrame(tFrame,"Response","","#frac{Entries}{Fit}",0.71,1.39);
       bFrame->GetXaxis()->SetRangeUser(labelResponseMin_,labelResponseMax_);     
+      bFrame->SetLineColor(fProf.at(ptBin)->GetLineColor());
       bFrame->Draw();
-      hProfOverFit.at(ptBin)->Draw("HISTsameE");
+      ratioErr->Draw("E2same");
+      hProfOverFit.at(ptBin)->Draw("HISTsame");
       ratioRestricted->Draw("][HISTsame");
-      ratioRestricted->Draw("PEsame");
       //ratioRestricted2Gauss->Draw("HISTsameE");
-      label->Draw("same");
       gPad->RedrawAxis();
       canRatio->SetName(outNamePrefix+"_OneGauss_ResponseFit_EtaBin"+util::toTString(etaBin)+"_PtBin"+util::toTString(ptBin));
       util::FileOps::toFiles(canRatio,OUT_FILE);
+      gStyle->SetErrorX(0);
 
       delete fitRestricted;
       delete fitRestricted2Gauss;
       delete ratioRestricted;
+      delete ratioErr;
       delete ratioRestricted2Gauss;
       delete label;
       delete leg;
@@ -1387,100 +1450,115 @@ void fitMCTruth() {
   gErrorIgnoreLevel = 1001;
   util::StyleSettings::setStyleNoteNoTitle();
   
-  //sampleTools::BinningAdmin admin("config/Analysis2011/Binning/BinningAdmin2011_v2.cfg");
-  sampleTools::BinningAdmin admin("config/Analysis2011/Binning/BinningAdmin2011_v2.cfg","config/Analysis2011/Binning/Binning2011_v2_central.cfg");
+  sampleTools::BinningAdmin admin("config/Analysis2011/Binning/BinningAdmin2011_v2.cfg");
+  //sampleTools::BinningAdmin admin("config/Analysis2011/Binning/BinningAdmin2011_v2.cfg","config/Analysis2011/Binning/Binning2011_v2_central.cfg");
   TString file = "../results/Analysis2011/MCTruthResolution/Kalibri_MCTruthResponse_MCSummer11_AK5PF.root";
   TString name = "MCTruthSummer11";
   OUT_FILE = new TFile(name+".root","UPDATE");
+  std::vector<TString> histNamePrefix;
+  std::vector<TString> legEntries;
 
-//   plotMCTruth(file,"hRespVsPtGen",admin,2.,10.,name);
-//   plotTwoGaussFit(file,"hRespVsPtGenUncorrected",admin,2.,10.,name);
-//    plotDeltaR(file,"hDeltaRVsPtGen",admin,100.,200.,name);
-//    plotGaussianFitRange(file,"hRespVsPtGen",admin,10.,name);
+  // For all eta bins
+  plotMCTruth(file,"hRespVsPtGen",admin,2.,10.,name);
+  plotTwoGaussFit(file,"hRespVsPtGenUncorrected",admin,2.,10.,name);
+
+  // Only central bin sufficient
+//   plotDeltaR(file,"hDeltaRVsPtGen",admin,100.,200.,name);
+//   plotGaussianFitRange(file,"hRespVsPtGen",admin,10.,name);
 //   plotMCTruth(file,"hRespVsPtGenUncorrected",admin,2.,10.,name+"_Uncorr");
 
+//         histNamePrefix.clear();
+//         legEntries.clear();
+//         histNamePrefix.push_back("hRespVsPtGenUncorrected");
+//         histNamePrefix.push_back("hRespVsPtGen");
+//         legEntries.push_back("Uncorrected");
+//         legEntries.push_back("C_{off} #upoint C_{rel} #upoint C_{abs}");
+//         plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_UncorrVsCorr",true,false,1);
 
-   std::vector<TString> histNamePrefix;
-   std::vector<TString> legEntries;
+//         histNamePrefix.clear();
+//         legEntries.clear();
+//         histNamePrefix.push_back("hRespVsPtGenUncorrected");
+//         histNamePrefix.push_back("hRespVsPtGenL1Corrected");
+//         histNamePrefix.push_back("hRespVsPtGen");
+//         legEntries.push_back("Uncorrected");
+//         legEntries.push_back("C_{off}");
+//         legEntries.push_back("C_{off} #upoint C_{rel} #upoint C_{abs}");
+//         plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_UncorrVsL1VsCorr");
 
-     histNamePrefix.push_back("hRespVsPtGenUncorrected");
-     histNamePrefix.push_back("hRespVsPtGen");
-     legEntries.push_back("Uncorrected");
-     legEntries.push_back("C_{off} #upoint C_{rel} #upoint C_{abs}");
-     plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_UncorrVsCorr",true,false,1);
- 
-     histNamePrefix.clear();
-     legEntries.clear();
-     histNamePrefix.push_back("hRespVsPtGenUncorrected");
-     histNamePrefix.push_back("hRespVsPtGenL1Corrected");
-     histNamePrefix.push_back("hRespVsPtGen");
-     legEntries.push_back("Uncorrected");
-     legEntries.push_back("C_{off}");
-     legEntries.push_back("C_{off} #upoint C_{rel} #upoint C_{abs}");
-     plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_UncorrVsL1VsCorr");
- 
-     histNamePrefix.clear();
-     legEntries.clear();
-     histNamePrefix.push_back("hRespVsPtGenUncorrected");
-     histNamePrefix.push_back("hRespVsPtGenUncorrectedLowPU");
-     histNamePrefix.push_back("hRespVsPtGenL1Corrected");
-     legEntries.push_back("Uncorrected  ");
-     legEntries.push_back("N(PU) < 2");
-     legEntries.push_back("C_{off}");
-     plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_UncorrVsLowPUVsL1Corr",true);
- 
-     histNamePrefix.clear();
-     legEntries.clear();
-     //   histNamePrefix.push_back("hRespVsPtGen");
-     //   histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId1:hRespVsPtGenVsPdgId_Eta?_PdgId2:hRespVsPtGenVsPdgId_Eta?_PdgId3:hRespVsPtGenVsPdgId_Eta?_PdgId4:hRespVsPtGenVsPdgId_Eta?_PdgId5:hRespVsPtGenVsPdgId_Eta?_PdgId21");
-     histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId1:hRespVsPtGenVsPdgId_Eta?_PdgId2:hRespVsPtGenVsPdgId_Eta?_PdgId3");
-     histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId4");
-     histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId5");
-     histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId21");
-     //   legEntries.push_back("All");
-     legEntries.push_back("u,d,s");
-     legEntries.push_back("c");
-     legEntries.push_back("b");
-     legEntries.push_back("g");
-     plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_Flavour",true);
+//         histNamePrefix.clear();
+//         legEntries.clear();
+//         histNamePrefix.push_back("hRespVsPtGenUncorrected");
+//         histNamePrefix.push_back("hRespVsPtGenUncorrectedLowPU");
+//         histNamePrefix.push_back("hRespVsPtGenL1Corrected");
+//         legEntries.push_back("Uncorrected  ");
+//         legEntries.push_back("N(PU) < 2");
+//         legEntries.push_back("C_{off}");
+//         plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_UncorrVsLowPUVsL1Corr",true);
 
-     histNamePrefix.clear();
-     legEntries.clear();
-     histNamePrefix.push_back("hRespVsPtGenDeltaRLess05");
-     histNamePrefix.push_back("hRespVsPtGenDeltaRLess10");
-     histNamePrefix.push_back("hRespVsPtGenDeltaRLess15");
-     histNamePrefix.push_back("hRespVsPtGenDeltaRLess20");
-     histNamePrefix.push_back("hRespVsPtGenDeltaRLess25");
-     //  histNamePrefix.push_back("hRespVsPtGenDeltaRLess30");
-     legEntries.push_back("#DeltaR_{max} = 0.05");
-     legEntries.push_back("#DeltaR_{max} = 0.10");
-     legEntries.push_back("#DeltaR_{max} = 0.15");
-     legEntries.push_back("#DeltaR_{max} = 0.20");
-     legEntries.push_back("#DeltaR_{max} = 0.25");
-     //  legEntries.push_back("#DeltaR_{max} = 0.30");
-     plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionVsDeltaR");
- 
+//          histNamePrefix.clear();
+//          legEntries.clear();
+//          histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId1:hRespVsPtGenVsPdgId_Eta?_PdgId2:hRespVsPtGenVsPdgId_Eta?_PdgId3");
+//          histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId4");
+//          histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId5");
+//          histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId21");
+//          legEntries.push_back("u,d,s");
+//          legEntries.push_back("c");
+//          legEntries.push_back("b");
+//          legEntries.push_back("g");
+//          plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_Flavour",true);
 
-  histNamePrefix.clear();
-    legEntries.clear();
-    histNamePrefix.push_back("hRespVsPtGen");
-    //   histNamePrefix.push_back("hRespVsPtGenVsPtSoft_Eta?_PtSoft4");
-    histNamePrefix.push_back("hRespVsPtGenVsPtSoft_Eta?_PtSoft6");
-    legEntries.push_back("QCD multijets");
-    legEntries.push_back("QCD dijets");
-    plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionDijetSelection",true);
- 
-    histNamePrefix.clear();
-    legEntries.clear();
-    histNamePrefix.push_back("hRespVsPtGenPULess05");
-    histNamePrefix.push_back("hRespVsPtGenPULess10");
-    histNamePrefix.push_back("hRespVsPtGenPULess15");
-    histNamePrefix.push_back("hRespVsPtGenPULess99");
-    legEntries.push_back("N(PU) #leq 4");
-    legEntries.push_back("4 < N(PU) #leq 9");
-    legEntries.push_back("9 < N(PU) #leq 14");
-    legEntries.push_back("N(PU) > 14");
-    plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionNPU");
+//    histNamePrefix.clear();
+//    legEntries.clear();
+//    histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId1:hRespVsPtGenVsPdgId_Eta?_PdgId2:hRespVsPtGenVsPdgId_Eta?_PdgId3:hRespVsPtGenVsPdgId_Eta?_PdgId4:hRespVsPtGenVsPdgId_Eta?_PdgId5:hRespVsPtGenVsPdgId_Eta?_PdgId21");
+//    histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId1:hRespVsPtGenVsPdgId_Eta?_PdgId2:hRespVsPtGenVsPdgId_Eta?_PdgId3");
+//    histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId4");
+//    histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId5");
+//    histNamePrefix.push_back("hRespVsPtGenVsPdgId_Eta?_PdgId21");
+//    legEntries.push_back("All");
+//    legEntries.push_back("u,d,s");
+//    legEntries.push_back("c");
+//    legEntries.push_back("b");
+//    legEntries.push_back("g");
+//    plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_FlavourInclAll",true);
+
+
+//         histNamePrefix.clear();
+//         legEntries.clear();
+//         histNamePrefix.push_back("hRespVsPtGenDeltaRLess05");
+//         histNamePrefix.push_back("hRespVsPtGenDeltaRLess10");
+//         histNamePrefix.push_back("hRespVsPtGenDeltaRLess15");
+//         histNamePrefix.push_back("hRespVsPtGenDeltaRLess20");
+//         histNamePrefix.push_back("hRespVsPtGenDeltaRLess25");
+//         //  histNamePrefix.push_back("hRespVsPtGenDeltaRLess30");
+//         legEntries.push_back("#DeltaR_{max} = 0.05");
+//         legEntries.push_back("#DeltaR_{max} = 0.10");
+//         legEntries.push_back("#DeltaR_{max} = 0.15");
+//         legEntries.push_back("#DeltaR_{max} = 0.20");
+//         legEntries.push_back("#DeltaR_{max} = 0.25");
+//         //  legEntries.push_back("#DeltaR_{max} = 0.30");
+//         plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionVsDeltaR");
+
+
+//         histNamePrefix.clear();
+//         legEntries.clear();
+//         histNamePrefix.push_back("hRespVsPtGen");
+//         //   histNamePrefix.push_back("hRespVsPtGenVsPtSoft_Eta?_PtSoft4");
+//         histNamePrefix.push_back("hRespVsPtGenVsPtSoft_Eta?_PtSoft6");
+//         legEntries.push_back("QCD multijets");
+//         legEntries.push_back("QCD dijets");
+//         plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionDijetSelection",true);
+
+//         histNamePrefix.clear();
+//         legEntries.clear();
+//         histNamePrefix.push_back("hRespVsPtGenPULess05");
+//         histNamePrefix.push_back("hRespVsPtGenPULess10");
+//         histNamePrefix.push_back("hRespVsPtGenPULess15");
+//         histNamePrefix.push_back("hRespVsPtGenPULess99");
+//         legEntries.push_back("N(PU) #leq 4");
+//         legEntries.push_back("4 < N(PU) #leq 9");
+//         legEntries.push_back("9 < N(PU) #leq 14");
+//         legEntries.push_back("N(PU) > 14");
+//         plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionNPU");
 
 
 

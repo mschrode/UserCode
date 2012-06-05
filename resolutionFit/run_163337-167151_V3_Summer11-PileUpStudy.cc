@@ -1,4 +1,4 @@
-// $Id: run_163337-167151_V3_Summer11-PileUpStudy.cc,v 1.2 2012/05/31 20:56:08 mschrode Exp $
+// $Id: run_163337-167151_V3_Summer11-PileUpStudy.cc,v 1.3 2012/06/01 18:40:32 mschrode Exp $
 
 #include <iostream>
 
@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
   
   gErrorIgnoreLevel = 1001;
   
-  Parameters* par = new Parameters("Res_163337-167151","config/Analysis2011/Binning/BinningAdmin2011_v2.cfg",0);
+  Parameters* par = new Parameters("Res_163337-167151_PileUpStudy","config/Analysis2011/Binning/BinningAdmin2011_v2.cfg",0);
   par->setJetProperties(JetProperties::AK5,JetProperties::PF);
   par->setOutMode(OutputManager::EPSSingleFilesPlusROOT);
   par->setNEtaBinsUser(1);

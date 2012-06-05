@@ -68,6 +68,16 @@ namespace resolutionFit {
     
     return t;
   }
+
+
+  // -------------------------------------------------------------------
+  void Sample::setOnlySolidMarkerStyles() {
+    int c = 0;
+    for(std::map<TString,int>::iterator it = MARKER_STYLE.begin();
+	it != MARKER_STYLE.end(); ++it,++c) {
+      it->second = 23 - c;
+    }
+  }
   
 
 
@@ -439,7 +449,6 @@ namespace resolutionFit {
     if( Sample::type(label) == Sample::NONE ) {
       TYPE[label] = Sample::MC;
       MARKER_STYLE[label] = 25 + N_MC_SAMPLES;
-      //MARKER_STYLE[label] = 23 - N_MC_SAMPLES;
       COLOR[label] = color(1+2*N_MC_SAMPLES);
       ++N_MC_SAMPLES;
     }
