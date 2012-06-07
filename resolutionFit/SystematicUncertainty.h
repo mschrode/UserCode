@@ -1,4 +1,4 @@
-// $Id: SystematicUncertainty.h,v 1.1 2011/02/28 10:53:05 mschrode Exp $
+// $Id: SystematicUncertainty.h,v 1.2 2011/03/01 16:52:41 mschrode Exp $
 
 #ifndef SYSTEMATIC_UNCERTAINTY_H
 #define SYSTEMATIC_UNCERTAINTY_H
@@ -37,6 +37,7 @@ namespace resolutionFit {
 
     bool isCombined() const { return components_.size(); }
     bool hasComponent(const TString &label) const;
+    const SystematicUncertainty* component(const TString &label) const;
     unsigned int nComponents() const { return components_.size(); }
     SystUncertIt componentsBegin() const { return components_.begin(); }
     SystUncertIt componentsEnd() const { return components_.end(); }

@@ -1,4 +1,4 @@
-// $Id: Extrapolation.cc,v 1.14 2011/11/21 17:18:05 mschrode Exp $
+// $Id: Extrapolation.cc,v 1.15 2011/11/22 12:21:02 mschrode Exp $
 
 #include "Extrapolation.h"
 
@@ -33,11 +33,12 @@ namespace resolutionFit {
   bool Extrapolation::operator()(const std::vector<double> &ptSoft,
 				 const std::vector<double> &values,
 				 const std::vector<double> &uncerts,
-				 TF1* &fit, double &systUncert) const {
+				 TF1* &fit, unsigned int &firstPointInExtrapolation,
+				 double &extra, double &statUncert, double &systUncert) const {
     bool result = true;
     
     TGraphAsymmErrors* g = getGraph(ptSoft,values,uncerts);
-
+    
     // Setup linear fit
     TString name = "LinearExtrapolation";
     name += NUM_EXTRAPOLATION_FUNCTIONS;
@@ -56,6 +57,8 @@ namespace resolutionFit {
       }
       fitResult = !(g->Fit(fit,"0QR"));
     }
+
+    firstPointInExtrapolation = ptSoft.size() - g->GetN();
      
     // Work-around to keep the program running in case of 
     // fitting failure
@@ -74,8 +77,27 @@ namespace resolutionFit {
       std::cerr << "  Cured by setting fit result to mean " << mean << " with large error " << 100 << std::endl << std::endl;
     }
 
-    systUncert = 0.5*std::abs(g->GetY()[0]-fit->GetParameter(0));
+//     // So far
+//     extra = fit->GetParameter(0);
+//     statUncert = fit->GetParError(0);
+//     systUncert = 0.5*std::abs(g->GetY()[0]-fit->GetParameter(0));
 
+
+    // Corrected syst uncertainty
+    extra = fit->GetParameter(0);
+    statUncert = fit->GetParError(0);
+    systUncert = 0.5*std::abs(fit->Eval(g->GetX()[0])-fit->Eval(0));
+
+
+//     // Working point * slope
+//     unsigned int wp = 0;
+//     //    while( g->GetX()[wp] < 0.14 ) ++wp;
+//     std::cout << "   WP = " << g->GetX()[wp] << std::endl;
+//     extra = g->GetY()[wp] - fit->GetParameter(1)*g->GetX()[wp];
+//     double statPoint = g->GetEYhigh()[wp];
+//     double statSlope = g->GetX()[wp]*fit->GetParError(1);
+//     statUncert = sqrt( statPoint*statPoint + statSlope*statSlope );
+//     systUncert = 0.5*std::abs(fit->Eval(g->GetX()[0])-fit->Eval(0.));
 
     return fitResult;
   }

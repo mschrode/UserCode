@@ -1,4 +1,4 @@
-// $Id: SystematicUncertainty.cc,v 1.1 2011/02/28 10:53:05 mschrode Exp $
+// $Id: SystematicUncertainty.cc,v 1.2 2012/05/31 20:17:44 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -102,5 +102,19 @@ namespace resolutionFit {
     }
     
     return result;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  const SystematicUncertainty* SystematicUncertainty::component(const TString &label) const {
+    const SystematicUncertainty* s = 0;
+    for(SystUncertIt it = components_.begin(); it != components_.end(); ++it) {
+      if( (*it)->label() == label ) {
+	s = *it;
+	break;
+      }
+    }
+    
+    return s;
   }
 }

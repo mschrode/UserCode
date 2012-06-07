@@ -1,4 +1,4 @@
-// $Id: Extrapolation.h,v 1.5 2011/11/21 17:18:04 mschrode Exp $
+// $Id: Extrapolation.h,v 1.6 2011/11/22 12:21:02 mschrode Exp $
 
 #ifndef EXTRAPOLATION_H
 #define EXTRAPOLATION_H
@@ -20,7 +20,8 @@ namespace resolutionFit {
     bool operator()(const std::vector<double> &values,
 		    const std::vector<double> &uncerts,
 		    const std::vector<double> &ptSoftconst,
-		    TF1* &fit, double &systUncert) const;
+		    TF1* &fit, unsigned int &firstPointInExtrapolation,
+		    double &extra, double &statUncert, double &systUncert) const;
 
 
   private:

@@ -1,4 +1,4 @@
-// $Id: EtaBin.cc,v 1.16 2012/05/31 20:17:43 mschrode Exp $
+// $Id: EtaBin.cc,v 1.17 2012/06/05 22:44:46 mschrode Exp $
 
 #include <algorithm>
 #include <iostream>
@@ -240,7 +240,15 @@ namespace resolutionFit{
 	ptMean.push_back(meanPt(nominalSample,type,i));
 	ptMin.push_back(par_->ptMin(etaBin(),i));
 	ptMax.push_back(par_->ptMax(etaBin(),i));
-	relUncerts.push_back(std::abs(extrapolatedSystUncert(nominalSample,type,i)/extrapolatedValue(nominalSample,type,i)));
+	double u = extrapolatedSystUncert(nominalSample,type,i);
+	double v = extrapolatedValue(nominalSample,type,i);
+	if( v == 0. ) {
+	  // if negative slope, v was set to 0; this point is not considered
+	  relUncerts.push_back(0.);
+	} else {
+	  relUncerts.push_back(std::abs(u/v));
+	}
+
       }
       uncert->addComponent(label,color,nominalSample,type,ptMean,ptMin,ptMax,relUncerts,relUncerts);
     }
@@ -390,19 +398,59 @@ namespace resolutionFit{
       kVal_ = fit->GetParameter(0);
       kValStat_ = fit->GetParError(0);
 
-      const SystematicUncertainty* systUncert = 0;
-      if( findSystematicUncertainty(slp->label2(),type,systUncert) ) {
-	TGraphAsymmErrors* gDown = static_cast<TGraphAsymmErrors*>(g->Clone());
+//       const SystematicUncertainty* systUncert = 0;
+//       if( findSystematicUncertainty(slp->label2(),type,systUncert) ) {
+// 	TGraphAsymmErrors* gDown = static_cast<TGraphAsymmErrors*>(g->Clone());
+// 	TGraphAsymmErrors* gUp = static_cast<TGraphAsymmErrors*>(g->Clone());
+// 	for(int i = 0; i < g->GetN(); ++i) {
+// 	  gDown->SetPoint(i,gDown->GetX()[i],gDown->GetY()[i]-systUncert->relUncertDown(i));
+// 	  gUp->SetPoint(i,gUp->GetX()[i],gUp->GetY()[i]+systUncert->relUncertUp(i));
+// 	}
+// 	gDown->Fit(fit,"0QR");
+// 	kValSystDown_ = std::abs(kVal_-fit->GetParameter(0));
+// 	gUp->Fit(fit,"0QR");
+// 	kValSystUp_ = std::abs(kVal_-fit->GetParameter(0));
+// 	delete gDown;
+// 	delete gUp;
+//       } else {
+// 	kValSystDown_ = 0.;
+// 	kValSystUp_ = 0.;
+//       }
+
+
+      const SystematicUncertainty* syst1 = 0;
+      const SystematicUncertainty* syst2 = 0;
+      bool hasSyst1 = findSystematicUncertainty(slp->label1(),type,syst1);
+      bool hasSyst2 = findSystematicUncertainty(slp->label2(),type,syst2);
+      
+      if( hasSyst1 || hasSyst2 ) {
+	// Varied ratio graphs
+	TGraphAsymmErrors* gDn = static_cast<TGraphAsymmErrors*>(g->Clone());
 	TGraphAsymmErrors* gUp = static_cast<TGraphAsymmErrors*>(g->Clone());
+
 	for(int i = 0; i < g->GetN(); ++i) {
-	  gDown->SetPoint(i,gDown->GetX()[i],gDown->GetY()[i]-systUncert->relUncertDown(i));
-	  gUp->SetPoint(i,gUp->GetX()[i],gUp->GetY()[i]+systUncert->relUncertUp(i));
+	  // nominal ratio
+	  double k = gDn->GetY()[i];
+
+	  // variation down
+	  double relDn1 = 0.;
+	  double relDn2 = 0.;
+	  if( hasSyst1 ) relDn1 = syst1->relUncertDown(i);
+	  if( hasSyst2 ) relDn2 = syst2->relUncertDown(i);
+	  gDn->SetPoint(i,gDn->GetX()[i],k*(1.-sqrt(relDn1*relDn1 + relDn2*relDn2) ));
+
+	  // variation up
+	  double relUp1 = 0.;
+	  double relUp2 = 0.;
+	  if( hasSyst1 ) relUp1 = syst1->relUncertDown(i);
+	  if( hasSyst2 ) relUp2 = syst2->relUncertDown(i);
+	  gUp->SetPoint(i,gUp->GetX()[i],k*(1.+sqrt(relUp1*relUp1 + relUp2*relUp2) ));
 	}
-	gDown->Fit(fit,"0QR");
+	gDn->Fit(fit,"0QR");
 	kValSystDown_ = std::abs(kVal_-fit->GetParameter(0));
 	gUp->Fit(fit,"0QR");
 	kValSystUp_ = std::abs(kVal_-fit->GetParameter(0));
-	delete gDown;
+	delete gDn;
 	delete gUp;
       } else {
 	kValSystDown_ = 0.;
@@ -743,6 +791,41 @@ namespace resolutionFit{
     return new TGraphAsymmErrors(pt.size(),&(pt.front()),&(res.front()),&(ptErr.front()),&(ptErr.front()),
 				 &(resStatErr.front()),&(resStatErr.front()));
   }
+
+  // -------------------------------------------------------------------------------------
+  TGraphAsymmErrors* EtaBin::correctedResolutionExtrapolationUncertTotal(const SampleLabel &label, FitResult::Type type) const {
+    // Corrected resolution
+    TGraphAsymmErrors* g = correctedResolution(label,type);
+
+    // Get extrapolation systematic uncertainty if assigned
+    std::vector<double> relErr(g->GetN(),0.);
+    const SystematicUncertainty* syst = 0;
+    if( findSystematicUncertainty(label,type,syst) ) {
+      const SystematicUncertainty* systEx = syst->component("Extrapolation");
+      if( systEx ) {
+	for(int i = 0; i < g->GetN(); ++i) {
+	  relErr.at(i) = systEx->relUncertDown(i);
+	}
+      }
+    }
+
+    // Apply relative uncertainty
+    for(int i = 0; i < g->GetN(); ++i) {
+      double val = g->GetY()[i];
+      double statErr = g->GetEYlow()[i];
+      double systErr = val*relErr.at(i);
+      double totErr = sqrt( statErr*statErr + systErr*systErr );
+      g->GetEXlow()[i]  = 0.;
+      g->GetEXhigh()[i] = 0.;
+      g->GetEYlow()[i]  = totErr;
+      g->GetEYhigh()[i] = totErr;
+    }
+    
+    g->SetMarkerStyle(1);
+
+    return g;
+  }
+
 
 
   //! Return graph of bias corrected measurement

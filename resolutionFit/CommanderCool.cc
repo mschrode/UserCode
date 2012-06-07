@@ -1,4 +1,4 @@
-// $Id: CommanderCool.cc,v 1.12 2012/05/31 20:17:43 mschrode Exp $
+// $Id: CommanderCool.cc,v 1.13 2012/06/05 22:44:46 mschrode Exp $
 
 #include <iomanip>
 #include <iostream>
@@ -293,7 +293,7 @@ namespace resolutionFit {
 
     std::cout << "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n" << std::endl;
 
-
+    int pre = 4;		// precision
     for(FitResultTypeIt rIt = etaBins_.front()->fitResultTypesBegin();
 	rIt != etaBins_.front()->fitResultTypesEnd(); ++rIt) {
       FitResult::Type fitResType = *rIt;
@@ -313,13 +313,13 @@ namespace resolutionFit {
 	    const EtaBin* etaBin = *etaBinIt;
 
 	    std::cout << std::setprecision(0) << "   " << etaBin->toString() << ":   \t$ ";
-	    std::cout << std::setprecision(1) << par_->etaMin(etaBin->etaBin()) << " < |\\eta| < " << par_->etaMax(etaBin->etaBin()) << "$ & $";
-	    std::cout << std::setprecision(3) << etaBin->kValue(sLabel1,sLabel2,fitResType) << " \\pm ";
-	    std::cout << std::setprecision(4) << etaBin->kStat(sLabel1,sLabel2,fitResType) << " _{-";
-	    std::cout << std::setprecision(4) << etaBin->kSystDown(sLabel1,sLabel2,fitResType) << "} ^{+";
-	    std::cout << std::setprecision(4) << etaBin->kSystUp(sLabel1,sLabel2,fitResType) << "} (-";
-	    std::cout << std::setprecision(4) << etaBin->kTotalDown(sLabel1,sLabel2,fitResType) << " +";
-	    std::cout << std::setprecision(4) << etaBin->kTotalUp(sLabel1,sLabel2,fitResType) << ") $ \\\\" << std::endl;
+	    std::cout << std::setprecision(1) << par_->etaMin(etaBin->etaBin()) << "$ -- $" << par_->etaMax(etaBin->etaBin()) << "$ & $";
+	    std::cout << std::setprecision(pre) << util::round(etaBin->kValue(sLabel1,sLabel2,fitResType),pre) << " \\pm ";
+	    std::cout << std::setprecision(pre) << util::round(etaBin->kStat(sLabel1,sLabel2,fitResType),pre) << " _{-";
+	    std::cout << std::setprecision(pre) << util::round(etaBin->kSystDown(sLabel1,sLabel2,fitResType),pre) << "} ^{+";
+	    std::cout << std::setprecision(pre) << util::round(etaBin->kSystUp(sLabel1,sLabel2,fitResType),pre) << "} (-";
+	    std::cout << std::setprecision(pre) << util::round(etaBin->kTotalDown(sLabel1,sLabel2,fitResType),pre) << " +";
+	    std::cout << std::setprecision(pre) << util::round(etaBin->kTotalUp(sLabel1,sLabel2,fitResType),pre) << ") $ \\\\" << std::endl;
 
 	  }
 	  std::cout << "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n" << std::endl;

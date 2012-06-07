@@ -1,4 +1,4 @@
-// $Id: EtaBin.h,v 1.12 2012/05/31 20:17:43 mschrode Exp $
+// $Id: EtaBin.h,v 1.13 2012/06/05 22:44:45 mschrode Exp $
 
 #ifndef ETA_BIN_H
 #define ETA_BIN_H
@@ -66,6 +66,8 @@ namespace resolutionFit {
 
     TGraphAsymmErrors* extrapolatedResolution(const SampleLabel &label, FitResult::Type type) const;
     TGraphAsymmErrors* correctedResolution(const SampleLabel &label, FitResult::Type type) const;
+    TGraphAsymmErrors* correctedResolutionExtrapolationUncertTotal(const SampleLabel &label, FitResult::Type type) const;
+
     TF1* mcTruthResoFunc(const TString &name) const { return mcTruthReso_->func(name); }
     TF1* pliFunc(const TString &name) const { return pli_->func(name); }
 

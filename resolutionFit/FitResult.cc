@@ -1,4 +1,4 @@
-// $Id: FitResult.cc,v 1.10 2011/11/21 17:18:05 mschrode Exp $
+// $Id: FitResult.cc,v 1.11 2012/05/31 20:17:43 mschrode Exp $
 
 #include "FitResult.h"
 
@@ -72,6 +72,7 @@ namespace resolutionFit {
 
     extrapolation_ = 0;
     kSoftFit_ = 0;
+    firstPointInExtrapolation_ = 0;
   }
 
 
@@ -86,18 +87,16 @@ namespace resolutionFit {
   bool FitResult::extrapolate() {
     if( verbosity_ == 1 ) std::cout << "Extrapolating" << std::endl;
     Extrapolation extra(minPt(),maxPt(),minPt3_);
-    bool result = extra(ptSoft_,values_,statUncerts_,extrapolation_,extrapolatedSystUncert_);
-    extrapolatedValue_ = extrapolation_->GetParameter(0);
-    extrapolatedStatUncert_ = extrapolation_->GetParError(0);
+    bool result = extra(ptSoft_,values_,statUncerts_,extrapolation_,firstPointInExtrapolation_,extrapolatedValue_,extrapolatedStatUncert_,extrapolatedSystUncert_);
 
     return result;
   }
 
 
-  // -------------------------------------------------------------------------------------  
-  TH1* FitResult::spectrum() const {
-    return meas_.front()->histPdfPtTrue();
-  }
+//   // -------------------------------------------------------------------------------------  
+//   TH1* FitResult::spectrum() const {
+//     return meas_.front()->histPdfPtTrue();
+//   }
 
 
   // -------------------------------------------------------------------------------------  
@@ -264,25 +263,30 @@ namespace resolutionFit {
     meanPtUncert_ = 1.;
 
     if( extrapolate() ) {
-      // Convolute extrapolated absolute resolution with spectrum
-      spectrum_->Reset();
-      for(int tBin = 1; tBin <= spectrum_->GetNbinsX(); ++tBin) {
-	double ptTrue = spectrum_->GetBinCenter(tBin);
-	// Convolution with cuts on ptAve
-	double s = extrapolatedValue_/sqrt(2.);	// This is still the absolute resolution!
-	double c = sqrt(M_PI/2.)*s*( erf((maxPt()-ptTrue)/s/sqrt(2.)) - erf((minPt()-ptTrue)/s/sqrt(2.)) );
-	double pdf = c*meas_.front()->pdfPtTrue(ptTrue); // Get truth pdf from bin with lowest ptSoft; this should be closest to real dijet spectrum
+//       // Convolute extrapolated absolute resolution with spectrum
+//       spectrum_->Reset();
+//       for(int tBin = 1; tBin <= spectrum_->GetNbinsX(); ++tBin) {
+// 	double ptTrue = spectrum_->GetBinCenter(tBin);
+// 	// Convolution with cuts on ptAve
+// 	double s = extrapolatedValue_/sqrt(2.);	// This is still the absolute resolution!
+// 	double c = sqrt(M_PI/2.)*s*( erf((maxPt()-ptTrue)/s/sqrt(2.)) - erf((minPt()-ptTrue)/s/sqrt(2.)) );
+// 	double pdf = c*meas_.front()->pdfPtTrue(ptTrue); // Get truth pdf from bin with lowest ptSoft; this should be closest to real dijet spectrum
 	
-	// Store (un-normalized) truth pdf for
-	// this value of ptTrue in hash table
-	spectrum_->SetBinContent(tBin,pdf);
-      } // End of loop over ptTrue
-      // Normalise values of truth pdf
-      if( spectrum_->Integral() ) spectrum_->Scale(1./spectrum_->Integral("width"));
+// 	// Store (un-normalized) truth pdf for
+// 	// this value of ptTrue in hash table
+// 	spectrum_->SetBinContent(tBin,pdf);
+//       } // End of loop over ptTrue
+//       // Normalise values of truth pdf
+//       if( spectrum_->Integral() ) spectrum_->Scale(1./spectrum_->Integral("width"));
 
-      // Get mean of pttrue spectrum
-      meanPt_ = spectrum_->GetMean();
-      meanPtUncert_ = meas_.front()->meanPdfPtTrueUncert();
+//       // Get mean of pttrue spectrum
+//       meanPt_ = spectrum_->GetMean();
+//       meanPtUncert_ = meas_.front()->meanPdfPtTrueUncert();
+
+      double meanPtUp = computeMeanPtTrue(std::abs(extrapolatedValue_+extrapolatedStatUncert_));
+      double meanPtDn = computeMeanPtTrue(std::abs(extrapolatedValue_-extrapolatedStatUncert_));
+      meanPt_ = computeMeanPtTrue(extrapolatedValue_);
+      meanPtUncert_ = 0.5*( std::abs(meanPt_-meanPtDn) + std::abs(meanPt_-meanPtUp) );
       
       // Set relative resolution
       values_.clear();
@@ -307,16 +311,39 @@ namespace resolutionFit {
     }    
   }
 
+  // Convolute absolute resolution with spectrum
+  // to otbain meanPtTrue
+  // -------------------------------------------------------------------------------------
+  double FitResultFullMaxLikeAbs::computeMeanPtTrue(double sigma) {
+    spectrum_->Reset();
+    for(int tBin = 1; tBin <= spectrum_->GetNbinsX(); ++tBin) {
+      double ptTrue = spectrum_->GetBinCenter(tBin);
+      // Convolution with cuts on ptAve
+      double s = sigma/sqrt(2.);	// This is still the absolute resolution!
+      double c = sqrt(M_PI/2.)*s*( erf((maxPt()-ptTrue)/s/sqrt(2.)) - erf((minPt()-ptTrue)/s/sqrt(2.)) );
+      double pdf = c*meas_.front()->pdfPtTrue(ptTrue); // Get truth pdf from bin with lowest ptSoft; this should be closest to real dijet spectrum
+   
+      // Store (un-normalized) truth pdf for
+      // this value of ptTrue in hash table
+      spectrum_->SetBinContent(tBin,pdf);
+    } // End of loop over ptTrue
+      // Normalise values of truth pdf
+    if( spectrum_->Integral() ) spectrum_->Scale(1./spectrum_->Integral("width"));
+
+    return spectrum_->GetMean();
+  }
+
+
   
   //! \brief Get assumed truth pdf for this EtaPt bin
   // -------------------------------------------------------------------------------------  
-  TH1* FitResultFullMaxLikeAbs::spectrum() const {
-    ++HIST_COUNT;
-    TString name = "FitResultFullMaxLikeAbs::spectrum::";
-    name += HIST_COUNT;
+//   TH1* FitResultFullMaxLikeAbs::spectrum() const {
+//     ++HIST_COUNT;
+//     TString name = "FitResultFullMaxLikeAbs::spectrum::";
+//     name += HIST_COUNT;
 
-    return static_cast<TH1*>(spectrum_->Clone(name));
-  }
+//     return static_cast<TH1*>(spectrum_->Clone(name));
+//   }
 
 
 

@@ -199,6 +199,16 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------
+  unsigned int Sample::firstPointInExtrapolation(FitResult::Type type) const {
+    unsigned int idx = 0;
+    FitResult* fr = 0;
+    if( findFitResult(type,fr) ) idx = fr->firstPointInExtrapolation();
+    
+    return idx;
+  }
+
+
+  // -------------------------------------------------------------------
   double Sample::meanPt(FitResult::Type type) const {
     double result = 0.;
     FitResult* fr = 0;
