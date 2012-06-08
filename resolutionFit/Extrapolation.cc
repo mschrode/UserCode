@@ -1,4 +1,4 @@
-// $Id: Extrapolation.cc,v 1.15 2011/11/22 12:21:02 mschrode Exp $
+// $Id: Extrapolation.cc,v 1.16 2012/06/07 21:10:55 mschrode Exp $
 
 #include "Extrapolation.h"
 
@@ -15,13 +15,19 @@ namespace resolutionFit {
   unsigned int Extrapolation::NUM_INSTANCES = 0;
   
 
+  //! @param wpIdx Index of stable working-point. If negative, use simple method
+  //!              where y-axis intercept is taken as resolution and error on this
+  //!              as uncertainty.
   // -------------------------------------------------------------------------------------
-  Extrapolation::Extrapolation(double minPt, double maxPt, double minPt3)
-    : minPt_(minPt), maxPt_(maxPt), minPt3_(minPt3) {
+  Extrapolation::Extrapolation(double minPt, double maxPt, double minPt3, int wpIdx)
+    : minPt_(minPt), maxPt_(maxPt), minPt3_(minPt3),
+      useWPExtrapolation_(wpIdx<0 ? false : true), wpIdx_(wpIdx_<0 ? 1000 : static_cast<int>(wpIdx))
+ {
     
     if( NUM_INSTANCES == 0 ) {
       std::cout << "\n\n++++++ Extrapolation +++++++++++++++++++++++++++++++++" << std::endl;
       std::cout << "\nLinear extrapolation\nMinimum ptSoft = " << minPt3_ << " GeV" << std::endl;
+      if( useWPExtrapolation_ ) std::cout << "Using 'Working-Point Extrapolation' with WP = " << wpIdx_ << std::endl;
       std::cout << std::endl;
     }
     
@@ -37,7 +43,8 @@ namespace resolutionFit {
 				 double &extra, double &statUncert, double &systUncert) const {
     bool result = true;
     
-    TGraphAsymmErrors* g = getGraph(ptSoft,values,uncerts);
+    unsigned int effWPIdx = wpIdx_;
+    TGraphAsymmErrors* g = getGraph(ptSoft,values,uncerts,effWPIdx);
     
     // Setup linear fit
     TString name = "LinearExtrapolation";
@@ -54,6 +61,7 @@ namespace resolutionFit {
       for(int i = 0; i < 7; ++i) {
 	std::cout << "  ptSoftRel = " << g->GetX()[0] << " ("  << g->GetX()[0]*minPt_ << " GeV)" << std::endl;
 	g->RemovePoint(0);
+	if( effWPIdx > 0 ) effWPIdx--;
       }
       fitResult = !(g->Fit(fit,"0QR"));
     }
@@ -77,27 +85,21 @@ namespace resolutionFit {
       std::cerr << "  Cured by setting fit result to mean " << mean << " with large error " << 100 << std::endl << std::endl;
     }
 
-//     // So far
-//     extra = fit->GetParameter(0);
-//     statUncert = fit->GetParError(0);
-//     systUncert = 0.5*std::abs(g->GetY()[0]-fit->GetParameter(0));
-
-
-    // Corrected syst uncertainty
-    extra = fit->GetParameter(0);
-    statUncert = fit->GetParError(0);
-    systUncert = 0.5*std::abs(fit->Eval(g->GetX()[0])-fit->Eval(0));
-
-
-//     // Working point * slope
-//     unsigned int wp = 0;
-//     //    while( g->GetX()[wp] < 0.14 ) ++wp;
-//     std::cout << "   WP = " << g->GetX()[wp] << std::endl;
-//     extra = g->GetY()[wp] - fit->GetParameter(1)*g->GetX()[wp];
-//     double statPoint = g->GetEYhigh()[wp];
-//     double statSlope = g->GetX()[wp]*fit->GetParError(1);
-//     statUncert = sqrt( statPoint*statPoint + statSlope*statSlope );
-//     systUncert = 0.5*std::abs(fit->Eval(g->GetX()[0])-fit->Eval(0.));
+    if( useWPExtrapolation_ ) {
+      // Working point * slope
+      //std::cout << "   WP = " << g->GetX()[effWPIdx] << std::endl;
+      extra = g->GetY()[effWPIdx] - fit->GetParameter(1)*g->GetX()[effWPIdx];
+      double statPoint = g->GetEYhigh()[effWPIdx];
+      double statSlope = g->GetX()[effWPIdx]*fit->GetParError(1);
+      statUncert = sqrt( statPoint*statPoint + statSlope*statSlope );
+      systUncert = 0.5*std::abs(fit->Eval(g->GetX()[0])-fit->Eval(0.));
+    } else {
+      // sigma = y(0)
+      // syst uncertainty wrt to extrapolation fit
+      extra = fit->GetParameter(0);
+      statUncert = fit->GetParError(0);
+      systUncert = 0.5*std::abs(fit->Eval(g->GetX()[0])-fit->Eval(0));
+    }
 
     return fitResult;
   }
@@ -107,7 +109,8 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   TGraphAsymmErrors* Extrapolation::getGraph(const std::vector<double> &ptSoft,
 					     const std::vector<double> &values,
-					     const std::vector<double> &uncerts) const {
+					     const std::vector<double> &uncerts,
+					     unsigned int &effectiveWPIdx) const {
     std::vector<double> ptSoftUncert(ptSoft.size(),0.);
     TGraphAsymmErrors* g = new TGraphAsymmErrors(ptSoft.size(),&(ptSoft.front()),&(values.front()),
 						 &(ptSoftUncert.front()),&(ptSoftUncert.front()),
@@ -115,6 +118,7 @@ namespace resolutionFit {
     
     // Remove points that correspond to bins with
     // ptAveMin below 'minPt3_'
+    effectiveWPIdx = wpIdx_;
     double minPt3 = minPt3_;
     if( minPt3 > 6. && minPt_ < 70. ) minPt3 = 6.; // Otherwise no points left in first bin
     int nPointsToDelete = 0;
@@ -127,6 +131,7 @@ namespace resolutionFit {
 	std::cout << "    ptSoftRel = " << g->GetX()[0] << " ("  << g->GetX()[0]*minPt_ << " GeV)" << std::endl;
 	g->RemovePoint(0);
       }
+      effectiveWPIdx -= nPointsToDelete;
       std::cout << "    " << g->GetN() << " points remaining" << std::endl;
     }
 

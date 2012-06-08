@@ -1,4 +1,4 @@
-// $Id: EtaBin.cc,v 1.17 2012/06/05 22:44:46 mschrode Exp $
+// $Id: EtaBin.cc,v 1.18 2012/06/07 21:10:55 mschrode Exp $
 
 #include <algorithm>
 #include <iostream>
@@ -230,7 +230,7 @@ namespace resolutionFit{
   bool EtaBin::addExtrapolationUncertainty(const SampleLabel &nominalSample, FitResult::Type type, int color) {
     SystematicUncertainty* uncert = findSystematicUncertainty(nominalSample,type);
 
-    TString label = "Extrapolation";
+    TString label = "Additional Jets";
     if( !(uncert->hasComponent(label)) ) {
       std::vector<double> ptMean;
       std::vector<double> ptMin;
@@ -397,26 +397,6 @@ namespace resolutionFit{
       g->Fit(fit,"0QR");
       kVal_ = fit->GetParameter(0);
       kValStat_ = fit->GetParError(0);
-
-//       const SystematicUncertainty* systUncert = 0;
-//       if( findSystematicUncertainty(slp->label2(),type,systUncert) ) {
-// 	TGraphAsymmErrors* gDown = static_cast<TGraphAsymmErrors*>(g->Clone());
-// 	TGraphAsymmErrors* gUp = static_cast<TGraphAsymmErrors*>(g->Clone());
-// 	for(int i = 0; i < g->GetN(); ++i) {
-// 	  gDown->SetPoint(i,gDown->GetX()[i],gDown->GetY()[i]-systUncert->relUncertDown(i));
-// 	  gUp->SetPoint(i,gUp->GetX()[i],gUp->GetY()[i]+systUncert->relUncertUp(i));
-// 	}
-// 	gDown->Fit(fit,"0QR");
-// 	kValSystDown_ = std::abs(kVal_-fit->GetParameter(0));
-// 	gUp->Fit(fit,"0QR");
-// 	kValSystUp_ = std::abs(kVal_-fit->GetParameter(0));
-// 	delete gDown;
-// 	delete gUp;
-//       } else {
-// 	kValSystDown_ = 0.;
-// 	kValSystUp_ = 0.;
-//       }
-
 
       const SystematicUncertainty* syst1 = 0;
       const SystematicUncertainty* syst2 = 0;
@@ -595,7 +575,7 @@ namespace resolutionFit{
     // Fit new PLI from extrapolated ptGen asymmetry width
     delete pli_;
     std::cout << "Fitting PLI for EtaBin " << etaBin() << std::endl;
-    pli_ = ResolutionFunction::fitTGraph(g,type);
+    pli_ = ResolutionFunction::fitTGraph(g,type,true);
   }
 
 
@@ -793,34 +773,20 @@ namespace resolutionFit{
   }
 
   // -------------------------------------------------------------------------------------
-  TGraphAsymmErrors* EtaBin::correctedResolutionExtrapolationUncertTotal(const SampleLabel &label, FitResult::Type type) const {
+  TGraphAsymmErrors* EtaBin::correctedResolutionSystUncert(const SampleLabel &labelResolution, const SampleLabel &labelUncertainty, FitResult::Type type) const {
     // Corrected resolution
-    TGraphAsymmErrors* g = correctedResolution(label,type);
+    TGraphAsymmErrors* g = correctedResolution(labelResolution,type);
 
     // Get extrapolation systematic uncertainty if assigned
     std::vector<double> relErr(g->GetN(),0.);
     const SystematicUncertainty* syst = 0;
-    if( findSystematicUncertainty(label,type,syst) ) {
-      const SystematicUncertainty* systEx = syst->component("Extrapolation");
-      if( systEx ) {
-	for(int i = 0; i < g->GetN(); ++i) {
-	  relErr.at(i) = systEx->relUncertDown(i);
-	}
+    if( findSystematicUncertainty(labelUncertainty,type,syst) ) {
+      for(int i = 0; i < g->GetN(); ++i) {
+	double val = g->GetY()[i];
+	g->GetEYlow()[i] = val*syst->relUncertDown(i);
+	g->GetEYhigh()[i] = val*syst->relUncertUp(i);
       }
     }
-
-    // Apply relative uncertainty
-    for(int i = 0; i < g->GetN(); ++i) {
-      double val = g->GetY()[i];
-      double statErr = g->GetEYlow()[i];
-      double systErr = val*relErr.at(i);
-      double totErr = sqrt( statErr*statErr + systErr*systErr );
-      g->GetEXlow()[i]  = 0.;
-      g->GetEXhigh()[i] = 0.;
-      g->GetEYlow()[i]  = totErr;
-      g->GetEYhigh()[i] = totErr;
-    }
-    
     g->SetMarkerStyle(1);
 
     return g;

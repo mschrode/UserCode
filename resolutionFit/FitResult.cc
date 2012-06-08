@@ -1,4 +1,4 @@
-// $Id: FitResult.cc,v 1.11 2012/05/31 20:17:43 mschrode Exp $
+// $Id: FitResult.cc,v 1.12 2012/06/07 21:10:55 mschrode Exp $
 
 #include "FitResult.h"
 
@@ -27,19 +27,19 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------
-  FitResult* FitResult::createFitResult(Type type, const std::vector<Measurement*> &meas, double minPt3, unsigned int verbosity) {
+  FitResult* FitResult::createFitResult(Type type, const std::vector<Measurement*> &meas, double minPt3, int wpIdx, unsigned int verbosity) {
     FitResult* fr = 0;
     if( validType(type) ) {
       if( type == MaxLikeKSoftRel ) {
-	fr = new FitResultMaxLikeKSoftRel(meas,minPt3,verbosity);
+	fr = new FitResultMaxLikeKSoftRel(meas,minPt3,wpIdx,verbosity);
       } else if( type == FullMaxLikeRel ) {
-	fr = new FitResultFullMaxLikeRel(meas,minPt3,verbosity);
+	fr = new FitResultFullMaxLikeRel(meas,minPt3,wpIdx,verbosity);
       } else if( type == FullMaxLikeAbs ) {
-	fr = new FitResultFullMaxLikeAbs(meas,minPt3,verbosity);
+	fr = new FitResultFullMaxLikeAbs(meas,minPt3,wpIdx,verbosity);
       } else if( type == PtAsym ) {
-	fr = new FitResultPtAsym(meas,minPt3,verbosity);
+	fr = new FitResultPtAsym(meas,minPt3,wpIdx,verbosity);
       } else if( type == PtGenAsym ) {
-	fr = new FitResultPtGenAsym(meas,minPt3,verbosity);
+	fr = new FitResultPtGenAsym(meas,minPt3,wpIdx,verbosity);
       }
       if( !fr->init() ) {
 	std::cerr << "ERROR in FitResult::createFitResult(): initialization failure. Das ist ganz schlecht!" << std::endl;
@@ -67,8 +67,8 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------  
-  FitResult::FitResult(const Meas &meas, double minPt3, unsigned int verbosity)
-    : meas_(meas), verbosity_(verbosity), workingPointBin_(3), minPt3_(minPt3) {
+  FitResult::FitResult(const Meas &meas, double minPt3, int wpIdx, unsigned int verbosity)
+    : meas_(meas), verbosity_(verbosity), workingPointBin_(3), minPt3_(minPt3), wpIdx_(wpIdx) {
 
     extrapolation_ = 0;
     kSoftFit_ = 0;
@@ -86,7 +86,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------  
   bool FitResult::extrapolate() {
     if( verbosity_ == 1 ) std::cout << "Extrapolating" << std::endl;
-    Extrapolation extra(minPt(),maxPt(),minPt3_);
+    Extrapolation extra(minPt(),maxPt(),minPt3_,wpIdx_);
     bool result = extra(ptSoft_,values_,statUncerts_,extrapolation_,firstPointInExtrapolation_,extrapolatedValue_,extrapolatedStatUncert_,extrapolatedSystUncert_);
 
     return result;
@@ -136,8 +136,8 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------  
-  FitResultMaxLikeKSoftRel::FitResultMaxLikeKSoftRel(const Meas meas, double minPt3, unsigned int verbosity)
-    : FitResult(meas,minPt3,verbosity) { }
+  FitResultMaxLikeKSoftRel::FitResultMaxLikeKSoftRel(const Meas meas, double minPt3, int wpIdx, unsigned int verbosity)
+    : FitResult(meas,minPt3,wpIdx,verbosity) { }
 
 
   // -------------------------------------------------------------------------------------  
@@ -186,8 +186,8 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------  
-  FitResultFullMaxLikeRel::FitResultFullMaxLikeRel(const Meas meas, double minPt3, unsigned int verbosity)
-    : FitResult(meas,minPt3,verbosity) { }
+  FitResultFullMaxLikeRel::FitResultFullMaxLikeRel(const Meas meas, double minPt3, int wpIdx, unsigned int verbosity)
+    : FitResult(meas,minPt3,wpIdx,verbosity) { }
 
 
   // -------------------------------------------------------------------------------------  
@@ -227,8 +227,8 @@ namespace resolutionFit {
   //! \brief Extrapolate absolute sigma and convolute extrapolated resolution
   //! with spectrum to obtain mean pt in each bin
   // -------------------------------------------------------------------------------------  
-  FitResultFullMaxLikeAbs::FitResultFullMaxLikeAbs(const Meas meas, double minPt3, unsigned int verbosity)
-    : FitResult(meas,minPt3,verbosity) {
+  FitResultFullMaxLikeAbs::FitResultFullMaxLikeAbs(const Meas meas, double minPt3, int wpIdx, unsigned int verbosity)
+    : FitResult(meas,minPt3,wpIdx,verbosity) {
     ++HIST_COUNT;
     TString name = "FitResultFullMaxLikeAbs::Spectrum::";
     name += HIST_COUNT;
@@ -348,8 +348,8 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------  
-  FitResultPtAsym::FitResultPtAsym(const Meas meas, double minPt3, unsigned int verbosity)
-    : FitResult(meas,minPt3,verbosity) { }
+  FitResultPtAsym::FitResultPtAsym(const Meas meas, double minPt3, int wpIdx, unsigned int verbosity)
+    : FitResult(meas,minPt3,wpIdx,verbosity) { }
 
 
   // -------------------------------------------------------------------------------------  
@@ -398,8 +398,8 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------  
-  FitResultPtGenAsym::FitResultPtGenAsym(const Meas meas, double minPt3, unsigned int verbosity)
-    : FitResult(meas,minPt3,verbosity) { }
+  FitResultPtGenAsym::FitResultPtGenAsym(const Meas meas, double minPt3, int wpIdx, unsigned int verbosity)
+    : FitResult(meas,minPt3,wpIdx,verbosity) { }
 
 
   // -------------------------------------------------------------------------------------  

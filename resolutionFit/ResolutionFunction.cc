@@ -1,4 +1,4 @@
-// $Id: ResolutionFunction.cc,v 1.6 2012/02/04 21:51:49 mschrode Exp $
+// $Id: ResolutionFunction.cc,v 1.7 2012/05/31 20:17:43 mschrode Exp $
 
 #include <algorithm>
 
@@ -79,7 +79,7 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------
-  ResolutionFunction* ResolutionFunction::fitTGraph(const TGraphAsymmErrors* g, ResolutionFunction::Type type) {
+  ResolutionFunction* ResolutionFunction::fitTGraph(const TGraphAsymmErrors* g, ResolutionFunction::Type type, bool setPar2to0) {
 
     TGraphAsymmErrors* gc = static_cast<TGraphAsymmErrors*>(g->Clone());
 
@@ -103,7 +103,7 @@ namespace resolutionFit {
 
     // Get TF1 to fit
     TF1* fit = f->func("tmp");
-    //if( type == ResolutionFunction::ModifiedNSC ) fit->FixParameter(2,0.);
+    if( setPar2to0 && type == ResolutionFunction::ModifiedNSC ) fit->FixParameter(2,0.);
     gc->Fit(fit,"0QR");
     std::cout << "Parameters of fitted resolution:\n";
     for(int i = 0; i < fit->GetNpar(); ++i) {

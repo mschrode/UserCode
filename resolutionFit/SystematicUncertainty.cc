@@ -1,4 +1,4 @@
-// $Id: SystematicUncertainty.cc,v 1.2 2012/05/31 20:17:44 mschrode Exp $
+// $Id: SystematicUncertainty.cc,v 1.3 2012/06/07 21:10:55 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -73,14 +73,29 @@ namespace resolutionFit {
     std::vector<double> y;
     std::vector<double> yed;
     std::vector<double> yeu;
+
+    x.push_back(ptMin_.front());
+    xed.push_back(0.);
+    xeu.push_back(ptMean_.front()-ptMin_.front());
+    y.push_back(0.);
+    yed.push_back(relUncertDown_.front());
+    yeu.push_back(relUncertUp_.front());
     for(size_t i = 0; i < ptMean_.size(); ++i) {
       x.push_back(ptMean_.at(i));
       xed.push_back(x.at(i)-ptMin_.at(i));
-      xed.push_back(ptMax_.at(i)-x.at(i));
+      xeu.push_back(ptMax_.at(i)-x.at(i));
       y.push_back(0.);
       yed.push_back(relUncertDown_.at(i));
       yeu.push_back(relUncertUp_.at(i));
     }
+    x.push_back(ptMax_.back());
+    xed.push_back(ptMax_.back()-ptMean_.back());
+    xeu.push_back(0.);
+    y.push_back(0.);
+    yed.push_back(relUncertDown_.back());
+    yeu.push_back(relUncertUp_.back());
+
+
     TGraphAsymmErrors* g = new TGraphAsymmErrors(x.size(),&(x.front()),&(y.front()),
 						 &(xed.front()),&(xeu.front()),&(yed.front()),&(yeu.front()));
     g->SetFillStyle(1001);

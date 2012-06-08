@@ -1,4 +1,4 @@
-// $Id: Parameters.h,v 1.32 2011/11/21 17:18:04 mschrode Exp $
+// $Id: Parameters.h,v 1.33 2012/05/31 20:17:43 mschrode Exp $
 
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
@@ -38,6 +38,7 @@ namespace resolutionFit {
     void setNEtaBinsUser(unsigned int nBins);
     void setLumi(double lumi) { lumi_ = lumi; }
     void setPtSoftAbsMin(double min) { ptSoftAbsMin_ = min; }
+    void useWPExtrapolation(double cutValue);
 
     unsigned int verbosity() const { return verbosity_; }
 
@@ -60,6 +61,7 @@ namespace resolutionFit {
     double ptSoftMax(unsigned int ptSoftBin) const { return binAdm_->ptSoftMax(ptSoftBin); }
     double ptSoftAbsMin() const { return ptSoftAbsMin_; }
     double deltaPhi() const { return 2.7; }
+    int wpIdx() const { return wpIdx_; }
 
     void printBinning() const { binAdm_->printBinning(); }
 
@@ -73,6 +75,7 @@ namespace resolutionFit {
     TString id_;
     unsigned int nEtaBinsUser_;
     double ptSoftAbsMin_;
+    int wpIdx_;
 
     JetProperties::Algo jetAlgo_;
     JetProperties::Type jetType_;

@@ -71,7 +71,7 @@ namespace resolutionFit{
     mcTruthSample_ = new MCTruthSample(label,etaBin(),ptBin(),par_->ptMin(etaBin(),ptBin()),
 				       par_->ptMax(etaBin(),ptBin()),
 				       par_->ptSoft(),fileName,par_->verbosity());
-    mcTruthSample_->addFitResult(FitResult::PtGenAsym,par_->ptSoftAbsMin());
+    mcTruthSample_->addFitResult(FitResult::PtGenAsym,par_->ptSoftAbsMin(),par_->wpIdx());
     
     return true;
   }
@@ -83,7 +83,7 @@ namespace resolutionFit{
     bool result = true;
     for(std::map<SampleLabel,Sample*>::iterator it = samples_.begin(); it != samples_.end(); ++it) {
       if( it->second->type() != Sample::MCTruth ) {
-	result = result && it->second->addFitResult(type,par_->ptSoftAbsMin());
+	result = result && it->second->addFitResult(type,par_->ptSoftAbsMin(),par_->wpIdx());
       }      
     }
 

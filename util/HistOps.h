@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.48 2012/06/03 21:51:11 mschrode Exp $
+// $Id: HistOps.h,v 1.49 2012/06/05 22:18:37 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.48 2012/06/03 21:51:11 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.49 2012/06/05 22:18:37 mschrode Exp $
   class HistOps
   {
   public:
@@ -308,7 +308,7 @@ namespace util
     }
 
 
-
+    //! Concat graphs
     // -------------------------------------------------------------------------------------
     static TGraphAsymmErrors* combineTGraphs(const TGraphAsymmErrors* g1, const TGraphAsymmErrors* g2) {
       std::vector<double> x;
@@ -335,7 +335,6 @@ namespace util
       }
       return new TGraphAsymmErrors(x.size(),&(x.front()),&(y.front()),&(xel.front()),&(xeh.front()),&(yel.front()),&(yeh.front()));
     }
-
 
 
     // -------------------------------------------------------------------------------------

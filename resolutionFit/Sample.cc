@@ -127,7 +127,7 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------
-  bool Sample::addFitResult(FitResult::Type type, double minPt3) {
+  bool Sample::addFitResult(FitResult::Type type, double minPt3, int wpIdx) {
     bool result = true;
     FitResultMapIt it = fitResult_.find(type);
     if( it != fitResult_.end() ) {
@@ -135,7 +135,7 @@ namespace resolutionFit {
       if( verbosity_ ) std::cerr << "ERROR in Sample: FitResult of type '" << FitResult::toString(type) << "' does already exist" << std::endl;
     } else {
       if( verbosity_ ) std::cout << "Sample::addFitResult(): Adding FitResult '" << FitResult::toString(type) << "'" << std::endl;
-      fitResult_[type] = FitResult::createFitResult(type,meas_,minPt3,verbosity_);
+      fitResult_[type] = FitResult::createFitResult(type,meas_,minPt3,wpIdx,verbosity_);
     }
 
     return result;

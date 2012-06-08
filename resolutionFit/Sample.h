@@ -1,4 +1,4 @@
-// $Id: Sample.h,v 1.17 2012/06/05 22:44:46 mschrode Exp $
+// $Id: Sample.h,v 1.18 2012/06/07 21:10:55 mschrode Exp $
 
 #ifndef SAMPLE_H
 #define SAMPLE_H
@@ -59,7 +59,7 @@ namespace resolutionFit {
     TH1* histDeltaPt(unsigned int ptSoftBin) const { return meas_.at(ptSoftBin)->histDeltaPt(); }
 
     void setPrintLabel(const TString &printLabel) { printLabel_ = printLabel; }
-    bool addFitResult(FitResult::Type type, double minPt3);
+    bool addFitResult(FitResult::Type type, double minPt3, int wpIdx);
     bool setKSoftFit(FitResult::Type type, const TF1* fit);
     void addSystematicUncertainty(FitResult::Type type, const TString &label, double variedValue, double fraction);
     void addSystematicUncertainty(FitResult::Type type, const TString &label, double variedValueDown, double variedValueUp, double fraction);

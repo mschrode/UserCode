@@ -1,4 +1,4 @@
-// $Id: PlotMaker.h,v 1.25 2012/06/05 22:44:45 mschrode Exp $
+// $Id: PlotMaker.h,v 1.26 2012/06/07 21:10:55 mschrode Exp $
 
 #ifndef PLOT_MAKER_H
 #define PLOT_MAKER_H
@@ -74,6 +74,7 @@ namespace resolutionFit {
       TString lumi() const;
       TString pt() const;
       TString ptSoft() const;
+      TString ptSoftGen() const;
       TString type(FitResult::Type type) const;
       TString sample(const SampleLabel &label) const;
       

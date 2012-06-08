@@ -1,4 +1,4 @@
-// $Id: StyleSettings.h,v 1.20 2012/05/31 20:16:31 mschrode Exp $
+// $Id: StyleSettings.h,v 1.21 2012/06/05 22:18:37 mschrode Exp $
 
 #ifndef STYLE_SETTINGS_H
 #define STYLE_SETTINGS_H
@@ -19,7 +19,7 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: StyleSettings.h,v 1.20 2012/05/31 20:16:31 mschrode Exp $
+  //!  $Id: StyleSettings.h,v 1.21 2012/06/05 22:18:37 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class StyleSettings {
   public:
@@ -96,6 +96,7 @@ namespace util {
     static int colorLight(int color) {
       int idx = kGray+1;
       if     ( color == kBlue    )  idx = kBlue-7;
+      if     ( color == 4        )  idx = kBlue-7;
       else if( color == kRed     )  idx = kRed-9;
       else if( color == 8        )  idx = kGreen-10;
       else if( color == kGreen+2 )  idx = kGreen-9;

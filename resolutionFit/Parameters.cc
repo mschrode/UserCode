@@ -1,4 +1,4 @@
-// $Id: Parameters.cc,v 1.30 2011/06/07 18:23:31 mschrode Exp $
+// $Id: Parameters.cc,v 1.31 2011/11/21 17:18:05 mschrode Exp $
 
 #include "Parameters.h"
 
@@ -16,6 +16,7 @@ namespace resolutionFit {
     outPutMode_ = OutputManager::PSAllInOne;
     nEtaBinsUser_ = 0;
     ptSoftAbsMin_ = 10.;
+    wpIdx_ = -1;
 
     // Print binning info
     binAdm_->printBinning();
@@ -55,6 +56,17 @@ namespace resolutionFit {
       exit(1);
     }
     nEtaBinsUser_ = nBins;
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  void Parameters::useWPExtrapolation(double cutValue) {
+    wpIdx_ = 0;
+    if( cutValue > ptSoftMax(nPtSoftBins()-1) ) {
+      wpIdx_ = nPtSoftBins()-1;
+    } else {
+      while( cutValue > ptSoftMax(wpIdx_) ) ++wpIdx_;
+    }
   }
 
 
