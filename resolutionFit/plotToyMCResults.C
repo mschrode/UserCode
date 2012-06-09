@@ -1,4 +1,4 @@
-// $Id: plotToyMCResults.C,v 1.4 2012/03/26 12:39:08 mschrode Exp $
+// $Id: plotToyMCResults.C,v 1.5 2012/06/01 18:48:47 mschrode Exp $
 
 #include <iomanip>
 #include <iostream>
@@ -29,8 +29,8 @@ const double PT_CUT_MIN = 250.;
 const double PT_CUT_MAX = 300.;
 const TString LABEL_MC = "Toy Simulation";
 const TString LABEL_TRUTH = "p^{true}_{T} (GeV)";
-const TString LABEL_PT_CUT = "p^{ave}_{T}";
-const TString LABEL_DELTA_PT = "|#Deltap_{T}| (GeV)";
+const TString LABEL_PT_CUT = util::LabelFactory::ptAve();
+const TString LABEL_DELTA_PT = "#Deltap_{T} (GeV)";
 const TString LABEL_PT_BIN = util::toTString(PT_CUT_MIN)+" < "+LABEL_PT_CUT+" < "+util::toTString(PT_CUT_MAX)+" GeV";
 const TString LABEL_ASYMMETRY = "Asymmetry";
 const TString LABEL_RESPONSE = "Response";
@@ -38,6 +38,16 @@ const int MARKER_STYLE_DIS = 21;
 const int COLOR_DIS = kBlack;
 const int COLOR_PDF = kRed;
 const int LINE_WIDTH = 2;
+TFile* OUT_FILE = 0;
+
+
+
+// ------------------------------------------------------------
+void openOutFile() {
+  if( OUT_FILE == 0 ) {
+    OUT_FILE = new TFile("ToyStudy.root","RECREATE");
+  }
+}
 
 
 // ------------------------------------------------------------
@@ -110,14 +120,16 @@ void printChi2Test(const TString &var, const TH1* h, const TH1* f, bool isSymmet
 
 // ------------------------------------------------------------
 void plotDisVsPdf(TH1* hDis, TH1* hPdf, const TString &disVar, const TString &model, const TString &outName) {
+  openOutFile();
+
   TPaveText* label = util::LabelFactory::createPaveText(2);
   label->AddText(LABEL_MC+", "+model);
   label->AddText(LABEL_PT_BIN);
 
   TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,-0.6,label->GetSize());
-  leg->AddEntry(hDis,"Selected events","P");
+  leg->AddEntry(hDis,"Selected Events","P");
   util::HistOps::normHist(hDis,"width");
-  leg->AddEntry(hPdf,"Assumed pdf","L");
+  leg->AddEntry(hPdf,"Estimate","L");
 
   hDis->SetTitle("");
   util::HistOps::setAxisTitles(hDis,disVar,"","events",true);
@@ -128,7 +140,7 @@ void plotDisVsPdf(TH1* hDis, TH1* hPdf, const TString &disVar, const TString &mo
   hPdf->SetLineWidth(LINE_WIDTH);
   hPdf->SetLineColor(COLOR_PDF);
 
-  TCanvas* can = new TCanvas("can"+outName,outName,500,500);
+  TCanvas* can = new TCanvas(outName,outName,500,500);
   can->cd();
   util::HistOps::setYRange(hDis,label->GetSize()+leg->GetNRows());
   hDis->Draw("PE1");
@@ -136,8 +148,9 @@ void plotDisVsPdf(TH1* hDis, TH1* hPdf, const TString &disVar, const TString &mo
   label->Draw("same");
   leg->Draw("same");
   gPad->RedrawAxis();
-  can->SaveAs(outName+".eps","eps");
+  util::FileOps::toFiles(can,OUT_FILE);
 
+  can->SetName(outName+"Log");
   util::HistOps::setYRange(hDis,label->GetSize()+leg->GetNRows(),3E-6);
   if( outName.Contains("Asym") ) util::HistOps::setYRange(hDis,label->GetSize()+leg->GetNRows(),3E-4);
   else if( outName.Contains("Resp") ) util::HistOps::setYRange(hDis,label->GetSize()+leg->GetNRows(),3E-3);
@@ -147,14 +160,18 @@ void plotDisVsPdf(TH1* hDis, TH1* hPdf, const TString &disVar, const TString &mo
   leg->Draw("same");
   can->SetLogy();
   gPad->RedrawAxis();
-  can->SaveAs(outName+"Log.eps","eps");
+  util::FileOps::toFiles(can,OUT_FILE);
 }
 
 
 // ------------------------------------------------------------
-void plotToyMCResults(const TString &fileNameResults, const TString &model, const TString &outNamePrefix) {
+void plotToyMCResults(const TString &fileNameResults, const TString &model) {
+  openOutFile();
+
   gErrorIgnoreLevel = 1001;
   util::StyleSettings::setStyleNoteNoTitle();
+
+  TString outNamePrefix = ("ToyStudy_"+model).ReplaceAll(" ","");
 
   // Fitted resolution
   TH1* hParameters = util::FileOps::readTH1(fileNameResults,"hAbsoluteParameters");
@@ -168,8 +185,8 @@ void plotToyMCResults(const TString &fileNameResults, const TString &model, cons
   hSpecDis->SetBinError(hSpecDis->FindBin(300.),0.);
   const double meanPtGen = hSpecDis->GetMean();
   const double fitResRel = fitRes/meanPtGen;
-
   util::HistOps::setXRange(hSpecDis,10);
+  hSpecDis->GetXaxis()->SetNdivisions(505);
   TH1* hSpecPdf = util::FileOps::readTH1(fileNameResults,"hTruthPDF_0");
   util::HistOps::normHist(hSpecPdf,"width");
   plotDisVsPdf(hSpecDis,hSpecPdf,LABEL_TRUTH,model,outNamePrefix+"_Spectrum");
@@ -209,28 +226,27 @@ void plotToyMCResults(const TString &fileNameResults, const TString &model, cons
   label->AddText(LABEL_MC+", "+model);
 
   TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,-0.6,label->GetSize());
-  leg->AddEntry(hParScan,"Likelihood L(#sigma)","L");
-  leg->AddEntry(parabola,"Gaussian likelihood","L");
+  leg->AddEntry(hParScan,"Dijet Likelihood","L");
+  leg->AddEntry(parabola,"Gaussian Likelihood","L");
 
   hParScan->SetTitle("");
-  util::HistOps::setAxisTitles(hParScan,"#sigma (GeV)","","#DeltaF = -2#upoint[lnL(#sigma) - lnL(#hat{#sigma})]");
+  util::HistOps::setAxisTitles(hParScan,"#sigma (GeV)","","#DeltaF = -2#upoint[lnL(#sigma) - lnL(#hat{#sigma}_{0})]");
   hParScan->GetXaxis()->SetNdivisions(505);
   hParScan->SetLineWidth(LINE_WIDTH);
-  hParScan->SetLineColor(COLOR_DIS);
+  hParScan->SetLineColor(kRed);
   parabola->SetLineWidth(LINE_WIDTH);
-  parabola->SetLineColor(kBlue);
+  parabola->SetLineColor(kBlack);
   parabola->SetLineStyle(2);
 
-  TCanvas* can = new TCanvas("canDeltaLikelihood","DeltaLikelihood",500,500);
+  TCanvas* can = new TCanvas(outNamePrefix+"_DeltaLikelihood","DeltaLikelihood",500,500);
   can->cd();
-  util::HistOps::setYRange(hParScan,label->GetSize()+leg->GetNRows());
+  util::HistOps::setYRange(hParScan,leg->GetNRows());
   hParScan->Draw("L");
   parabola->Draw("Lsame");
   label->Draw("same");
   leg->Draw("same");
   gPad->RedrawAxis();
-  can->SaveAs(outNamePrefix+"_DeltaLikelihood.eps","eps");
-
+  util::FileOps::toFiles(can,OUT_FILE);
   
 
   // Goodness-of-fit
@@ -240,16 +256,20 @@ void plotToyMCResults(const TString &fileNameResults, const TString &model, cons
   printChi2Test("Response",hRespDis,hRespPdf,true);
 
 
-  std::cout << std::endl << " Mean ptGen = " << meanPtGen << std::endl;
+  std::cout << std::endl << " Mean ptGen = " << meanPtGen << " +/- " << hSpecDis->GetMeanError() << std::endl;
   std::cout << " Expected resolution = " << sqrt( 4.*4. + 1.2*1.2*meanPtGen + 0.05*0.05*meanPtGen*meanPtGen ) << std::endl;
   
 }
 
 
 // ------------------------------------------------------------
-void plotPullDistribution(const TString &fileNamePrefix, unsigned int nFiles, const TString &model, const TString &outNamePrefix) {
+void plotPullDistribution(const TString &fileNamePrefix, unsigned int nFiles, const TString &model) {
+  openOutFile();
+
   gErrorIgnoreLevel = 1001;
   util::StyleSettings::setStyleNoteNoTitle();
+
+  TString outNamePrefix = ("ToyStudy_"+model).ReplaceAll(" ","");
 
   // set of input files
   std::vector<TString> fileNames;
@@ -275,17 +295,22 @@ void plotPullDistribution(const TString &fileNamePrefix, unsigned int nFiles, co
       delete hPtGen;
     }
     double p = h->GetMean();
-    delete h;
     expReso = p*sqrt( 4.*4./p/p + 1.2*1.2/p + 0.05*0.05 );
+
+    std::cout << "All samples:    mean ptTrue = " << p << " +/- " << h->GetMeanError() << std::endl;
+    std::cout << "             expected sigma = " << expReso << std::endl;
+
+    delete h;
   }
 
   // fill pull and resolution
-  TH1* hPull = new TH1D("hPull",";(#hat{#sigma} - #LT#sigma#GT) / #delta#hat{#sigma};Number of Fits",31,-4.5,4.5);
+  TH1* hPull = new TH1D("hPull",";(#hat{#sigma}_{k} - #LT#sigma#GT) / #delta#hat{#sigma}_{k};Number of Fits",31,-4.5,4.5);
   hPull->SetMarkerStyle(21);
   hPull->SetMarkerSize(1.4);
-  TH1* hReso = new TH1D("hReso",";#hat{#sigma} (GeV);Number of Fits",31,expReso-0.9,expReso+0.9);
+  TH1* hReso = new TH1D("hReso",";#hat{#sigma}_{k} (GeV);Number of Fits",31,expReso-0.9,expReso+0.9);
   hReso->SetMarkerStyle(21);
   hReso->SetMarkerSize(1.4);
+  hReso->GetXaxis()->SetNdivisions(505);
 
   for(unsigned int n = 0; n < fileNames.size(); ++n) {
     // Fitted resolution
@@ -322,36 +347,49 @@ void plotPullDistribution(const TString &fileNamePrefix, unsigned int nFiles, co
 
   TLegend* legReso = util::LabelFactory::createLegendWithOffset(5,label->GetSize());
   legReso->AddEntry(lExpRes,"Expected #LT#sigma#GT = "+util::toTString(expReso,util::firstSigDigit(fReso->GetParError(1)))+" GeV","L");
-  legReso->AddEntry(hReso,"Fitted #hat{#sigma}","P");
-  legReso->AddEntry(fReso,"Gaussian fit to distribution","L");
-  util::LabelFactory::addExtraLegLine(legReso," mean = "+util::toTString(fReso->GetParameter(1),util::firstSigDigit(fReso->GetParError(1)))+" #pm "+util::toTString(fReso->GetParError(1),util::firstSigDigit(fReso->GetParError(1)))+" GeV");
-  util::LabelFactory::addExtraLegLine(legReso," width = "+util::toTString(fReso->GetParameter(2),util::firstSigDigit(fReso->GetParError(2)))+" #pm "+util::toTString(fReso->GetParError(2),util::firstSigDigit(fReso->GetParError(2)))+" GeV");
+  legReso->AddEntry(hReso,"Fitted #hat{#sigma}_{k}","P");
+  legReso->AddEntry(fReso,"Gaussian Fit to Distribution","L");
+  legReso->AddEntry(fReso," mean = "+util::toTString(fReso->GetParameter(1),util::firstSigDigit(fReso->GetParError(1)))+" #pm "+util::toTString(fReso->GetParError(1),util::firstSigDigit(fReso->GetParError(1)))+" GeV","");
+  legReso->AddEntry(fReso," width = "+util::toTString(fReso->GetParameter(2),util::firstSigDigit(fReso->GetParError(2)))+" #pm "+util::toTString(fReso->GetParError(2),util::firstSigDigit(fReso->GetParError(2)))+" GeV","");
   
   TLegend* legPull = util::LabelFactory::createLegendColWithOffset(4,-0.75,label->GetSize());
-  legPull->AddEntry(hReso,"Fitted pull (#hat{#sigma} - #LT#sigma#GT) / #delta#hat{#sigma}","P");
-  legPull->AddEntry(fReso,"Gaussian fit to distribution","L");
-  util::LabelFactory::addExtraLegLine(legPull," mean = "+util::toTString(fPull->GetParameter(1),util::firstSigDigit(fPull->GetParError(1)))+" #pm "+util::toTString(fPull->GetParError(1),util::firstSigDigit(fPull->GetParError(1))));
-  util::LabelFactory::addExtraLegLine(legPull," width = "+util::toTString(fPull->GetParameter(2),util::firstSigDigit(fPull->GetParError(2)))+" #pm "+util::toTString(fPull->GetParError(2),util::firstSigDigit(fPull->GetParError(2))));
+  legPull->AddEntry(hReso,"Fitted pull (#hat{#sigma}_{k} - #LT#sigma#GT) / #delta#hat{#sigma}_{k}","P");
+  legPull->AddEntry(fReso,"Gaussian Fit to Distribution","L");
+  legPull->AddEntry(fReso," mean = "+util::toTString(fPull->GetParameter(1),util::firstSigDigit(fPull->GetParError(1)))+" #pm "+util::toTString(fPull->GetParError(1),util::firstSigDigit(fPull->GetParError(1))),"");
+  legPull->AddEntry(fReso," width = "+util::toTString(fPull->GetParameter(2),util::firstSigDigit(fPull->GetParError(2)))+" #pm "+util::toTString(fPull->GetParError(2),util::firstSigDigit(fPull->GetParError(2))),"");
 
   util::HistOps::setYRange(hReso,label->GetSize()+legReso->GetNRows());
   util::HistOps::setYRange(hPull,label->GetSize()+legPull->GetNRows());
 
-  TCanvas* canPull = new TCanvas("canPull","Pull",500,500);
+  TCanvas* canPull = new TCanvas(outNamePrefix+"_Pull","Pull",500,500);
   canPull->cd();
   hPull->Draw("PE1");
   fPull->Draw("same");
   label->Draw("same");
   legPull->Draw("same");
   gPad->RedrawAxis();
-  canPull->SaveAs(outNamePrefix+"_Pull.eps","eps");
+  util::FileOps::toFiles(canPull,OUT_FILE);
 
-  TCanvas* canReso = new TCanvas("canReso","Reso",500,500);
-			     canReso->cd();
+  TCanvas* canReso = new TCanvas(outNamePrefix+"_Sigma","Reso",500,500);
+  canReso->cd();
   hReso->Draw("PE1");
   lExpRes->Draw("same");
   fReso->Draw("same");
   label->Draw("same");
   legReso->Draw("same");
   gPad->RedrawAxis();
-  canReso->SaveAs(outNamePrefix+"_Sigma.eps","eps");
+  util::FileOps::toFiles(canReso,OUT_FILE);
+}
+
+
+void runThesisResults() {
+  openOutFile();
+
+  plotToyMCResults("../results/Analysis2011/ToyExample/Kalibri_ToyMC_SpecExp100_PtTrue0250-0300_ResGauss-Const-20.root","Model 1");
+  plotPullDistribution("../results/Analysis2011/ToyExample/ToyModel1/toy_model1_",400,"Model 1");
+  plotToyMCResults("../results/Analysis2011/ToyExample/Kalibri_ToyMC_SpecExp100_PtAve0250-0300_ResGauss-400-120-005.root","Model 2");
+  plotPullDistribution("../results/Analysis2011/ToyExample/ToyModel2/toy_model2_",400,"Model 2");
+
+  OUT_FILE->Close();
+  delete OUT_FILE;
 }

@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.49 2012/06/05 22:18:37 mschrode Exp $
+// $Id: HistOps.h,v 1.50 2012/06/08 21:14:44 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.49 2012/06/05 22:18:37 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.50 2012/06/08 21:14:44 mschrode Exp $
   class HistOps
   {
   public:
@@ -166,6 +166,23 @@ namespace util
       }
       if( setMin ) min = tmpMin;
       max = tmpMax;
+    }
+
+
+    // -------------------------------------------------------------------------------------
+    static void findYRangeInclErrors(const TGraphAsymmErrors *g, double& min, double& max) {
+      min = 1E10;
+      max = 0.;
+      for(unsigned int i = 0; i < g->GetN(); ++i) {
+	double minTmp = g->GetY()[i] - g->GetEYlow()[i];
+	double maxTmp = g->GetY()[i] + g->GetEYhigh()[i];
+	if( minTmp < min ) min = minTmp;
+	if( maxTmp > max ) max = maxTmp;
+      }
+      if( min > max ) {
+	min = 1E-3;
+	max = 1;
+      }
     }
 
 

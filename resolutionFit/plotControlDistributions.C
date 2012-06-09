@@ -1,4 +1,4 @@
-// $Id: plotControlDistributions.C,v 1.6 2012/06/03 21:53:27 mschrode Exp $
+// $Id: plotControlDistributions.C,v 1.7 2012/06/05 22:44:46 mschrode Exp $
 
 //!  Control and n-1 distributions for
 //!  histograms in Kalibri skims from
@@ -312,8 +312,8 @@ void plotCorrelations(bool data, const TString &fileName, const sampleTools::Bin
   TString binId = "_EtaBin"+util::toTString(etaBin)+"_PtBin"+util::toTString(ptBin);
   TH2* h2 = util::FileOps::readTH2(fileName,histNamePrefix+binId);
   h2->SetTitle("");
-  h2->GetXaxis()->SetTitle(xLabel);//"p^{gen}_{T,3} / p^{gen,ave}_{T}");
-  h2->GetYaxis()->SetTitle(yLabel);//"p_{T,3} / p^{ave}_{T}");
+  h2->GetXaxis()->SetTitle(xLabel);
+  h2->GetYaxis()->SetTitle(yLabel);
   if( xMax > xMin ) {
     h2->GetXaxis()->SetRangeUser(xMin,xMax);
   }
@@ -456,11 +456,11 @@ void plotVariedSpectrum(const std::vector<TString> &fileNames, const std::vector
   }    
   spectra.push_back(hUp);
   spectra.push_back(hDn);
-  legEntries.push_back(sampleNames.front()+" #left(#frac{p^{gen}_{T}}{30}#right)^{+1/2}");
-  legEntries.push_back(sampleNames.front()+" #left(#frac{p^{gen}_{T}}{30}#right)^{-1/2}");
+  legEntries.push_back(sampleNames.front()+" #upoint #left(p^{gen}_{T}#right)^{+ #frac{1}{2}}");
+  legEntries.push_back(sampleNames.front()+" #upoint #left(p^{gen}_{T}#right)^{- #frac{1}{2}}");
 
   // set style
-  TLegend* leg = util::LabelFactory::createLegendCol(spectra.size()+5,0.5);
+  TLegend* leg = util::LabelFactory::createLegendCol(spectra.size()+1,0.5);
   for(unsigned int i = 0; i < spectra.size(); ++i) {
     spectra.at(i)->SetTitle("");
     util::HistOps::normHist(spectra.at(i),"width");
@@ -670,32 +670,32 @@ void plotControlDistributions() {
   OUT_FILE = new TFile(outNamePrefix+".root","RECREATE");
 
 
-    plotNMinus1Eta(fileNameData,fileNameMC,binAdmin,3,3,-5.1,-5.1,false,"#eta","","jets",deltaPhiLabel+",  "+ptRelLabel,outNamePrefix+"_NMin1Eta");
+  plotNMinus1Eta(fileNameData,fileNameMC,binAdmin,3,3,-5.1,-5.1,false,"#eta","","jets",deltaPhiLabel+",  "+ptRelLabel,outNamePrefix+"_NMin1Eta");
+  
+  for(int ptBin = 0; ptBin < 16; ++ptBin) {
+    //     // N-1 plots
+    plotNMinus1(fileNameData,fileNameMC,"hDeltaPhiNMin1",binAdmin,0,ptBin,2,2.1,3.5,false,deltaPhiVar,"","events",ptRelLabel,outNamePrefix+"_NMin1DeltaPhi");
+    plotNMinus1(fileNameData,fileNameMC,"hPtRelNMin1",binAdmin,0,ptBin,3,0.,1.,false,ptRelVar,"","events",deltaPhiLabel,outNamePrefix+"_NMin1PtRel");
+    
+    // Pt3 correlations
+    plotCorrelations(true,fileNameData,binAdmin,"hDeltaPhiVsPt3Rel",0,ptBin,-1,0.,1.,1.95,3.5,false,ptRelVar,deltaPhiVar,deltaPhiLabel,outNamePrefix+"_DeltaPhiVsPt3Rel");
+    plotCorrelations(false,fileNameMC,binAdmin,"hPt3RelGenVsReco",0,ptBin,-1,0.,0.35,0.,0.35,false,"#alpha","#alpha^{gen}",deltaPhiLabel,outNamePrefix+"_Pt3RelGenVsReco");
+    plotCorrelations(false,fileNameMC,binAdmin,"hPt3RelGenVsImbalGen",0,ptBin,-1,0.,0.35,0.,0.35,false,"#alpha^{imbal}","#alpha^{gen}",deltaPhiGenLabel,outNamePrefix+"_Pt3RelGenVsImbalGen");
+  }
+  
 
-    for(int ptBin = 0; ptBin < 16; ++ptBin) {
-  //     // N-1 plots
-      plotNMinus1(fileNameData,fileNameMC,"hDeltaPhiNMin1",binAdmin,0,ptBin,2,2.1,3.5,false,deltaPhiVar,"","events",ptRelLabel,outNamePrefix+"_NMin1DeltaPhi");
-      plotNMinus1(fileNameData,fileNameMC,"hPtRelNMin1",binAdmin,0,ptBin,3,0.,1.,false,ptRelVar,"","events",deltaPhiLabel,outNamePrefix+"_NMin1PtRel");
-
-      // Pt3 correlations
-      plotCorrelations(true,fileNameData,binAdmin,"hDeltaPhiVsPt3Rel",0,ptBin,-1,0.,1.,1.95,3.5,false,ptRelVar,deltaPhiVar,deltaPhiLabel,outNamePrefix+"_DeltaPhiVsPt3Rel");
-      plotCorrelations(false,fileNameMC,binAdmin,"hPt3RelGenVsReco",0,ptBin,-1,0.,0.35,0.,0.35,false,"#alpha","#alpha^{gen}",deltaPhiLabel,outNamePrefix+"_Pt3RelGenVsReco");
-      plotCorrelations(false,fileNameMC,binAdmin,"hPt3RelGenVsImbalGen",0,ptBin,-1,0.,0.35,0.,0.35,false,"#alpha^{imbal}","#alpha^{gen}",deltaPhiGenLabel,outNamePrefix+"_Pt3RelGenVsImbalGen");
-    }
-
-
-    // Spectra
-    std::vector<TString> fileNames;
-    fileNames.push_back("~/Kalibri/input/Kalibri_DijetSpectra_PythiaZ2_Summer11.root");
-    fileNames.push_back("~/Kalibri/input/Kalibri_DijetSpectra_Herwigpp23_Summer11.root");
-    std::vector<TString> sampleNames;
-    sampleNames.push_back("Pythia");
-    sampleNames.push_back("Herwig++");
-    plotUnderlyingSpectra(fileNames.front(),binAdmin,outNamePrefix);
-    plotVariedSpectrum(fileNames,sampleNames,binAdmin,outNamePrefix);
-    plotPtHat("~/lustre/mc/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6-Summer11-PU_S3_START42_V11-v2/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6job_*_ak5FastPF.root","DiJetTree",outNamePrefix);
-    plotExpectedDataPileUpDistribution("~/PileUp/Pileup_2011_to_172255.root","pileup",outNamePrefix);
-
+  // Spectra
+  std::vector<TString> fileNames;
+  fileNames.push_back("~/Kalibri/input/Kalibri_DijetSpectra_PythiaZ2_Summer11.root");
+  fileNames.push_back("~/Kalibri/input/Kalibri_DijetSpectra_Herwigpp23_Summer11.root");
+  std::vector<TString> sampleNames;
+  sampleNames.push_back("Pythia");
+  sampleNames.push_back("Herwig++");
+  plotUnderlyingSpectra(fileNames.front(),binAdmin,outNamePrefix);
+  plotVariedSpectrum(fileNames,sampleNames,binAdmin,outNamePrefix);
+  plotPtHat("~/lustre/mc/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6-Summer11-PU_S3_START42_V11-v2/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6job_*_ak5FastPF.root","DiJetTree",outNamePrefix);
+  plotExpectedDataPileUpDistribution("~/PileUp/Pileup_2011_to_172255.root","pileup",outNamePrefix);
+  
   // Asymmetry contributions
   plotAsymmetryComponents("../results/Analysis2011/ControlPlots/Kalibri_AsymmetryComponents_Summer11.root");
 
