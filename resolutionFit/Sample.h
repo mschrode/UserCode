@@ -1,4 +1,4 @@
-// $Id: Sample.h,v 1.18 2012/06/07 21:10:55 mschrode Exp $
+// $Id: Sample.h,v 1.19 2012/06/08 21:14:44 mschrode Exp $
 
 #ifndef SAMPLE_H
 #define SAMPLE_H
@@ -160,7 +160,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   class DataSample : public Sample {
   public:
-    DataSample(const TString &label, unsigned int etaBin, unsigned int ptBin, double ptMin, double ptMax, const std::vector<double> &ptSoft, const TString &fileName, unsigned int verbosity);
+    DataSample(const TString &label, unsigned int etaBin, double etaMin, double etaMax, unsigned int ptBin, double ptMin, double ptMax, const std::vector<double> &ptSoft, const TString &fileName, unsigned int verbosity);
     
     Sample::Type type() const { return Data; }
     double relativeWeightTo(const SampleLabel &other) const { return 1.; }
@@ -179,7 +179,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   class MCSample : public Sample {
   public:
-    MCSample(const TString &label, unsigned int etaBin, unsigned int ptBin, double ptMin, double ptMax, const std::vector<double> &ptSoft, const TString &fileName, unsigned int verbosity);
+    MCSample(const TString &label, unsigned int etaBin, double etaMin, double etaMax, unsigned int ptBin, double ptMin, double ptMax, const std::vector<double> &ptSoft, const TString &fileName, unsigned int verbosity);
     
     Sample::Type type() const { return MC; }
 
@@ -196,7 +196,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   class MCTruthSample : public Sample {
   public:
-    MCTruthSample(const TString &label, unsigned int etaBin, unsigned int ptBin, double ptMin, double ptMax, const std::vector<double> &ptSoft, const TString &fileName, unsigned int verbosity);
+    MCTruthSample(const TString &label, unsigned int etaBin, double etaMin, double etaMax, unsigned int ptBin, double ptMin, double ptMax, const std::vector<double> &ptSoft, const TString &fileName, unsigned int verbosity);
     
     Sample::Type type() const { return MCTruth; }
 

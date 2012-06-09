@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.33 2012/06/07 21:10:55 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.34 2012/06/08 21:14:44 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -73,16 +73,16 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------------------------
   void PlotMaker::makeAllPlots() const {
-    //plotControlDistributions();
+    //    plotControlDistributions();
     //    plotPtGenSpectra();
 //     plotAsymmetry();
-//    plotExtrapolation();
-    plotParticleLevelImbalance();
+    plotExtrapolation();
+//     plotParticleLevelImbalance();
     plotResolution();
     plotScaledMCTruth();
     plotSystematicUncertainties();
 
-//    plotPtSpectra();
+    //    plotPtSpectra();
   }
 
 
@@ -1338,8 +1338,17 @@ namespace resolutionFit {
  				     1000,0.,1.3*par_->ptSoftMax(par_->nPtSoftBins()-1));
  	      util::HistOps::setAxisTitles(hFrame,labelMk_->ptSoft(),"",yAxisLabel);
  	      hFrame->GetXaxis()->SetTitle("Threshold "+labelMk_->ptSoft()+"_{max}");
- 	      hFrame->GetYaxis()->SetRangeUser(0.7*std::min(gVals1->GetY()[0],gVals2->GetY()[1]),1.7*std::max(gVals1->GetY()[gVals1->GetN()-1],gVals2->GetY()[gVals2->GetN()-1]));
-	      
+	      double yMin1 = 0.;
+	      double yMax1 = 0.;
+	      util::HistOps::findYRangeInclErrors(gVals1,yMin1,yMax1);
+	      double yMin2 = 0.;
+	      double yMax2 = 0.;
+	      util::HistOps::findYRangeInclErrors(gVals2,yMin2,yMax2);
+	      double yMin = std::min(std::min(std::min(yMin1,yMin2),extra1->Eval(0.)),extra2->Eval(0.));
+	      double yMax = std::max(yMax1,yMax2);
+	      if( yMax > 100. ) yMax = 25.; // One corrupted fit point
+	      double delta = yMax - yMin;
+	      hFrame->GetYaxis()->SetRangeUser(std::max(0.,yMin-0.3*delta),yMax+1.5*delta);
  	      out_->nextMultiPad("Sample comparison: Extrapolation "+ptBin->toTString());
  	      hFrame->Draw();
  	      label->Draw("same");
@@ -3286,8 +3295,10 @@ namespace resolutionFit {
 		  // Superimpose fit result
 		  // (first FitResult type only)
 		  FitResult::Type fitResType = *(etaBin->fitResultTypesBegin());
-		  double fittedSigma = sample->meanPt(fitResType)*sample->fittedValue(fitResType,ptSoftBinIdx)/sqrt(2.);
-		  double uncertSigma = sample->meanPt(fitResType)*sample->fittedUncert(fitResType,ptSoftBinIdx)/sqrt(2.);
+// 		  double fittedSigma = sample->meanPt(fitResType)*sample->fittedValue(fitResType,ptSoftBinIdx)/sqrt(2.);
+// 		  double uncertSigma = sample->meanPt(fitResType)*sample->fittedUncert(fitResType,ptSoftBinIdx)/sqrt(2.);
+		  double fittedSigma = sample->fittedValue(fitResType,ptSoftBinIdx)/sqrt(2.);
+		  double uncertSigma = sample->fittedUncert(fitResType,ptSoftBinIdx)/sqrt(2.);
 		  TF1* fitResult = static_cast<TF1*>(fit->Clone("fitResult"));
 		  // Norm to data distribution: the data distribution is normalised
 		  // to its integral, the pdf from 0 to 2sigma.

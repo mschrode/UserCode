@@ -1,4 +1,4 @@
-// $Id: EtaBin.cc,v 1.18 2012/06/07 21:10:55 mschrode Exp $
+// $Id: EtaBin.cc,v 1.19 2012/06/08 21:14:44 mschrode Exp $
 
 #include <algorithm>
 #include <iostream>
@@ -422,8 +422,8 @@ namespace resolutionFit{
 	  // variation up
 	  double relUp1 = 0.;
 	  double relUp2 = 0.;
-	  if( hasSyst1 ) relUp1 = syst1->relUncertDown(i);
-	  if( hasSyst2 ) relUp2 = syst2->relUncertDown(i);
+	  if( hasSyst1 ) relUp1 = syst1->relUncertUp(i);
+	  if( hasSyst2 ) relUp2 = syst2->relUncertUp(i);
 	  gUp->SetPoint(i,gUp->GetX()[i],k*(1.+sqrt(relUp1*relUp1 + relUp2*relUp2) ));
 	}
 	gDn->Fit(fit,"0QR");
@@ -785,6 +785,11 @@ namespace resolutionFit{
 	double val = g->GetY()[i];
 	g->GetEYlow()[i] = val*syst->relUncertDown(i);
 	g->GetEYhigh()[i] = val*syst->relUncertUp(i);
+      }
+    } else {
+      for(int i = 0; i < g->GetN(); ++i) {
+	g->GetEYlow()[i] = 0.;
+	g->GetEYhigh()[i] = 0.;
       }
     }
     g->SetMarkerStyle(1);

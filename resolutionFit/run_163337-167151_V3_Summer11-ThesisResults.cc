@@ -1,4 +1,4 @@
-// $Id: run_163337-167151_V3_Summer11-ThesisResults.cc,v 1.7 2012/06/07 21:10:55 mschrode Exp $
+// $Id: run_163337-167151_V3_Summer11-ThesisResults.cc,v 1.8 2012/06/08 21:14:44 mschrode Exp $
 
 #include <iostream>
 
@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
   cmd->addMCSample("JES Up",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet_JESUp.root");
   cmd->addMCSample("Spec Herwig",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet_SpectrumHerwigpp.root");
   cmd->addMCSample("PU Up",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet_PUUp.root");
-       
+  
   cmd->addFitResult(nominalFitResType);
 
   // Systematic uncertainties

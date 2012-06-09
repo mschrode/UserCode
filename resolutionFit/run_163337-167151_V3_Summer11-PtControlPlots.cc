@@ -1,4 +1,4 @@
-// $Id: run_163337-167151_V3_Summer11-PtControlPlots.cc,v 1.2 2012/06/01 18:40:32 mschrode Exp $
+// $Id: run_163337-167151_V3_Summer11-PtControlPlots.cc,v 1.3 2012/06/05 22:44:46 mschrode Exp $
 
 #include <iostream>
 
@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
   
   Parameters* par = new Parameters("Res_163337-167151_PtControlPlots","config/Analysis2011/Binning/BinningAdmin2011_v2.cfg",0);
   par->setJetProperties(JetProperties::AK5,JetProperties::PF);
-  par->setOutMode(OutputManager::EPSSingleFilesPlusROOT);
+  par->setOutMode(OutputManager::EPSSingleFiles);
   par->setLumi(855.);
   par->setPtSoftAbsMin(10.);
   par->setNEtaBinsUser(1);

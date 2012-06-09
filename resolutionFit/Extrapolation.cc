@@ -1,4 +1,4 @@
-// $Id: Extrapolation.cc,v 1.16 2012/06/07 21:10:55 mschrode Exp $
+// $Id: Extrapolation.cc,v 1.17 2012/06/08 21:14:44 mschrode Exp $
 
 #include "Extrapolation.h"
 
@@ -19,14 +19,14 @@ namespace resolutionFit {
   //!              where y-axis intercept is taken as resolution and error on this
   //!              as uncertainty.
   // -------------------------------------------------------------------------------------
-  Extrapolation::Extrapolation(double minPt, double maxPt, double minPt3, int wpIdx)
-    : minPt_(minPt), maxPt_(maxPt), minPt3_(minPt3),
+  Extrapolation::Extrapolation(double pt3Min, int wpIdx, const TString &sampleLabel, double etaMin, double etaMax, double ptMin, double ptMax)
+    : sampleLabel_(sampleLabel), etaMin_(etaMin), etaMax_(etaMax), ptMin_(ptMin), ptMax_(ptMax), pt3Min_(pt3Min),
       useWPExtrapolation_(wpIdx<0 ? false : true), wpIdx_(wpIdx_<0 ? 1000 : static_cast<int>(wpIdx))
  {
     
     if( NUM_INSTANCES == 0 ) {
       std::cout << "\n\n++++++ Extrapolation +++++++++++++++++++++++++++++++++" << std::endl;
-      std::cout << "\nLinear extrapolation\nMinimum ptSoft = " << minPt3_ << " GeV" << std::endl;
+      std::cout << "\nLinear extrapolation\nMinimum ptSoft = " << pt3Min_ << " GeV" << std::endl;
       if( useWPExtrapolation_ ) std::cout << "Using 'Working-Point Extrapolation' with WP = " << wpIdx_ << std::endl;
       std::cout << std::endl;
     }
@@ -57,9 +57,9 @@ namespace resolutionFit {
     // HACK for Eta4 bin
     // Should be replace by proper chi2 criterion
     if( fit->GetParameter(0) > 34 && g->GetY()[2] > 45 ) {
-      std::cout << "\n\n************* HACK IN EXTRAPOLATION *********************\n\n" << std::endl;
+      std::cout << "\n\n************* HACK IN EXTRAPOLATION (" << bin() << ") *********************\n\n" << std::endl;
       for(int i = 0; i < 7; ++i) {
-	std::cout << "  ptSoftRel = " << g->GetX()[0] << " ("  << g->GetX()[0]*minPt_ << " GeV)" << std::endl;
+	std::cout << "  ptSoftRel = " << g->GetX()[0] << " ("  << g->GetX()[0]*ptMin_ << " GeV)" << std::endl;
 	g->RemovePoint(0);
 	if( effWPIdx > 0 ) effWPIdx--;
       }
@@ -117,18 +117,18 @@ namespace resolutionFit {
 						 &(uncerts.front()),&(uncerts.front()));
     
     // Remove points that correspond to bins with
-    // ptAveMin below 'minPt3_'
+    // ptAveMin below 'pt3Min_'
     effectiveWPIdx = wpIdx_;
-    double minPt3 = minPt3_;
-    if( minPt3 > 6. && minPt_ < 70. ) minPt3 = 6.; // Otherwise no points left in first bin
+    double pt3Min = pt3Min_;
+    if( pt3Min > 6. && ptMin_ < 70. ) pt3Min = 6.; // Otherwise no points left in first bin
     int nPointsToDelete = 0;
     for(int i = 0; i < g->GetN(); ++i) {
-      if( g->GetX()[i]*minPt_ < minPt3 ) nPointsToDelete++;
+      if( g->GetX()[i]*ptMin_ < pt3Min ) nPointsToDelete++;
     }
     if( nPointsToDelete ) {
       std::cout << "  Extrapolation in " << bin() << ": Removing " << nPointsToDelete << " points" << std::endl;
       for(int i = 0; i < nPointsToDelete; ++i) {
-	std::cout << "    ptSoftRel = " << g->GetX()[0] << " ("  << g->GetX()[0]*minPt_ << " GeV)" << std::endl;
+	std::cout << "    ptSoftRel = " << g->GetX()[0] << " ("  << g->GetX()[0]*ptMin_ << " GeV)" << std::endl;
 	g->RemovePoint(0);
       }
       effectiveWPIdx -= nPointsToDelete;
@@ -141,11 +141,16 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------------------------
   TString Extrapolation::bin() const {
-    TString str = "pt bin ";
-    str += minPt_;
+    TString str = sampleLabel_;
+    str += " (eta ";
+    str += etaMin_;
     str += " - ";
-    str += maxPt_;
-    str += " GeV";
+    str += etaMax_;
+    str += ", pt ";
+    str += ptMin_;
+    str += " - ";
+    str += ptMax_;
+    str += " GeV)";
 
     return str;
   }

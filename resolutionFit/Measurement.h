@@ -1,4 +1,4 @@
-// $Id: Measurement.h,v 1.11 2012/02/04 21:51:49 mschrode Exp $
+// $Id: Measurement.h,v 1.12 2012/05/31 20:17:43 mschrode Exp $
 
 #ifndef MEASUREMENT_H
 #define MEASUREMENT_H
@@ -29,10 +29,12 @@ namespace resolutionFit {
   // -------------------------------------------------------------------
   class Measurement {
   public:
-    Measurement(const TString &fileName, unsigned int etaBin, unsigned int ptBin, unsigned int ptSoftBin, double ptMin, double ptMax, double ptSoft, unsigned int verbosity = 0);
+    Measurement(const TString &fileName, unsigned int etaBin, double etaMin, double etaMax, unsigned int ptBin, double ptMin, double ptMax, unsigned int ptSoftBin, double ptSoft, unsigned int verbosity = 0);
 
     ~Measurement();
 
+    double etaMin() const { return etaMin_; }
+    double etaMax() const { return etaMax_; }
     double ptMin() const { return ptMin_; }
     double ptMax() const { return ptMax_; }
     double ptSoft() const { return ptSoft_; }
@@ -72,6 +74,8 @@ namespace resolutionFit {
     typedef std::map<TString,TH1*> HistMap;
     typedef std::map<TString,TH1*>::iterator HistMapIt;
 
+    const double etaMin_;
+    const double etaMax_;
     const double ptMin_;
     const double ptMax_;
     const double ptSoft_;

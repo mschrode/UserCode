@@ -135,7 +135,7 @@ namespace resolutionFit {
       if( verbosity_ ) std::cerr << "ERROR in Sample: FitResult of type '" << FitResult::toString(type) << "' does already exist" << std::endl;
     } else {
       if( verbosity_ ) std::cout << "Sample::addFitResult(): Adding FitResult '" << FitResult::toString(type) << "'" << std::endl;
-      fitResult_[type] = FitResult::createFitResult(type,meas_,minPt3,wpIdx,verbosity_);
+      fitResult_[type] = FitResult::createFitResult(type,label_,meas_,minPt3,wpIdx,verbosity_);
     }
 
     return result;
@@ -424,11 +424,11 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------
-  DataSample::DataSample(const TString &label, unsigned int etaBin, unsigned int ptBin, double ptMin, double ptMax, const std::vector<double> &ptSoft, const TString &fileName, unsigned int verbosity)
+  DataSample::DataSample(const TString &label, unsigned int etaBin, double etaMin, double etaMax, unsigned int ptBin, double ptMin, double ptMax, const std::vector<double> &ptSoft, const TString &fileName, unsigned int verbosity)
     : Sample(label,verbosity) {
     // Read measurements and fitted values from file
     for(unsigned int i = 0; i < ptSoft.size(); ++i) {
-      meas_.push_back(new Measurement(fileName,etaBin,ptBin,i,ptMin,ptMax,ptSoft.at(i),verbosity));
+      meas_.push_back(new Measurement(fileName,etaBin,etaMin,etaMax,ptBin,ptMin,ptMax,i,ptSoft.at(i),verbosity));
     }
     cureStatUncerts();
     fitAsymmetryWidths();
@@ -445,12 +445,12 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------
-  MCSample::MCSample(const TString &label, unsigned int etaBin, unsigned int ptBin, double ptMin, double ptMax, const std::vector<double> &ptSoft, const TString &fileName, unsigned int verbosity)
+  MCSample::MCSample(const TString &label, unsigned int etaBin, double etaMin, double etaMax, unsigned int ptBin, double ptMin, double ptMax, const std::vector<double> &ptSoft, const TString &fileName, unsigned int verbosity)
     : Sample(label,verbosity) {
 
     // Read measurements and fitted values from file
     for(unsigned int i = 0; i < ptSoft.size(); ++i) {
-      meas_.push_back(new Measurement(fileName,etaBin,ptBin,i,ptMin,ptMax,ptSoft.at(i),verbosity));
+      meas_.push_back(new Measurement(fileName,etaBin,etaMin,etaMax,ptBin,ptMin,ptMax,i,ptSoft.at(i),verbosity));
     }
     cureStatUncerts();
     fitAsymmetryWidths();
@@ -467,12 +467,12 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------
-  MCTruthSample::MCTruthSample(const TString &label, unsigned int etaBin, unsigned int ptBin, double ptMin, double ptMax, const std::vector<double> &ptSoft, const TString &fileName, unsigned int verbosity)
+  MCTruthSample::MCTruthSample(const TString &label, unsigned int etaBin, double etaMin, double etaMax, unsigned int ptBin, double ptMin, double ptMax, const std::vector<double> &ptSoft, const TString &fileName, unsigned int verbosity)
     : Sample(label,verbosity) {
 
     // Read measurements from file
     for(unsigned int i = 0; i < ptSoft.size(); ++i) {
-      meas_.push_back(new Measurement(fileName,etaBin,ptBin,i,ptMin,ptMax,ptSoft.at(i),verbosity));
+      meas_.push_back(new Measurement(fileName,etaBin,etaMin,etaMax,ptBin,ptMin,ptMax,i,ptSoft.at(i),verbosity));
     }
 
     // Style

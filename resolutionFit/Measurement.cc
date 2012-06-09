@@ -1,4 +1,4 @@
-// $Id: Measurement.cc,v 1.9 2012/05/31 20:17:43 mschrode Exp $
+// $Id: Measurement.cc,v 1.10 2012/06/01 18:34:05 mschrode Exp $
 
 #include "Measurement.h"
 
@@ -14,8 +14,8 @@ namespace resolutionFit {
   unsigned int Measurement::HIST_COUNT = 0;
 
   // -------------------------------------------------------------------
-  Measurement::Measurement(const TString &fileName, unsigned int etaBin, unsigned int ptBin, unsigned int ptSoftBin, double ptMin, double ptMax, double ptSoft, unsigned int verbosity)
-    : ptMin_(ptMin), ptMax_(ptMax), ptSoft_(ptSoft), verbosity_(verbosity) {
+  Measurement::Measurement(const TString &fileName, unsigned int etaBin, double etaMin, double etaMax, unsigned int ptBin, double ptMin, double ptMax, unsigned int ptSoftBin, double ptSoft, unsigned int verbosity)
+    : etaMin_(etaMin), etaMax_(etaMax), ptMin_(ptMin), ptMax_(ptMax), ptSoft_(ptSoft), verbosity_(verbosity) {
     init(fileName,etaBin,ptBin,ptSoftBin);
   }
   

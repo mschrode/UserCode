@@ -1,4 +1,4 @@
-// $Id: FitResult.h,v 1.11 2012/06/07 21:10:55 mschrode Exp $
+// $Id: FitResult.h,v 1.12 2012/06/08 21:14:44 mschrode Exp $
 
 #ifndef FIT_RESULT_H
 #define FIT_RESULT_H
@@ -23,10 +23,10 @@ namespace resolutionFit {
     enum Type { MaxLikeKSoftRel, FullMaxLikeRel, FullMaxLikeAbs, SimpleMaxLike, PtAsym, PtGenAsym };
 
     static bool validType(Type type);
-    static FitResult* createFitResult(Type type, const std::vector<Measurement*> &meas, double minPt3, int wpIdx, unsigned int verbosity);
+    static FitResult* createFitResult(Type type, const TString &sampleLabel, const std::vector<Measurement*> &meas, double minPt3, int wpIdx, unsigned int verbosity);
     static TString toString(FitResult::Type type);
 
-    FitResult(const std::vector<Measurement*> &meas, double minPt3, int wpIdx, unsigned int verbosity);
+    FitResult(const std::vector<Measurement*> &meas, const TString &sampleLabel, double minPt3, int wpIdx, unsigned int verbosity);
     virtual ~FitResult();
 
     virtual FitResult::Type fitResultType() const = 0;
@@ -67,6 +67,7 @@ namespace resolutionFit {
   protected:
     static unsigned int HIST_COUNT;
 
+    const TString sampleLabel_;
     const std::vector<Measurement*> meas_;
     const unsigned int verbosity_;
     const unsigned int workingPointBin_;
@@ -96,7 +97,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   class FitResultMaxLikeKSoftRel : public FitResult {
   public:
-    FitResultMaxLikeKSoftRel(const std::vector<Measurement*> meas, double minPt3, int wpIdx, unsigned int verbosity);
+    FitResultMaxLikeKSoftRel(const std::vector<Measurement*> meas, const TString &sampleLabel, double minPt3, int wpIdx, unsigned int verbosity);
 
     FitResult::Type fitResultType() const { return FitResult::MaxLikeKSoftRel; }
 
@@ -112,7 +113,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   class FitResultFullMaxLikeRel : public FitResult {
   public:
-    FitResultFullMaxLikeRel(const std::vector<Measurement*> meas, double minPt3, int wpIdx, unsigned int verbosity);
+    FitResultFullMaxLikeRel(const std::vector<Measurement*> meas, const TString &sampleLabel, double minPt3, int wpIdx, unsigned int verbosity);
 
     FitResult::Type fitResultType() const { return FitResult::FullMaxLikeRel; }
 
@@ -124,7 +125,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   class FitResultFullMaxLikeAbs : public FitResult {
   public:
-    FitResultFullMaxLikeAbs(const std::vector<Measurement*> meas, double minPt3, int wpIdx, unsigned int verbosity);
+    FitResultFullMaxLikeAbs(const std::vector<Measurement*> meas, const TString &sampleLabel, double minPt3, int wpIdx, unsigned int verbosity);
     ~FitResultFullMaxLikeAbs();
 
     FitResult::Type fitResultType() const { return FitResult::FullMaxLikeAbs; }
@@ -134,12 +135,12 @@ namespace resolutionFit {
     virtual TString labelQuantityInExtrapolation() const {
       return "#sigma (GeV)";
     }
-    double valueInExtrapolation(unsigned int ptSoftBin) const { 
-      return meanPt()*values_.at(ptSoftBin);
-    }
-    double statUncertInExtrapolation(unsigned int ptSoftBin) const {
-      return meanPt()*statUncerts_.at(ptSoftBin);
-    }
+//     double valueInExtrapolation(unsigned int ptSoftBin) const { 
+//       return meanPt()*values_.at(ptSoftBin);
+//     }
+//     double statUncertInExtrapolation(unsigned int ptSoftBin) const {
+//       return meanPt()*statUncerts_.at(ptSoftBin);
+//     }
     //    TH1* spectrum() const;
 
     
@@ -154,7 +155,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   class FitResultPtAsym : public FitResult {
   public:
-    FitResultPtAsym(const std::vector<Measurement*> meas, double minPt3, int wpIdx, unsigned int verbosity);
+    FitResultPtAsym(const std::vector<Measurement*> meas, const TString &sampleLabel, double minPt3, int wpIdx, unsigned int verbosity);
 
     FitResult::Type fitResultType() const { return FitResult::PtAsym; }
 
@@ -166,7 +167,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   class FitResultPtGenAsym : public FitResult {
   public:
-    FitResultPtGenAsym(const std::vector<Measurement*> meas, double minPt3, int wpIdx, unsigned int verbosity);
+    FitResultPtGenAsym(const std::vector<Measurement*> meas, const TString &sampleLabel, double minPt3, int wpIdx, unsigned int verbosity);
 
     FitResult::Type fitResultType() const { return FitResult::PtGenAsym; }
 

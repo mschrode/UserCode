@@ -1,4 +1,4 @@
-// $Id: FitResult.cc,v 1.12 2012/06/07 21:10:55 mschrode Exp $
+// $Id: FitResult.cc,v 1.13 2012/06/08 21:14:44 mschrode Exp $
 
 #include "FitResult.h"
 
@@ -27,19 +27,19 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------
-  FitResult* FitResult::createFitResult(Type type, const std::vector<Measurement*> &meas, double minPt3, int wpIdx, unsigned int verbosity) {
+  FitResult* FitResult::createFitResult(Type type, const TString &sampleLabel, const std::vector<Measurement*> &meas, double minPt3, int wpIdx, unsigned int verbosity) {
     FitResult* fr = 0;
     if( validType(type) ) {
       if( type == MaxLikeKSoftRel ) {
-	fr = new FitResultMaxLikeKSoftRel(meas,minPt3,wpIdx,verbosity);
+	fr = new FitResultMaxLikeKSoftRel(meas,sampleLabel,minPt3,wpIdx,verbosity);
       } else if( type == FullMaxLikeRel ) {
-	fr = new FitResultFullMaxLikeRel(meas,minPt3,wpIdx,verbosity);
+	fr = new FitResultFullMaxLikeRel(meas,sampleLabel,minPt3,wpIdx,verbosity);
       } else if( type == FullMaxLikeAbs ) {
-	fr = new FitResultFullMaxLikeAbs(meas,minPt3,wpIdx,verbosity);
+	fr = new FitResultFullMaxLikeAbs(meas,sampleLabel,minPt3,wpIdx,verbosity);
       } else if( type == PtAsym ) {
-	fr = new FitResultPtAsym(meas,minPt3,wpIdx,verbosity);
+	fr = new FitResultPtAsym(meas,sampleLabel,minPt3,wpIdx,verbosity);
       } else if( type == PtGenAsym ) {
-	fr = new FitResultPtGenAsym(meas,minPt3,wpIdx,verbosity);
+	fr = new FitResultPtGenAsym(meas,sampleLabel,minPt3,wpIdx,verbosity);
       }
       if( !fr->init() ) {
 	std::cerr << "ERROR in FitResult::createFitResult(): initialization failure. Das ist ganz schlecht!" << std::endl;
@@ -67,8 +67,8 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------  
-  FitResult::FitResult(const Meas &meas, double minPt3, int wpIdx, unsigned int verbosity)
-    : meas_(meas), verbosity_(verbosity), workingPointBin_(3), minPt3_(minPt3), wpIdx_(wpIdx) {
+  FitResult::FitResult(const Meas &meas, const TString &sampleLabel, double minPt3, int wpIdx, unsigned int verbosity)
+    : sampleLabel_(sampleLabel), meas_(meas), verbosity_(verbosity), workingPointBin_(3), minPt3_(minPt3), wpIdx_(wpIdx) {
 
     extrapolation_ = 0;
     kSoftFit_ = 0;
@@ -86,7 +86,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------  
   bool FitResult::extrapolate() {
     if( verbosity_ == 1 ) std::cout << "Extrapolating" << std::endl;
-    Extrapolation extra(minPt(),maxPt(),minPt3_,wpIdx_);
+    Extrapolation extra(minPt3_,wpIdx_,sampleLabel_,meas_.front()->etaMin(),meas_.front()->etaMax(),meas_.front()->ptMin(),meas_.front()->ptMax());
     bool result = extra(ptSoft_,values_,statUncerts_,extrapolation_,firstPointInExtrapolation_,extrapolatedValue_,extrapolatedStatUncert_,extrapolatedSystUncert_);
 
     return result;
@@ -136,8 +136,8 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------  
-  FitResultMaxLikeKSoftRel::FitResultMaxLikeKSoftRel(const Meas meas, double minPt3, int wpIdx, unsigned int verbosity)
-    : FitResult(meas,minPt3,wpIdx,verbosity) { }
+  FitResultMaxLikeKSoftRel::FitResultMaxLikeKSoftRel(const Meas meas, const TString &sampleLabel, double minPt3, int wpIdx, unsigned int verbosity)
+    : FitResult(meas,sampleLabel,minPt3,wpIdx,verbosity) { }
 
 
   // -------------------------------------------------------------------------------------  
@@ -186,8 +186,8 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------  
-  FitResultFullMaxLikeRel::FitResultFullMaxLikeRel(const Meas meas, double minPt3, int wpIdx, unsigned int verbosity)
-    : FitResult(meas,minPt3,wpIdx,verbosity) { }
+  FitResultFullMaxLikeRel::FitResultFullMaxLikeRel(const Meas meas, const TString &sampleLabel, double minPt3, int wpIdx, unsigned int verbosity)
+    : FitResult(meas,sampleLabel,minPt3,wpIdx,verbosity) { }
 
 
   // -------------------------------------------------------------------------------------  
@@ -227,8 +227,8 @@ namespace resolutionFit {
   //! \brief Extrapolate absolute sigma and convolute extrapolated resolution
   //! with spectrum to obtain mean pt in each bin
   // -------------------------------------------------------------------------------------  
-  FitResultFullMaxLikeAbs::FitResultFullMaxLikeAbs(const Meas meas, double minPt3, int wpIdx, unsigned int verbosity)
-    : FitResult(meas,minPt3,wpIdx,verbosity) {
+  FitResultFullMaxLikeAbs::FitResultFullMaxLikeAbs(const Meas meas, const TString &sampleLabel, double minPt3, int wpIdx, unsigned int verbosity)
+    : FitResult(meas,sampleLabel,minPt3,wpIdx,verbosity) {
     ++HIST_COUNT;
     TString name = "FitResultFullMaxLikeAbs::Spectrum::";
     name += HIST_COUNT;
@@ -263,38 +263,18 @@ namespace resolutionFit {
     meanPtUncert_ = 1.;
 
     if( extrapolate() ) {
-//       // Convolute extrapolated absolute resolution with spectrum
-//       spectrum_->Reset();
-//       for(int tBin = 1; tBin <= spectrum_->GetNbinsX(); ++tBin) {
-// 	double ptTrue = spectrum_->GetBinCenter(tBin);
-// 	// Convolution with cuts on ptAve
-// 	double s = extrapolatedValue_/sqrt(2.);	// This is still the absolute resolution!
-// 	double c = sqrt(M_PI/2.)*s*( erf((maxPt()-ptTrue)/s/sqrt(2.)) - erf((minPt()-ptTrue)/s/sqrt(2.)) );
-// 	double pdf = c*meas_.front()->pdfPtTrue(ptTrue); // Get truth pdf from bin with lowest ptSoft; this should be closest to real dijet spectrum
-	
-// 	// Store (un-normalized) truth pdf for
-// 	// this value of ptTrue in hash table
-// 	spectrum_->SetBinContent(tBin,pdf);
-//       } // End of loop over ptTrue
-//       // Normalise values of truth pdf
-//       if( spectrum_->Integral() ) spectrum_->Scale(1./spectrum_->Integral("width"));
-
-//       // Get mean of pttrue spectrum
-//       meanPt_ = spectrum_->GetMean();
-//       meanPtUncert_ = meas_.front()->meanPdfPtTrueUncert();
-
       double meanPtUp = computeMeanPtTrue(std::abs(extrapolatedValue_+extrapolatedStatUncert_));
       double meanPtDn = computeMeanPtTrue(std::abs(extrapolatedValue_-extrapolatedStatUncert_));
       meanPt_ = computeMeanPtTrue(extrapolatedValue_);
       meanPtUncert_ = 0.5*( std::abs(meanPt_-meanPtDn) + std::abs(meanPt_-meanPtUp) );
       
       // Set relative resolution
-      values_.clear();
-      statUncerts_.clear();
-      for(MeasIt it = meas_.begin(); it != meas_.end(); ++it) {
-	values_.push_back((*it)->fittedValue(0)/meanPt_);
-	statUncerts_.push_back((*it)->fittedUncert(0)/meanPt_);
-      }
+//       values_.clear();
+//       statUncerts_.clear();
+//       for(MeasIt it = meas_.begin(); it != meas_.end(); ++it) {
+// 	values_.push_back((*it)->fittedValue(0)/meanPt_);
+// 	statUncerts_.push_back((*it)->fittedUncert(0)/meanPt_);
+//       }
       if( extrapolation_->GetParameter(1) > 0. ) { // want positive slope
 	extrapolatedValue_ /= meanPt_;
 	extrapolatedStatUncert_ /= meanPt_;
@@ -348,8 +328,8 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------  
-  FitResultPtAsym::FitResultPtAsym(const Meas meas, double minPt3, int wpIdx, unsigned int verbosity)
-    : FitResult(meas,minPt3,wpIdx,verbosity) { }
+  FitResultPtAsym::FitResultPtAsym(const Meas meas, const TString &sampleLabel, double minPt3, int wpIdx, unsigned int verbosity)
+    : FitResult(meas,sampleLabel,minPt3,wpIdx,verbosity) { }
 
 
   // -------------------------------------------------------------------------------------  
@@ -398,8 +378,8 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------  
-  FitResultPtGenAsym::FitResultPtGenAsym(const Meas meas, double minPt3, int wpIdx, unsigned int verbosity)
-    : FitResult(meas,minPt3,wpIdx,verbosity) { }
+  FitResultPtGenAsym::FitResultPtGenAsym(const Meas meas, const TString &sampleLabel, double minPt3, int wpIdx, unsigned int verbosity)
+    : FitResult(meas,sampleLabel,minPt3,wpIdx,verbosity) { }
 
 
   // -------------------------------------------------------------------------------------  

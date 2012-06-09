@@ -42,14 +42,18 @@ namespace resolutionFit{
   bool PtBin::addSample(Sample::Type type, const TString &label, const TString &fileName, const TString &printLabel) {
     bool result = true;
     if( type == Sample::Data ) {
-      DataSample* s = new DataSample(label,etaBin(),ptBin(),par_->ptMin(etaBin(),ptBin()),
+      DataSample* s = new DataSample(label,
+				     etaBin(),par_->etaMin(etaBin()),par_->etaMax(etaBin()),
+				     ptBin(),par_->ptMin(etaBin(),ptBin()),
 				     par_->ptMax(etaBin(),ptBin()),
 				     par_->ptSoft(),fileName,par_->verbosity());
       if( printLabel != "" ) s->setPrintLabel(printLabel);
       dataSamples_[label] = s;
       samples_[label] = s;
     } else if( type == Sample::MC ) {
-      MCSample* s = new MCSample(label,etaBin(),ptBin(),par_->ptMin(etaBin(),ptBin()),
+      MCSample* s = new MCSample(label,
+				 etaBin(),par_->etaMin(etaBin()),par_->etaMax(etaBin()),
+				 ptBin(),par_->ptMin(etaBin(),ptBin()),
 				 par_->ptMax(etaBin(),ptBin()),
 				 par_->ptSoft(),fileName,par_->verbosity());
       if( printLabel != "" ) s->setPrintLabel(printLabel);
@@ -68,7 +72,9 @@ namespace resolutionFit{
   // -------------------------------------------------------------------------------------
   bool PtBin::addMCTruthSample(const TString &label, const TString &fileName) {
     std::vector<TString> fileNames;
-    mcTruthSample_ = new MCTruthSample(label,etaBin(),ptBin(),par_->ptMin(etaBin(),ptBin()),
+    mcTruthSample_ = new MCTruthSample(label,
+				       etaBin(),par_->etaMin(etaBin()),par_->etaMax(etaBin()),
+				       ptBin(),par_->ptMin(etaBin(),ptBin()),
 				       par_->ptMax(etaBin(),ptBin()),
 				       par_->ptSoft(),fileName,par_->verbosity());
     mcTruthSample_->addFitResult(FitResult::PtGenAsym,par_->ptSoftAbsMin(),par_->wpIdx());
