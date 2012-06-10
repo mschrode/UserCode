@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.17 2012/05/31 20:36:32 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.18 2012/06/10 14:53:41 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -399,7 +399,7 @@ void getTailScalingFactors(double  nSigTailStart,
   std::cout << "Creating bins" << std::endl;
 
   std::vector<EtaPtBin*> etaPtBins;
-  const unsigned int nEtaBins = binAdm->nEtaBins();
+  const unsigned int nEtaBins = 1;//binAdm->nEtaBins();
   unsigned int globalBin = 0;
   for(unsigned int etaBin = 0; etaBin < nEtaBins; ++etaBin) {
     double coreScaling = 0.;
@@ -846,7 +846,6 @@ EtaPtBin::EtaPtBin(unsigned int etaBinIdx, unsigned int ptBinIdx, double nSigCor
 
   binLabel_ = util::LabelFactory::createPaveText(2);
   binLabel_->AddText(util::LabelFactory::etaCut(binAdm_->etaMin(etaBin_),binAdm_->etaMax(etaBin_))+",  "+util::LabelFactory::ptAveCut(binAdm_->ptMin(etaBin_,ptBin_),binAdm_->ptMax(etaBin_,ptBin_)));
-  binLabel_->AddText(util::LabelFactory::deltaPhiCut(2.7));
 }
 
 
@@ -905,21 +904,22 @@ void EtaPtBin::plotExtrapolation(const TString &outNameId) const {
   if( DEBUG ) std::cout << "Entering EtaPtBin::plotExtrapolation()" << std::endl;
 
   // Extrapolation MC Closure
-  TLegend* leg = util::LabelFactory::createLegendCol(3,LEG_WIDTH);
-  leg->AddEntry(gFTailMC_,"Asymmetry","P");
-  leg->AddEntry(fExMC_,"Extrapolation","L");
-  leg->AddEntry(gFTailToyMC_,FASYMTOY,"P");
-
   TCanvas* can = new TCanvas("can","",500,500);
   can->cd();
   TH1* hFrame = new TH1D("hFrame",HEADER+";Threshold "+util::LabelFactory::pt3RelMax(),1000,0.,PT3PLOTMAX);
   hFrame->SetNdivisions(505);
+  hFrame->GetYaxis()->SetNoExponent();
   //hFrame->GetYaxis()->SetRangeUser(0.,2.3*gFTailMC_->GetY()[gFTailMC_->GetN()-1]);
   double minY = 0.2*(*std::min_element(gFTailMCGauss_->GetY(),gFTailMCGauss_->GetY()+gFTailMCGauss_->GetN()));
   double maxY = 7.;
   hFrame->GetYaxis()->SetRangeUser(minY,maxY);
 
   if( hasToyMC() ) {
+    TLegend* leg = util::LabelFactory::createLegendWithOffset(3,binLabel_->GetSize());
+    leg->AddEntry(gFTailMC_,MCSMEAR,"PL");
+    leg->AddEntry(gFTailMC_,FASYMMC+"("+util::LabelFactory::pt3RelMax()+"#rightarrow0) = "+util::toTString(extraMC(),4)+" #pm "+util::toTString(extraMCErr(),4),"");
+    leg->AddEntry(gFTailToyMC_,FASYMTOY+" = "+util::toTString(toyMC(),4)+" #pm "+util::toTString(toyMCErr(),4),"P");
+
     hFrame->GetYaxis()->SetTitle(FASYMMC);
     hFrame->Draw();
     fExMC_->Draw("same");
@@ -930,17 +930,18 @@ void EtaPtBin::plotExtrapolation(const TString &outNameId) const {
     leg->Draw("same");
     gPad->SetLogy(1);
     toFiles(can,outNameId+binId()+"_ExtrapolationMCClosure");
+
+    delete leg;
   }
-  delete leg;
 
   // Extrapolation MC + Data
   hFrame->GetYaxis()->SetTitle(FASYM);
-  leg = util::LabelFactory::createLegendCol(5,LEG_WIDTH);
-  leg->AddEntry(gFTailData_,"Asymmetry Data","P");
-  leg->AddEntry(fExData_,"Extrapolation Data","L");
-  leg->AddEntry(gFTailMC_,"Asymmetry MC","P");
-  leg->AddEntry(fExMC_,"Extrapolation MC","L");
-  leg->AddEntry(gFTailMCGauss_,"Asymmetry Gauss","P");
+  TLegend* leg = util::LabelFactory::createLegendWithOffset(5,binLabel_->GetSize());
+  leg->AddEntry(gFTailData_,DATA,"PL");
+  leg->AddEntry(gFTailData_,FASYMDATA+"("+util::LabelFactory::pt3RelMax()+"#rightarrow0) = "+util::toTString(extraData(),4)+" #pm "+util::toTString(extraDataErr(),4),"");
+  leg->AddEntry(gFTailMC_,MCSMEAR,"PL");
+  leg->AddEntry(gFTailMC_,FASYMMC+"("+util::LabelFactory::pt3RelMax()+"#rightarrow0) = "+util::toTString(extraMC(),4)+" #pm "+util::toTString(extraMCErr(),4),"");
+  leg->AddEntry(gFTailMCGauss_,"Gaussian Asymmetry","P");
 
   can->cd();
   hFrame->Draw();
@@ -955,34 +956,6 @@ void EtaPtBin::plotExtrapolation(const TString &outNameId) const {
   toFiles(can,outNameId+binId()+"_Extrapolation");
   delete leg;
   gPad->SetLogy(0);
-
-
-//   // Extrapolation MC Closure + Data + Shifted Extrapolation
-//   if( hasToyMC() ) {
-//     hFrame->GetYaxis()->SetTitle("( "+FASYMMC+" - Fit ) / Fit");
-//     leg = util::LabelFactory::createLegendCol(5,LEG_WIDTH);
-//     leg->AddEntry(gFTailData_,"Asymmetry Data","P");
-//     leg->AddEntry(fExData_,"Extrapolation Data","L");
-//     leg->AddEntry(gFTailMC_,"Asymmetry MC","P");
-//     leg->AddEntry(fExMC_,"Extrapolation MC","L");
-//     leg->AddEntry(gFTailToyMC_,"Toy MC","P");
-    
-//     can->cd();
-//     hFrame->Draw();
-//     fExMC_->Draw("same");
-//     fExData_->Draw("same");
-//     gFTailMC_->Draw("PE1same");
-//     gFTailData_->Draw("PE1same");
-//     if( hasSymMCTruth() ) {
-//       gFTailMCTruth_->Draw("PE1same");
-//       //gFTailMCTruthNonGauss_->Draw("PE1same");
-//     }
-//     gFTailToyMC_->Draw("PE1same");
-//     binLabel_->DrawClone("same");
-//     leg->Draw("same");
-//     toFiles(can,outNameId+binId()+"_Extrapolation2");
-//     delete leg;
-//   }
 
   // Spread of ftail for mc
   double relErr = extraMCErr_/extraMC();
@@ -1093,7 +1066,7 @@ void EtaPtBin::findWindow(const TString &fileName, unsigned int pt3Bin, double n
 
   delete h;
   
-  binLabel_->AddText(labelWindow(nSigTailWindowMin,nSigTailWindowMax));
+  binLabel_->AddText(util::LabelFactory::deltaPhiCut(2.7)+",  "+labelWindow(nSigTailWindowMin,nSigTailWindowMax));
 }
 
 
@@ -1119,7 +1092,7 @@ void EtaPtBin::setWindow(const TString &fileName, double nSigTailWindowMin, doub
   tailWindowMaxEff_ = 10000.;
   delete hMin;
   
-  binLabel_->AddText(labelWindow(nSigTailWindowMin,nSigTailWindowMax));
+  binLabel_->AddText(util::LabelFactory::deltaPhiCut(2.7)+",  "+labelWindow(nSigTailWindowMin,nSigTailWindowMax));
 }
 
 
@@ -1223,6 +1196,7 @@ void EtaPtBin::extrapolate(double minPt3Data, bool fixDataShape, bool useExtrapo
 					 &(pt3e.front()),&(pt3e.front()),
 					 &(ne.front()),&(ne.front()));
     gFTailToyMC_->SetMarkerStyle(29);
+    gFTailToyMC_->SetMarkerSize(1.5);
     gFTailToyMC_->SetMarkerColor(kRed);
     gFTailToyMC_->SetLineColor(gFTailToyMC_->GetMarkerColor());
   }
@@ -1257,7 +1231,7 @@ void EtaPtBin::extrapolate(double minPt3Data, bool fixDataShape, bool useExtrapo
   // Extrapolation of ftail
   //extraMC_ = useExtrapolatedValue ? fExMC_->GetParameter(0) : fExMC_->Eval(gFTailMC_->GetX()[0]);
   extraMC_ = useExtrapolatedValue ? fExMC_->Eval(0) : fExMC_->Eval(gFTailMC_->GetX()[0]);
-  extraMCErr_ = fExMC_->GetParError(0)*fExMC_->Eval(0);
+  extraMCErr_ = fExMC_->GetParError(0)*fExMC_->Eval(0);	// Parameter correlations do not need to be taken into account because the correlation term vanishes at x = 0
 
 
   // Fill graphs of ftail vs pt3 for data
@@ -1318,7 +1292,7 @@ void EtaPtBin::extrapolate(double minPt3Data, bool fixDataShape, bool useExtrapo
 
   // Extrapolated ftail
   extraData_ = useExtrapolatedValue ? fExData_->Eval(0) : fExData_->Eval(gFTailData_->GetX()[0]);
-  extraDataErr_ = fExData_->GetParError(0)*fExData_->Eval(0);
+  extraDataErr_ = fExData_->GetParError(0)*fExData_->Eval(0);	// Parameter correlations do not need to be taken into account because the correlation term vanishes at x = 0
   delete hSpread;
 
 
@@ -1817,6 +1791,7 @@ void Pt3Bin::plotSpectra(const TString &outNameId) const {
   int xMaxBin = 1000;
   util::HistOps::findXRange(hPtAveSpecMC_,xMinBin,xMaxBin);
   double yMin = std::min(hPtAveSpecData_->GetBinContent(xMinBin),hPtAveSpecData_->GetBinContent(xMaxBin));
+  yMin = std::max(yMin,0.3);	// no zero bc of log scale
   xMinBin = std::max(1,xMinBin-10);
   xMaxBin = std::min(xMaxBin+10,hPtAveSpecMC_->GetNbinsX());
 
@@ -2107,6 +2082,7 @@ void setStyleData(TGraphAsymmErrors* g) {
   g->SetMarkerStyle(20);
   g->SetMarkerColor(kBlack);
   g->SetLineColor(g->GetMarkerColor());
+  g->SetLineStyle(2);
 }
 
 void setStyleMC(TGraphAsymmErrors* g) {
@@ -2280,7 +2256,7 @@ TString labelWindow(double nSigMin, double nSigMax) {
   if( nSigMax < 50. ) 
     label = "Window: "+util::toTString(nSigMin)+" - "+util::toTString(nSigMax);
   else
-    label = "Tail Start: "+ASYM_TAIL_START+" = "+util::toTString(nSigMin);
+    label = "Tail Start:  "+ASYM_TAIL_START+" = "+util::toTString(nSigMin);
   label += " #sigma_{A}";
 
   return label;
