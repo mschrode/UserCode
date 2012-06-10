@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.16 2012/03/02 15:04:41 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.17 2012/05/31 20:36:32 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -33,23 +33,24 @@
 
 
 const bool DEBUG = false;
-
 const bool SHOW_HEADER = false;
-const TString LUMI = util::StyleSettings::luminosity(4598);
+const double lumi = 4900.;
 
+const TString LUMI = util::StyleSettings::luminosity(lumi);
 const double BINLABEL_WIDTH = -0.52;
 const double LEG_WIDTH = 0.48;
-const TString PT3RELVAR = "p_{T,3} / p^{ave}_{T} threshold";
 const double PT3PLOTMAX = 0.23;
 const TString FASYM = "f_{asym}";
 const TString FASYMMC = "f^{mc}_{asym}";
 const TString FASYMDATA = "f^{data}_{asym}";
 const TString FASYMGAUSS = "f^{gauss}_{asym}";
 const TString FASYMTOY = "f^{toy}_{asym}";
-const TString MCSMEAR = "Corrected MC";
 const TString SCALE = "#rho_{tail}";
 const TString ASYM_TAIL_START = "A_{tail}";
 const TString ASYM_TAIL_START_EFF = "#hat{A}_{tail}";
+const TString DATA = util::LabelFactory::data(LUMI);
+const TString MC = util::LabelFactory::mc();
+const TString MCSMEAR = MC+" (Corrected #sigma_{A})^{#color[10]{A}}";
 
 const TString LUMI_LABEL = SHOW_HEADER ? "CMS preliminary, L = "+LUMI+",  #sqrt{s} = 7 TeV" : "#sqrt{s} = 7 TeV,  L = "+LUMI;
 const TString HEADER = SHOW_HEADER ? LUMI_LABEL : "";
@@ -58,7 +59,7 @@ const int COLOR_GAUSS = 46;
 const int COLOR_FILLED_ASYM = 38;
 const int COLOR_FILLED_ASYM_SMEAR = 29;
 const int COLOR_LINE_ASYM_SMEAR = 30;
-const double MARKER_SIZE = SHOW_HEADER ? 1. : 1.4;
+const double MARKER_SIZE = 1.4;
 const int LINE_WIDTH = 2;
 
 
@@ -74,6 +75,7 @@ class Pt3Bin;
 class EtaPtBin;
 typedef std::vector<EtaPtBin*>::const_iterator EtaPtBinConstIt;
 
+double coreScaleFactor(unsigned int etaBin, int variation);
 void setStyleDataMarker(TH1* h);
 void setStyleMCFilled(TH1* h);
 void setStyleData(TGraphAsymmErrors* g);
@@ -97,8 +99,8 @@ void correctAsymmetryWidth(TH1* hOrig, double nSigCore, double coreScale, TH1* &
 // ------------------------------------------------------------------------------------
 class Pt3Bin {
 public:
-  Pt3Bin(const TString &fileNameData, const TString &fileNameMC, unsigned int etaBin, unsigned int ptBin, unsigned int pt3Bin, double pt3Threshold, double nSigCore, double coreScaleFactor, int windowMinBin, int windowMaxBin, const sampleTools::BinningAdmin* adm, const TString &jetLabel);
-  Pt3Bin(const TString &fileName, unsigned int etaBin, unsigned int ptBin, double nSigCore, double coreScaleFactor, int nAsymBins, int windowMinBin, int windowMaxBin, const sampleTools::BinningAdmin* adm, const TString &jetLabel);
+  Pt3Bin(const TString &fileNameData, const TString &fileNameMC, unsigned int etaBin, unsigned int ptBin, unsigned int pt3Bin, double pt3Threshold, double nSigCore, double coreScaleFactor, int windowMinBin, int windowMaxBin, const sampleTools::BinningAdmin* adm);
+  Pt3Bin(const TString &fileName, unsigned int etaBin, unsigned int ptBin, double nSigCore, double coreScaleFactor, int nAsymBins, int windowMinBin, int windowMaxBin, const sampleTools::BinningAdmin* adm);
  ~Pt3Bin();
 
   double pt3Thres() const { return pt3Thres_; }
@@ -167,7 +169,7 @@ private:
   TH1* readHistAsym(const TString &fileName, const TString &id) const;  
   TH1* readMCTruthResponse(const TString &fileName, const TString &type) const;
   //  void init(double nSigCore, double coreScalingFactor, double tailWindowDataMin, double tailWindowDataMax, double tailWindowMCMin, double tailWindowMCMax);
-  void initBinLabel(const sampleTools::BinningAdmin* adm, const TString &jetLabel, bool isMCTruth = false);
+  void initBinLabel(const sampleTools::BinningAdmin* adm, bool isMCTruth = false);
   void getFTail(const TH1* h, double entries, int start, int end, double &fTail, double &fTailErr) const;
 };
 
@@ -176,7 +178,7 @@ private:
 // ------------------------------------------------------------------------------------
 class EtaPtBin {
 public:
-  EtaPtBin(unsigned int etaBinIdx, unsigned int ptBinIdx, double nSigCore, double coreScaleFactor,const sampleTools::BinningAdmin* adm, const TString &jetLabel);
+  EtaPtBin(unsigned int etaBinIdx, unsigned int ptBinIdx, double nSigCore, double coreScaleFactor,const sampleTools::BinningAdmin* adm);
   ~EtaPtBin();
 
 
@@ -236,7 +238,6 @@ private:
   const double exMin_;
   const double exMax_;
   const sampleTools::BinningAdmin* binAdm_;
-  const TString jetLabel_;
 
   double tailWindowMinEff_;
   double tailWindowMaxEff_;
@@ -288,10 +289,10 @@ private:
 void getTailScalingFactors(double  nSigTailStart,
 			   double  nSigTailEnd = 10000.,
 			   bool    variationCoreUp = false,
-			   bool    variationCoreDown = false,
+			   bool    variationCoreDn = false,
 			   bool    variationExtrapolation = false,
 			   bool    variationClosure = false,
-			   bool    variationPUDown = false,
+			   bool    variationPUDn = false,
 			   bool    variationPUUp = false            ) {
 
   // +++++ Parameters +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -305,26 +306,26 @@ void getTailScalingFactors(double  nSigTailStart,
   const bool    fixDataShape = false;
   const double  nSigCore     = 2.;
   const TString jetAlgo      = "PF";
-  const bool    archivePlots = true;
+  const bool    archivePlots = false;
 
 
   // Sanity checks
   assert( nSigTailStart < nSigTailEnd );
   if( variationCoreUp )
-    assert( !variationCoreDown && !variationExtrapolation && !variationClosure && !variationPUDown && !variationPUUp );
-  else if( variationCoreDown )
-    assert( !variationCoreUp && !variationExtrapolation && !variationClosure && !variationPUDown && !variationPUUp );
+    assert( !variationCoreDn && !variationExtrapolation && !variationClosure && !variationPUDn && !variationPUUp );
+  else if( variationCoreDn )
+    assert( !variationCoreUp && !variationExtrapolation && !variationClosure && !variationPUDn && !variationPUUp );
   else if( variationExtrapolation )
-    assert( !variationCoreUp && !variationCoreDown && !variationClosure && !variationPUDown && !variationPUUp );
+    assert( !variationCoreUp && !variationCoreDn && !variationClosure && !variationPUDn && !variationPUUp );
   else if( variationClosure )
-    assert( !variationCoreUp && !variationCoreDown && !variationExtrapolation && !variationPUDown && !variationPUUp );
-  else if( variationPUDown )
-    assert( !variationCoreUp && !variationCoreDown && !variationExtrapolation && !variationClosure && !variationPUUp );
+    assert( !variationCoreUp && !variationCoreDn && !variationExtrapolation && !variationPUDn && !variationPUUp );
+  else if( variationPUDn )
+    assert( !variationCoreUp && !variationCoreDn && !variationExtrapolation && !variationClosure && !variationPUUp );
   else if( variationPUUp )
-    assert( !variationCoreUp && !variationCoreDown && !variationExtrapolation && !variationPUDown && !variationClosure );
+    assert( !variationCoreUp && !variationCoreDn && !variationExtrapolation && !variationPUDn && !variationClosure );
 
 
-  if( variationCoreDown ) 
+  if( variationCoreDn ) 
     std::cout << "\n***** Variation core down ***********************************\n" << std::endl;
   else if( variationCoreUp )
     std::cout << "\n***** Variation core up *************************************\n" << std::endl;
@@ -334,7 +335,7 @@ void getTailScalingFactors(double  nSigTailStart,
     std::cout << "\n***** Variation closure *************************************\n" << std::endl;
   else if( variationPUUp )
     std::cout << "\n***** Variation pile-up up **********************************\n" << std::endl;
-  else if( variationPUDown )
+  else if( variationPUDn )
     std::cout << "\n***** Variation pile-up down ********************************\n" << std::endl;
 
 
@@ -356,8 +357,8 @@ void getTailScalingFactors(double  nSigTailStart,
   else tmpLabelWindow += util::toTString(nSigTailEnd);
   tmpLabelWindow.ReplaceAll(".","");
   TString outLabel = "Tail_"+uid+"_Sig"+tmpLabelWindow+"_"+jetAlgo;
-  if( variationCoreDown )
-    outLabel += "_VarCoreDown";
+  if( variationCoreDn )
+    outLabel += "_VarCoreDn";
   else if( variationCoreUp )
     outLabel += "_VarCoreUp";
   else if( variationExtrapolation )
@@ -366,12 +367,32 @@ void getTailScalingFactors(double  nSigTailStart,
     outLabel += "_VarClosure";
   else if( variationPUUp )
     outLabel += "_VarPUUp";
-  else if( variationPUDown )
-    outLabel += "_VarPUDown";
-
-  TString jetLabel = util::LabelFactory::labelJet("ak5"+jetAlgo);
+  else if( variationPUDn )
+    outLabel += "_VarPUDn";
 
 
+  // +++++ Input Files +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  const TString srcData = "../results/Analysis2011/Run2011_163337-180252_V10/";
+  const TString srcMC   = "../results/Analysis2011/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/";
+  
+  TString fileNameData = srcData+"ResTails_PtAveBins_Data2011_PF_L1FastJet_V10_REBINNED.root";
+  TString fileNameMC   = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_REBINNED.root";
+  if( variationPUDn ) {
+    fileNameMC = srcMC+"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_PUDn_REBINNED.root";
+  } else if( variationPUUp ) {
+    fileNameMC = srcMC+"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_PUUp_REBINNED.root";
+  }
+  TString fileNameMCTruth = srcMC+"ResTails_PtGenAveBins_MCFall11_PF_L1FastJet_V10_REBINNED.root";
+      
+  //       TString fileNameData = "~/results/ResolutionFit/Run2011_163337-180252_V10/ResTails_PtAveBins_Data2011_PF_L1FastJet_V10_NVtx00-06_REBINNED.root";
+  //       TString fileNameMC = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx00-06_REBINNED.root";
+  //       if( variationPUDown ) {
+  //      	fileNameMC = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx00-06_PUDn_REBINNED.root";
+  //       } else if( variationPUUp ) {
+  //      	fileNameMC = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx00-06_PUUp_REBINNED.root";
+  //       }
+  //       TString fileNameMCTruth = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtGenAveBins_MCFall11_PF_L1FastJet_V10_REBINNED.root";
+  
 
   // +++++ Bins +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -382,55 +403,16 @@ void getTailScalingFactors(double  nSigTailStart,
   unsigned int globalBin = 0;
   for(unsigned int etaBin = 0; etaBin < nEtaBins; ++etaBin) {
     double coreScaling = 0.;
-    // Core scale factors from runs 163337-167151
-    // Version 2011/07/20: closure uncertainty removed
-    if( variationCoreDown ) {
-      // Uncertainties down
-      if( etaBin == 0 )      coreScaling = 0.000;
-      else if( etaBin == 1 ) coreScaling = 0.001;
-      else if( etaBin == 2 ) coreScaling = 0.032;
-      else if( etaBin == 3 ) coreScaling = 0.043;
-      else if( etaBin == 4 ) coreScaling = 0.090;
-    } else if( variationCoreUp ) {
-      // Uncertainties up
-      if( etaBin == 0 )      coreScaling = 0.116;
-      else if( etaBin == 1 ) coreScaling = 0.115;
-      else if( etaBin == 2 ) coreScaling = 0.162;
-      else if( etaBin == 3 ) coreScaling = 0.228;
-      else if( etaBin == 4 ) coreScaling = 0.489;
-    } else {
-      // Nominal
-      if( etaBin == 0 )      coreScaling = 0.052;
-      else if( etaBin == 1 ) coreScaling = 0.057;
-      else if( etaBin == 2 ) coreScaling = 0.096;
-      else if( etaBin == 3 ) coreScaling = 0.134;
-      else if( etaBin == 4 ) coreScaling = 0.288;
-    }
+    if     ( variationCoreDn ) coreScaling = coreScaleFactor(etaBin,-1);
+    else if( variationCoreUp ) coreScaling = coreScaleFactor(etaBin,1);
+    else                       coreScaling = coreScaleFactor(etaBin,0);
     std::cout << "  Eta " << etaBin << ": Using core scale factor " << coreScaling << std::endl;
 
     for(unsigned int ptBin = 0; ptBin < binAdm->nPtBins(etaBin); ++ptBin) {
       if( DEBUG ) std::cout << "Setting up bin (" << etaBin << ", " << ptBin << ")" << std::endl;
 
-      TString fileNameData = "~/results/ResolutionFit/Run2011_163337-180252_V10/ResTails_PtAveBins_Data2011_PF_L1FastJet_V10_REBINNED.root";
-      TString fileNameMC = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_REBINNED.root";
-      if( variationPUDown ) {
-      	fileNameMC = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_PUDn_REBINNED.root";
-      } else if( variationPUUp ) {
-      	fileNameMC = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_PUUp_REBINNED.root";
-      }
-      TString fileNameMCTruth = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtGenAveBins_MCFall11_PF_L1FastJet_V10_REBINNED.root";
-      
-//       TString fileNameData = "~/results/ResolutionFit/Run2011_163337-180252_V10/ResTails_PtAveBins_Data2011_PF_L1FastJet_V10_NVtx00-06_REBINNED.root";
-//       TString fileNameMC = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx00-06_REBINNED.root";
-//       if( variationPUDown ) {
-//      	fileNameMC = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx00-06_PUDn_REBINNED.root";
-//       } else if( variationPUUp ) {
-//      	fileNameMC = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx00-06_PUUp_REBINNED.root";
-//       }
-//       TString fileNameMCTruth = "~/results/ResolutionFit/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/ResTails_PtGenAveBins_MCFall11_PF_L1FastJet_V10_REBINNED.root";
-      
       // Create eta-pt bin
-      EtaPtBin* bin = new EtaPtBin(etaBin,ptBin,nSigCore,coreScaling,binAdm,jetLabel);
+      EtaPtBin* bin = new EtaPtBin(etaBin,ptBin,nSigCore,coreScaling,binAdm);
 
       // Define window
       bin->findWindow(fileNameMC,0,nSigTailStart,nSigTailEnd);
@@ -545,7 +527,7 @@ void getTailScalingFactors(double  nSigTailStart,
       label->AddText(LUMI_LABEL);
     }
     label->AddText(util::LabelFactory::labelJet("ak5pf"));
-    label->AddText(util::LabelFactory::labelEta(binAdm->etaMin(etaBin),binAdm->etaMax(etaBin)));
+    label->AddText(util::LabelFactory::etaCut(binAdm->etaMin(etaBin),binAdm->etaMax(etaBin)));
     label->AddText(labelWindow(nSigTailStart,nSigTailEnd));
     
     TLegend* leg = util::LabelFactory::createLegendCol(2,0.7*LEG_WIDTH);
@@ -639,8 +621,8 @@ void getTailScalingFactors(double  nSigTailStart,
 	label->AddText(LUMI_LABEL);
       }
       label->AddText(util::LabelFactory::labelJet("ak5pf"));
-      label->AddText(util::LabelFactory::labelEta(binAdm->etaMin(etaBin),binAdm->etaMax(etaBin)));
-      label->AddText(util::LabelFactory::labelPt3(binAdm->ptSoftMax(pt3Bin)));
+      label->AddText(util::LabelFactory::etaCut(binAdm->etaMin(etaBin),binAdm->etaMax(etaBin)));
+      label->AddText(util::LabelFactory::pt3RelCut(binAdm->ptSoftMax(pt3Bin)));
       label->AddText(labelWindow(nSigTailStart,nSigTailEnd));
       
       leg = util::LabelFactory::createLegendCol(3,LEG_WIDTH);
@@ -795,13 +777,13 @@ void getTailScalingFactors() {
 
   std::vector<double> nSigTailStart;
   nSigTailStart.push_back(2.0);
-  nSigTailStart.push_back(2.5);
+  //nSigTailStart.push_back(2.5);
   nSigTailStart.push_back(3.0);
 
   double  nSigTailEnd = 1000.;
   for(std::vector<double>::const_iterator it = nSigTailStart.begin();
       it != nSigTailStart.end(); ++it) {
-    EPS_OUTPUT = true ;
+    EPS_OUTPUT = true;
     getTailScalingFactors(*it,nSigTailEnd,false,false,false,false,false,false);
     EPS_OUTPUT = false;
     getTailScalingFactors(*it,nSigTailEnd,true,false,false,false,false,false);
@@ -825,11 +807,11 @@ void getTailScalingFactors() {
 
 
 // ------------------------------------------------------------------------------------
-EtaPtBin::EtaPtBin(unsigned int etaBinIdx, unsigned int ptBinIdx, double nSigCore, double coreScaleFactor, const sampleTools::BinningAdmin* binAdm, const TString &jetLabel)
+EtaPtBin::EtaPtBin(unsigned int etaBinIdx, unsigned int ptBinIdx, double nSigCore, double coreScaleFactor, const sampleTools::BinningAdmin* binAdm)
   : etaBin_(etaBinIdx), ptBin_(ptBinIdx),
     nSigCore_(nSigCore), coreScalingFactor_(coreScaleFactor),
     exMin_(0.), exMax_(0.19),
-    binAdm_(binAdm), jetLabel_(jetLabel) {
+    binAdm_(binAdm) {
 
   tailWindowMinEff_ = 0.;
   tailWindowMaxEff_ = 0.;
@@ -862,15 +844,9 @@ EtaPtBin::EtaPtBin(unsigned int etaBinIdx, unsigned int ptBinIdx, double nSigCor
   toyMC_ = 0;
   hasToyMC_ = false;
 
-  if( SHOW_HEADER ) {
-    binLabel_ = util::LabelFactory::createPaveText(4,BINLABEL_WIDTH);
-  } else {
-    binLabel_ = util::LabelFactory::createPaveText(5,BINLABEL_WIDTH);
-    binLabel_->AddText(LUMI_LABEL);
-  }
-  binLabel_->AddText(jetLabel_);
-  binLabel_->AddText(util::LabelFactory::labelEta(binAdm_->etaMin(etaBin_),binAdm_->etaMax(etaBin_)));
-  binLabel_->AddText(util::LabelFactory::labelPtAve(binAdm_->ptMin(etaBin_,ptBin_),binAdm_->ptMax(etaBin_,ptBin_)));
+  binLabel_ = util::LabelFactory::createPaveText(2);
+  binLabel_->AddText(util::LabelFactory::etaCut(binAdm_->etaMin(etaBin_),binAdm_->etaMax(etaBin_))+",  "+util::LabelFactory::ptAveCut(binAdm_->ptMin(etaBin_,ptBin_),binAdm_->ptMax(etaBin_,ptBin_)));
+  binLabel_->AddText(util::LabelFactory::deltaPhiCut(2.7));
 }
 
 
@@ -936,7 +912,7 @@ void EtaPtBin::plotExtrapolation(const TString &outNameId) const {
 
   TCanvas* can = new TCanvas("can","",500,500);
   can->cd();
-  TH1* hFrame = new TH1D("hFrame",HEADER+";"+PT3RELVAR,1000,0.,PT3PLOTMAX);
+  TH1* hFrame = new TH1D("hFrame",HEADER+";Threshold "+util::LabelFactory::pt3RelMax(),1000,0.,PT3PLOTMAX);
   hFrame->SetNdivisions(505);
   //hFrame->GetYaxis()->SetRangeUser(0.,2.3*gFTailMC_->GetY()[gFTailMC_->GetN()-1]);
   double minY = 0.2*(*std::min_element(gFTailMCGauss_->GetY(),gFTailMCGauss_->GetY()+gFTailMCGauss_->GetN()));
@@ -1069,7 +1045,7 @@ void EtaPtBin::plotTailStart() const {
 
 // ------------------------------------------------------------------------------------
 void EtaPtBin::addPt3Bin(unsigned int pt3Bin, double thres, const TString &fileNameData, const TString &fileNameMC) {
-  pt3Bins_.push_back(new Pt3Bin(fileNameData,fileNameMC,etaBin_,ptBin_,pt3Bin,thres,nSigCore_,coreScalingFactor_,tailMinBin_,tailMaxBin_,binAdm_,jetLabel_));
+  pt3Bins_.push_back(new Pt3Bin(fileNameData,fileNameMC,etaBin_,ptBin_,pt3Bin,thres,nSigCore_,coreScalingFactor_,tailMinBin_,tailMaxBin_,binAdm_));
 }
 
 
@@ -1087,7 +1063,7 @@ int EtaPtBin::nPtAsymBins() const {
 // ------------------------------------------------------------------------------------
 void EtaPtBin::addMCTruthForToyAsym(const TString &fileName) {
   if( hasToyMC() ) delete toyMC_;
-  toyMC_ = new Pt3Bin(fileName,etaBin_,ptBin_,nSigCore_,coreScalingFactor_,nPtAsymBins(),tailMinBin_,tailMaxBin_,binAdm_,jetLabel_);
+  toyMC_ = new Pt3Bin(fileName,etaBin_,ptBin_,nSigCore_,coreScalingFactor_,nPtAsymBins(),tailMinBin_,tailMaxBin_,binAdm_);
   hasToyMC_ = true;
 }
 
@@ -1375,7 +1351,7 @@ void EtaPtBin::extrapolate(double minPt3Data, bool fixDataShape, bool useExtrapo
 
 // Constructor for asymmetry
 // ------------------------------------------------------------------------------------
-Pt3Bin::Pt3Bin(const TString &fileNameData, const TString &fileNameMC, unsigned int etaBin, unsigned int ptBin, unsigned int pt3Bin, double pt3Threshold, double nSigCore, double coreScaleFactor, int windowMinBin, int windowMaxBin, const sampleTools::BinningAdmin* adm, const TString &jetLabel)
+Pt3Bin::Pt3Bin(const TString &fileNameData, const TString &fileNameMC, unsigned int etaBin, unsigned int ptBin, unsigned int pt3Bin, double pt3Threshold, double nSigCore, double coreScaleFactor, int windowMinBin, int windowMaxBin, const sampleTools::BinningAdmin* adm)
   : etaBin_(etaBin), ptBin_(ptBin), pt3Bin_(pt3Bin), pt3Thres_(pt3Threshold),
     coreScalingFactor_(coreScaleFactor), 
     tailStartBin_(windowMinBin), tailEndBin_(windowMaxBin) {
@@ -1429,14 +1405,14 @@ Pt3Bin::Pt3Bin(const TString &fileNameData, const TString &fileNameMC, unsigned 
   setStyleDataMarker(hAsymData_);
   setStyleMCFilled(hAsymMC_);
   setStyleMCFilled(hAsymMCSmeared_);
-  initBinLabel(adm,jetLabel);
+  initBinLabel(adm);
 }
 
 
 // Constructor for toy asymmetry from MC truth response
 //  fAsymMCSmeared from toy MC (MC truth --> asymmetry --> smearing)
 // ------------------------------------------------------------------------------------
-Pt3Bin::Pt3Bin(const TString &fileName, unsigned int etaBin, unsigned int ptBin, double nSigCore, double coreScaleFactor, int nAsymBins, int windowMinBin, int windowMaxBin, const sampleTools::BinningAdmin* adm, const TString &jetLabel) 
+Pt3Bin::Pt3Bin(const TString &fileName, unsigned int etaBin, unsigned int ptBin, double nSigCore, double coreScaleFactor, int nAsymBins, int windowMinBin, int windowMaxBin, const sampleTools::BinningAdmin* adm) 
   : etaBin_(etaBin), ptBin_(ptBin), pt3Bin_(1000), pt3Thres_(1000.),
     coreScalingFactor_(coreScaleFactor),
     tailStartBin_(windowMinBin), tailEndBin_(windowMaxBin) {
@@ -1495,27 +1471,20 @@ Pt3Bin::Pt3Bin(const TString &fileName, unsigned int etaBin, unsigned int ptBin,
   if( DEBUG ) std::cout << "ok" << std::endl;
 
   // Set style
-  initBinLabel(adm,jetLabel,true);
+  initBinLabel(adm,true);
 
   if( DEBUG ) std::cout << "Pt3Bin::Pt3Bin(): Leaving constructor for toy asymmetry" << std::endl;
 }
 
 
 // ------------------------------------------------------------------------------------
-void Pt3Bin::initBinLabel(const sampleTools::BinningAdmin* adm, const TString &jetLabel, bool isMCTruth) {
-  if( SHOW_HEADER ) {
-    if( isMCTruth ) binLabel_ = util::LabelFactory::createPaveText(3,BINLABEL_WIDTH);
-    else binLabel_ = util::LabelFactory::createPaveText(4,BINLABEL_WIDTH);
-  } else {
-    if( isMCTruth ) binLabel_ = util::LabelFactory::createPaveText(4,BINLABEL_WIDTH);
-    else binLabel_ = util::LabelFactory::createPaveText(5,BINLABEL_WIDTH);
-    binLabel_->AddText(LUMI_LABEL);
-  }
-  binLabel_->AddText(jetLabel);
-  binLabel_->AddText(util::LabelFactory::labelEta(adm->etaMin(etaBin_),adm->etaMax(etaBin_)));
-  binLabel_->AddText(util::LabelFactory::labelPtAve(adm->ptMin(etaBin_,ptBin_),adm->ptMax(etaBin_,ptBin_)));
-  //  if( !isMCTruth ) binLabel_->AddText(util::toTString(adm->ptSoftMin(pt3Bin_))+" < p_{T,3} / p^{ave}_{T} < "+util::toTString(adm->ptSoftMax(pt3Bin_)));
-  if( !isMCTruth ) binLabel_->AddText(util::LabelFactory::labelPt3(adm->ptSoftMax(pt3Bin_)));
+void Pt3Bin::initBinLabel(const sampleTools::BinningAdmin* adm, bool isMCTruth) {
+  if( DEBUG ) std::cout << "Pt3Bin::initBinLabel(): Creating bin label . . . " << std::flush;
+  if( isMCTruth ) binLabel_ = util::LabelFactory::createPaveText(1);
+  else binLabel_ = util::LabelFactory::createPaveText(2);
+  binLabel_->AddText(util::LabelFactory::etaCut(adm->etaMin(etaBin_),adm->etaMax(etaBin_))+",  "+util::LabelFactory::ptAveCut(adm->ptMin(etaBin_,ptBin_),adm->ptMax(etaBin_,ptBin_)));
+  if( !isMCTruth ) binLabel_->AddText(util::LabelFactory::deltaPhiCut(2.7)+",  "+util::LabelFactory::pt3RelCut(adm->ptSoftMax(pt3Bin_)));
+  if( DEBUG ) std::cout << "ok" << std::endl;
 }
 
 
@@ -1597,9 +1566,9 @@ void Pt3Bin::getFTail(const TH1* h, double entries, int start, int end, double &
 // ------------------------------------------------------------------------------------
 void Pt3Bin::plotAsymmetryDataMC(const TString &outNameId) const {
 
-  TLegend* leg = util::LabelFactory::createLegendCol(2,LEG_WIDTH);
-  leg->AddEntry(hAsymData_,"Data","P");
-  leg->AddEntry(hAsymMC_,"MC","F");
+  TLegend* leg = util::LabelFactory::createLegendWithOffset(2,2);
+  leg->AddEntry(hAsymData_,DATA,"P");
+  leg->AddEntry(hAsymMC_,MC,"F");
 
   // Log scale
   util::HistOps::setYRange(hAsymMC_,5,3E-5);
@@ -1667,21 +1636,20 @@ void Pt3Bin::plotAsymmetryDataMC(const TString &outNameId) const {
   can = util::HistOps::createRatioTopCanvas();
   TPad *bRatioBottomPad = util::HistOps::createRatioBottomPad();
   TH1 *bRatioTopFrame = util::HistOps::createRatioTopHist(hAsymMC_);
-  TH1 *bRatioBottomFrame = util::HistOps::createRatioBottomFrame(hAsymMC_,0.61,1.39);
+  TH1 *bRatioBottomFrame = util::HistOps::createRatioBottomFrame(hAsymMC_,static_cast<TString>(hAsymMC_->GetXaxis()->GetTitle()),"","#frac{Data}{Sim.}",0.61,1.39);
   bRatioBottomFrame->SetFillColor(0);
   bRatioBottomFrame->SetLineWidth(LINE_WIDTH);
   can->cd();
-  bRatioTopFrame->GetXaxis()->SetRangeUser(0.,0.24);
+  bRatioTopFrame->GetXaxis()->SetRangeUser(0.,0.2);
   bRatioTopFrame->GetXaxis()->SetNdivisions(505);
-  util::HistOps::setYRange(bRatioTopFrame,5);
+  util::HistOps::setYRange(bRatioTopFrame,2+leg->GetNRows());
   bRatioTopFrame->Draw("HISTE");
   hAsymData_->Draw("PE1same");
   binLabel_->Draw("same");
   leg->Draw("same");
   bRatioBottomPad->Draw();
   bRatioBottomPad->cd();
-  bRatioBottomFrame->GetXaxis()->SetRangeUser(0.,0.24);
-  bRatioBottomFrame->GetXaxis()->SetMoreLogLabels();
+  bRatioBottomFrame->GetXaxis()->SetRangeUser(0.,0.2);
   bRatioBottomFrame->GetXaxis()->SetNdivisions(505);
   bRatioBottomFrame->Draw();
   hRatio->Draw("PE1same");
@@ -1701,8 +1669,8 @@ void Pt3Bin::plotAsymmetryDataMC(const TString &outNameId) const {
 // ------------------------------------------------------------------------------------
 void Pt3Bin::plotAsymmetryDataMCSmeared(const TString &outNameId, double nSigTailStart, double nSigTailEnd) const {
 
-  TLegend* leg = util::LabelFactory::createLegendCol(2,LEG_WIDTH);
-  leg->AddEntry(hAsymData_,"Data","P");
+  TLegend* leg = util::LabelFactory::createLegendWithOffset(2,2);
+  leg->AddEntry(hAsymData_,DATA,"P");
   leg->AddEntry(hAsymMCSmeared_,MCSMEAR,"F");
 
   // Log scale
@@ -1740,22 +1708,23 @@ void Pt3Bin::plotAsymmetryDataMCSmeared(const TString &outNameId, double nSigTai
   gauss->SetParameter(2,sigmaSmeared());
   gauss->SetLineWidth(2);
   gauss->SetLineColor(COLOR_GAUSS);
-  gauss->SetFillStyle(3004);
+  gauss->SetFillStyle(3354);
   gauss->SetFillColor(gauss->GetLineColor());
   gauss->SetRange(hAsymMCSmeared_->GetXaxis()->GetBinLowEdge(tailStartBin_),gauss->GetX(3E-5,0.,1.));
   
-  TLegend* legWin = util::LabelFactory::createLegendCol(4,LEG_WIDTH);
-  legWin->AddEntry(hAsymData_,"Data","P");
+  TLegend* legWin = util::LabelFactory::createLegendWithOffset(4,2);
+  legWin->AddEntry(hAsymData_,DATA,"P");
   legWin->AddEntry(hAsymMCSmeared_,MCSMEAR,"F");
-  legWin->AddEntry(gauss,"Asymmetry Gauss","F");
+  legWin->AddEntry(gauss,"Gaussian Asymmetry","F");
   legWin->AddEntry(arr,labelWindow(nSigTailStart,nSigTailEnd),"L");
 
-  TPaveText* labelFAsym = util::LabelFactory::createPaveTextWithOffset(4,LEG_WIDTH,legWin->GetNRows());
+  TPaveText* labelFAsym = util::LabelFactory::createPaveTextWithOffset(4,0.6,2+legWin->GetNRows());
   int nDigits = 4;
   labelFAsym->AddText(FASYMDATA+" = "+util::toTString(fTailData(),nDigits)+" #pm "+util::toTString(fTailDataErr(),nDigits));
   labelFAsym->AddText(FASYMMC+" = "+util::toTString(fTailMCSmeared(),nDigits)+" #pm "+util::toTString(fTailMCSmearedErr(),nDigits));
   labelFAsym->AddText(FASYMGAUSS+" = "+util::toTString(fTailMCSmearedGauss(),nDigits));
 
+  hAsymMCSmeared_->GetXaxis()->SetNdivisions(505);
   hAsymMCSmeared_->GetXaxis()->SetRangeUser(0.,1.);
   can->cd();
   hAsymMCSmeared_->Draw("HISTE");
@@ -1807,11 +1776,11 @@ void Pt3Bin::plotAsymmetryDataMCSmeared(const TString &outNameId, double nSigTai
   can = util::HistOps::createRatioTopCanvas();
   TPad *bRatioBottomPad = util::HistOps::createRatioBottomPad();
   TH1 *bRatioTopFrame = util::HistOps::createRatioTopHist(hAsymMCSmeared_);
-  TH1 *bRatioBottomFrame = util::HistOps::createRatioBottomFrame(hAsymMC_,0.61,1.39);
+  TH1 *bRatioBottomFrame = util::HistOps::createRatioBottomFrame(hAsymMC_,static_cast<TString>(hAsymMC_->GetXaxis()->GetTitle()),"","#frac{Data}{Sim.}",0.61,1.39);
   bRatioBottomFrame->SetFillColor(0);
   bRatioBottomFrame->SetLineWidth(LINE_WIDTH);
   can->cd();
-  bRatioTopFrame->GetXaxis()->SetRangeUser(0.,0.24);
+  bRatioTopFrame->GetXaxis()->SetRangeUser(0.,0.2);
   bRatioTopFrame->GetXaxis()->SetNdivisions(505);
   util::HistOps::setYRange(bRatioTopFrame,5);
   bRatioTopFrame->Draw("HISTE");
@@ -1820,8 +1789,7 @@ void Pt3Bin::plotAsymmetryDataMCSmeared(const TString &outNameId, double nSigTai
   leg->Draw("same");
   bRatioBottomPad->Draw();
   bRatioBottomPad->cd();
-  bRatioBottomFrame->GetXaxis()->SetRangeUser(0.,0.24);
-  bRatioBottomFrame->GetXaxis()->SetMoreLogLabels();
+  bRatioBottomFrame->GetXaxis()->SetRangeUser(0.,0.2);
   bRatioBottomFrame->GetXaxis()->SetNdivisions(505);
   bRatioBottomFrame->Draw();
   hRatio->Draw("PE1same");
@@ -1845,16 +1813,17 @@ void Pt3Bin::plotSpectra(const TString &outNameId) const {
   TCanvas *can = new TCanvas(canName,canName,500,500);
 
   // Populated x-region
-  int xMin = 1;
-  int xMax = 1000;
-  util::HistOps::findXRange(hPtAveSpecMC_,xMin,xMax);
-  xMin = max(1,xMin-10);
-  xMax = min(xMax+10,hPtAveSpecMC_->GetNbinsX());
+  int xMinBin = 1;
+  int xMaxBin = 1000;
+  util::HistOps::findXRange(hPtAveSpecMC_,xMinBin,xMaxBin);
+  double yMin = std::min(hPtAveSpecData_->GetBinContent(xMinBin),hPtAveSpecData_->GetBinContent(xMaxBin));
+  xMinBin = std::max(1,xMinBin-10);
+  xMaxBin = std::min(xMaxBin+10,hPtAveSpecMC_->GetNbinsX());
 
   // Absolute data spectrum
-  TLegend* leg = util::LabelFactory::createLegendCol(1,LEG_WIDTH);
-  leg->AddEntry(hPtAveSpecData_,"Data N = "+util::toTString(hPtAveSpecData_->GetEntries()),"P");
-  hPtAveSpecData_->GetXaxis()->SetRange(xMin,xMax);
+  TLegend* leg = util::LabelFactory::createLegendWithOffset(1,binLabel_->GetSize());
+  leg->AddEntry(hPtAveSpecData_,DATA+",  N = "+util::toTString(hPtAveSpecData_->GetEntries()),"P");
+  hPtAveSpecData_->GetXaxis()->SetRange(xMinBin,xMaxBin);
   util::HistOps::setYRange(hPtAveSpecData_,6,3E-1);
   can->cd();
   hPtAveSpecData_->Draw("PE1");
@@ -1865,11 +1834,11 @@ void Pt3Bin::plotSpectra(const TString &outNameId) const {
 
   // Absolute MC spectrum
   delete leg;
-  leg = util::LabelFactory::createLegendCol(1,LEG_WIDTH);
-  leg->AddEntry(hPtAveSpecMC_,"MC N = "+util::toTString(hPtAveSpecMC_->GetEntries()),"F");
+  leg = util::LabelFactory::createLegendWithOffset(1,binLabel_->GetSize());
+  leg->AddEntry(hPtAveSpecMC_,MC+",  N = "+util::toTString(hPtAveSpecData_->GetEntries()),"P");
   util::HistOps::setYRange(hPtAveSpecMC_,6,3E-5);
   can->cd();
-  hPtAveSpecMC_->GetXaxis()->SetRange(xMin,xMax);
+  hPtAveSpecMC_->GetXaxis()->SetRange(xMinBin,xMaxBin);
   hPtAveSpecMC_->Draw("HIST");
   binLabel_->Draw("same");
   leg->Draw("same");
@@ -1878,14 +1847,14 @@ void Pt3Bin::plotSpectra(const TString &outNameId) const {
 
   // Comparison (MC entries scaled to data)
   delete leg;
-  leg = util::LabelFactory::createLegendCol(2,LEG_WIDTH);
-  leg->AddEntry(hPtAveSpecData_,"Data, N = "+util::toTString(hPtAveSpecData_->GetEntries()),"P");
-  leg->AddEntry(hPtAveSpecMC_,"MC, N = "+util::toTString(hPtAveSpecMC_->GetEntries()),"F");
+  leg = util::LabelFactory::createLegendWithOffset(2,binLabel_->GetSize());
+  leg->AddEntry(hPtAveSpecData_,DATA+",  N = "+util::toTString(hPtAveSpecData_->GetEntries()),"P");
+  leg->AddEntry(hPtAveSpecMC_,MC+",  N = "+util::toTString(hPtAveSpecMC_->GetEntries()),"F");
   double scaleData = hPtAveSpecData_->Integral("width");
   double scaleMC = hPtAveSpecMC_->Integral("width");
   if( scaleData > 0. && scaleMC > 0. ) {
-    hPtAveSpecMC_->Scale(scaleData/scaleMC);
-    util::HistOps::setYRange(hPtAveSpecMC_,binLabel_->GetSize(),3E-1);
+    hPtAveSpecMC_->Scale(scaleData/scaleMC); // Scale mc to data
+    util::HistOps::setYRange(hPtAveSpecMC_,binLabel_->GetSize()+leg->GetNRows(),0.3*yMin);
     can->cd();
     hPtAveSpecMC_->Draw("HISTE");
     hPtAveSpecData_->Draw("PE1same");
@@ -1893,8 +1862,8 @@ void Pt3Bin::plotSpectra(const TString &outNameId) const {
     leg->Draw("same");
     can->SetLogy(1);
     toFiles(can,outNameId+"PtAveSpectra");
-    hPtAveSpecData_->Scale(scaleData);
-    hPtAveSpecMC_->Scale(scaleMC);
+    // set back MC scale
+    hPtAveSpecMC_->Scale(scaleMC/scaleData);
   }  
   delete leg;
   delete can;
@@ -2045,6 +2014,74 @@ void Pt3Bin::plotToyAsymmetry(const TString &outNameId) const {
 
 
 ////////////////////// GLOBAL FUNCTIONS //////////////////////////////////////////
+
+
+double coreScaleFactor(unsigned int etaBin, int variation) {
+  double coreScaling = 0.;
+
+//   // Core scale factors from runs 163337-167151
+//   // Version 2011/07/20: closure uncertainty removed
+//   if( variation == -1 ) {	// core down 1 sigma
+//     // Uncertainties down
+//     if( etaBin == 0 )      coreScaling = 0.000;
+//     else if( etaBin == 1 ) coreScaling = 0.001;
+//     else if( etaBin == 2 ) coreScaling = 0.032;
+//     else if( etaBin == 3 ) coreScaling = 0.043;
+//     else if( etaBin == 4 ) coreScaling = 0.090;
+//   } else if( variation == 1 ) {	// core up 1 sigma
+//     // Uncertainties up
+//     if( etaBin == 0 )      coreScaling = 0.116;
+//     else if( etaBin == 1 ) coreScaling = 0.115;
+//     else if( etaBin == 2 ) coreScaling = 0.162;
+//     else if( etaBin == 3 ) coreScaling = 0.228;
+//     else if( etaBin == 4 ) coreScaling = 0.489;
+//   } else if( variation == 0 ) {	// nominal core scale
+//     // Nominal
+//     if( etaBin == 0 )      coreScaling = 0.052;
+//     else if( etaBin == 1 ) coreScaling = 0.057;
+//     else if( etaBin == 2 ) coreScaling = 0.096;
+//     else if( etaBin == 3 ) coreScaling = 0.134;
+//     else if( etaBin == 4 ) coreScaling = 0.288;
+//   } else {
+//     std::cerr << "ERROR: unknown core-scale variation '" << variation << "'" << std::endl;
+//     exit(1);
+//   }
+
+
+  // Core scale factors from runs 163337-167151
+  // Version 2012/06/09 (thesis):
+  // - corrected MC statistical uncertainties
+  // - corrected extrapolation uncertainty determination
+  // - corrected uncertainty propagation to ratio
+  if( variation == -1 ) {	// core down 1 sigma
+    // Uncertainties down
+    if( etaBin == 0 )      coreScaling = 0.0000;
+    else if( etaBin == 1 ) coreScaling = 0.0000;
+    else if( etaBin == 2 ) coreScaling = 0.0192;
+    else if( etaBin == 3 ) coreScaling = 0.0283;
+    else if( etaBin == 4 ) coreScaling = 0.0737;
+  } else if( variation == 1 ) {	// core up 1 sigma
+    // Uncertainties up
+    if( etaBin == 0 )      coreScaling = 0.1232;
+    else if( etaBin == 1 ) coreScaling = 0.1254;
+    else if( etaBin == 2 ) coreScaling = 0.1659;
+    else if( etaBin == 3 ) coreScaling = 0.2567;
+    else if( etaBin == 4 ) coreScaling = 0.5174;
+  } else if( variation == 0 ) {	// nominal core scale
+    // Nominal
+    if( etaBin == 0 )      coreScaling = 0.0541;
+    else if( etaBin == 1 ) coreScaling = 0.0599;
+    else if( etaBin == 2 ) coreScaling = 0.0920;
+    else if( etaBin == 3 ) coreScaling = 0.1409;
+    else if( etaBin == 4 ) coreScaling = 0.2942;
+  } else {
+    std::cerr << "ERROR: unknown core-scale variation '" << variation << "'" << std::endl;
+    exit(1);
+  }
+
+  return coreScaling;
+}
+
 
 void setStyleDataMarker(TH1* h) {
   h->SetMarkerSize(MARKER_SIZE);
@@ -2243,7 +2280,7 @@ TString labelWindow(double nSigMin, double nSigMax) {
   if( nSigMax < 50. ) 
     label = "Window: "+util::toTString(nSigMin)+" - "+util::toTString(nSigMax);
   else
-    label = "Tail: "+ASYM_TAIL_START+" = "+util::toTString(nSigMin);
+    label = "Tail Start: "+ASYM_TAIL_START+" = "+util::toTString(nSigMin);
   label += " #sigma_{A}";
 
   return label;
@@ -2397,7 +2434,7 @@ TGraphAsymmErrors* relUncertainty(const TH1* hNom, int color, double weight, con
 
 
 // ------------------------------------------------------------------------------------
-TGraphAsymmErrors* totalUncertainty(const std::vector<TGraphAsymmErrors*> &uncerts, int color) {
+TGraphAsymmErrors* totalUncertainty(const std::vector<TGraphAsymmErrors*> &uncerts) {
 
   TGraphAsymmErrors* g = static_cast<TGraphAsymmErrors*>(uncerts.at(0)->Clone());
   for(int i = 0; i < g->GetN(); ++i) {
@@ -2409,10 +2446,6 @@ TGraphAsymmErrors* totalUncertainty(const std::vector<TGraphAsymmErrors*> &uncer
     }
     g->SetPointError(i,g->GetEXlow()[i],g->GetEXhigh()[i],sqrt(ed2),sqrt(eu2));
   }
-//   g->SetFillStyle(0);
-//   g->SetFillColor(0);
-//   g->SetLineColor(color);
-
   g->SetFillStyle(3444);
   g->SetFillColor(kBlack);
   g->SetLineColor(kBlack);
@@ -2483,16 +2516,16 @@ void plotFinalResult(const TString &fileName) {
 
     // Read histograms with variations
     TH1* hScaleVarCoreUp = util::FileOps::readTH1(fileNamePrefix+"_VarCoreUp.root",histName,histName+"_VarCoreUp");
-    TH1* hScaleVarCoreDown = util::FileOps::readTH1(fileNamePrefix+"_VarCoreDown.root",histName,histName+"_VarCoreDown");
+    TH1* hScaleVarCoreDn = util::FileOps::readTH1(fileNamePrefix+"_VarCoreDn.root",histName,histName+"_VarCoreDn");
     TH1* hScaleVarClosure = util::FileOps::readTH1(fileNamePrefix+"_VarClosure.root",histName,histName+"_VarClosure");
     TH1* hScaleVarPUUp = util::FileOps::readTH1(fileNamePrefix+"_VarPUUp.root",histName,histName+"_VarPUUp");
-    TH1* hScaleVarPUDown = util::FileOps::readTH1(fileNamePrefix+"_VarPUDown.root",histName,histName+"_VarPUDown");
+    TH1* hScaleVarPUDn = util::FileOps::readTH1(fileNamePrefix+"_VarPUDn.root",histName,histName+"_VarPUDn");
     TH1* hScaleVarExtra = util::FileOps::readTH1(fileNamePrefix+"_VarExtrapolation.root",histName,histName+"_VarExtrapolation");
 
     // Get relative uncertainties
     std::vector<TGraphAsymmErrors*> uncerts;
-    uncerts.push_back(relUncertainty(hScaleNom,46,1.,hScaleVarCoreUp,hScaleVarCoreDown));
-    uncerts.push_back(relUncertainty(hScaleNom,11,1.,hScaleVarPUUp,hScaleVarPUDown));
+    uncerts.push_back(relUncertainty(hScaleNom,46,1.,hScaleVarCoreUp,hScaleVarCoreDn));
+    uncerts.push_back(relUncertainty(hScaleNom,11,1.,hScaleVarPUUp,hScaleVarPUDn));
     uncerts.push_back(relUncertainty(hScaleNom,38,1.,hScaleVarExtra));
     uncerts.push_back(relUncertainty(hScaleNom,8,0.5,hScaleVarClosure));
 
@@ -2504,7 +2537,7 @@ void plotFinalResult(const TString &fileName) {
     uncertLabels.push_back("Non-closure");
 
     // Add up uncertainties
-    TGraphAsymmErrors* gUncertRelTotal = totalUncertainty(uncerts,kBlack);
+    TGraphAsymmErrors* gUncertRelTotal = totalUncertainty(uncerts);
     TGraphAsymmErrors* gUncertAbs = uncertaintyBand(hScaleNom,gUncertRelTotal,5);
     TGraphAsymmErrors* gUncertAbsPos = static_cast<TGraphAsymmErrors*>(gUncertAbs->Clone());
     for(int i = 0; i < gUncertAbsPos->GetN(); ++i) {
@@ -2523,7 +2556,7 @@ void plotFinalResult(const TString &fileName) {
       label->AddText(LUMI_LABEL);
     }
     label->AddText(util::LabelFactory::labelJet("AK5PF"));
-    label->AddText(util::LabelFactory::labelEta(binAdm->etaMin(etaBin),binAdm->etaMax(etaBin)));
+    label->AddText(util::LabelFactory::etaCut(binAdm->etaMin(etaBin),binAdm->etaMax(etaBin)));
     label->AddText(labelWindow(getTailStart(fileNamePrefix),1000.));
 
     TLegend* legScale = util::LabelFactory::createLegendCol(2,LEG_WIDTH);
@@ -2750,9 +2783,9 @@ void plotEvolution() {
 	  label->AddText(LUMI_LABEL);
 	}
 	label->AddText(util::LabelFactory::labelJet("AK5PF"));
-	label->AddText(util::LabelFactory::labelEta(binAdm->etaMin(etaBin),binAdm->etaMax(etaBin)));
-	label->AddText(util::LabelFactory::labelPtAve(binAdm->ptMin(etaBin,ptBin),binAdm->ptMax(etaBin,ptBin)));
-	label->AddText(util::LabelFactory::labelPt3(binAdm->ptSoftMax(pt3Bin)));
+	label->AddText(util::LabelFactory::etaCut(binAdm->etaMin(etaBin),binAdm->etaMax(etaBin)));
+	label->AddText(util::LabelFactory::ptAveCut(binAdm->ptMin(etaBin,ptBin),binAdm->ptMax(etaBin,ptBin)));
+	label->AddText(util::LabelFactory::pt3RelCut(binAdm->ptSoftMax(pt3Bin)));
 	label->AddText(labelWindow(getTailStart(fileNames.front()),1000.));
 		       
 
@@ -2883,7 +2916,7 @@ void plotEvolutionFinalPlots() {
 	label->AddText(LUMI_LABEL);
       }
       label->AddText(util::LabelFactory::labelJet("AK5PF"));
-      label->AddText(util::LabelFactory::labelEta(binAdm->etaMin(etaBin),binAdm->etaMax(etaBin))+",  "+util::LabelFactory::labelPtAve(binAdm->ptMin(etaBin,ptBin),binAdm->ptMax(etaBin,ptBin)));
+      label->AddText(util::LabelFactory::etaCut(binAdm->etaMin(etaBin),binAdm->etaMax(etaBin))+",  "+util::LabelFactory::ptAveCut(binAdm->ptMin(etaBin,ptBin),binAdm->ptMax(etaBin,ptBin)));
 
 
       TCanvas* can = new TCanvas("can","Scale factor evolution (Eta "+util::toTString(etaBin)+", Pt "+util::toTString(ptBin),500,500);
