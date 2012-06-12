@@ -1,4 +1,4 @@
-// $Id: PlotMaker.h,v 1.26 2012/06/07 21:10:55 mschrode Exp $
+// $Id: PlotMaker.h,v 1.27 2012/06/08 21:14:44 mschrode Exp $
 
 #ifndef PLOT_MAKER_H
 #define PLOT_MAKER_H
@@ -61,6 +61,7 @@ namespace resolutionFit {
       TPaveText* etaPtAvePtSoftBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int ptSoftBinIdx) const;
       TPaveText* etaPtAvePtSoftGenBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptBinIdx, unsigned int ptSoftBinIdx) const;
       TPaveText* etaPtSoftBin(unsigned int etaBinIdx, unsigned int ptSoftBinIdx) const;
+      TPaveText* etaPtSoftBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptSoftBinIdx) const;
       TPaveText* etaPtAveBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptBinIdx) const;
       TPaveText* etaPtAveBin(unsigned int etaBinIdx, unsigned int ptBinIdx) const;
       TPaveText* etaBin(SampleLabel label, unsigned int etaBinIdx, double pos = 1.) const;
@@ -74,7 +75,9 @@ namespace resolutionFit {
       TString lumi() const;
       TString pt() const;
       TString ptSoft() const;
+      TString ptSoftMax() const;
       TString ptSoftGen() const;
+      TString ptSoftGenMax() const;
       TString type(FitResult::Type type) const;
       TString sample(const SampleLabel &label) const;
       

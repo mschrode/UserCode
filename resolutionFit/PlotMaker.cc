@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.34 2012/06/08 21:14:44 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.35 2012/06/09 15:58:31 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -76,11 +76,13 @@ namespace resolutionFit {
     //    plotControlDistributions();
     //    plotPtGenSpectra();
 //     plotAsymmetry();
-    plotExtrapolation();
+//    plotExtrapolation();
 //     plotParticleLevelImbalance();
-    plotResolution();
-    plotScaledMCTruth();
-    plotSystematicUncertainties();
+//     plotResolution();
+//     plotScaledMCTruth();
+//     plotSystematicUncertainties();
+
+    plotAsymmetryComparison();
 
     //    plotPtSpectra();
   }
@@ -440,7 +442,7 @@ namespace resolutionFit {
 	    fit2->SetLineColor(hPtAsym2->GetLineColor());
 			      
 	    // Labels
-	    TPaveText* label = labelMk_->ptSoftBin(etaBin->etaBin(),ptBin->ptBin(),ptSoftBinIdx);
+	    TPaveText* label = labelMk_->etaPtAvePtSoftBin(etaBin->etaBin(),ptBin->ptBin(),ptSoftBinIdx);
 	    TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,labelMk_->start(),label->GetSize());
 	    leg->AddEntry(hPtAsym1,sLabel1,"P");
 	    leg->AddEntry(hPtAsym2,sLabel2,"P");
@@ -499,9 +501,9 @@ namespace resolutionFit {
 	  gDiff2->SetMarkerColor(kRed);
 	  gDiff2->SetLineColor(kRed);
 	  TGraphAsymmErrors* gRatio = util::HistOps::createRatioGraph(gWidthAsym2,gWidthAsym1);
-	  gRatio->SetMarkerStyle(27);
-	  gRatio->SetMarkerColor(kBlack);
-	  gRatio->SetLineColor(kBlack);
+// 	  gRatio->SetMarkerStyle(27);
+// 	  gRatio->SetMarkerColor(kBlack);
+// 	  gRatio->SetLineColor(kBlack);
 	  	  
 	  // Fit to standard deviations vs pt
 	  ResolutionFunction* rf = ResolutionFunction::fitTGraph(gWidthAsym1,ResolutionFunction::ModifiedNSC);
@@ -522,16 +524,16 @@ namespace resolutionFit {
 	  fDiff2->SetLineColor(gDiff2->GetLineColor());
 	  delete rf;
 
-	  TPaveText* label = labelMk_->ptSoftBin(etaBin->etaBin(),ptSoftBinIdx);
+	  TPaveText* label = labelMk_->etaPtSoftBin(etaBin->etaBin(),ptSoftBinIdx);
 	  if( Sample::type(sLabel1) == Sample::type(sLabel2) ) {
 	    delete label;
-	    label = labelMk_->ptSoftBin(sLabel1,etaBin->etaBin(),ptSoftBinIdx);	  
+	    label = labelMk_->etaPtSoftBin(util::LabelFactory::data(labelMk_->lumi()),etaBin->etaBin(),ptSoftBinIdx);
 	  }
-	  TLegend* leg = util::LabelFactory::createLegendCol(3,0.36*labelMk_->start());
- 	  leg->AddEntry(gWidthAsym1,"A: "+sLabel1,"P");
- 	  leg->AddEntry(gWidthAsym2,"B: "+sLabel2,"P");
+	  TLegend* leg = util::LabelFactory::createLegendCol(2,0.3);
+ 	  leg->AddEntry(gWidthAsym1,sLabel1,"P");
+ 	  leg->AddEntry(gWidthAsym2,sLabel2,"P");
 	  // 	  leg->AddEntry(gDiff2,"#sqrt{B^{2} - A^{2}}","P");
- 	  leg->AddEntry(gRatio,"B / A","P");
+	  // 	  leg->AddEntry(gRatio,"B / A","P");
 // 	  leg->AddEntry(gWidthAsym1,sLabel1,"P");
 // 	  leg->AddEntry(gWidthAsym2,sLabel2,"P");
 
@@ -563,7 +565,7 @@ namespace resolutionFit {
 	  TH1* hFrameMain = out_->mainFrame(hFrame);
 	  hFrameMain->GetYaxis()->SetRangeUser(0.005,0.27);
 	  hFrameMain->SetTitle(title_);	  
-	  TH1* hFrameRatio = out_->ratioFrame(hFrame,0.83,1.17);
+	  TH1* hFrameRatio = out_->ratioFrame(hFrame,util::LabelFactory::ptAve(),"GeV","#frac{"+sLabel2+"}{"+sLabel1+"}",0.83,1.17);
 	  hFrameRatio->SetLineWidth(lineWidth_);
   	  hFrameMain->GetXaxis()->SetRangeUser(27.,xMaxPt_);
   	  hFrameRatio->GetXaxis()->SetRangeUser(27.,xMaxPt_);
@@ -1120,7 +1122,7 @@ namespace resolutionFit {
 		// Create frame
 		TH1* hFrame = new TH1D("PlotMaker::plotExtrapolation::hFrame",title_,
 				       1000,0.,1.3*par_->ptSoftMax(par_->nPtSoftBins()-1));
-		util::HistOps::setAxisTitles(hFrame,"Threshold "+labelMk_->ptSoft()+"_{max}","",sample->labelQuantityInExtrapolation(*rIt));
+		util::HistOps::setAxisTitles(hFrame,"Threshold "+labelMk_->ptSoftMax(),"",sample->labelQuantityInExtrapolation(*rIt));
 		hFrame->GetYaxis()->SetRangeUser(0.7*val.front(),1.7*val.back());
 		
 		
@@ -1337,7 +1339,7 @@ namespace resolutionFit {
  	      TH1* hFrame = new TH1D("PlotMaker::plotExtrapolation::hFrame",title_,
  				     1000,0.,1.3*par_->ptSoftMax(par_->nPtSoftBins()-1));
  	      util::HistOps::setAxisTitles(hFrame,labelMk_->ptSoft(),"",yAxisLabel);
- 	      hFrame->GetXaxis()->SetTitle("Threshold "+labelMk_->ptSoft()+"_{max}");
+ 	      hFrame->GetXaxis()->SetTitle("Threshold "+labelMk_->ptSoft());
 	      double yMin1 = 0.;
 	      double yMax1 = 0.;
 	      util::HistOps::findYRangeInclErrors(gVals1,yMin1,yMax1);
@@ -1631,7 +1633,7 @@ namespace resolutionFit {
 	  // Create frame
 	  TH1* hFrame = new TH1D("PlotMaker::plotParticleLevelImbalance::hFrame",title_,
 				 1000,0.,1.3*par_->ptSoftMax(par_->nPtSoftBins()-1));
-	  util::HistOps::setAxisTitles(hFrame,"Threshold on "+labelMk_->ptSoftGen()+"_{max}","","#sqrt{2}#upoint#sigma_{A^{gen}}");
+	  util::HistOps::setAxisTitles(hFrame,"Threshold on "+labelMk_->ptSoftGenMax(),"","#sqrt{2}#upoint#sigma_{A^{gen}}");
 	  hFrame->GetYaxis()->SetRangeUser(0.,0.19);
 	       
 	  // Labels
@@ -3544,6 +3546,16 @@ namespace resolutionFit {
     return lab;
   }
 
+  // -------------------------------------------------------------------------------------
+  TPaveText* PlotMaker::LabelMaker::etaPtSoftBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptSoftBinIdx) const {
+    TPaveText* lab = util::LabelFactory::createPaveText(3);
+    lab->AddText(label);
+    lab->AddText(util::LabelFactory::etaCut(par_->etaMin(etaBinIdx),par_->etaMax(etaBinIdx)));
+    lab->AddText(util::LabelFactory::deltaPhiCut(par_->deltaPhi())+",  "+util::LabelFactory::pt3RelCut(par_->ptSoftMax(ptSoftBinIdx)));
+
+    return lab;
+  }
+
 
   // -------------------------------------------------------------------------------------
   TPaveText* PlotMaker::LabelMaker::etaBin(SampleLabel label, unsigned int etaBinIdx, double pos) const {
@@ -3740,10 +3752,16 @@ namespace resolutionFit {
   TString PlotMaker::LabelMaker::ptSoft() const { 
     return util::LabelFactory::pt3Rel();
   }
+  TString PlotMaker::LabelMaker::ptSoftMax() const { 
+    return util::LabelFactory::pt3RelMax();
+  }
 
   // -------------------------------------------------------------------------------------
   TString PlotMaker::LabelMaker::ptSoftGen() const { 
     return util::LabelFactory::pt3RelGen();
+  }
+  TString PlotMaker::LabelMaker::ptSoftGenMax() const { 
+    return util::LabelFactory::pt3RelGenMax();
   }
 
 

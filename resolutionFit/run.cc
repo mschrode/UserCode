@@ -1,4 +1,4 @@
-// $Id: run_163337-167151_V3_Summer11-ThesisResults.cc,v 1.8 2012/06/08 21:14:44 mschrode Exp $
+// $Id: run_163337-180252_V10_Fall11-PileUpStudy.cc,v 1.1 2012/05/31 20:17:43 mschrode Exp $
 
 #include <iostream>
 
@@ -20,72 +20,39 @@ int main(int argc, char *argv[]) {
   
   gErrorIgnoreLevel = 1001;
   
-  //  Parameters* par = new Parameters("~/scratch/ThesisPlots/Res_163337-167151","config/Analysis2011/Binning/BinningAdmin2011_v2.cfg",0);
-  Parameters* par = new Parameters("Res_163337-167151","config/Analysis2011/Binning/BinningAdmin2011_v2.cfg",0);
+  Parameters* par = new Parameters("PileUpStudy_163337-180252","config/Analysis2011/Binning/BinningAdmin2011_v5.cfg",0);
   par->setJetProperties(JetProperties::AK5,JetProperties::PF);
-  //par->setOutMode(OutputManager::EPSSingleFilesPlusROOT);
   par->setOutMode(OutputManager::EPSSingleFiles);
-  par->setLumi(855.);
+  par->setLumi(4900.);
   par->setPtSoftAbsMin(10.);
-  //par->setNEtaBinsUser(1);
-  
+
   TString pathToSrc = "/afs/naf.desy.de/user/m/mschrode/UserCode/mschrode/";
   TString pathToConfig = pathToSrc+"resolutionFit/config/Analysis2011/";
-  TString pathToFitResultsData = pathToSrc+"results/Analysis2011/Run2011A_163337-167151";
-  TString pathToFitResultsMC = pathToSrc+"results/Analysis2011/QCD_Pt-15to3000_TuneZ2_Flat_7TeV-pythia6_Summer11-PU_S3_START42_V11-v2";
 
-  FitResult::Type nominalFitResType = FitResult::FullMaxLikeAbs;
+  // 2011 pile-up study (asymmetry)
+  TString pathToFitResultsData = pathToSrc+"/results/Analysis2011/PileUpStudy";
 
   CommanderCool* cmd = new CommanderCool(par);
-  
-  // Samples and FitResult types
-  TString jetTypeStr;
-  if( par->jetType() == JetProperties::Calo ) jetTypeStr = "Calo";
-  else if( par->jetType() == JetProperties::JPT ) jetTypeStr = "JPT";
-  else if( par->jetType() == JetProperties::PF )  jetTypeStr = "PF";
   
   // MC truth resolution
   cmd->setMCTruthResolution(pathToConfig+"Parameters_MCTruthResolution_Summer11_PythiaZ2_L1FastJet_ThesisResults.txt",ResolutionFunction::ModifiedNSC);
   
-  
   // Particle level imbalance
-  //cmd->fitPLI("CMS Simulation ",pathToFitResultsMC+"/ResFit_PtGenAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet.root",ResolutionFunction::ModifiedNSC);
   cmd->setPLI(pathToConfig+"Parameters_PLI_Summer11_PythiaZ2.txt",ResolutionFunction::ModifiedNSC);
   
   // Samples
-  TString idData = "Data";
-  TString idMC = "CMS Simulation";
+  cmd->addDataSample("N_{Vtx} #leq 5",pathToFitResultsData+"/PileUpStudy_Data2011_PF_L1FastJet_V10_NVtx00-05.root");
+  cmd->addDataSample("N_{Vtx} #geq 9",pathToFitResultsData+"/PileUpStudy_Data2011_PF_L1FastJet_V10_NVtx09-99.root");
 
-  // Summer11 primary result
-  cmd->addDataSample(idData,pathToFitResultsData+"/ResFit_PtAveBins_Data_163337-167151_V3_"+jetTypeStr+"_L1FastJet.root");
-  cmd->addMCSample(idMC,pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet_Nominal.root");
-  cmd->addMCSample("JES Down",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet_JESDown.root");
-  cmd->addMCSample("JES Up",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet_JESUp.root");
-  cmd->addMCSample("Spec Herwig",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet_SpectrumHerwigpp.root");
-  cmd->addMCSample("PU Up",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet_PUUp.root");
-  
-  cmd->addFitResult(nominalFitResType);
-
-  // Systematic uncertainties
-  cmd->addUncertaintyFromVariedSample("PU",1.,idMC,nominalFitResType,"PU Up",kGreen-2);
-  cmd->addUncertaintyFromVariedSample("Spectrum",1.,idMC,nominalFitResType,"Spec Herwig",kCyan-7);
-  cmd->addUncertaintyFromVariedSample("JES",1.,idMC,nominalFitResType,"JES Down","JES Up",kBlue);
-  cmd->addPLIUncertainty(idMC,nominalFitResType,kRed+4);
-  cmd->addExtrapolationUncertainty(idMC,nominalFitResType,kRed+2);
-
-  
   // Samples to be compared
-  cmd->compareSamples(idData,idMC);
-  cmd->fitKValues(nominalFitResType);
+  cmd->compareSamples("N_{Vtx} #leq 5","N_{Vtx} #geq 9");
 
   // Output
   cmd->printSetup();
   cmd->makeAllPlots();
-  cmd->printResult();
-  cmd->printPLI();
 
   delete cmd;
   delete par;
-  
+
   return 0;
 }
