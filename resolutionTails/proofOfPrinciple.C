@@ -1,4 +1,4 @@
-// $Id: proofOfPrinciple.C,v 1.2 2012/02/27 15:16:13 mschrode Exp $
+// $Id: proofOfPrinciple.C,v 1.3 2012/05/31 20:36:32 mschrode Exp $
 
 #include <cassert>
 #include <iostream>
@@ -47,13 +47,16 @@ double drawResponse(double tailFrac) {
 }
 
 
-void generateEvents(int id, double tailFrac, unsigned int nEntries, TH1* &hResp, TH1* &hAsym) {
+void generateEvents(int id, double tailFrac, unsigned int nEntries, TH1* &hResp, TH1* &hAsym, TH1* &hAsymAbs) {
   TString name = "hResp";
   name += id;
-  hResp = new TH1D(name,";Response;Probability density",100,0.,2.);
+  hResp = new TH1D(name,";Response;Probability Density",100,0.21,1.79);
   name = "hAsym";
   name += id;
-  hAsym = new TH1D(name,";Asymmetry;Probability density",100,-1.,1.);
+  hAsym = new TH1D(name,";Asymmetry;Probability Density",100,-0.79,0.79);
+  name = "hAsymAbs";
+  name += id;
+  hAsymAbs = new TH1D(name,";|Asymmetry|;Probability Density",100,0.,0.72);
 
   for(unsigned int n = 0; n < nEntries; ++n) {
     double r1 = drawResponse(tailFrac);
@@ -64,6 +67,7 @@ void generateEvents(int id, double tailFrac, unsigned int nEntries, TH1* &hResp,
     hResp->Fill(r2);
     hAsym->Fill(a);
     hAsym->Fill(-a);
+    hAsymAbs->Fill(std::abs(a));
   }
 }
 
@@ -99,6 +103,7 @@ void proofOfPrinciple(unsigned int nEntries = 500000) {
   std::vector<TH1*> hResp(nSets);
   std::vector<TH1*> hRespTail(nSets);
   std::vector<TH1*> hAsym(nSets);
+  std::vector<TH1*> hAsymAbs(nSets);
   std::vector<TH1*> hAsymTail(nSets);
 
   std::vector<double> fTailResp(nSets,0.);
@@ -111,7 +116,7 @@ void proofOfPrinciple(unsigned int nEntries = 500000) {
   for(int i = 0; i < nSets; ++i) {
     double scale = (1.+0.5/nVar*(i-nVar)); // Vary fraction from 50% to 150%
     double tailFrac = 0.1*scale;
-    generateEvents(i,tailFrac,nEntries,hResp.at(i),hAsym.at(i));
+    generateEvents(i,tailFrac,nEntries,hResp.at(i),hAsym.at(i),hAsymAbs.at(i));
     getTails(hResp.at(i),hAsym.at(i),hRespTail.at(i),fTailResp.at(i),hAsymTail.at(i),fTailAsym.at(i));
     
     std::cout << "f(Tail) = " << tailFrac << ": f(TailAsym) = " << fTailAsym.at(i) << std::endl;
@@ -131,10 +136,13 @@ void proofOfPrinciple(unsigned int nEntries = 500000) {
   for(unsigned int i = 0; i < hResp.size(); ++i) {
     util::HistOps::normHist(hResp.at(i),"width");
     util::HistOps::normHist(hAsym.at(i),"width");
+    util::HistOps::normHist(hAsymAbs.at(i),"width");
     util::HistOps::setYRange(hResp.at(i),2,yMinResp);
     util::HistOps::setYRange(hAsym.at(i),2,yMinAsym);
+    util::HistOps::setYRange(hAsymAbs.at(i),2,yMinAsym);
     hResp.at(i)->SetLineWidth(2);
     hAsym.at(i)->SetLineWidth(2);
+    hAsymAbs.at(i)->SetLineWidth(2);
   }
   hResp.front()->SetLineColor(kRed);
   hResp.front()->SetLineStyle(2);
@@ -146,9 +154,14 @@ void proofOfPrinciple(unsigned int nEntries = 500000) {
   hAsym.back()->SetLineColor(kBlue);
   hAsym.back()->SetLineStyle(4);
 
+  hAsymAbs.front()->SetLineColor(kRed);
+  hAsymAbs.front()->SetLineStyle(2);
+  hAsymAbs.back()->SetLineColor(kBlue);
+  hAsymAbs.back()->SetLineStyle(4);
+
   TLine* linTailResp = new TLine(gaussStart_,yMinResp,gaussStart_,4.);
-  linTailResp->SetLineWidth(2);
-  linTailResp->SetLineColor(28);
+  linTailResp->SetLineWidth(3);
+  linTailResp->SetLineColor(kOrange+1);
   //  linTailResp->SetLineStyle(2);
   TArrow* arrResp = new TArrow(gaussStart_,1.5,tailStart_+0.09,1.5);
   arrResp->SetLineWidth(linTailResp->GetLineWidth());
@@ -182,21 +195,24 @@ void proofOfPrinciple(unsigned int nEntries = 500000) {
   arrAsymLeft->SetY2(arrAsymLeft->GetY1());
   TArrow* arrAsymRight = static_cast<TArrow*>(arrAsymLeft->Clone());
   arrAsymRight->SetX1(gaussEndAsym_);
-  arrAsymRight->SetX2(0.6);
-  TLatex* arrAsymLeftLabel = static_cast<TLatex*>(arrRespLabel->Clone());
-  arrAsymLeftLabel->SetX(-0.56);
-  arrAsymLeftLabel->SetY(1.85);
+  arrAsymRight->SetX2(0.5);
+  TLatex* arrAsymRightLabel = static_cast<TLatex*>(arrRespLabel->Clone());
+  arrAsymRightLabel->SetX(0.36);
+  arrAsymRightLabel->SetY(1.85);
   TArrow* arrAsymCore = static_cast<TArrow*>(arrRespCore->Clone());
-  arrAsymCore->SetX1(gaussStartAsym_);
-  arrAsymCore->SetX2(0.);
-  TLatex* arrAsymCoreLabel = new TLatex(gaussStartAsym_+0.01,0.12,"#frac{2.5}{#sqrt{2}}#sigma_{toy}");
+  arrAsymCore->SetX1(0.);
+  arrAsymCore->SetX2(gaussEndAsym_);
+  arrAsymCore->SetY1(0.12);
+  arrAsymCore->SetY2(0.12);
+  arrAsymCore->SetOption("|->");
+  TLatex* arrAsymCoreLabel = new TLatex(0.02,0.24,"#frac{2.5}{#sqrt{2}}#sigma_{toy}");
   arrAsymCoreLabel->SetTextFont(42);
   arrAsymCoreLabel->SetTextColor(arrResp->GetLineColor());
 
   TPaveText* label = util::LabelFactory::createPaveText(1,-0.5);
-  label->AddText("Toy simulation");
+  label->AddText("Toy Simulation");
 
-  TLegend* leg = util::LabelFactory::createLegendCol(5,0.3);
+  TLegend* leg = util::LabelFactory::createLegendCol(5,0.4);
   leg->AddEntry(hResp.front(),"f^{toy}_{resp} #times "+util::toTString(varTailResp.front(),1),"L");
   leg->AddEntry(hResp.at(nVar),"f^{toy}_{resp} #times 1.0","L");
   leg->AddEntry(hResp.back(),"f^{toy}_{resp} #times "+util::toTString(varTailResp.back(),1),"L");
@@ -218,14 +234,12 @@ void proofOfPrinciple(unsigned int nEntries = 500000) {
 
   TCanvas* cAsym = new TCanvas("cAsym","Asymmetry",500,500);
   cAsym->cd();
-  hAsym.front()->Draw("L");
-  hAsym.back()->Draw("Lsame");
-  hAsym.at(nVar)->Draw("Lsame");
+  hAsymAbs.front()->Draw("L");
+  hAsymAbs.back()->Draw("Lsame");
+  hAsymAbs.at(nVar)->Draw("Lsame");
   leg->Draw("same");
   label->Draw("same");
-  linTailAsymLeft->Draw("same");
-  arrAsymLeftLabel->Draw("same");
-  arrAsymLeft->Draw();
+  arrAsymRightLabel->Draw("same");
   linTailAsymRight->Draw("same");
   arrAsymRight->Draw();
   arrAsymCore->Draw();
@@ -239,7 +253,7 @@ void proofOfPrinciple(unsigned int nEntries = 500000) {
 
   TCanvas* cFvsF = new TCanvas("cFvsF","FAsym vs FResp",500,500);
   cFvsF->cd();
-  TH1* hFrameFAsymVsFResp = new TH1D("hFrameFAsymVsFResp",";Scale of f^{toy}_{resp};Scale of f^{toy}_{asym}",1000,0.4,1.6);
+  TH1* hFrameFAsymVsFResp = new TH1D("hFrameFAsymVsFResp",";Variation of f^{toy}_{resp};Variation of f^{toy}_{asym}",1000,0.4,1.6);
   for(int bin = 1; bin <= hFrameFAsymVsFResp->GetNbinsX(); ++bin) {
     hFrameFAsymVsFResp->SetBinContent(bin,hFrameFAsymVsFResp->GetXaxis()->GetBinCenter(bin));
   }
@@ -256,12 +270,12 @@ void proofOfPrinciple(unsigned int nEntries = 500000) {
 
   TCanvas* cRelVar = new TCanvas("cRelVar","Relative variation",500,500);
   cRelVar->cd();
-  TH1* hFrameRelScale = new TH1D("hFrameRelScale",";Scale of f^{toy}_{resp};Scale of f^{toy}_{asym} / Scale of f^{toy}_{resp}",1000,0.4,1.6);
+  TH1* hFrameRelScale = new TH1D("hFrameRelScale",";Variation of f^{toy}_{resp};Variation of f^{toy}_{asym} / Variation of f^{toy}_{resp}",1000,0.4,1.6);
   for(int bin = 1; bin <= hFrameRelScale->GetNbinsX(); ++bin) {
     hFrameRelScale->SetBinContent(bin,1.);
   }
   hFrameRelScale->SetLineStyle(2);
-  hFrameRelScale->GetYaxis()->SetRangeUser(0.55,1.45);
+  hFrameRelScale->GetYaxis()->SetRangeUser(0.81,1.19);
   hFrameRelScale->Draw();
   gRelScale->Draw("Psame");
   label->Draw("same");
