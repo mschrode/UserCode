@@ -1,4 +1,4 @@
-// $Id: fitMCTruth.C,v 1.19 2012/06/05 22:44:46 mschrode Exp $
+// $Id: fitMCTruth.C,v 1.20 2012/06/15 00:15:53 mschrode Exp $
 
 //!  Fit mean response and resolution from MC truth
 //!  histograms in Kalibri skims from
@@ -49,8 +49,16 @@ void fitProfile(const TH2* h2, std::vector<TH1*> &hProf, double nSigCore, std::v
   TString name = h2->GetName();
   TString xTitle = h2->GetXaxis()->GetTitle();
   TString yTitle = h2->GetYaxis()->GetTitle();
-  hMean = new TH1D(name+"_YMean",";"+xTitle+";Gauss Mean",
-		   h2->GetNbinsX(),h2->GetXaxis()->GetXbins()->GetArray());
+  if( h2->GetXaxis()->GetBinWidth(1) != h2->GetXaxis()->GetBinWidth(2) ) {
+    hMean = new TH1D(name+"_YMean",";"+xTitle+";Gauss Mean",
+		     h2->GetNbinsX(),h2->GetXaxis()->GetXbins()->GetArray());
+    // For whatever reason, this version works only for non-equidistant bins...
+  } else {
+    hMean = new TH1D(name+"_YMean",";"+xTitle+";Gauss Mean",
+		     h2->GetNbinsX(),
+		     h2->GetXaxis()->GetBinLowEdge(1),
+		     h2->GetXaxis()->GetBinUpEdge(h2->GetNbinsX()));
+  }
   hMean->SetMarkerStyle(20);
   hMean->SetMarkerSize(1.4);
   hMean->SetLineWidth(2);
@@ -372,18 +380,21 @@ void plotMCTruth(const TString &fileName, const TString &histNamePrefix, const s
   util::FileOps::toFiles(canPlain,OUT_FILE);
 
   // Resolution plots per etaBin in multicanvas
-  util::MultiCanvas* mc = new util::MultiCanvas(outNamePrefix+"_Resolution_AllEtaBins",3,2,false);
-
+  util::MultiCanvas* mc = new util::MultiCanvas(outNamePrefix+"_Resolution_AllEtaBins",3,2,5,true);
+  std::vector<TPaveText*> etaBinLabels;
   for(unsigned int etaBin = 0; etaBin < binningAdmin.nEtaBins(); ++etaBin) {
-//     delete label;
-//     label = util::LabelFactory::createPaveText(1);
-//     label->AddText(util::LabelFactory::mc()+",  "+util::LabelFactory::etaGenCut(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin)));
+    TPaveText* lab = util::LabelFactory::createPaveText(1);
+    lab->SetTextSize(1.2*lab->GetTextSize());
+    lab->AddText(util::LabelFactory::mc()+",  "+util::LabelFactory::etaGenCut(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin)));
+    etaBinLabels.push_back(lab);
 
     TH1* mFrame = mc->mainFrame(hFrame,etaBin);
-    TPad* pad = mc->mainPad(etaBin);
+    TPad* mPad = mc->mainPad(etaBin);
+    TH1* rFrame = mc->ratioFrame(hFrame,"#frac{Point}{Fit}",0.81,1.19,etaBin);
+    TPad* rPad = mc->ratioPad(etaBin);
     mc->cd();
-    pad->Draw();
-    pad->cd();
+    mPad->Draw();
+    mPad->cd();
     mFrame->Draw();
     hSigma.at(etaBin)->SetMarkerStyle(20);
     hSigma.at(etaBin)->SetMarkerColor(kBlack);
@@ -392,6 +403,12 @@ void plotMCTruth(const TString &fileName, const TString &histNamePrefix, const s
     fSigma.at(etaBin)->SetLineStyle(1);
     fSigma.at(etaBin)->Draw("same");
     hSigma.at(etaBin)->Draw("PE1same");
+    lab->Draw("same");
+
+    rPad->Draw();
+    rPad->cd();
+    rFrame->SetLineColor(fSigma.at(etaBin)->GetLineColor());    
+    rFrame->Draw();
 
 //     label->Draw("same");
 //     bPad = util::HistOps::createRatioBottomPad();
@@ -400,21 +417,20 @@ void plotMCTruth(const TString &fileName, const TString &histNamePrefix, const s
 //     bFrame->SetLineWidth(2);
 //     bFrame->SetLineColor(fSigma.at(etaBin)->GetLineColor());
 //     bFrame->Draw();
-//     hSigmaOverFit.at(etaBin)->SetMarkerStyle(20);
-//     hSigmaOverFit.at(etaBin)->SetMarkerColor(kBlack);
-//     hSigmaOverFit.at(etaBin)->SetLineColor(kBlack);
-//     hSigmaOverFit.at(etaBin)->Draw("PE1same");
-//     canRatio->SetLogx();
-//     bPad->SetLogx();
-//     canRatio->SetName(outNamePrefix+"_ResolutionFitRatio_EtaBin"+util::toTString(etaBin));
+    hSigmaOverFit.at(etaBin)->SetMarkerStyle(20);
+    hSigmaOverFit.at(etaBin)->SetMarkerColor(kBlack);
+    hSigmaOverFit.at(etaBin)->SetLineColor(kBlack);
+    hSigmaOverFit.at(etaBin)->Draw("PE1same");
   }
   mc->noExponentX();
-  mc->moreLogLabelsX();
+  //mc->moreLogLabelsX();
   mc->setLogx();
   util::FileOps::toFiles(mc->canvas(),OUT_FILE);
   mc->deleteFrames();
   delete mc;
-
+  for(unsigned int i = 0; i < etaBinLabels.size(); ++i) {
+    delete etaBinLabels.at(i);
+  }
   canRatio->cd();
   TH1 *tFrame = util::HistOps::createRatioTopHist(hFrame);
   tFrame->GetYaxis()->SetRangeUser(3E-3,resolutionMax_);
@@ -423,10 +439,12 @@ void plotMCTruth(const TString &fileName, const TString &histNamePrefix, const s
     fSigma.at(etaBin)->Draw("same");
     hSigma.at(etaBin)->Draw("PE1same");
   }
+
   label->Draw("same");
   leg->Draw("same");
   bPad->Draw();
   bPad->cd();
+
   TH1 *bFrame = util::HistOps::createRatioBottomFrame(hFrame,"#frac{Point}{Fit}",0.81,1.19);
   bFrame->SetLineWidth(2);
   bFrame->Draw();
@@ -833,7 +851,7 @@ void plotMCTruth(const std::vector<TString> &fileName, const std::vector<TString
 
 
     hFrame->GetYaxis()->SetTitle("Mean Response");
-    hFrame->GetYaxis()->SetRangeUser(0.81,1.39);
+    hFrame->GetYaxis()->SetRangeUser(0.82,1.28);
     for(int bin = 1; bin <= hFrame->GetNbinsX(); ++bin) {
       hFrame->SetBinContent(bin,1.);
     }
@@ -1490,6 +1508,109 @@ void plotTwoGaussFit(const TString &fileName, const TString &histNamePrefix, con
 }
 
 
+
+// Compare MC-truth resolution for different selections
+// One plot per pt bin
+// ------------------------------------------------------------
+void plotJESvsEta(const TString &fileName,
+		  const std::vector<TString> &histNamePrefix,
+		  const std::vector<TString> &legEntries,
+		  const TString &histWithPtGenBinEdges,
+		  double nSigCore,
+		  const TString &outNamePrefix) {
+
+  assert( legEntries.size() == histNamePrefix.size() );
+
+  // PtBin edges
+  TH1* hPtGenBins = util::FileOps::readTH1(fileName,histWithPtGenBinEdges);
+
+  // JES vs eta
+  std::vector< std::vector<TH1*> > hMean; // [selections][ptGen bins]
+
+  // Fit profiles for different selections and pt bins
+  for(unsigned int i = 0; i < histNamePrefix.size(); ++i) { // loop over selections
+    std::vector<TH1*> tmpHMean;
+
+    for(int ptBin = 0; ptBin < hPtGenBins->GetNbinsX(); ++ptBin) {
+      TString histName = histNamePrefix.at(i)+"_PtGen"+util::toTString(ptBin);
+      TH2* h2 = util::FileOps::readTH2(fileName,histName);
+
+      std::vector<TH1*> hProf;
+      std::vector<TF1*> fits;
+      TH1* hMeanTmp;
+      TH1* hSigma;
+      TH1* hChi2Ndof;
+      std::vector<double> entries;
+      fitProfile(h2,hProf,nSigCore,fits,hMeanTmp,hSigma,hChi2Ndof,entries);
+
+      delete hSigma;
+      delete hChi2Ndof;
+      for(unsigned int k = 0; k < hProf.size(); ++k) {
+	delete hProf.at(k);
+	delete fits.at(k);
+      }
+      tmpHMean.push_back(hMeanTmp);
+    }
+    hMean.push_back(tmpHMean);
+  } // end of loop over selections
+
+  // Plot
+  TCanvas* can = util::HistOps::createTCanvas("can","",500,500);
+  for(int ptBin = 0; ptBin < hPtGenBins->GetNbinsX(); ++ptBin) {
+
+    // Labels
+    TPaveText* label = util::LabelFactory::createPaveText(2,-0.5);
+    label->AddText(util::LabelFactory::mc());
+    label->AddText(util::LabelFactory::ptGenCut(hPtGenBins->GetXaxis()->GetBinLowEdge(1+ptBin),hPtGenBins->GetXaxis()->GetBinUpEdge(1+ptBin)));
+
+    TLegend* leg = util::LabelFactory::createLegendCol(histNamePrefix.size(),0.5);
+    for(unsigned int i = 0; i < histNamePrefix.size(); ++i) {
+      leg->AddEntry(hMean.at(i).at(ptBin),legEntries.at(i),"P");
+      hMean.at(i).at(ptBin)->SetMarkerStyle(20+i);
+      hMean.at(i).at(ptBin)->SetMarkerColor(util::StyleSettings::color(i));
+      hMean.at(i).at(ptBin)->SetLineColor(hMean.at(i).at(ptBin)->GetMarkerColor());
+      hMean.at(i).at(ptBin)->SetLineWidth(2);
+    }
+
+    TH1* hFrame = new TH1D("hFrame",";#eta;Mean Response",1000,-5.2,5.2);
+    hFrame->GetYaxis()->SetRangeUser(0.82,1.28);
+    for(int bin = 1; bin <= hFrame->GetNbinsX(); ++bin) {
+      hFrame->SetBinContent(bin,1.);
+    }
+    hFrame->SetLineStyle(2);
+    hFrame->SetLineWidth(2);
+    can->cd();
+    hFrame->Draw();
+    for(std::vector< std::vector<TH1*> >::reverse_iterator it = hMean.rbegin();
+	it != hMean.rend(); ++it) {
+      it->at(ptBin)->Draw("PE1same");
+    }
+    label->Draw("same");
+    leg->Draw("same");
+    can->SetName(outNamePrefix+"_MeanResponse_PtGenBin"+util::toTString(ptBin));
+    util::FileOps::toFiles(can,OUT_FILE);
+
+    delete hFrame;
+    delete label;
+    delete leg;
+  }
+
+  for(unsigned int i = 0; i < hMean.size(); ++i) {
+    for(unsigned int j = 0; j < hMean.at(i).size(); ++j) {
+      delete hMean.at(i).at(j);
+    }
+  }
+  delete can;  
+
+  if( archivePlots_ ) {
+    gROOT->ProcessLine(".! tar -zcf "+outNamePrefix+".tar.gz "+outNamePrefix+"*.eps");
+    gROOT->ProcessLine(".! rm "+outNamePrefix+"*.eps");
+    std::cout << "Plots stored in "+outNamePrefix+".tar.gz" << std::endl;
+  }
+}
+
+
+
 // ------------------------------------------------------------
 void fitMCTruth() {
   gErrorIgnoreLevel = 1001;
@@ -1497,14 +1618,15 @@ void fitMCTruth() {
   
   sampleTools::BinningAdmin admin("config/Analysis2011/Binning/BinningAdmin2011_v2.cfg");
   //sampleTools::BinningAdmin admin("config/Analysis2011/Binning/BinningAdmin2011_v2.cfg","config/Analysis2011/Binning/Binning2011_v2_central.cfg");
-  TString file = "../results/Analysis2011/MCTruthResolution/Kalibri_MCTruthResponse_MCSummer11_AK5PF.root";
+  //TString file = "../results/Analysis2011/MCTruthResolution/Kalibri_MCTruthResponse_MCSummer11_AK5PF.root";
+  TString file = "tmp/Kalibri_MCTruthResponse.root";
   TString name = "MCTruthSummer11";
   OUT_FILE = new TFile(name+".root","UPDATE");
   std::vector<TString> histNamePrefix;
   std::vector<TString> legEntries;
 
   // For all eta bins
-  plotMCTruth(file,"hRespVsPtGen",admin,2.,10.,name);
+  //  plotMCTruth(file,"hRespVsPtGen",admin,2.,10.,name);
   //  plotTwoGaussFit(file,"hRespVsPtGenUncorrected",admin,2.,10.,name);
 
   // Only central bin sufficient
@@ -1529,6 +1651,15 @@ void fitMCTruth() {
 //         legEntries.push_back("C_{off}");
 //         legEntries.push_back("C_{off} #upoint C_{rel} #upoint C_{abs}");
 //         plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_UncorrVsL1VsCorr");
+  histNamePrefix.clear();
+  legEntries.clear();
+  histNamePrefix.push_back("hRespVsEtaGenUncorrected");
+  histNamePrefix.push_back("hRespVsEtaGenL1Corrected");
+  histNamePrefix.push_back("hRespVsEtaGen");
+  legEntries.push_back("Uncorrected");
+  legEntries.push_back("C_{off}");
+  legEntries.push_back("C_{off} #upoint C_{rel} #upoint C_{abs}");
+  plotJESvsEta(file,histNamePrefix,legEntries,"hPtGenBinsForRespVsEtaGen",2.,name+"_UncorrVsL1VsCorr");
 
 //         histNamePrefix.clear();
 //         legEntries.clear();
