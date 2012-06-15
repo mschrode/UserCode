@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.51 2012/06/09 15:59:17 mschrode Exp $
+// $Id: HistOps.h,v 1.52 2012/06/10 14:53:41 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,10 +36,18 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.51 2012/06/09 15:59:17 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.52 2012/06/10 14:53:41 mschrode Exp $
   class HistOps
   {
   public:
+    //! TCanvas that has in fact the dimensions as specified...
+    // -------------------------------------------------------------------------------------
+    static TCanvas *createTCanvas(const TString &name, const TString& title, int xw, int yw) {
+      TCanvas* c = new TCanvas(name,title,xw,yw);
+      c->SetWindowSize(xw+(xw-c->GetWw()),yw+(yw-c->GetWh())); // No clue why I need this line: ROOT sucks!
+      return c;
+    }
+
     // -------------------------------------------------------------------------------------
     static TH1D *createTH1D(const TString &name, int n, double xMin, double xMax, const TString &title) {
       return new TH1D(name,title,n,xMin,xMax);

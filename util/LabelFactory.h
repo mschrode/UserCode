@@ -1,4 +1,4 @@
-//  $Id: LabelFactory.h,v 1.28 2012/06/08 21:14:44 mschrode Exp $
+//  $Id: LabelFactory.h,v 1.29 2012/06/10 14:53:41 mschrode Exp $
 
 #ifndef LABEL_FACTORY_H
 #define LABEL_FACTORY_H
@@ -22,7 +22,7 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: LabelFactory.h,v 1.28 2012/06/08 21:14:44 mschrode Exp $
+  //!  $Id: LabelFactory.h,v 1.29 2012/06/10 14:53:41 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class LabelFactory {
   public:
@@ -170,7 +170,7 @@ namespace util {
       return "Data ("+lumi+")";
     }
     static TString mc() {
-      return "CMS Simulation";
+      return "Simulation";
     }
 
 

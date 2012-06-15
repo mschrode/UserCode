@@ -1,4 +1,4 @@
-// $Id: fitMCTruth.C,v 1.18 2012/06/03 21:53:27 mschrode Exp $
+// $Id: fitMCTruth.C,v 1.19 2012/06/05 22:44:46 mschrode Exp $
 
 //!  Fit mean response and resolution from MC truth
 //!  histograms in Kalibri skims from
@@ -27,6 +27,7 @@
 #include "../util/HistOps.h"
 #include "../util/LabelFactory.h"
 #include "../util/StyleSettings.h"
+#include "../util/MultiCanvas.h"
 
 
 // Global style
@@ -337,7 +338,7 @@ void plotMCTruth(const TString &fileName, const TString &histNamePrefix, const s
   }
 
   // Canvases
-  TCanvas* canPlain = new TCanvas(outNamePrefix+"_Resolution","",500,500);
+  TCanvas* canPlain = util::HistOps::createTCanvas(outNamePrefix+"_Resolution","",500,500);
   TCanvas* canRatio = util::HistOps::createRatioTopCanvas();
   TPad *bPad = util::HistOps::createRatioBottomPad();
 
@@ -369,6 +370,50 @@ void plotMCTruth(const TString &fileName, const TString &histNamePrefix, const s
   canPlain->SetLogx();
   canPlain->SetName(outNamePrefix+"_ResolutionFit");
   util::FileOps::toFiles(canPlain,OUT_FILE);
+
+  // Resolution plots per etaBin in multicanvas
+  util::MultiCanvas* mc = new util::MultiCanvas(outNamePrefix+"_Resolution_AllEtaBins",3,2,false);
+
+  for(unsigned int etaBin = 0; etaBin < binningAdmin.nEtaBins(); ++etaBin) {
+//     delete label;
+//     label = util::LabelFactory::createPaveText(1);
+//     label->AddText(util::LabelFactory::mc()+",  "+util::LabelFactory::etaGenCut(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin)));
+
+    TH1* mFrame = mc->mainFrame(hFrame,etaBin);
+    TPad* pad = mc->mainPad(etaBin);
+    mc->cd();
+    pad->Draw();
+    pad->cd();
+    mFrame->Draw();
+    hSigma.at(etaBin)->SetMarkerStyle(20);
+    hSigma.at(etaBin)->SetMarkerColor(kBlack);
+    hSigma.at(etaBin)->SetLineColor(kBlack);
+    fSigma.at(etaBin)->SetLineColor(kRed);
+    fSigma.at(etaBin)->SetLineStyle(1);
+    fSigma.at(etaBin)->Draw("same");
+    hSigma.at(etaBin)->Draw("PE1same");
+
+//     label->Draw("same");
+//     bPad = util::HistOps::createRatioBottomPad();
+//     bPad->Draw();
+//     bPad->cd();
+//     bFrame->SetLineWidth(2);
+//     bFrame->SetLineColor(fSigma.at(etaBin)->GetLineColor());
+//     bFrame->Draw();
+//     hSigmaOverFit.at(etaBin)->SetMarkerStyle(20);
+//     hSigmaOverFit.at(etaBin)->SetMarkerColor(kBlack);
+//     hSigmaOverFit.at(etaBin)->SetLineColor(kBlack);
+//     hSigmaOverFit.at(etaBin)->Draw("PE1same");
+//     canRatio->SetLogx();
+//     bPad->SetLogx();
+//     canRatio->SetName(outNamePrefix+"_ResolutionFitRatio_EtaBin"+util::toTString(etaBin));
+  }
+  mc->noExponentX();
+  mc->moreLogLabelsX();
+  mc->setLogx();
+  util::FileOps::toFiles(mc->canvas(),OUT_FILE);
+  mc->deleteFrames();
+  delete mc;
 
   canRatio->cd();
   TH1 *tFrame = util::HistOps::createRatioTopHist(hFrame);
@@ -701,7 +746,7 @@ void plotMCTruth(const std::vector<TString> &fileName, const std::vector<TString
     hNumFracProf.push_back(tmpHNumFracProf);
   }
   
-  TCanvas* can = new TCanvas("can","",500,500);
+  TCanvas* can = util::HistOps::createTCanvas("can","",500,500);
   for(unsigned int etaBin = 0; etaBin < binningAdmin.nEtaBins(); ++etaBin) {
     TPaveText* label = util::LabelFactory::createPaveText(2,-0.5);
     label->AddText(util::LabelFactory::mc());
@@ -1034,7 +1079,7 @@ void plotGaussianFitRange(const TString &fileName, const TString &histNamePrefix
     }
   }
 
-  TCanvas* can = new TCanvas("can","",500,500);
+  TCanvas* can = util::HistOps::createTCanvas("can","",500,500);
 
   TLegend* leg = util::LabelFactory::createLegendCol(nSigCore.size(),0.5);
   for(unsigned int i = 0; i < nSigCore.size(); ++i) {
@@ -1126,7 +1171,7 @@ void plotDeltaR(const TString &fileName, const TString &histNamePrefix, const sa
     TLegend* leg = util::LabelFactory::createLegendColWithOffset(1,-0.5,label->GetSize());
     leg->AddEntry(hDeltaRSel,"= "+util::toTString(100.*hDeltaRSel->Integral("width"),0)+"%","F");
     
-    TCanvas* can = new TCanvas("can","DeltaR EtaBin"+util::toTString(etaBin),500,500);
+    TCanvas* can = util::HistOps::createTCanvas("can","DeltaR EtaBin"+util::toTString(etaBin),500,500);
     can->cd();
     hDeltaRSel->Draw("HIST");
     hDeltaR->Draw("HISTsame");
@@ -1411,7 +1456,7 @@ void plotTwoGaussFit(const TString &fileName, const TString &histNamePrefix, con
     leg->AddEntry(hChi2Ndof.at(etaBin),util::LabelFactory::etaGenCut(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin)),"P");
   }
 
-  TCanvas* can = new TCanvas("can","#chi^{2}/ndof",500,500);
+  TCanvas* can = util::HistOps::createTCanvas("can","#chi^{2}/ndof",500,500);
   can->cd();
   hChi2Ndof.back()->GetYaxis()->SetRangeUser(1E-3,9.8);
   hChi2Ndof.back()->Draw("P");
@@ -1460,7 +1505,7 @@ void fitMCTruth() {
 
   // For all eta bins
   plotMCTruth(file,"hRespVsPtGen",admin,2.,10.,name);
-  plotTwoGaussFit(file,"hRespVsPtGenUncorrected",admin,2.,10.,name);
+  //  plotTwoGaussFit(file,"hRespVsPtGenUncorrected",admin,2.,10.,name);
 
   // Only central bin sufficient
 //   plotDeltaR(file,"hDeltaRVsPtGen",admin,100.,200.,name);
