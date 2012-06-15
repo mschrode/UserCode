@@ -1,4 +1,4 @@
-// $Id: OutputManager.cc,v 1.7 2012/03/07 13:53:59 mschrode Exp $
+// $Id: OutputManager.cc,v 1.8 2012/06/01 18:32:55 mschrode Exp $
 
 #include "OutputManager.h"
 
@@ -40,6 +40,7 @@ namespace resolutionFit {
   // -------------------------------------------------------------------------------------
   OutputManager::OutputManager(const TString &fileNameBase) {
     can_ = new TCanvas("OutputManager:Canvas","",500,500);
+    can_->SetWindowSize(500+(500-can_->GetWw()),500+(500-can_->GetWh()));
     topCan_ = util::HistOps::createRatioTopCanvas();
     bottomPad_ = 0;
     lastPad_ = can_;
@@ -233,6 +234,16 @@ namespace resolutionFit {
 	outFile_->WriteTObject(lastPad_);
       }
       lastPad_->SetName(nameTmp);
+    }
+  }
+
+
+  // -------------------------------------------------------------------------------------
+  void OutputManagerEPSSingleFiles::saveCanvas(TCanvas* can, const TString &name) const {
+    can->SetName(name);
+    can->SaveAs(name+".eps","eps");
+    if( rootOutput_ && outFile_->IsOpen() ) {
+      outFile_->WriteTObject(can,name);
     }
   }
 }

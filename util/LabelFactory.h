@@ -1,4 +1,4 @@
-//  $Id: LabelFactory.h,v 1.29 2012/06/10 14:53:41 mschrode Exp $
+//  $Id: LabelFactory.h,v 1.30 2012/06/15 00:15:53 mschrode Exp $
 
 #ifndef LABEL_FACTORY_H
 #define LABEL_FACTORY_H
@@ -22,7 +22,7 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: LabelFactory.h,v 1.29 2012/06/10 14:53:41 mschrode Exp $
+  //!  $Id: LabelFactory.h,v 1.30 2012/06/15 00:15:53 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class LabelFactory {
   public:
@@ -33,6 +33,10 @@ namespace util {
 	height = 0.05;
       }
       return height;
+    }
+
+    static double lineHeightMultiCan() {
+      return 1.4*lineHeight();
     }
 
     static double labelTopOffset() { 
@@ -142,13 +146,16 @@ namespace util {
       return txt;
     }
 
-
     static TPaveText *createPaveTextWithOffset(int nEntries, double width, double yOffset) {
+      return createPaveTextWithOffset(nEntries,width,yOffset,lineHeight());
+    }
+      
+    static TPaveText *createPaveTextWithOffset(int nEntries, double width, double yOffset, double lineHeight) {
       double x0 = 0.;
       double y0 = 0.;
       double x1 = 0.;
       double y1 = 0.;
-      cornerCoordinates(nEntries,width,lineHeight(),x0,y0,x1,y1);
+      cornerCoordinates(nEntries,width,lineHeight,x0,y0,x1,y1);
       TPaveText *txt = new TPaveText(x0,y0-yOffset,x1,y1-yOffset,"NDC");
       txt->SetBorderSize(0);
       txt->SetFillColor(0);

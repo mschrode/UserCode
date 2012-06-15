@@ -1,4 +1,4 @@
-// $Id: PlotMaker.h,v 1.27 2012/06/08 21:14:44 mschrode Exp $
+// $Id: PlotMaker.h,v 1.28 2012/06/12 21:31:11 mschrode Exp $
 
 #ifndef PLOT_MAKER_H
 #define PLOT_MAKER_H
@@ -65,7 +65,7 @@ namespace resolutionFit {
       TPaveText* etaPtAveBin(SampleLabel label, unsigned int etaBinIdx, unsigned int ptBinIdx) const;
       TPaveText* etaPtAveBin(unsigned int etaBinIdx, unsigned int ptBinIdx) const;
       TPaveText* etaBin(SampleLabel label, unsigned int etaBinIdx, double pos = 1.) const;
-      TPaveText* etaBin(unsigned int etaBinIdx) const;
+      TPaveText* etaBin(unsigned int etaBinIdx, double pos = 0.95) const;
       TPaveText* sampleBin(SampleLabel label) const;
 
       TString etaRange(unsigned int etaBin, const TString &superscript = "") const;

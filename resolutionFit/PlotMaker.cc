@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.35 2012/06/09 15:58:31 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.36 2012/06/12 21:31:11 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -22,6 +22,7 @@
 #include "../util/HistOps.h"
 #include "../util/LabelFactory.h"
 #include "../util/StyleSettings.h"
+#include "../util/MultiCanvas.h"
 
 
 namespace resolutionFit {
@@ -75,14 +76,14 @@ namespace resolutionFit {
   void PlotMaker::makeAllPlots() const {
     //    plotControlDistributions();
     //    plotPtGenSpectra();
-//     plotAsymmetry();
+    plotAsymmetry();
 //    plotExtrapolation();
 //     plotParticleLevelImbalance();
-//     plotResolution();
-//     plotScaledMCTruth();
-//     plotSystematicUncertainties();
+     plotResolution();
+     plotScaledMCTruth();
+     plotSystematicUncertainties();
 
-    plotAsymmetryComparison();
+//    plotAsymmetryComparison();
 
     //    plotPtSpectra();
   }
@@ -226,12 +227,14 @@ namespace resolutionFit {
 
 	      // Asymmetry distribution for different ptSoft
 	      std::vector<TH1*> hPtAsyms;
+	      std::vector<TGraphAsymmErrors*> gUncerts;
 	      std::vector<TString> labels;
 	      unsigned int step = (par_->nPtSoftBins() > 5 ? 4 : 1);
 	      for(unsigned int ptSoftBinIdx = 0; ptSoftBinIdx < par_->nPtSoftBins(); ptSoftBinIdx += step) {
 		TH1* h = sample->histPtAsym(ptSoftBinIdx);
 		util::HistOps::normHist(h,"width");
 		hPtAsyms.push_back(h);
+		gUncerts.push_back(util::HistOps::getUncertaintyBand(h));
 		labels.push_back(labelMk_->ptSoftRange(ptSoftBinIdx));
 	      }
 
@@ -241,19 +244,21 @@ namespace resolutionFit {
 
 	      for(unsigned int i = 0; i < hPtAsyms.size(); ++i) {
 		util::HistOps::setAxisTitles(hPtAsyms.at(i),"Asymmetry","","events",true);
-		hPtAsyms.at(i)->GetXaxis()->SetRangeUser(-asymMax,asymMax);
+		hPtAsyms.at(i)->GetXaxis()->SetRangeUser(-0.28,0.28);
 		setStyle(sample,hPtAsyms.at(i));
 		hPtAsyms.at(i)->SetLineColor(util::StyleSettings::color(i));
 		hPtAsyms.at(i)->SetLineStyle(1+i);
 		hPtAsyms.at(i)->SetMarkerStyle(0);
 		util::HistOps::setYRange(hPtAsyms.at(i),label->GetSize()+leg->GetNRows()+2);
 		leg->AddEntry(hPtAsyms.at(i),labels.at(i),"L");
+		gUncerts.at(i)->SetFillColor(util::StyleSettings::colorLight(hPtAsyms.at(i)->GetLineColor()));
 	      }
 
 	      out_->nextMultiPad(sample->label()+": PtAsym "+ptBin->toTString());
-	      hPtAsyms.front()->Draw("HISTE1");
-	      for(unsigned int i = 1; i < hPtAsyms.size(); ++i) {
-		hPtAsyms.at(i)->Draw("HISTE1same");
+	      hPtAsyms.front()->Draw("HIST");
+	      for(unsigned int i = 0; i < hPtAsyms.size(); ++i) {
+		gUncerts.at(i)->Draw("E3same");
+		hPtAsyms.at(i)->Draw("HISTsame");
 	      }
 	      label->Draw("same");
 	      leg->Draw("same");
@@ -262,6 +267,7 @@ namespace resolutionFit {
 	    
 	      for(unsigned int i = 0; i < hPtAsyms.size(); ++i) {
 		delete hPtAsyms.at(i);
+		delete gUncerts.at(i);
 	      }
 	      delete label;
 	      delete leg;
@@ -2207,16 +2213,10 @@ namespace resolutionFit {
 
     // +++++ Resolution per Sample ++++++++++++++++++++++++++++++++++++++
     // Loop over eta bins
-//     TFile* fileData = new TFile("MaxLikeResData.root","RECREATE");
-//     TFile* fileMC = new TFile("MaxLikeResMC.root","RECREATE");
-
     for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
       const EtaBin* etaBin = *etaBinIt;
       const unsigned int etaBinIdx = etaBin->etaBin();
       if( par_->verbosity() > 1 ) std::cout << "  Eta " << etaBinIdx << std::endl;
-
-//       TDirectory* outDirMC = fileMC->mkdir("Eta"+util::toTString(etaBin->etaBin()));
-//       TDirectory* outDirData = fileData->mkdir("Eta"+util::toTString(etaBin->etaBin()));
 
       // Loop over FitResultTypes
       for(FitResultTypeIt rIt = etaBin->fitResultTypesBegin(); rIt != etaBin->fitResultTypesEnd(); ++rIt) {
@@ -2438,6 +2438,213 @@ namespace resolutionFit {
       } // End of loop over FitResultTypes
     } // End of loop over eta bins
 
+
+    // +++++ Multi Canvas ++++++++++++++++++++++++++++++++++++++++++++++++
+
+    if( par_->verbosity() > 1 ) std::cout << "  MultiCanvas plots" << std::endl;
+    TH1* hFrame = new TH1D("hFrame",";p^{true}_{T} (GeV);#sigma / p^{true}_{T}  ",10000,xMinPt_,xMaxPt_);
+    hFrame->GetYaxis()->SetRangeUser(yMinExtraRes_,yMaxExtraRes_);
+
+    // Loop over SampleLabels
+    if( par_->verbosity() > 1 ) std::cout << "    Resolution per sample" << std::endl;
+    for(SampleTypeIt sTIt = etaBins_.front()->sampleTypesBegin();
+ 	sTIt != etaBins_.front()->sampleTypesEnd(); ++sTIt) {
+      SampleLabel sampleLabel = sTIt->first;
+      if( par_->verbosity() > 1 ) std::cout << "      " << sampleLabel << std::endl;	
+
+      util::MultiCanvas* mc = new util::MultiCanvas("Resolution",3,2,5,true);
+      TLegend* leg = util::LabelFactory::createLegendWithOffset(2,0.25+util::LabelFactory::lineHeightMultiCan(),util::LabelFactory::lineHeightMultiCan());
+      mc->adjustLegend(leg);
+
+      // Loop over eta bins
+      for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+	const EtaBin* etaBin = *etaBinIt;
+	if( par_->verbosity() > 1 ) std::cout << "        Eta " << etaBin->etaBin() << "   " << std::flush;	
+
+	// Only first FitResultType for the time being
+	FitResult::Type fitResType = *(etaBin->fitResultTypesBegin());
+	
+	TGraphAsymmErrors* gResCorr = etaBin->correctedResolution(sampleLabel,fitResType);
+	setStyle(sampleLabel,gResCorr);
+	mc->markForDeletion(gResCorr);
+	
+	// MC truth resolution function
+	TF1* mcTruth = etaBin->mcTruthResoFunc("MCTruthReso_Eta"+util::toTString(etaBin->etaBin()));
+	mcTruth->SetLineColor(kRed);
+	mcTruth->SetLineWidth(lineWidth_);
+	mc->markForDeletion(mcTruth);
+
+	// Ratio of measurement and mc truth
+	TGraphAsymmErrors* gRatio = util::HistOps::createRatioGraph(gResCorr,mcTruth);
+	gRatio->SetLineWidth(lineWidth_);
+	mc->markForDeletion(gRatio);
+	
+	// Create frames for main and ratio plots
+	TH1* mFrame = mc->mainFrame(hFrame,etaBin->etaBin());
+	TH1* rFrame = mc->ratioFrame(hFrame,"#frac{Meas.}{Truth}",yMinResRatio_,yMaxResRatio_,etaBin->etaBin());
+	rFrame->SetLineWidth(lineWidth_);
+	rFrame->SetLineColor(mcTruth->GetLineColor());
+
+	// Labels
+	TPaveText* label = labelMk_->etaBin(etaBin->etaBin(),0.45);
+	mc->markForDeletion(label);
+	mc->adjustPaveText(label);
+	mc->canvas()->cd();
+	TPad* padt = mc->mainPad(etaBin->etaBin());
+	padt->Draw();
+	padt->cd();
+	mFrame->Draw();
+	mcTruth->Draw("same");
+	gResCorr->Draw("PE1same");
+	label->Draw("same");
+	TPad* padr = mc->ratioPad(etaBin->etaBin());
+	padr->Draw();
+	padr->cd();
+	rFrame->Draw();
+	gRatio->Draw("PE1same");
+	gPad->RedrawAxis();
+ 	if( etaBin->etaBin() == 0 ) {
+ 	  leg->AddEntry(gResCorr,"Measurement","P");
+ 	  leg->AddEntry(mcTruth,"MC Truth","L");
+ 	}
+	if( par_->verbosity() > 1 ) std::cout << "ok" << std::endl;
+      } // End of loop over eta bins
+
+      TPaveText* label = util::LabelFactory::createPaveTextWithOffset(1,1.,0.25,util::LabelFactory::lineHeightMultiCan());
+      label->AddText(labelMk_->sample(sampleLabel));
+      mc->markForDeletion(label);
+      mc->adjustPaveText(label);
+      
+      mc->canvas()->cd();
+      TPad* padt = mc->mainPad(5);
+      padt->Draw();
+      padt->cd();
+      label->Draw();
+      leg->Draw("same");      
+      mc->moreLogLabelsX();
+      mc->noExponentX();
+      mc->setLogx();
+      out_->saveCanvas(mc->canvas(),histFileName("Resolution",sampleLabel));
+      delete mc;
+      delete leg;
+    } // End of loop over SampleTypes
+
+
+    if( par_->verbosity() > 1 ) std::cout << "  Sample comparison plots" << std::endl;
+    // Only first FitResultType for the time being
+    FitResult::Type fitResType = *(etaBins_.front()->fitResultTypesBegin());
+
+    // Loop over to-be-compare Samples
+    for(ComparedSamplesIt sCIt = etaBins_.front()->comparedSamplesBegin();
+	sCIt != etaBins_.front()->comparedSamplesEnd(); ++sCIt) {
+      SampleLabel sLabel1 = (*sCIt)->label1();
+      SampleLabel sLabel2 = (*sCIt)->label2();
+      if( par_->verbosity() > 1 ) std::cout << "    " << sLabel1 << " vs " << sLabel2 << ":" <<  std::endl;
+
+      util::MultiCanvas* mc = new util::MultiCanvas("Resolution",3,2,5,true);
+      TLegend* leg = util::LabelFactory::createLegendWithOffset(4,0.2,util::LabelFactory::lineHeightMultiCan());
+      mc->adjustLegend(leg);
+      
+      // Loop over eta bins
+      for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+	const EtaBin* etaBin = *etaBinIt;
+	if( par_->verbosity() > 1 ) std::cout << "      Eta " << etaBin->etaBin() << std::endl;
+
+	// Create graphs of extrapolated resolution corrected for PLI
+	TGraphAsymmErrors* gRes1 = etaBin->correctedResolution(sLabel1,fitResType);
+	setStyle(sLabel1,gRes1);
+	mc->markForDeletion(gRes1);
+	TGraphAsymmErrors* gRes2 = etaBin->correctedResolution(sLabel2,fitResType);
+	setStyle(sLabel2,gRes2);
+	mc->markForDeletion(gRes2);
+	TGraphAsymmErrors* gRatio = util::HistOps::createRatioGraph(gRes1,gRes2);
+	gRatio->SetLineWidth(lineWidth_);
+	mc->markForDeletion(gRatio);
+
+	TGraphAsymmErrors* gSystErr1 = etaBin->correctedResolutionSystUncert(sLabel1,sLabel2,fitResType);
+	gSystErr1->SetFillColor(kYellow);
+	gSystErr1->SetMarkerStyle(1);
+	gSystErr1->SetMarkerColor(gSystErr1->GetFillColor());
+	gSystErr1->SetLineColor(gSystErr1->GetFillColor());
+	gSystErr1->SetLineWidth(1);
+	gSystErr1->SetFillStyle(1001);
+	mc->markForDeletion(gSystErr1);
+	
+	TGraphAsymmErrors* gRatioSystErr = static_cast<TGraphAsymmErrors*>(gRatio->Clone());
+	for(int i = 0; i < gRatioSystErr->GetN(); ++i) {
+	  double res2 = gRes2->GetY()[i];
+	  gRatioSystErr->GetEYlow()[i] = gSystErr1->GetEYlow()[i]/res2;
+	  gRatioSystErr->GetEYhigh()[i] = gSystErr1->GetEYhigh()[i]/res2;
+	}
+	gRatioSystErr->SetFillColor(gSystErr1->GetFillColor());
+	gRatioSystErr->SetMarkerStyle(1);
+	gRatioSystErr->SetMarkerColor(gRatioSystErr->GetFillColor());
+	gRatioSystErr->SetLineColor(gRatioSystErr->GetFillColor());
+	gRatioSystErr->SetLineWidth(1);
+	gRatioSystErr->SetFillStyle(gSystErr1->GetFillStyle());
+	mc->markForDeletion(gRatioSystErr);
+
+	// Hack to remove first point in case of failed fits
+	if( gRes1->GetY()[0] < 0.02 ) {
+	  gRes1->RemovePoint(0);
+	  gRatio->RemovePoint(0);
+	  gSystErr1->RemovePoint(0);
+	  gRatioSystErr->RemovePoint(0);
+	}
+
+	// Create frames for main and ratio plots
+	TH1* mFrame = mc->mainFrame(hFrame,etaBin->etaBin());
+	TH1* rFrame = mc->ratioFrame(hFrame,"#frac{Data}{Sim.}",0.82,1.38,etaBin->etaBin());
+	rFrame->SetLineWidth(lineWidth_);
+	rFrame->SetLineColor(gRes2->GetLineColor());
+	
+	// Labels
+	TPaveText* label = labelMk_->etaBin(etaBin->etaBin(),0.45);
+	mc->markForDeletion(label);
+	mc->adjustPaveText(label);
+
+	mc->canvas()->cd();
+	TPad* padt = mc->mainPad(etaBin->etaBin());
+	padt->Draw();
+	padt->cd();
+	mFrame->Draw();
+	gSystErr1->Draw("PE3same");
+	gRes1->Draw("PE1same");
+	gRes2->Draw("PE1same");
+	label->Draw("same");
+	TPad* padr = mc->ratioPad(etaBin->etaBin());
+	padr->Draw();
+	padr->cd();
+	rFrame->Draw("][");
+	gRatioSystErr->Draw("PE3same");
+	rFrame->Draw("][same");
+	gRatio->Draw("PE1same");
+	gPad->RedrawAxis();
+
+	if( etaBin->etaBin() == 0 ) {
+	  leg->AddEntry(gRes1,labelMk_->sample(sLabel1),"P");
+	  leg->AddEntry(gRes2,labelMk_->sample(sLabel2),"P");
+	  leg->AddEntry(gRes1,"Extrapolation Uncertainty #delta#sigma_{ex}","L");
+	  leg->AddEntry(gSystErr1,"Systematic Uncertainty","F");
+	}
+      } // End of loop over eta bins
+      
+      if( par_->verbosity() > 1 ) std::cout << "    Storing MultiCanvas" << std::endl;
+      mc->canvas()->cd();
+      TPad* padt = mc->mainPad(5);
+      padt->Draw();
+      padt->cd();
+      leg->Draw();      
+      mc->moreLogLabelsX();
+      mc->noExponentX();
+      mc->setLogx();
+      out_->saveCanvas(mc->canvas(),histFileName("Resolution",sLabel1,sLabel2,fitResType));
+      delete mc;
+      delete leg;
+    } // End of loop over to-be-compared samples
+
+    delete hFrame;
+    
     if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotResolution(): Leaving" << std::endl;
   }
 
@@ -2528,8 +2735,94 @@ namespace resolutionFit {
 	  } // End of loop over FitResultTypes
 	} // End of loop over eta bins
       } // End of loop over SampleLabels
-
       
+      
+      if( par_->verbosity() > 1 ) std::cout << "  Sample comparison plots" << std::endl;
+      // Only first FitResultType for the time being
+      FitResult::Type fitResType = *(etaBins_.front()->fitResultTypesBegin());
+      
+      // Loop over to-be-compare Samples
+      for(ComparedSamplesIt sCIt = etaBins_.front()->comparedSamplesBegin();
+	  sCIt != etaBins_.front()->comparedSamplesEnd(); ++sCIt) {
+	SampleLabel sLabel1 = (*sCIt)->label1();
+	SampleLabel sLabel2 = (*sCIt)->label2();
+	if( par_->verbosity() > 1 ) std::cout << "    " << sLabel1 << " vs " << sLabel2 << ":" <<  std::endl;
+      
+	util::MultiCanvas* mc = new util::MultiCanvas("ResolutionRatio",3,2,5,false);
+	TLegend* leg = util::LabelFactory::createLegendWithOffset(4,0.2,util::LabelFactory::lineHeightMultiCan());
+	mc->adjustLegend(leg);
+      
+	// Loop over eta bins
+	for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+	  const EtaBin* etaBin = *etaBinIt;
+	  if( par_->verbosity() > 1 ) std::cout << "      Eta " << etaBin->etaBin() << std::endl;
+	  if( etaBin->hasKValue(sLabel1,sLabel2,fitResType) ) {
+	  
+	    // Data-MC ratio (k-Value) with statistical und systematic uncertainty
+	    TGraphAsymmErrors* gRatio = etaBin->ratioGraph(sLabel1,sLabel2,fitResType);
+	    setStyle(sLabel1,gRatio);
+	    mc->markForDeletion(gRatio);
+	    TF1* kValueLine = etaBin->kValueLine(sLabel1,sLabel2,fitResType,"kValueLine",xMinPt_,xMaxPt_);
+	    kValueLine->SetLineWidth(lineWidth_);
+	    mc->markForDeletion(kValueLine);
+	    TGraphAsymmErrors* kStatBand = etaBin->kValueStatBand(sLabel1,sLabel2,fitResType,xMinPt_,xMaxPt_);
+	    kStatBand->SetFillStyle(3445);
+	    kStatBand->SetFillColor(kValueLine->GetLineColor());
+	    kStatBand->SetLineColor(kValueLine->GetLineColor());
+	    kStatBand->SetLineWidth(lineWidth_);
+	    mc->markForDeletion(kStatBand);
+	    TGraphAsymmErrors* kSystBand = etaBin->kValueSystBand(sLabel1,sLabel2,fitResType,xMinPt_,xMaxPt_);
+	    mc->markForDeletion(kSystBand);
+	  
+	    // Labels
+	    TPaveText* label = labelMk_->etaBin(etaBin->etaBin(),0.45);
+	    mc->adjustPaveText(label);
+	    if( etaBin->etaBin() == 0 ) {
+	      leg->AddEntry(gRatio,"Measurement ("+labelMk_->lumi()+")","P");
+	      leg->AddEntry(kValueLine,"Fitted #rho_{res}","L");
+	      leg->AddEntry(kStatBand,"Extrapolation Uncertainty #delta#sigma_{ex}","F");
+	      leg->AddEntry(kSystBand,"Systematic Uncertainty","F");
+	    }
+
+	    TH1* hFrame = util::HistOps::createRatioFrame(xMinPt_,xMaxPt_,0.75,1.95,"p^{true}_{T} (GeV)","#sigma(Data) / #sigma(Simulation)  ");
+	    hFrame->GetYaxis()->SetRangeUser(0.71,2.1);
+	    if( etaBin->etaBin() > 3 ) hFrame->GetYaxis()->SetRangeUser(0.5,2.5);
+	    hFrame->SetTitle(title_);
+	    hFrame->SetLineWidth(lineWidth_);
+	    mc->markForDeletion(hFrame);
+	    TH1* mFrame = mc->mainFrame(hFrame,etaBin->etaBin());
+
+	    mc->canvas()->cd();
+	    TPad* padt = mc->mainPad(etaBin->etaBin());
+	    padt->Draw();
+	    padt->cd();
+	    mFrame->Draw("][");
+	    kSystBand->Draw("E2same");
+	    kStatBand->Draw("E2same");
+	    kValueLine->Draw("same");
+	    gRatio->Draw("PE1same");
+	    mFrame->Draw("][same");
+	    label->Draw("same");
+	    gPad->RedrawAxis();
+	  } // End hasKValue
+	} // End of loop over eta bins
+      
+	if( par_->verbosity() > 1 ) std::cout << "    Storing MultiCanvas" << std::endl;
+	mc->canvas()->cd();
+	TPad* padt = mc->mainPad(5);
+	padt->Draw();
+	padt->cd();
+	leg->Draw();      
+	mc->moreLogLabelsX();
+	mc->noExponentX();
+	mc->setLogx();
+	out_->saveCanvas(mc->canvas(),histFileName("ResolutionRatio",sLabel1,sLabel2,fitResType));
+	delete mc;
+	delete leg;
+      }
+
+
+    
       // +++++ kValues vs eta +++++++++++++++++++++++++++++++++++++++++++++++++
       // Loop over FitResultTypes
       for(FitResultTypeIt rIt = etaBins_.front()->fitResultTypesBegin(); rIt != etaBins_.front()->fitResultTypesEnd(); ++rIt) {
@@ -2586,7 +2879,7 @@ namespace resolutionFit {
 	    label->Draw("same");
 	    leg->Draw("same");
 	    gPad->RedrawAxis();
-	    out_->saveCurrentPad(histFileName("ResolutionRatio",sLabel1,sLabel2,fitResType));
+	    out_->saveCurrentPad(histFileName("Rho",sLabel1,sLabel2,fitResType));
     
 	    delete hFrame;
 	    delete hKValueVsEta;
@@ -2890,6 +3183,123 @@ namespace resolutionFit {
       } // End of loop over FitResultTypes
     } // End of loop over eta bins
 
+
+    // +++++ MultiCanvas ++++++++++++++++++++++++++++++++++++
+
+    // Loop over FitResultTypes
+    for(FitResultTypeIt rIt = etaBins_.front()->fitResultTypesBegin(); rIt != etaBins_.front()->fitResultTypesEnd(); ++rIt) {
+      FitResult::Type fitResType = *rIt;
+      if( par_->verbosity() > 1 ) std::cout << "    " << FitResult::toString(fitResType) << std::endl;
+      
+      // Loop over SampleLabels
+      for(SampleTypeIt sTIt = etaBins_.front()->sampleTypesBegin(); sTIt != etaBins_.front()->sampleTypesEnd(); ++sTIt) {
+	SampleLabel sampleLabel = sTIt->first;
+	Sample::Type sampleType = sTIt->second;
+	if( par_->verbosity() > 1 ) std::cout << "      " << sampleLabel << std::endl;
+
+	const SystematicUncertainty* unct = 0;
+	if( etaBins_.front()->findSystematicUncertainty(sampleLabel,fitResType,unct) ) {
+	  
+	  util::MultiCanvas* mc = new util::MultiCanvas("RelativeSystematicUncertainty",3,2,5,false);
+	  TLegend* leg = util::LabelFactory::createLegendWithOffset(unct->nComponents(),0.1+util::LabelFactory::lineHeightMultiCan(),util::LabelFactory::lineHeightMultiCan());
+	  mc->adjustLegend(leg);
+	  mc->markForDeletion(leg);
+	  
+	  for(EtaBinIt etaBinIt = etaBins_.begin(); etaBinIt != etaBins_.end(); ++etaBinIt) {
+	    const EtaBin* etaBin = *etaBinIt;
+	    const unsigned int etaBinIdx = etaBin->etaBin();
+	    if( par_->verbosity() > 1 ) std::cout << "  Eta " << etaBinIdx << std::endl;
+	    
+	    // If uncertainties are assigned to this sample and 
+	    // fit result type, get them
+	    const SystematicUncertainty* uncert = 0;
+	    if( etaBin->findSystematicUncertainty(sampleLabel,fitResType,uncert) ) {
+	      
+	      // Uncertainty bands and labels for components
+	      // and total uncertainty
+	      std::vector<TGraphAsymmErrors*> bands;
+	      for(SystUncertIt it = uncert->componentsBegin(); it != uncert->componentsEnd(); ++it) {
+		TGraphAsymmErrors* b = (*it)->relUncertSteps();
+		// Scale to percent
+		for(int i = 0; i < b->GetN(); ++i) {
+		  b->GetEYlow()[i] = 100.*b->GetEYlow()[i];
+		  b->GetEYhigh()[i] = 100.*b->GetEYhigh()[i];
+		}
+		
+		// Add components in quadrature
+		if( bands.size() > 0 ) {
+		  for(int i = 0; i < b->GetN(); ++i) {
+		    double errPrev = bands.back()->GetEYlow()[i];
+		    double err = b->GetEYlow()[i];
+		    b->GetEYlow()[i] = sqrt( err*err + errPrev*errPrev );
+		    errPrev = bands.back()->GetEYhigh()[i];
+		    err = b->GetEYhigh()[i];
+		    b->GetEYhigh()[i] = sqrt( err*err + errPrev*errPrev );
+		  }
+		}
+		bands.push_back(b);
+		mc->markForDeletion(b);
+		if( etaBin->etaBin() == 0 ) {
+		  leg->AddEntry(b,(*it)->label(),"F");
+		}
+	      }
+
+	      
+	      // hack for the time being to catch failed fit
+	      if( bands.back()->GetEYhigh()[0] > 60. ) {
+		for(std::vector<TGraphAsymmErrors*>::iterator it = bands.begin();
+		    it != bands.end(); ++it) {
+		  (*it)->RemovePoint(0);
+		  (*it)->RemovePoint(1);
+		}
+	      }
+	      
+	      TPaveText* label = labelMk_->etaBin(etaBin->etaBin(),0.45);
+	      mc->adjustPaveText(label);
+	      mc->markForDeletion(label);
+	      
+	      // Create frame
+	      TH1* hFrame = util::HistOps::createRatioFrame(xMinPt_,xMaxPt_,-38,38,"p^{ave}_{T} (GeV)","Relative Uncertainty on #rho_{res} (%)");
+	      for(int bin = 1; bin <= hFrame->GetNbinsX(); ++bin) {
+		hFrame->SetBinContent(bin,0.);
+	      }
+	      hFrame->SetLineWidth(lineWidth_);
+	      if( etaBinIdx == 4 ) {
+		hFrame->GetYaxis()->SetRangeUser(-68,68);
+	      }
+	      util::HistOps::setAxisTitles(hFrame,"p^{ave}_{T}","GeV","Relative Uncertainty on #rho_{res} (%)");
+	      mc->markForDeletion(hFrame);
+	      TH1* mFrame = mc->mainFrame(hFrame,etaBin->etaBin());
+	      
+	      mc->canvas()->cd();
+	      TPad* padt = mc->mainPad(etaBin->etaBin());
+	      padt->Draw();
+	      padt->cd();
+	      mFrame->Draw("][");
+	      for(std::vector<TGraphAsymmErrors*>::reverse_iterator it = bands.rbegin();
+		  it != bands.rend(); ++it) {
+		(*it)->Draw("E3same");
+	      }
+	      mFrame->Draw("][same");
+	      label->Draw("same");
+	      gPad->RedrawAxis();
+	    } // End has systematic uncertainty
+	  } // End of loop over eta bins
+	  
+	  if( par_->verbosity() > 1 ) std::cout << "    Storing MultiCanvas" << std::endl;
+	  mc->canvas()->cd();
+	  TPad* padt = mc->mainPad(5);
+	  padt->Draw();
+	  padt->cd();
+	  leg->Draw();      
+	  mc->moreLogLabelsX();
+	  mc->noExponentX();
+	  mc->setLogx();
+	  out_->saveCanvas(mc->canvas(),histFileName("RelativeSystematicUncertainty",sampleLabel));
+	  delete mc;
+	}
+      }	// End of loop over sample labels
+    } // End of loop over fit result types
 
     if( par_->verbosity() > 1 ) std::cout << "PlotMaker::plotSystematicUncertainties(): Leaving" << std::endl;    
   }
@@ -3567,8 +3977,8 @@ namespace resolutionFit {
 
 
   // -------------------------------------------------------------------------------------
-  TPaveText* PlotMaker::LabelMaker::etaBin(unsigned int etaBinIdx) const {
-    TPaveText* lab = util::LabelFactory::createPaveText(1,0.95);
+  TPaveText* PlotMaker::LabelMaker::etaBin(unsigned int etaBinIdx, double pos) const {
+    TPaveText* lab = util::LabelFactory::createPaveText(1,pos);
     lab->AddText(util::LabelFactory::etaCut(par_->etaMin(etaBinIdx),par_->etaMax(etaBinIdx)));
 
     return lab;

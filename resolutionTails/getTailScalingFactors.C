@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.19 2012/06/10 16:02:39 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.20 2012/06/12 21:29:44 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -562,7 +562,7 @@ void getTailScalingFactors(double  nSigTailStart,
     leg->AddEntry(hAsymTailStartEff,ASYM_TAIL_START_EFF,"L");
 
     // Plot
-    TCanvas* can = new TCanvas("can","",500,500);
+    TCanvas* can = util::HistOps::createTCanvas("can","",500,500);
     can->cd();
     hAsymTailStart->GetYaxis()->SetRangeUser(0.071,0.169);
     hAsymTailStart->Draw("HIST");
@@ -661,7 +661,7 @@ void getTailScalingFactors(double  nSigTailStart,
       leg->AddEntry(hFAsymMCSmearedGauss,MCGAUSS,"L");
       
       // Plot
-      can = new TCanvas("can","",500,500);
+      can = util::HistOps::createTCanvas("can","",500,500);
       can->cd();
       double min = 100.*minFAsym.at(pt3Bin);
       double max = 100.*maxFAsym.at(pt3Bin);
@@ -727,7 +727,7 @@ void getTailScalingFactors(double  nSigTailStart,
     } // End of loop over pt3 bins
     
     // Plots
-    can = new TCanvas("can","",500,500);
+    can = util::HistOps::createTCanvas("can","",500,500);
     
     TH1* hDeltaFrame = static_cast<TH1D*>(hDelta->Clone("hDeltaFrame_Eta"+util::toTString(etaBin)));
     hDeltaFrame->SetTitle(HEADER);
@@ -936,7 +936,7 @@ void EtaPtBin::plotExtrapolation(const TString &outNameId) const {
   if( DEBUG ) std::cout << "Entering EtaPtBin::plotExtrapolation()" << std::endl;
 
   // Extrapolation MC Closure
-  TCanvas* can = new TCanvas("can","",500,500);
+  TCanvas* can = util::HistOps::createTCanvas("can","",500,500);
   can->cd();
   TH1* hFrame = new TH1D("hFrame",HEADER+";Threshold "+util::LabelFactory::pt3RelMax(),1000,0.,PT3PLOTMAX);
   hFrame->SetNdivisions(505);
@@ -1586,7 +1586,7 @@ void Pt3Bin::plotAsymmetryDataMC(const TString &outNameId) const {
   hAsymMC_->GetXaxis()->SetRangeUser(-1.,1.);
 
   TString canName = outNameId+"PtAsym";
-  TCanvas *can = new TCanvas(canName,canName,500,500);
+  TCanvas *can = util::HistOps::createTCanvas(canName,canName,500,500);
   can->cd();
   hAsymMC_->GetXaxis()->SetRangeUser(0.,1.);
   hAsymMC_->Draw("HISTE");
@@ -1689,7 +1689,7 @@ void Pt3Bin::plotAsymmetryDataMCSmeared(const TString &outNameId, double nSigTai
   hAsymMCSmeared_->GetXaxis()->SetRangeUser(0.,1.);
 
   TString canName = outNameId+"PtAsym";
-  TCanvas *can = new TCanvas(canName,canName,500,500);
+  TCanvas *can = util::HistOps::createTCanvas(canName,canName,500,500);
   can->cd();
   hAsymMCSmeared_->Draw("HISTE");
   hAsymData_->Draw("PE1same");
@@ -1820,7 +1820,7 @@ void Pt3Bin::plotAsymmetryDataMCSmeared(const TString &outNameId, double nSigTai
 void Pt3Bin::plotSpectra(const TString &outNameId) const {
 
   TString canName = outNameId+"_PtAveSpectrum";
-  TCanvas *can = new TCanvas(canName,canName,500,500);
+  TCanvas *can = util::HistOps::createTCanvas(canName,canName,500,500);
 
   // Populated x-region
   int xMinBin = 1;
@@ -1910,7 +1910,7 @@ void Pt3Bin::plotSymMCTruthResponse(const TString &outNameId) const {
   hSymResp_->GetXaxis()->SetRangeUser(0.,2.);
 
   TString canName = outNameId+"_SymMCTruthResponse";
-  TCanvas *can = new TCanvas(canName,canName,500,500);
+  TCanvas *can = util::HistOps::createTCanvas(canName,canName,500,500);
   can->cd();
   hSymResp_->Draw("HIST");
   //  fGaussMCTruth_->Draw("same");
@@ -1962,7 +1962,7 @@ void Pt3Bin::plotToyAsymmetry(const TString &outNameId) const {
   hAsymMCSmeared_->GetXaxis()->SetRangeUser(0.,1.);
 
   TString canName = outNameId+"_ToyMC";
-  TCanvas *can = new TCanvas(canName,canName,500,500);
+  TCanvas *can = util::HistOps::createTCanvas(canName,canName,500,500);
   can->cd();
   hAsymMCSmeared_->Draw("HIST");
   win->Draw("same");
@@ -2629,7 +2629,7 @@ void plotFinalResult(const TString &fileName) {
     hScaleFrame->GetYaxis()->SetTitle(SCALE);
     hScaleFrame->GetXaxis()->SetMoreLogLabels();
     hScaleFrame->GetXaxis()->SetNoExponent();
-    TCanvas* canScale = new TCanvas(outNamePrefix+"_canScale_"+util::toTString(etaBin),"Scale Factors Eta "+util::toTString(etaBin),500,500);
+    TCanvas* canScale = util::HistOps::createTCanvas(outNamePrefix+"_canScale_"+util::toTString(etaBin),"Scale Factors Eta "+util::toTString(etaBin),500,500);
     canScale->cd();
     hScaleFrame->Draw("HIST");
     gUncertAbs->Draw("E2same");
@@ -2663,7 +2663,7 @@ void plotFinalResult(const TString &fileName) {
     hUncertsFrame->GetXaxis()->SetMoreLogLabels();
     hUncertsFrame->GetXaxis()->SetNoExponent();
     hUncertsFrame->GetYaxis()->SetTitle("Relative Uncertainty on "+SCALE+"  (%)");
-    TCanvas* canRelUncerts = new TCanvas(outNamePrefix+"_canRelUncerts_"+util::toTString(etaBin),"Relative Uncertainties Eta "+util::toTString(etaBin),500,500);
+    TCanvas* canRelUncerts = util::HistOps::createTCanvas(outNamePrefix+"_canRelUncerts_"+util::toTString(etaBin),"Relative Uncertainties Eta "+util::toTString(etaBin),500,500);
     canRelUncerts->cd();
     hUncertsFrame->Draw("HIST");
     for(std::vector<TGraphAsymmErrors*>::reverse_iterator it = gUncertStack.rbegin();
@@ -2880,7 +2880,7 @@ void plotEvolution() {
 			      hEvoFAsymData->GetBinContent(hEvoFAsymData->GetMaximumBin()));
  	double delta = max - min;
  	hEvoFAsymMC->GetYaxis()->SetRangeUser(min,max+delta);
-	TCanvas* can = new TCanvas("can","",500,500);
+	TCanvas* can = util::HistOps::createTCanvas("can","",500,500);
 	can->cd();
 	hEvoFAsymMC->Draw("HIST");
 	gEvoFAsymMC->Draw("E2same");
@@ -3007,7 +3007,7 @@ void plotEvolutionFinalPlots() {
       }
       label->AddText(util::LabelFactory::ptAveCut(binAdm->ptMin(etaBin,ptBin),binAdm->ptMax(etaBin,ptBin)));
 
-      TCanvas* can = new TCanvas("can","Scale factor evolution (Eta "+util::toTString(etaBin)+", Pt "+util::toTString(ptBin),500,500);
+      TCanvas* can = util::HistOps::createTCanvas("can","Scale factor evolution (Eta "+util::toTString(etaBin)+", Pt "+util::toTString(ptBin),500,500);
       can->cd();
       hEvoFrame->Draw("HIST");
       gEvoSyst->Draw("E2same");

@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.52 2012/06/10 14:53:41 mschrode Exp $
+// $Id: HistOps.h,v 1.53 2012/06/15 00:15:53 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.52 2012/06/10 14:53:41 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.53 2012/06/15 00:15:53 mschrode Exp $
   class HistOps
   {
   public:
@@ -44,7 +44,7 @@ namespace util
     // -------------------------------------------------------------------------------------
     static TCanvas *createTCanvas(const TString &name, const TString& title, int xw, int yw) {
       TCanvas* c = new TCanvas(name,title,xw,yw);
-      c->SetWindowSize(xw+(xw-c->GetWw()),yw+(yw-c->GetWh())); // No clue why I need this line: ROOT sucks!
+      c->SetWindowSize(xw+(xw-c->GetWw()),yw+(yw-c->GetWh())); // No clue why I need to ADD this line and why it's not default; ROOT is really NOT userfriendly.
       return c;
     }
 
@@ -629,6 +629,7 @@ namespace util
     static TCanvas *createRatioTopCanvas(const TString &name = "") {
       COUNT_++;      
       TCanvas *topCan = new TCanvas(name==""?"TopRatio"+toTString(COUNT_):name,name,500,500);
+      topCan->SetWindowSize(500+(500-topCan->GetWw()),500+(500-topCan->GetWh()));
       topCan->SetBottomMargin(0.2 + 0.8*topCan->GetBottomMargin()-0.2*topCan->GetTopMargin());
       return topCan;
     }

@@ -1,4 +1,4 @@
-// $Id: plotControlDistributions.C,v 1.7 2012/06/05 22:44:46 mschrode Exp $
+// $Id: plotControlDistributions.C,v 1.8 2012/06/09 15:59:16 mschrode Exp $
 
 //!  Control and n-1 distributions for
 //!  histograms in Kalibri skims from
@@ -103,7 +103,7 @@ void plotNMinus1(const TString &fileNameData, const TString &fileNameMC, const T
 
   // Plots
   util::HistOps::setYRange(hMC,label->GetSize()+leg->GetNRows(),(logY ? 3E-1 : -1.));
-  TCanvas* can = new TCanvas("can","N-1 plot",500,500);
+  TCanvas* can = util::HistOps::createTCanvas("can","N-1 plot",500,500);
   can->cd();
   hMC->Draw("HIST");
   hData->Draw("PE1same");
@@ -208,7 +208,7 @@ void plotNMinus1Eta(const TString &fileNameData, const TString &fileNameMC, cons
 
   // Plots
   util::HistOps::setYRange(hEtaNMin1MC,label->GetSize()+3,logY?3E-1:-1.);
-  TCanvas* can = new TCanvas("can","N-1 plot",500,500);
+  TCanvas* can = util::HistOps::createTCanvas("can","N-1 plot",500,500);
   can->cd();
   hEtaNMin1MC->Draw("HIST");
   hEtaMC->Draw("HISTsame");
@@ -287,7 +287,7 @@ void plotPtSpectrum(const TString &fileNameData, const TString &fileNameMC, cons
 
   // Plots
   util::HistOps::setYRange(hMC,label->GetSize()+leg->GetNRows(),(logY ? 3E-1 : -1.));
-  TCanvas* can = new TCanvas("can","control plot",500,500);
+  TCanvas* can = util::HistOps::createTCanvas("can","control plot",500,500);
   can->cd();
   hMC->Draw("HIST");
   hData->Draw("PE1same");
@@ -326,7 +326,7 @@ void plotCorrelations(bool data, const TString &fileName, const sampleTools::Bin
   TPaveText* label = createLabel(binningAdmin,etaBin,ptBin,selectionLabel,(data?"DATA":"MC"));
 
   // Plots
-  TCanvas* can = new TCanvas(outNamePrefix+binId,outNamePrefix+binId,550,500);
+  TCanvas* can = util::HistOps::createTCanvas(outNamePrefix+binId,outNamePrefix+binId,550,500);
   can->cd();
   can->SetMargin(gStyle->GetPadLeftMargin(),gStyle->GetPadRightMargin()+(1.*can->GetWindowWidth()/can->GetWindowHeight())-1.,gStyle->GetPadBottomMargin(),gStyle->GetPadTopMargin());
   h2->Draw("COLZ");
@@ -357,7 +357,7 @@ void plotExpectedDataPileUpDistribution(const TString &fileName, const TString &
   TPaveText* label = util::LabelFactory::createPaveText(1);
   label->AddText("#LTN_{PU}#GT = "+util::toTString(h->GetMean(),4)+" #pm "+util::toTString(h->GetMeanError(),4));
   
-  TCanvas* c = new TCanvas(outNamePrefix+"_ExpectedPileUpDistribution","Expected pile-up distribution",500,500);
+  TCanvas* c = util::HistOps::createTCanvas(outNamePrefix+"_ExpectedPileUpDistribution","Expected pile-up distribution",500,500);
   c->cd();
   h->Draw("HIST");
   label->Draw("same");
@@ -390,7 +390,7 @@ void plotUnderlyingSpectra(const TString &fileName, const sampleTools::BinningAd
   label->AddText(util::LabelFactory::pt3RelGenCut(binningAdmin.ptSoftMax(ptSoftBin)));
 
   // linear x-scale
-  TCanvas* c1 = new TCanvas(outNamePrefix+"_PtGenDijetSpectra","Underlying di-jet spectra",500,500);
+  TCanvas* c1 = util::HistOps::createTCanvas(outNamePrefix+"_PtGenDijetSpectra","Underlying di-jet spectra",500,500);
   c1->cd();
   TH1* h = hists.front();
   h->GetXaxis()->SetRangeUser(20.,1900.);
@@ -407,7 +407,7 @@ void plotUnderlyingSpectra(const TString &fileName, const sampleTools::BinningAd
   util::FileOps::toFiles(c1,OUT_FILE);
 
   // log x-scale
-  TCanvas* c2 = new TCanvas(outNamePrefix+"_PtGenDijetSpectra_Logx","Underlying di-jet spectra",500,500);
+  TCanvas* c2 = util::HistOps::createTCanvas(outNamePrefix+"_PtGenDijetSpectra_Logx","Underlying di-jet spectra",500,500);
   c2->cd();
   h->GetXaxis()->SetRangeUser(20.,1900.);
   h->GetXaxis()->SetNoExponent();
@@ -478,7 +478,7 @@ void plotVariedSpectrum(const std::vector<TString> &fileNames, const std::vector
   label->AddText(util::LabelFactory::deltaPhiGenCut(2.7));
   label->AddText(util::LabelFactory::pt3RelGenCut(binningAdmin.ptSoftMax(ptSoftBin)));
 
-  TCanvas* c = new TCanvas(outNamePrefix+"_VariedPtGenDijetSpectra","Varied spectra",500,500);
+  TCanvas* c = util::HistOps::createTCanvas(outNamePrefix+"_VariedPtGenDijetSpectra","Varied spectra",500,500);
   c->cd();
   TH1* h = spectra.front();
   h->GetXaxis()->SetRangeUser(20.,1900.);
@@ -554,7 +554,7 @@ void plotPtHat(const TString &fileName, const TString &treeName, const TString &
   hPtHat->GetXaxis()->SetMoreLogLabels();
   hPtHat->GetXaxis()->SetNoExponent();
 
-  TCanvas* c = new TCanvas(outNamePrefix+"_PtHatSpectrum","PtHat spectra",500,500);
+  TCanvas* c = util::HistOps::createTCanvas(outNamePrefix+"_PtHatSpectrum","PtHat spectra",500,500);
   c->cd();
   hPtHat->Draw("HIST");
   hPtHatWeighted->Draw("HISTsame");
@@ -564,7 +564,7 @@ void plotPtHat(const TString &fileName, const TString &treeName, const TString &
   gPad->RedrawAxis();
   util::FileOps::toFiles(c,OUT_FILE);
 
-  TCanvas* c2 = new TCanvas(outNamePrefix+"_PtHatSpectrum_Logx","PtHat spectra",500,500);
+  TCanvas* c2 = util::HistOps::createTCanvas(outNamePrefix+"_PtHatSpectrum_Logx","PtHat spectra",500,500);
   c2->cd();
   hPtHat->Draw("HIST");
   hPtHatWeighted->Draw("HISTsame");
@@ -629,7 +629,7 @@ void plotAsymmetryComponents(const TString &file) {
   leg->AddEntry(hSigSoft,"#sigma_{imbal}","L");
   leg->AddEntry(hSigTotal,"#sigma_{MC}/p_{T} #oplus #sigma_{imbal}","L");
   
-  TCanvas* can = new TCanvas("can","Asymmetry Components",500,500);
+  TCanvas* can = util::HistOps::createTCanvas("can","Asymmetry Components",500,500);
   can->cd();
   hSigTotal->Draw("HIST");
   gSigTotalErr->Draw("PE2same");
