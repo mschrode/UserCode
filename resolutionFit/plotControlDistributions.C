@@ -1,4 +1,4 @@
-// $Id: plotControlDistributions.C,v 1.8 2012/06/09 15:59:16 mschrode Exp $
+// $Id: plotControlDistributions.C,v 1.9 2012/06/15 23:05:55 mschrode Exp $
 
 //!  Control and n-1 distributions for
 //!  histograms in Kalibri skims from
@@ -391,6 +391,7 @@ void plotUnderlyingSpectra(const TString &fileName, const sampleTools::BinningAd
 
   // linear x-scale
   TCanvas* c1 = util::HistOps::createTCanvas(outNamePrefix+"_PtGenDijetSpectra","Underlying di-jet spectra",500,500);
+
   c1->cd();
   TH1* h = hists.front();
   h->GetXaxis()->SetRangeUser(20.,1900.);

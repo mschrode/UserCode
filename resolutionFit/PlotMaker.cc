@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.36 2012/06/12 21:31:11 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.37 2012/06/15 23:05:55 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -74,18 +74,18 @@ namespace resolutionFit {
 
   // -------------------------------------------------------------------------------------
   void PlotMaker::makeAllPlots() const {
-    //    plotControlDistributions();
-    //    plotPtGenSpectra();
-    plotAsymmetry();
-//    plotExtrapolation();
-//     plotParticleLevelImbalance();
-     plotResolution();
-     plotScaledMCTruth();
-     plotSystematicUncertainties();
+//     plotControlDistributions();
+//     plotPtGenSpectra();
+    //    plotAsymmetry();
+    //    plotExtrapolation();
+    //    plotParticleLevelImbalance();
+    plotResolution();
+    plotScaledMCTruth();
+    plotSystematicUncertainties();
 
 //    plotAsymmetryComparison();
 
-    //    plotPtSpectra();
+//    plotPtSpectra();
   }
 
 
@@ -1156,23 +1156,25 @@ namespace resolutionFit {
 
 		// Illustration for systematic uncertainties
 		TLine* hor = new TLine(0.,extra->Eval(0.),fit->GetXmin(),extra->Eval(0.));
-		hor->SetLineWidth(5);
+		hor->SetLineWidth(4);
 		hor->SetLineColor(kRed+1);
 		hor->SetLineStyle(2);
 		TArrow* ver = new TArrow(fit->GetXmin(),extra->Eval(0.),fit->GetXmin(),extra->Eval(fit->GetXmin()),0.04,"<>");
 		ver->SetLineWidth(hor->GetLineWidth());
 		ver->SetLineColor(hor->GetLineColor());
 		
-		TPaveText *txt = new TPaveText(fit->GetXmin()+0.015,extra->Eval(0.),fit->GetXmin()+0.1,extra->Eval(fit->GetXmin()));
+		TPaveText *txt = new TPaveText(fit->GetXmin()+0.01,extra->Eval(0.),fit->GetXmin()+0.08,extra->Eval(fit->GetXmin()));
 		txt->SetBorderSize(0);
 		txt->SetFillColor(0);
 		txt->SetTextFont(42);
 		txt->SetTextAlign(12);
-		txt->SetTextSize(0.1);
+		txt->SetTextSize(0.08);
 		txt->SetTextColor(hor->GetLineColor());
 		txt->AddText("50%");
 		
-		hFrame->GetYaxis()->SetRangeUser(0.7*val.front(),1.3*val.back());
+		hFrame->GetXaxis()->SetNdivisions(505);
+		hFrame->GetXaxis()->SetRangeUser(0.,0.19);
+		hFrame->GetYaxis()->SetRangeUser(0.8*val.front(),1.1*val.back());
 		fit->SetLineColor(gVals->GetLineColor());
 		extra->SetLineColor(gVals->GetLineColor());
 		
@@ -1185,7 +1187,7 @@ namespace resolutionFit {
 		hor->Draw("same");
 		ver->Draw();
 		txt->Draw("same");
-		//out_->saveCurrentPad(histFileName("ExtrapolationUncertaintyIllustration",ptBin,sample,*rIt));
+		//		out_->saveCurrentPad(histFileName("ExtrapolationUncertaintyIllustration",ptBin,sample,*rIt));
 		
 		
 		delete gVals;
@@ -1335,9 +1337,9 @@ namespace resolutionFit {
  	      TPaveText* label = labelMk_->etaPtAveBin(etaBin->etaBin(),ptBin->ptBin());
  	      TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,-1.,label->GetSize());
  	      leg->AddEntry(gVals1,labelMk_->sample(sLabel1),"PL");
- 	      leg->AddEntry(gVals1,"#sigma("+labelMk_->ptSoft()+"#rightarrow 0) = "+util::toTString(fit1->GetParameter(0),1)+" #pm "+util::toTString(fit1->GetParError(0),1)+" GeV","");
+ 	      leg->AddEntry(gVals1,"#sigma("+labelMk_->ptSoftMax()+"#rightarrow 0) = "+util::toTString(fit1->GetParameter(0),1)+" #pm "+util::toTString(fit1->GetParError(0),1)+" GeV","");
  	      leg->AddEntry(gVals2,labelMk_->sample(sLabel2),"PL");
- 	      leg->AddEntry(gVals2,"#sigma("+labelMk_->ptSoft()+"#rightarrow 0) = "+util::toTString(fit2->GetParameter(0),1)+" #pm "+util::toTString(fit2->GetParError(0),1)+" GeV","");
+ 	      leg->AddEntry(gVals2,"#sigma("+labelMk_->ptSoftMax()+"#rightarrow 0) = "+util::toTString(fit2->GetParameter(0),1)+" #pm "+util::toTString(fit2->GetParError(0),1)+" GeV","");
 
  	      TString yAxisLabel = sample1->labelQuantityInExtrapolation(*rIt);
 	   
@@ -1345,7 +1347,7 @@ namespace resolutionFit {
  	      TH1* hFrame = new TH1D("PlotMaker::plotExtrapolation::hFrame",title_,
  				     1000,0.,1.3*par_->ptSoftMax(par_->nPtSoftBins()-1));
  	      util::HistOps::setAxisTitles(hFrame,labelMk_->ptSoft(),"",yAxisLabel);
- 	      hFrame->GetXaxis()->SetTitle("Threshold "+labelMk_->ptSoft());
+ 	      hFrame->GetXaxis()->SetTitle("Threshold "+labelMk_->ptSoftMax());
 	      double yMin1 = 0.;
 	      double yMax1 = 0.;
 	      util::HistOps::findYRangeInclErrors(gVals1,yMin1,yMax1);
@@ -1639,13 +1641,13 @@ namespace resolutionFit {
 	  // Create frame
 	  TH1* hFrame = new TH1D("PlotMaker::plotParticleLevelImbalance::hFrame",title_,
 				 1000,0.,1.3*par_->ptSoftMax(par_->nPtSoftBins()-1));
-	  util::HistOps::setAxisTitles(hFrame,"Threshold on "+labelMk_->ptSoftGenMax(),"","#sqrt{2}#upoint#sigma_{A^{gen}}");
+	  util::HistOps::setAxisTitles(hFrame,"Threshold "+labelMk_->ptSoftGenMax(),"","#sqrt{2}#upoint#sigma_{A^{gen}}");
 	  hFrame->GetYaxis()->SetRangeUser(0.,0.19);
 	       
 	  // Labels
 	  TPaveText* label = labelMk_->etaPtAveBin(sample->label(),etaBin->etaBin(),ptBin->ptBin());
 	  TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,-labelMk_->start(),label->GetSize());
-	  leg->AddEntry(fit,"Fit  #sqrt{2}#upoint#sigma("+labelMk_->ptSoftGen()+"#rightarrow 0)","PL");
+	  leg->AddEntry(fit,"Fit  #sqrt{2}#upoint#sigma_{A^{gen}}("+labelMk_->ptSoftGenMax()+"#rightarrow 0)","PL");
 	  leg->AddEntry(fit," = "+util::toTString(fit->GetParameter(0),5)+" #pm "+util::toTString(fit->GetParError(0),5),"");
 
 	  // Linear scale
@@ -3100,6 +3102,12 @@ namespace resolutionFit {
 	    
 	    for(SystUncertIt it = uncert->componentsBegin(); it != uncert->componentsEnd(); ++it) {
 	      TGraphAsymmErrors* b = (*it)->relUncertSteps();
+		// Scale to percent
+		for(int i = 0; i < b->GetN(); ++i) {
+		  b->GetEYlow()[i] = 100.*b->GetEYlow()[i];
+		  b->GetEYhigh()[i] = 100.*b->GetEYhigh()[i];
+		}
+
 	      
 	      // 	      // Add components
 	      // 	      if( (*it)->label() != "Extrapolation" && (*it)->label() != "PLI" ) {
@@ -3132,7 +3140,7 @@ namespace resolutionFit {
 
 
 	    // hack for the time being to catch failed fit
-	    if( bands.back()->GetEYhigh()[0] > 0.6 ) {
+	    if( bands.back()->GetEYhigh()[0] > 60. ) {
 	      for(std::vector<TGraphAsymmErrors*>::iterator it = bands.begin();
 		  it != bands.end(); ++it) {
 		(*it)->RemovePoint(0);
@@ -3151,11 +3159,11 @@ namespace resolutionFit {
 	    hFrame->SetLineWidth(lineWidth_);
 	    hFrame->SetLineStyle(2);
 	    if( etaBinIdx == 4 ) {
-	      hFrame->GetYaxis()->SetRangeUser(-0.58,1.09);
+	      hFrame->GetYaxis()->SetRangeUser(-58,109);
 	    } else {
-	      hFrame->GetYaxis()->SetRangeUser(-0.28,0.54);
+	      hFrame->GetYaxis()->SetRangeUser(-28,54);
 	    }
-	    util::HistOps::setAxisTitles(hFrame,"p^{ave}_{T}","GeV","Relative Uncertainty");
+	    util::HistOps::setAxisTitles(hFrame,"p^{ave}_{T}","GeV","Relative Uncertainty on #sigma / p^{true}_{T} (%)");
 	     
 	    out_->nextPad(sampleLabel+": Systematic uncertainties "+etaBin->toString());
 	    hFrame->Draw("][");
@@ -3259,7 +3267,7 @@ namespace resolutionFit {
 	      mc->markForDeletion(label);
 	      
 	      // Create frame
-	      TH1* hFrame = util::HistOps::createRatioFrame(xMinPt_,xMaxPt_,-38,38,"p^{ave}_{T} (GeV)","Relative Uncertainty on #rho_{res} (%)");
+	      TH1* hFrame = util::HistOps::createRatioFrame(xMinPt_,xMaxPt_,-38,38,"p^{ave}_{T} (GeV)","Rel. Uncertainty on #rho_{res} (%)");
 	      for(int bin = 1; bin <= hFrame->GetNbinsX(); ++bin) {
 		hFrame->SetBinContent(bin,0.);
 	      }
@@ -3267,7 +3275,7 @@ namespace resolutionFit {
 	      if( etaBinIdx == 4 ) {
 		hFrame->GetYaxis()->SetRangeUser(-68,68);
 	      }
-	      util::HistOps::setAxisTitles(hFrame,"p^{ave}_{T}","GeV","Relative Uncertainty on #rho_{res} (%)");
+	      util::HistOps::setAxisTitles(hFrame,"p^{ave}_{T}","GeV","Rel. Uncertainty on #sigma / p^{true}_{T} (%)");
 	      mc->markForDeletion(hFrame);
 	      TH1* mFrame = mc->mainFrame(hFrame,etaBin->etaBin());
 	      
@@ -3701,7 +3709,7 @@ namespace resolutionFit {
 		  leg->Draw("same");
 		  gPad->RedrawAxis();
 		  out_->logy();
-		  //out_->saveCurrentPad(histFileName("DeltaPt-CutIllustration",ptBin,sample,ptSoftBinIdx));
+		  out_->saveCurrentPad(histFileName("DeltaPt-CutIllustration",ptBin,sample,ptSoftBinIdx));
 
 		
 		  // Superimpose fit result

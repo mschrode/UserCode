@@ -1,4 +1,4 @@
-// $Id: run_163337-167151_V3_Summer11-PtControlPlots.cc,v 1.3 2012/06/05 22:44:46 mschrode Exp $
+// $Id: run_163337-167151_V3_Summer11-PtControlPlots.cc,v 1.4 2012/06/09 15:58:32 mschrode Exp $
 
 #include <iostream>
 
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
   
   // Samples
   TString idData = "Data";
-  TString idMC = "CMS Simulation";
+  TString idMC = "Simulation";
 
   // Summer11: updated pt control plots
   cmd->addDataSample(idData,pathToFitResultsData+"/ResFit_PtAveBins_Data_163337-167151_V3_"+jetTypeStr+"_L1FastJet.root");
