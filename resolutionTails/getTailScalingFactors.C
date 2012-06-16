@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.20 2012/06/12 21:29:44 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.21 2012/06/15 23:08:26 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -30,6 +30,7 @@
 #include "../util/FileOps.h"
 #include "../util/LabelFactory.h"
 #include "../util/StyleSettings.h"
+#include "../util/MultiCanvas.h"
 
 
 const bool DEBUG = false;
@@ -310,7 +311,7 @@ void getTailScalingFactors(double  nSigTailStart,
   const bool    fixDataShape = false;
   const double  nSigCore     = 2.;
   const TString jetAlgo      = "PF";
-  const bool    archivePlots = true;
+  const bool    archivePlots = false;
 
 
   // +++++ Input Files +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -500,6 +501,15 @@ void getTailScalingFactors(double  nSigTailStart,
     }
   }
 
+  // For MultiCanvas figure
+  std::vector< std::vector<TGraphAsymmErrors*> > vgFAsymData;
+  std::vector< std::vector<TH1*> >               vhFAsymMCSmearedGauss;
+  std::vector< std::vector<TH1*> >               vhFAsymMCSmeared;
+  std::vector< std::vector<TGraphAsymmErrors*> > vgFAsymMCSmeared;
+  std::vector< std::vector<TGraphAsymmErrors*> > vgFAsymDataRelToGauss;
+  std::vector< std::vector<TH1*> >               vhFAsymMCSmearedRelToGauss;
+  std::vector< std::vector<TGraphAsymmErrors*> > vgFAsymMCSmearedRelToGauss;
+
   // Loop over eta bins
   for(unsigned int etaBin = 0; etaBin < nEtaBins; ++etaBin) {
     TH1* hPtAveMeanData = new TH1D("hPtAveMeanData_Eta"+util::toTString(etaBin),
@@ -584,6 +594,13 @@ void getTailScalingFactors(double  nSigTailStart,
     
       
     // Loop over pt3 bins
+    std::vector<TGraphAsymmErrors*> vgFAsymDataTmp;
+    std::vector<TH1*>               vhFAsymMCSmearedGaussTmp;
+    std::vector<TH1*>               vhFAsymMCSmearedTmp;
+    std::vector<TGraphAsymmErrors*> vgFAsymMCSmearedTmp;
+    std::vector<TGraphAsymmErrors*> vgFAsymDataRelToGaussTmp;
+    std::vector<TH1*>               vhFAsymMCSmearedRelToGaussTmp;
+    std::vector<TGraphAsymmErrors*> vgFAsymMCSmearedRelToGaussTmp;
     for(unsigned int pt3Bin = 0; pt3Bin < binAdm->nPtSoftBins(); ++pt3Bin) {
       
       TH1* hFAsymMCSmeared = new TH1D("hFAsymMCSmeared_EtaBin"+util::toTString(etaBin)+"_Pt3Bin"+util::toTString(pt3Bin),
@@ -682,8 +699,9 @@ void getTailScalingFactors(double  nSigTailStart,
       delete can;
       can = util::HistOps::createRatioTopCanvas();
       TPad *bRatioBottomPad = util::HistOps::createRatioBottomPad();
-      TH1 *bRatioTopFrame = util::HistOps::createRatioTopHist(hFAsymData);
-      TH1 *bRatioBottomFrame = util::HistOps::createRatioBottomFrame(hFAsymData,util::LabelFactory::ptAve(),"GeV","#frac{Data, Sim.}{Gauss}",0.81,2.99);
+      //TH1 *bRatioTopFrame = util::HistOps::createRatioTopHist(hFAsymData);
+      TH1 *bRatioTopFrame = util::HistOps::createRatioTopHist(hFAsymMCSmeared);
+      TH1 *bRatioBottomFrame = util::HistOps::createRatioBottomFrame(hFAsymMCSmeared,util::LabelFactory::ptAve(),"GeV","#frac{Data, Sim.}{Gauss}",0.81,2.99);
       bRatioBottomFrame->GetYaxis()->SetRangeUser(0.95,1.1*(*std::max_element(gFAsymDataRelToGauss->GetY(),gFAsymDataRelToGauss->GetY()+gFAsymDataRelToGauss->GetN())));
       bRatioBottomFrame->SetLineStyle(hFAsymMCSmearedGauss->GetLineStyle());
       bRatioBottomFrame->SetLineColor(hFAsymMCSmearedGauss->GetLineColor());
@@ -691,11 +709,11 @@ void getTailScalingFactors(double  nSigTailStart,
       bRatioBottomFrame->GetXaxis()->SetNoExponent();
       bRatioTopFrame->GetYaxis()->SetRangeUser(0.9*min,max+1.2*delta);
       can->cd();
-      bRatioTopFrame->Draw("PE1");
+      bRatioTopFrame->Draw("HIST");
       hFAsymMCSmearedGauss->Draw("HISTsame");
       gFAsymMCSmeared->Draw("E2same");
       hFAsymMCSmeared->Draw("HISTsame");
-      bRatioTopFrame->Draw("PE1same");
+      gFAsymData->Draw("PE1same");
       leg->Draw("same");
       label->Draw("same");
       gPad->RedrawAxis();
@@ -710,21 +728,38 @@ void getTailScalingFactors(double  nSigTailStart,
       bRatioBottomPad->RedrawAxis();
       toFiles(can,outLabel+"_EtaBin"+util::toTString(etaBin)+"_Pt3Bin"+util::toTString(pt3Bin)+"_FAsymRelToGaussBottom");
 
+      // Store for MultiCanvas figure
+      vgFAsymDataTmp.push_back(gFAsymData);
+      vhFAsymMCSmearedGaussTmp.push_back(hFAsymMCSmearedGauss);
+      vhFAsymMCSmearedTmp.push_back(hFAsymMCSmeared);
+      vgFAsymMCSmearedTmp.push_back(gFAsymMCSmeared);
+      vgFAsymDataRelToGaussTmp.push_back(gFAsymDataRelToGauss);
+      vhFAsymMCSmearedRelToGaussTmp.push_back(hFAsymMCSmearedRelToGauss);
+      vgFAsymMCSmearedRelToGaussTmp.push_back(gFAsymMCSmearedRelToGauss);
+
+//       delete hFAsymMCSmeared;
+//       delete hFAsymMCSmearedGauss;
+//       delete gFAsymMCSmeared;
+//       delete gFAsymDataRelToGauss;
+//       delete gFAsymMCSmearedRelToGauss;
+//       delete hFAsymMCSmearedRelToGauss;
+      //      delete gFAsymData;
       delete hFAsymData;
-      delete hFAsymMCSmeared;
-      delete hFAsymMCSmearedGauss;
-      delete gFAsymMCSmeared;
-      delete gFAsymData;
       delete bRatioBottomPad;
       delete bRatioTopFrame;
       delete bRatioBottomFrame;
-      delete gFAsymDataRelToGauss;
-      delete gFAsymMCSmearedRelToGauss;
-      delete hFAsymMCSmearedRelToGauss;
       delete label;
       delete leg;
       delete can;
     } // End of loop over pt3 bins
+    vgFAsymData.push_back(vgFAsymDataTmp);
+    vhFAsymMCSmearedGauss.push_back(vhFAsymMCSmearedGaussTmp);
+    vhFAsymMCSmeared.push_back(vhFAsymMCSmearedTmp);
+    vgFAsymMCSmeared.push_back(vgFAsymMCSmearedTmp);
+    vgFAsymDataRelToGauss.push_back(vgFAsymDataRelToGaussTmp);
+    vhFAsymMCSmearedRelToGauss.push_back(vhFAsymMCSmearedRelToGaussTmp);
+    vgFAsymMCSmearedRelToGauss.push_back(vgFAsymMCSmearedRelToGaussTmp);
+
     
     // Plots
     can = util::HistOps::createTCanvas("can","",500,500);
@@ -775,6 +810,105 @@ void getTailScalingFactors(double  nSigTailStart,
     delete hPtAveMeanData;
     delete can;
   } // End of loop over eta bins
+
+  // MultiCanvas figure
+
+  // Loop over pt3 bins
+  for(unsigned int pt3Bin = 0; pt3Bin < binAdm->nPtSoftBins(); ++pt3Bin) {
+
+    util::MultiCanvas* mc = new util::MultiCanvas(outLabel+"_Pt3Bin"+util::toTString(pt3Bin)+"_FAsymRelToGaussBottom",3,2,5,true);
+	
+    TLegend* leg = util::LabelFactory::createLegendWithOffset(3,0.2+util::LabelFactory::lineHeightMultiCan(),util::LabelFactory::lineHeightMultiCan());
+    mc->adjustLegend(leg);
+    mc->markForDeletion(leg);
+      
+    // Frames
+    TH1* hFrame = static_cast<TH1*>(vhFAsymMCSmeared.at(0).at(pt3Bin)->Clone("FrameForMultiCanvas"));
+    hFrame->Reset();
+    hFrame->GetYaxis()->SetTitle(FASYM+"  (%)    ");
+    double min = 100.*minFAsym.at(pt3Bin);
+    double max = 100.*maxFAsym.at(pt3Bin);
+    double delta = max - min;
+    hFrame->GetYaxis()->SetRangeUser(0.8*min,max+0.6*delta);
+    mc->markForDeletion(hFrame);
+
+    for(unsigned int etaBin = 0; etaBin < nEtaBins; ++etaBin) {
+
+      // Labels
+      TPaveText* label = util::LabelFactory::createPaveText(1,0.45);
+      label->AddText(util::LabelFactory::etaCut(binAdm->etaMin(etaBin),binAdm->etaMax(etaBin)));
+      mc->markForDeletion(label);
+      mc->adjustPaveText(label);
+      if( etaBin == 0 ) {
+	leg->AddEntry(vgFAsymData.at(etaBin).at(pt3Bin),DATA,"P");
+	leg->AddEntry(vgFAsymMCSmeared.at(etaBin).at(pt3Bin),MCSMEAR,"LF");
+	leg->AddEntry(vhFAsymMCSmearedGauss.at(etaBin).at(pt3Bin),MCGAUSS,"L");
+      }
+
+      // Plot
+      TH1* mFrame = mc->mainFrame(hFrame,etaBin);
+      TH1* rFrame = mc->ratioFrame(hFrame,"#frac{Dat, Sim}{Gauss}",0.81,2.99,etaBin);
+      min = 0.95;
+      max = 1.66;
+      if( etaBin == 4 ) max = 2.4;
+      if( nSigTailStart > 2. ) {
+	min = 0.95;
+	max = 4.1;
+	if( etaBin == 4 ) max = 9.5;
+      }
+      rFrame->GetYaxis()->SetRangeUser(min,max);
+      rFrame->SetLineStyle(vhFAsymMCSmearedGauss.at(0).at(pt3Bin)->GetLineStyle());
+      rFrame->SetLineColor(vhFAsymMCSmearedGauss.at(0).at(pt3Bin)->GetLineColor());
+      mc->canvas()->cd();
+      TPad* padt = mc->mainPad(etaBin);
+      padt->Draw();
+      padt->cd();
+      mFrame->Draw();
+      vhFAsymMCSmearedGauss.at(etaBin).at(pt3Bin)->Draw("HISTsame");
+      vgFAsymMCSmeared.at(etaBin).at(pt3Bin)->Draw("E2same");
+      vhFAsymMCSmeared.at(etaBin).at(pt3Bin)->Draw("HISTsame");
+      vgFAsymData.at(etaBin).at(pt3Bin)->Draw("PE1same");
+      label->Draw("same");
+      gPad->RedrawAxis();
+      TPad* padr = mc->ratioPad(etaBin);
+      padr->Draw();
+      padr->cd();
+      rFrame->Draw("HIST");
+      vgFAsymMCSmearedRelToGauss.at(etaBin).at(pt3Bin)->Draw("E2same");
+      vhFAsymMCSmearedRelToGauss.at(etaBin).at(pt3Bin)->Draw("HISTsame");
+      vgFAsymDataRelToGauss.at(etaBin).at(pt3Bin)->Draw("PE1same");
+      gPad->RedrawAxis();
+
+    } // end of loop over eta bins
+    TPaveText* label = util::LabelFactory::createPaveTextWithOffset(1,1.,0.2,util::LabelFactory::lineHeightMultiCan());
+    label->AddText(labelWindow(nSigTailStart,nSigTailEnd)+",  "+util::LabelFactory::pt3RelCut(binAdm->ptSoftMax(pt3Bin)));
+    mc->adjustPaveText(label);
+    mc->markForDeletion(label);
+
+    mc->canvas()->cd();
+    TPad* padt = mc->mainPad(5);
+    padt->Draw();
+    padt->cd();
+    label->Draw();
+    leg->Draw();      
+    mc->moreLogLabelsX();
+    mc->noExponentX();
+    mc->setLogx();
+    toFiles(mc->canvas(),outLabel+"_Pt3Bin"+util::toTString(pt3Bin)+"_FAsymRelToGaussBottom");
+    delete mc;
+  } // End of loop over pt3 bins
+
+  for(unsigned int i = 0; i < vgFAsymData.size(); ++i) {
+    for(unsigned int j = 0; j < vgFAsymData.at(i).size(); ++j) {
+      delete vgFAsymData.at(i).at(j);
+      delete vhFAsymMCSmearedGauss.at(i).at(j);
+      delete vhFAsymMCSmeared.at(i).at(j);
+      delete vgFAsymMCSmeared.at(i).at(j);
+      delete vgFAsymDataRelToGauss.at(i).at(j);
+      delete vhFAsymMCSmearedRelToGauss.at(i).at(j);
+      delete vgFAsymMCSmearedRelToGauss.at(i).at(j);
+    }
+  }
 
   ROOT_OUT_FILE->Close();
   delete ROOT_OUT_FILE;
@@ -2513,6 +2647,20 @@ void plotFinalResult(const TString &fileName) {
 
   std::vector<EtaPtBin*> etaPtBins;
   unsigned int nEtaBins = binAdm->nEtaBins();
+
+
+  TH1* hFrame = 0;
+//   std::vector<TGraphAsymmErrors*> vgUncertAbs;
+//   std::vector<TGraphAsymmErrors*> vgNomRatio;
+//   std::vector< std::vector<TGraphAsymmErrors*> >
+
+
+  util::MultiCanvas* mcScales = new util::MultiCanvas(outNamePrefix,3,2,5,false);
+  util::MultiCanvas* mcUncert = new util::MultiCanvas(outNamePrefix+"_Uncertainties",3,2,5,false);
+	
+//   TLegend* leg = util::LabelFactory::createLegendWithOffset(3,0.2+util::LabelFactory::lineHeightMultiCan(),util::LabelFactory::lineHeightMultiCan());
+//   mc->adjustLegend(leg);
+//   mc->markForDeletion(leg);
   for(unsigned int etaBin = 0; etaBin < nEtaBins; ++etaBin) {
 
     // ****** Nominal scaling factors *****************************************************
@@ -2641,6 +2789,22 @@ void plotFinalResult(const TString &fileName) {
     gPad->RedrawAxis();
     toFiles(canScale,outNamePrefix+"_Eta"+util::toTString(etaBin));
 
+    // Multicanvas
+    if( etaBin == 0 ) {
+      hFrame = static_cast<TH1*>(hScaleFrame->Clone("FrameForMultiCan"));
+      mcScales->markForDeletion(hFrame);
+    }
+    TH1* mFrame = mcScales->mainFrame(hFrame,etaBin);
+    mcScales->canvas()->cd();
+    TPad* padt = mcScales->mainPad(etaBin);
+    padt->Draw();
+    padt->cd();
+    mFrame->Draw("HIST");
+    gUncertAbs->Draw("E2same");
+    mFrame->Draw("HISTsame");
+    gNomRatio->Draw("PE1same");
+    gPad->RedrawAxis();
+
     // Plot relative uncertainties
     TPaveText* labelU = util::LabelFactory::createPaveText(2);
     labelU->AddText(MCSMEAR);
@@ -2734,6 +2898,13 @@ void plotFinalResult(const TString &fileName) {
       std::cout << "\\bottomrule\n\\end{tabular}\n\\renewcommand{\\arraystretch}{1.}\n";
     }
   }
+
+  mcScales->moreLogLabelsX();
+  mcScales->noExponentX();
+  mcScales->setLogx();
+  toFiles(mcScales->canvas(),outNamePrefix);
+  delete mcScales;
+
 
   ROOT_OUT_FILE->Close();
   delete ROOT_OUT_FILE;
