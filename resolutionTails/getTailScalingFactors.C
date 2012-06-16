@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.21 2012/06/15 23:08:26 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.22 2012/06/16 16:46:55 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -311,7 +311,7 @@ void getTailScalingFactors(double  nSigTailStart,
   const bool    fixDataShape = false;
   const double  nSigCore     = 2.;
   const TString jetAlgo      = "PF";
-  const bool    archivePlots = false;
+  const bool    archivePlots = true;
 
 
   // +++++ Input Files +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -328,22 +328,22 @@ void getTailScalingFactors(double  nSigTailStart,
   TString fileNameMCTruth = srcMC  +"ResTails_PtGenAveBins_MCFall11_PF_L1FastJet_V10_REBINNED.root";
   TString fileNameTailWindow = "";
 
-//    // PileUp selection: NVtx 0 - 6
-//    fileNameTailWindow = "ScaleFactors_163337-180252_2012-06-12/Tail_163337-180252_Sig30-Inf_PF.root";
-//    fileNameData            = srcData+"ResTails_PtAveBins_Data2011_PF_L1FastJet_V10_NVtx00-06_REBINNED.root";
-//    fileNameMC              = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx00-06_REBINNED.root";
-//    if( variationPUDn )
-//      fileNameMC            = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx00-06_PUDn_REBINNED.root";
-//    else if( variationPUUp )
-//      fileNameMC            = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx00-06_PUUp_REBINNED.root";
+//     // PileUp selection: NVtx 0 - 6
+//     fileNameTailWindow = "ScaleFactors_163337-180252_2012-06-12/Tail_163337-180252_Sig30-Inf_PF.root";
+//     fileNameData            = srcData+"ResTails_PtAveBins_Data2011_PF_L1FastJet_V10_NVtx00-06_REBINNED.root";
+//     fileNameMC              = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx00-06_REBINNED.root";
+//     if( variationPUDn )
+//       fileNameMC            = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx00-06_PUDn_REBINNED.root";
+//     else if( variationPUUp )
+//       fileNameMC            = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx00-06_PUUp_REBINNED.root";
 
-//      // PileUp selection: NVtx > 6
-//      fileNameData            = srcData+"ResTails_PtAveBins_Data2011_PF_L1FastJet_V10_NVtx07-99_REBINNED.root";
-//      fileNameMC              = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx07-99_REBINNED.root";
-//      if( variationPUDn )
-//        fileNameMC            = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx07-99_PUDn_REBINNED.root";
-//      else if( variationPUUp )
-//        fileNameMC            = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx07-99_PUUp_REBINNED.root";
+//       // PileUp selection: NVtx > 6
+//       fileNameData            = srcData+"ResTails_PtAveBins_Data2011_PF_L1FastJet_V10_NVtx07-99_REBINNED.root";
+//       fileNameMC              = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx07-99_REBINNED.root";
+//       if( variationPUDn )
+//         fileNameMC            = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx07-99_PUDn_REBINNED.root";
+//       else if( variationPUUp )
+//         fileNameMC            = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx07-99_PUUp_REBINNED.root";
 
 
   // +++++ Setup +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -2649,18 +2649,19 @@ void plotFinalResult(const TString &fileName) {
   unsigned int nEtaBins = binAdm->nEtaBins();
 
 
-  TH1* hFrame = 0;
-//   std::vector<TGraphAsymmErrors*> vgUncertAbs;
-//   std::vector<TGraphAsymmErrors*> vgNomRatio;
-//   std::vector< std::vector<TGraphAsymmErrors*> >
-
-
+  TH1* hFrameScales = 0;
+  TH1* hFrameUncert = 0;
   util::MultiCanvas* mcScales = new util::MultiCanvas(outNamePrefix,3,2,5,false);
   util::MultiCanvas* mcUncert = new util::MultiCanvas(outNamePrefix+"_Uncertainties",3,2,5,false);
-	
-//   TLegend* leg = util::LabelFactory::createLegendWithOffset(3,0.2+util::LabelFactory::lineHeightMultiCan(),util::LabelFactory::lineHeightMultiCan());
-//   mc->adjustLegend(leg);
-//   mc->markForDeletion(leg);
+  
+  TLegend* legMultiCanScales = util::LabelFactory::createLegendWithOffset(2,0.25+util::LabelFactory::lineHeightMultiCan(),util::LabelFactory::lineHeightMultiCan());
+  mcUncert->adjustLegend(legMultiCanScales);
+  mcUncert->markForDeletion(legMultiCanScales);
+
+  TLegend* legMultiCanUncert = util::LabelFactory::createLegendWithOffset(4,0.2+util::LabelFactory::lineHeightMultiCan(),util::LabelFactory::lineHeightMultiCan());
+  mcUncert->adjustLegend(legMultiCanUncert);
+  mcUncert->markForDeletion(legMultiCanUncert);
+      
   for(unsigned int etaBin = 0; etaBin < nEtaBins; ++etaBin) {
 
     // ****** Nominal scaling factors *****************************************************
@@ -2770,6 +2771,10 @@ void plotFinalResult(const TString &fileName) {
     TLegend* legScale = util::LabelFactory::createLegendWithOffset(2,label->GetSize());
     legScale->AddEntry(gNomRatio,"Extrapolation Uncertainty #deltaf_{ex}","L");
     legScale->AddEntry(gUncertAbs,"Systematic Uncertainty","F");
+    if( etaBin == 0 ) {
+      legMultiCanScales->AddEntry(gNomRatio,"Extrapolation Uncertainty #deltaf_{ex}","L");
+      legMultiCanScales->AddEntry(gUncertAbs,"Systematic Uncertainty","F");
+    }
 
     // Plot scaling factors and total uncertainty    
     hScaleFrame->SetTitle(HEADER);
@@ -2791,10 +2796,16 @@ void plotFinalResult(const TString &fileName) {
 
     // Multicanvas
     if( etaBin == 0 ) {
-      hFrame = static_cast<TH1*>(hScaleFrame->Clone("FrameForMultiCan"));
-      mcScales->markForDeletion(hFrame);
+      hFrameScales = static_cast<TH1*>(hScaleFrame->Clone("FrameForMultiCan"));
+      hFrameScales->GetYaxis()->SetRangeUser(0.01,2.7);
+      mcScales->markForDeletion(hFrameScales);
     }
-    TH1* mFrame = mcScales->mainFrame(hFrame,etaBin);
+    TPaveText* labelMultiCan = util::LabelFactory::createPaveText(1,0.45);
+    labelMultiCan->AddText(util::LabelFactory::etaCut(binAdm->etaMin(etaBin),binAdm->etaMax(etaBin)));
+    mcScales->markForDeletion(labelMultiCan);
+    mcScales->adjustPaveText(labelMultiCan);
+
+    TH1* mFrame = mcScales->mainFrame(hFrameScales,etaBin);
     mcScales->canvas()->cd();
     TPad* padt = mcScales->mainPad(etaBin);
     padt->Draw();
@@ -2803,11 +2814,11 @@ void plotFinalResult(const TString &fileName) {
     gUncertAbs->Draw("E2same");
     mFrame->Draw("HISTsame");
     gNomRatio->Draw("PE1same");
+    labelMultiCan->Draw("same");
     gPad->RedrawAxis();
 
     // Plot relative uncertainties
-    TPaveText* labelU = util::LabelFactory::createPaveText(2);
-    labelU->AddText(MCSMEAR);
+    TPaveText* labelU = util::LabelFactory::createPaveText(1);
     labelU->AddText(labelWindow(getTailStart(fileNamePrefix),1000.)+",   "+util::LabelFactory::etaCut(binAdm->etaMin(etaBin),binAdm->etaMax(etaBin)));
 
     TLegend* legUncert1 = util::LabelFactory::createLegendColWithOffset(2,-0.5,labelU->GetSize());
@@ -2815,10 +2826,13 @@ void plotFinalResult(const TString &fileName) {
     for(int i = static_cast<int>(gUncertStack.size())-1; i >= 0; --i) {
       if( i > 1 ) legUncert1->AddEntry(gUncertStack.at(i),uncertLabels.at(i),"F");
       else        legUncert2->AddEntry(gUncertStack.at(i),uncertLabels.at(i),"F");
+      if( etaBin == 0 ) {
+	legMultiCanUncert->AddEntry(gUncertStack.at(i),uncertLabels.at(i),"F");
+      }
     }
 
-    TText* line = label->GetLine(0);
-    line->SetText(line->GetX(),line->GetY(),MCSMEAR);
+//     TText* line = label->GetLine(0);
+//     line->SetText(line->GetX(),line->GetY(),MCSMEAR);
     TH1* hUncertsFrame = static_cast<TH1D*>(hScaleFrame->Clone("hUncertsFrame"+util::toTString(etaBin)));
     for(int bin = 1; bin <= hUncertsFrame->GetNbinsX(); ++bin) {
       hUncertsFrame->SetBinContent(bin,-1.);
@@ -2840,6 +2854,28 @@ void plotFinalResult(const TString &fileName) {
     canRelUncerts->SetLogx();
     gPad->RedrawAxis();
     toFiles(canRelUncerts,outNamePrefix+"_Uncertainties_Eta"+util::toTString(etaBin));
+
+    // Multicanvas
+    if( etaBin == 0 ) {
+      hFrameUncert = static_cast<TH1*>(hUncertsFrame->Clone("UncertFrameForMultiCan"));
+      for(int bin = 1; bin <= hFrameUncert->GetNbinsX(); ++bin) {
+	hFrameUncert->SetBinContent(bin,-1);
+      }
+      hFrameUncert->GetYaxis()->SetRangeUser(0.001,75.);
+      mcScales->markForDeletion(hFrameUncert);
+    }
+    TH1* mFrameUncert = mcUncert->mainFrame(hFrameUncert,etaBin);
+    mcUncert->canvas()->cd();
+    TPad* padtUncert = mcUncert->mainPad(etaBin);
+    padtUncert->Draw();
+    padtUncert->cd();
+    mFrameUncert->Draw("HIST");
+    for(std::vector<TGraphAsymmErrors*>::reverse_iterator it = gUncertStack.rbegin();
+	it != gUncertStack.rend(); ++it) {
+      (*it)->Draw("E3same");
+    }
+    labelMultiCan->Draw("same");
+    gPad->RedrawAxis();
 
     
     // store factors and total uncertainties for evolution plots
@@ -2899,11 +2935,38 @@ void plotFinalResult(const TString &fileName) {
     }
   }
 
+  TPaveText* labelMultiCanScales = util::LabelFactory::createPaveTextWithOffset(1,1.,0.2,util::LabelFactory::lineHeightMultiCan());
+  labelMultiCanScales->AddText(LUMI+",  "+labelWindow(getTailStart(fileNamePrefix),1000.));
+  mcScales->adjustPaveText(labelMultiCanScales);
+  mcScales->markForDeletion(labelMultiCanScales);
+
+  mcScales->canvas()->cd();
+  TPad* padtScales = mcScales->mainPad(5);
+  padtScales->Draw();
+  padtScales->cd();
+  labelMultiCanScales->Draw();
+  legMultiCanScales->Draw("same");      
   mcScales->moreLogLabelsX();
   mcScales->noExponentX();
   mcScales->setLogx();
   toFiles(mcScales->canvas(),outNamePrefix);
-  delete mcScales;
+  //delete mcScales;
+
+  TPaveText* labelMultiCanUncert = util::LabelFactory::createPaveTextWithOffset(1,1.,0.2,util::LabelFactory::lineHeightMultiCan());
+  labelMultiCanUncert->AddText(labelWindow(getTailStart(fileNamePrefix),1000.));
+  mcUncert->adjustPaveText(labelMultiCanUncert);
+  mcUncert->markForDeletion(labelMultiCanUncert);
+
+  mcUncert->canvas()->cd();
+  TPad* padtUncert = mcUncert->mainPad(5);
+  padtUncert->Draw();
+  padtUncert->cd();
+  labelMultiCanUncert->Draw();
+  legMultiCanUncert->Draw("same");      
+  mcUncert->moreLogLabelsX();
+  mcUncert->noExponentX();
+  mcUncert->setLogx();
+  toFiles(mcUncert->canvas(),outNamePrefix+"_Uncertainties");
 
 
   ROOT_OUT_FILE->Close();
@@ -2925,10 +2988,10 @@ void plotEvolution() {
 
   // Evolution with NVtx
   std::vector<TString> fileNames;
-  fileNames.push_back("ScaleFactors_163337-180252_2012-06-12/Tail_163337-180252_NVtx00-06_Sig20-Inf_PF.root");
-  fileNames.push_back("ScaleFactors_163337-180252_2012-06-12/Tail_163337-180252_NVtx07-99_Sig20-Inf_PF.root");
-  const TString outNamePrefix = "Tail_163337-180252_NVtxEvolution_Sig20_PF";
-  const TString labWin = labelWindow(2.,1000.);
+  fileNames.push_back("ScaleFactors_163337-180252_2012-06-16/Tail_163337-180252_NVtx00-06_Sig30-Inf_PF.root");
+  fileNames.push_back("ScaleFactors_163337-180252_2012-06-16/Tail_163337-180252_NVtx07-99_Sig30-Inf_PF.root");
+  const TString outNamePrefix = "Tail_163337-180252_NVtxEvolution_Sig30_PF";
+  const TString labWin = labelWindow(3.,1000.);
 
   // Binning
   std::vector<double> xBinEdges;
@@ -3111,14 +3174,14 @@ void plotEvolutionFinalPlots() {
 //   const TString outNamePrefix = "Tail_163337-180252_SigEvolution_PF_ScaleFactors";
 
   // Evolution with NVtx
-  fileNames.push_back("ScaleFactors_163337-180252_2012-06-12/Tail_163337-180252_NVtx00-06_Sig30-Inf_PF_ScaleFactors.root");
-  fileNames.push_back("ScaleFactors_163337-180252_2012-06-12/Tail_163337-180252_NVtx07-99_Sig30-Inf_PF_ScaleFactors.root");
+  fileNames.push_back("ScaleFactors_163337-180252_2012-06-16/Tail_163337-180252_NVtx00-06_Sig20-Inf_PF_ScaleFactors.root");
+  fileNames.push_back("ScaleFactors_163337-180252_2012-06-16/Tail_163337-180252_NVtx07-99_Sig20-Inf_PF_ScaleFactors.root");
   const TString xAxisLabel = LABEL_NVTX;
   const int nBins = 2;
   const double xBinEdges[nBins+1] = { 0., 1., 2. };
   const TString binLabels[nBins+1] = { "#leq 6", "#geq 7" };
-  const TString outNamePrefix = "Tail_163337-180252_NVtxEvolution_Sig30_PF_ScaleFactors";
-  const TString labWin = labelWindow(3.,1000.);
+  const TString outNamePrefix = "Tail_163337-180252_NVtxEvolution_Sig20_PF_ScaleFactors";
+  const TString labWin = labelWindow(2.,1000.);
 
   assert( nBins == static_cast<int>(fileNames.size()) );
 
