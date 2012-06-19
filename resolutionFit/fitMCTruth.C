@@ -1,4 +1,4 @@
-// $Id: fitMCTruth.C,v 1.20 2012/06/15 00:15:53 mschrode Exp $
+// $Id: fitMCTruth.C,v 1.21 2012/06/15 23:04:23 mschrode Exp $
 
 //!  Fit mean response and resolution from MC truth
 //!  histograms in Kalibri skims from
@@ -38,6 +38,7 @@ const double labelResponseMax_ = 1.39;
 const double labelResponseLogMin_ = 0.09;
 const double labelResponseLogMax_ = 1.91;
 const int rebin_ = 3;
+const TString MCTruthResolutionLabel = "#sigma_{MC} / p^{gen}_{T}";
 TFile* OUT_FILE= 0;
 
 
@@ -352,8 +353,8 @@ void plotMCTruth(const TString &fileName, const TString &histNamePrefix, const s
 
   // Resolution plots
   canPlain->cd();
-  TH1* hFrame = new TH1D("hFrame",";p^{gen}_{T} (GeV);MC-Truth Resolution",10000,
-			 std::max(minPt-0.99,hSigma.front()->GetXaxis()->GetBinLowEdge(1)),
+  TH1* hFrame = new TH1D("hFrame",";p^{gen}_{T} (GeV);"+MCTruthResolutionLabel,10000,
+			 std::max(minPt-2,hSigma.front()->GetXaxis()->GetBinLowEdge(1)),
 			 1.2*hSigma.front()->GetXaxis()->GetBinUpEdge(hSigma.front()->GetNbinsX()));
   hFrame->GetYaxis()->SetRangeUser(3E-3,resolutionMax_);
   hFrame->GetXaxis()->SetNoExponent();
@@ -368,6 +369,8 @@ void plotMCTruth(const TString &fileName, const TString &histNamePrefix, const s
   util::FileOps::toFiles(canPlain,OUT_FILE);
 
   canPlain->cd();
+  TString tmp = hFrame->GetYaxis()->GetTitle();
+  hFrame->GetYaxis()->SetTitle("#sigma_{MC}(p^{gen}_{T}) / p^{gen}_{T}");
   hFrame->Draw();
   for(int etaBin = static_cast<int>(binningAdmin.nEtaBins()-1); etaBin >=0; --etaBin) {
     fSigma.at(etaBin)->SetLineStyle(1+etaBin);
@@ -378,6 +381,7 @@ void plotMCTruth(const TString &fileName, const TString &histNamePrefix, const s
   canPlain->SetLogx();
   canPlain->SetName(outNamePrefix+"_ResolutionFit");
   util::FileOps::toFiles(canPlain,OUT_FILE);
+  hFrame->GetYaxis()->SetTitle(tmp);
 
   // Resolution plots per etaBin in multicanvas
   util::MultiCanvas* mc = new util::MultiCanvas(outNamePrefix+"_Resolution_AllEtaBins",3,2,5,true);
@@ -388,6 +392,7 @@ void plotMCTruth(const TString &fileName, const TString &histNamePrefix, const s
     lab->AddText(util::LabelFactory::mc()+",  "+util::LabelFactory::etaGenCut(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin)));
     etaBinLabels.push_back(lab);
 
+    hFrame->GetYaxis()->SetTitle(MCTruthResolutionLabel+"  ");
     TH1* mFrame = mc->mainFrame(hFrame,etaBin);
     TPad* mPad = mc->mainPad(etaBin);
     TH1* rFrame = mc->ratioFrame(hFrame,"#frac{Point}{Fit}",0.81,1.19,etaBin);
@@ -426,11 +431,11 @@ void plotMCTruth(const TString &fileName, const TString &histNamePrefix, const s
   //mc->moreLogLabelsX();
   mc->setLogx();
   util::FileOps::toFiles(mc->canvas(),OUT_FILE);
-  mc->deleteFrames();
   delete mc;
   for(unsigned int i = 0; i < etaBinLabels.size(); ++i) {
     delete etaBinLabels.at(i);
   }
+  hFrame->GetYaxis()->SetTitle(MCTruthResolutionLabel+"  ");
   canRatio->cd();
   TH1 *tFrame = util::HistOps::createRatioTopHist(hFrame);
   tFrame->GetYaxis()->SetRangeUser(3E-3,resolutionMax_);
@@ -797,7 +802,7 @@ void plotMCTruth(const std::vector<TString> &fileName, const std::vector<TString
       }
     }
 
-    TH1* hFrame = new TH1D("hFrame",";p^{gen}_{T} (GeV);MC-Truth Resolution",1000,
+    TH1* hFrame = new TH1D("hFrame",";p^{gen}_{T} (GeV);"+MCTruthResolutionLabel,1000,
 			   std::max(minPt-0.99,hSigma.front().front()->GetXaxis()->GetBinLowEdge(1)),1.2*hSigma.front().front()->GetXaxis()->GetBinUpEdge(hSigma.front().front()->GetNbinsX()));
     hFrame->GetYaxis()->SetRangeUser(3E-3,resolutionMax_);
     hFrame->GetXaxis()->SetNoExponent();
@@ -1104,7 +1109,7 @@ void plotGaussianFitRange(const TString &fileName, const TString &histNamePrefix
     leg->AddEntry(hSigma.at(i).front(),"#mu #pm "+util::toTString(nSigCore.at(i))+"#sigma","P");
   }
   
-  TH1* hFrame = new TH1D("hFrame",";p^{gen}_{T} (GeV);MC-Truth Resolution",1000,
+  TH1* hFrame = new TH1D("hFrame",";p^{gen}_{T} (GeV);"+MCTruthResolutionLabel,1000,
 			 std::max(minPt-0.99,hSigma.front().front()->GetXaxis()->GetBinLowEdge(1)),1.2*hSigma.front().front()->GetXaxis()->GetBinUpEdge(hSigma.front().front()->GetNbinsX()));
   hFrame->GetYaxis()->SetRangeUser(3E-3,resolutionMax_);
   hFrame->GetXaxis()->SetNoExponent();
@@ -1572,7 +1577,7 @@ void plotJESvsEta(const TString &fileName,
       hMean.at(i).at(ptBin)->SetLineWidth(2);
     }
 
-    TH1* hFrame = new TH1D("hFrame",";#eta;Mean Response",1000,-5.2,5.2);
+    TH1* hFrame = new TH1D("hFrame",";#eta^{gen};Mean Response",1000,-5.2,5.2);
     hFrame->GetYaxis()->SetRangeUser(0.82,1.28);
     for(int bin = 1; bin <= hFrame->GetNbinsX(); ++bin) {
       hFrame->SetBinContent(bin,1.);
@@ -1616,51 +1621,41 @@ void fitMCTruth() {
   gErrorIgnoreLevel = 1001;
   util::StyleSettings::setStyleNoteNoTitle();
   
-  sampleTools::BinningAdmin admin("config/Analysis2011/Binning/BinningAdmin2011_v2.cfg");
-  //sampleTools::BinningAdmin admin("config/Analysis2011/Binning/BinningAdmin2011_v2.cfg","config/Analysis2011/Binning/Binning2011_v2_central.cfg");
-  //TString file = "../results/Analysis2011/MCTruthResolution/Kalibri_MCTruthResponse_MCSummer11_AK5PF.root";
-  TString file = "tmp/Kalibri_MCTruthResponse.root";
+  //sampleTools::BinningAdmin admin("config/Analysis2011/Binning/BinningAdmin2011_v2.cfg");
+  sampleTools::BinningAdmin admin("config/Analysis2011/Binning/BinningAdmin2011_v2.cfg","config/Analysis2011/Binning/Binning2011_v2_central.cfg");
+  TString file = "../results/Analysis2011/MCTruthResolution/Kalibri_MCTruthResponse_MCSummer11_AK5PF.root";
+  //TString file = "tmp/Kalibri_MCTruthResponse.root";
   TString name = "MCTruthSummer11";
   OUT_FILE = new TFile(name+".root","UPDATE");
   std::vector<TString> histNamePrefix;
   std::vector<TString> legEntries;
 
   // For all eta bins
-  //  plotMCTruth(file,"hRespVsPtGen",admin,2.,10.,name);
-  //  plotTwoGaussFit(file,"hRespVsPtGenUncorrected",admin,2.,10.,name);
+//   plotMCTruth(file,"hRespVsPtGen",admin,2.,10.,name);
+//   plotTwoGaussFit(file,"hRespVsPtGenUncorrected",admin,2.,10.,name);
 
   // Only central bin sufficient
-//   plotDeltaR(file,"hDeltaRVsPtGen",admin,100.,200.,name);
-//   plotGaussianFitRange(file,"hRespVsPtGen",admin,10.,name);
+  plotDeltaR(file,"hDeltaRVsPtGen",admin,100.,200.,name);
+  plotGaussianFitRange(file,"hRespVsPtGen",admin,10.,name);
 //   plotMCTruth(file,"hRespVsPtGenUncorrected",admin,2.,10.,name+"_Uncorr");
 
-//         histNamePrefix.clear();
-//         legEntries.clear();
-//         histNamePrefix.push_back("hRespVsPtGenUncorrected");
-//         histNamePrefix.push_back("hRespVsPtGen");
-//         legEntries.push_back("Uncorrected");
-//         legEntries.push_back("C_{off} #upoint C_{rel} #upoint C_{abs}");
-//         plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_UncorrVsCorr",true,false,1);
+//          histNamePrefix.clear();
+//          legEntries.clear();
+//          histNamePrefix.push_back("hRespVsPtGenUncorrected");
+//          histNamePrefix.push_back("hRespVsPtGen");
+//          legEntries.push_back("Uncorrected");
+//          legEntries.push_back("C_{off} #upoint C_{rel} #upoint C_{abs}");
+//          plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_UncorrVsCorr",true,false,1);
 
-//         histNamePrefix.clear();
-//         legEntries.clear();
-//         histNamePrefix.push_back("hRespVsPtGenUncorrected");
-//         histNamePrefix.push_back("hRespVsPtGenL1Corrected");
-//         histNamePrefix.push_back("hRespVsPtGen");
-//         legEntries.push_back("Uncorrected");
-//         legEntries.push_back("C_{off}");
-//         legEntries.push_back("C_{off} #upoint C_{rel} #upoint C_{abs}");
-//         plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_UncorrVsL1VsCorr");
-  histNamePrefix.clear();
-  legEntries.clear();
-  histNamePrefix.push_back("hRespVsEtaGenUncorrected");
-  histNamePrefix.push_back("hRespVsEtaGenL1Corrected");
-  histNamePrefix.push_back("hRespVsEtaGen");
-  legEntries.push_back("Uncorrected");
-  legEntries.push_back("C_{off}");
-  legEntries.push_back("C_{off} #upoint C_{rel} #upoint C_{abs}");
-  plotJESvsEta(file,histNamePrefix,legEntries,"hPtGenBinsForRespVsEtaGen",2.,name+"_UncorrVsL1VsCorr");
-
+//          histNamePrefix.clear();
+//          legEntries.clear();
+//          histNamePrefix.push_back("hRespVsPtGenUncorrected");
+//          histNamePrefix.push_back("hRespVsPtGenL1Corrected");
+//          histNamePrefix.push_back("hRespVsPtGen");
+//          legEntries.push_back("Uncorrected");
+//          legEntries.push_back("C_{off}");
+//          legEntries.push_back("C_{off} #upoint C_{rel} #upoint C_{abs}");
+//          plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_UncorrVsL1VsCorr");
 //         histNamePrefix.clear();
 //         legEntries.clear();
 //         histNamePrefix.push_back("hRespVsPtGenUncorrected");
@@ -1697,44 +1692,81 @@ void fitMCTruth() {
 //    legEntries.push_back("g");
 //    plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_FlavourInclAll",true);
 
+//           histNamePrefix.clear();
+//           legEntries.clear();
+//           histNamePrefix.push_back("hRespVsPtGenUncorrectedVsPdgId_Eta?_PdgId1:hRespVsPtGenUncorrectedVsPdgId_Eta?_PdgId2:hRespVsPtGenUncorrectedVsPdgId_Eta?_PdgId3");
+//           histNamePrefix.push_back("hRespVsPtGenUncorrectedVsPdgId_Eta?_PdgId4");
+//           histNamePrefix.push_back("hRespVsPtGenUncorrectedVsPdgId_Eta?_PdgId5");
+//           histNamePrefix.push_back("hRespVsPtGenUncorrectedVsPdgId_Eta?_PdgId21");
+//           legEntries.push_back("u,d,s");
+//           legEntries.push_back("c");
+//           legEntries.push_back("b");
+//           legEntries.push_back("g");
+//           plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_UncorrectedFlavour",true);
 
-//         histNamePrefix.clear();
-//         legEntries.clear();
-//         histNamePrefix.push_back("hRespVsPtGenDeltaRLess05");
-//         histNamePrefix.push_back("hRespVsPtGenDeltaRLess10");
-//         histNamePrefix.push_back("hRespVsPtGenDeltaRLess15");
-//         histNamePrefix.push_back("hRespVsPtGenDeltaRLess20");
-//         histNamePrefix.push_back("hRespVsPtGenDeltaRLess25");
-//         //  histNamePrefix.push_back("hRespVsPtGenDeltaRLess30");
-//         legEntries.push_back("#DeltaR_{max} = 0.05");
-//         legEntries.push_back("#DeltaR_{max} = 0.10");
-//         legEntries.push_back("#DeltaR_{max} = 0.15");
-//         legEntries.push_back("#DeltaR_{max} = 0.20");
-//         legEntries.push_back("#DeltaR_{max} = 0.25");
-//         //  legEntries.push_back("#DeltaR_{max} = 0.30");
-//         plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionVsDeltaR");
+//     histNamePrefix.clear();
+//     legEntries.clear();
+//     histNamePrefix.push_back("hRespVsPtGenUncorrectedVsPdgId_Eta?_PdgId1:hRespVsPtGenUncorrectedVsPdgId_Eta?_PdgId2:hRespVsPtGenUncorrectedVsPdgId_Eta?_PdgId3:hRespVsPtGenUncorrectedVsPdgId_Eta?_PdgId4:hRespVsPtGenUncorrectedVsPdgId_Eta?_PdgId5:hRespVsPtGenUncorrectedVsPdgId_Eta?_PdgId21");
+//     histNamePrefix.push_back("hRespVsPtGenUncorrectedVsPdgId_Eta?_PdgId1:hRespVsPtGenUncorrectedVsPdgId_Eta?_PdgId2:hRespVsPtGenUncorrectedVsPdgId_Eta?_PdgId3");
+//     histNamePrefix.push_back("hRespVsPtGenUncorrectedVsPdgId_Eta?_PdgId4");
+//     histNamePrefix.push_back("hRespVsPtGenUncorrectedVsPdgId_Eta?_PdgId5");
+//     histNamePrefix.push_back("hRespVsPtGenUncorrectedVsPdgId_Eta?_PdgId21");
+//     legEntries.push_back("All");
+//     legEntries.push_back("u,d,s");
+//     legEntries.push_back("c");
+//     legEntries.push_back("b");
+//     legEntries.push_back("g");
+//     plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_UncorrectedFlavourInclAll",true);
 
 
-//         histNamePrefix.clear();
-//         legEntries.clear();
-//         histNamePrefix.push_back("hRespVsPtGen");
-//         //   histNamePrefix.push_back("hRespVsPtGenVsPtSoft_Eta?_PtSoft4");
-//         histNamePrefix.push_back("hRespVsPtGenVsPtSoft_Eta?_PtSoft6");
-//         legEntries.push_back("QCD multijets");
-//         legEntries.push_back("QCD dijets");
-//         plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionDijetSelection",true);
+         histNamePrefix.clear();
+         legEntries.clear();
+         histNamePrefix.push_back("hRespVsPtGenDeltaRLess05");
+         histNamePrefix.push_back("hRespVsPtGenDeltaRLess10");
+         histNamePrefix.push_back("hRespVsPtGenDeltaRLess15");
+         histNamePrefix.push_back("hRespVsPtGenDeltaRLess20");
+         histNamePrefix.push_back("hRespVsPtGenDeltaRLess25");
+         //  histNamePrefix.push_back("hRespVsPtGenDeltaRLess30");
+         legEntries.push_back("#DeltaR_{max} = 0.05");
+         legEntries.push_back("#DeltaR_{max} = 0.10");
+         legEntries.push_back("#DeltaR_{max} = 0.15");
+         legEntries.push_back("#DeltaR_{max} = 0.20");
+         legEntries.push_back("#DeltaR_{max} = 0.25");
+         //  legEntries.push_back("#DeltaR_{max} = 0.30");
+         plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionVsDeltaR");
 
-//         histNamePrefix.clear();
-//         legEntries.clear();
-//         histNamePrefix.push_back("hRespVsPtGenPULess05");
-//         histNamePrefix.push_back("hRespVsPtGenPULess10");
-//         histNamePrefix.push_back("hRespVsPtGenPULess15");
-//         histNamePrefix.push_back("hRespVsPtGenPULess99");
-//         legEntries.push_back("N(PU) #leq 4");
-//         legEntries.push_back("4 < N(PU) #leq 9");
-//         legEntries.push_back("9 < N(PU) #leq 14");
-//         legEntries.push_back("N(PU) > 14");
-//         plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionNPU");
+
+         histNamePrefix.clear();
+         legEntries.clear();
+         histNamePrefix.push_back("hRespVsPtGen");
+         //   histNamePrefix.push_back("hRespVsPtGenVsPtSoft_Eta?_PtSoft4");
+         histNamePrefix.push_back("hRespVsPtGenVsPtSoft_Eta?_PtSoft6");
+         legEntries.push_back("QCD multijets");
+         legEntries.push_back("QCD dijets");
+         plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionDijetSelection",true);
+
+         histNamePrefix.clear();
+         legEntries.clear();
+         histNamePrefix.push_back("hRespVsPtGenPULess05");
+         histNamePrefix.push_back("hRespVsPtGenPULess10");
+         histNamePrefix.push_back("hRespVsPtGenPULess15");
+         histNamePrefix.push_back("hRespVsPtGenPULess99");
+         legEntries.push_back("N(PU) #leq 4");
+         legEntries.push_back("4 < N(PU) #leq 9");
+         legEntries.push_back("9 < N(PU) #leq 14");
+         legEntries.push_back("N(PU) > 14");
+         plotMCTruth(file,histNamePrefix,legEntries,admin,2.,10.,name+"_ResolutionNPU");
+
+//    histNamePrefix.clear();
+//    legEntries.clear();
+//    histNamePrefix.push_back("hRespVsEtaGenUncorrected");
+//    histNamePrefix.push_back("hRespVsEtaGenL1Corrected");
+//    histNamePrefix.push_back("hRespVsEtaGen");
+//    legEntries.push_back("Uncorrected");
+//    legEntries.push_back("C_{off}");
+//    legEntries.push_back("C_{off} #upoint C_{rel} #upoint C_{abs}");
+//    plotJESvsEta(file,histNamePrefix,legEntries,"hPtGenBinsForRespVsEtaGen",2.,name+"_UncorrVsL1VsCorr");
+
 
 
 

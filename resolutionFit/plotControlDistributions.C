@@ -1,4 +1,4 @@
-// $Id: plotControlDistributions.C,v 1.9 2012/06/15 23:05:55 mschrode Exp $
+// $Id: plotControlDistributions.C,v 1.10 2012/06/16 15:02:29 mschrode Exp $
 
 //!  Control and n-1 distributions for
 //!  histograms in Kalibri skims from
@@ -595,11 +595,11 @@ void plotAsymmetryComponents(const TString &file) {
 
   hSigTotal->SetLineColor(kRed);
   hSigTotal->SetLineWidth(2);
-  hSigTotal->GetYaxis()->SetRangeUser(3E-4,0.59);
+  hSigTotal->GetYaxis()->SetRangeUser(3E-4,0.54);
   hSigTotal->GetXaxis()->SetRange(1,hSigTotal->GetNbinsX()-1);
   hSigTotal->GetXaxis()->SetMoreLogLabels();
   hSigTotal->GetXaxis()->SetNoExponent();
-  util::HistOps::setAxisTitles(hSigTotal,"p^{gen}_{T}","GeV","Standard Deviation");
+  util::HistOps::setAxisTitles(hSigTotal,"p^{gen}_{T}","GeV","#sqrt{2}#upoint#sigma_{A}");
 
   // fix error calculation for quadratic sum
   for(int bin = 1; bin <= hSigTotal->GetNbinsX(); ++bin) {
@@ -621,9 +621,9 @@ void plotAsymmetryComponents(const TString &file) {
   hSigSoft->SetLineStyle(3);
   TGraphAsymmErrors* gSigSoftErr = util::HistOps::getUncertaintyBand(hSigSoft,util::StyleSettings::colorLight(hSigSoft->GetLineColor()));
 
-  TPaveText* label = util::LabelFactory::createPaveText(2,-0.7);
-  label->AddText(util::LabelFactory::mc());
-  label->AddText(util::LabelFactory::etaGenCut(0.,0.5)+",  "+util::LabelFactory::deltaPhiGenCut(2.7));
+  TPaveText* label = util::LabelFactory::createPaveText(1);
+  label->AddText(util::LabelFactory::mc()+",  "+util::LabelFactory::etaGenCut(0.,0.5)+",  "+util::LabelFactory::deltaPhiGenCut(2.7));
+
   TLegend* leg = util::LabelFactory::createLegendColWithOffset(4,0.45,label->GetSize());
   leg->AddEntry(hSigAsym,"#sqrt{2} #upoint #sigma_{A}","P");
   leg->AddEntry(hSigResp,"#sigma_{MC}/p_{T}","L");
@@ -671,31 +671,31 @@ void plotControlDistributions() {
   OUT_FILE = new TFile(outNamePrefix+".root","RECREATE");
 
 
-  plotNMinus1Eta(fileNameData,fileNameMC,binAdmin,3,3,-5.1,-5.1,false,"#eta","","jets",deltaPhiLabel+",  "+ptRelLabel,outNamePrefix+"_NMin1Eta");
+//   plotNMinus1Eta(fileNameData,fileNameMC,binAdmin,3,3,-5.1,-5.1,false,"#eta","","jets",deltaPhiLabel+",  "+ptRelLabel,outNamePrefix+"_NMin1Eta");
   
-  for(int ptBin = 0; ptBin < 16; ++ptBin) {
-    //     // N-1 plots
-    plotNMinus1(fileNameData,fileNameMC,"hDeltaPhiNMin1",binAdmin,0,ptBin,2,2.1,3.5,false,deltaPhiVar,"","events",ptRelLabel,outNamePrefix+"_NMin1DeltaPhi");
-    plotNMinus1(fileNameData,fileNameMC,"hPtRelNMin1",binAdmin,0,ptBin,3,0.,1.,false,ptRelVar,"","events",deltaPhiLabel,outNamePrefix+"_NMin1PtRel");
+//   for(int ptBin = 0; ptBin < 16; ++ptBin) {
+//     //     // N-1 plots
+//     plotNMinus1(fileNameData,fileNameMC,"hDeltaPhiNMin1",binAdmin,0,ptBin,2,2.1,3.5,false,deltaPhiVar,"","events",ptRelLabel,outNamePrefix+"_NMin1DeltaPhi");
+//     plotNMinus1(fileNameData,fileNameMC,"hPtRelNMin1",binAdmin,0,ptBin,3,0.,1.,false,ptRelVar,"","events",deltaPhiLabel,outNamePrefix+"_NMin1PtRel");
     
-    // Pt3 correlations
-    plotCorrelations(true,fileNameData,binAdmin,"hDeltaPhiVsPt3Rel",0,ptBin,-1,0.,1.,1.95,3.5,false,ptRelVar,deltaPhiVar,deltaPhiLabel,outNamePrefix+"_DeltaPhiVsPt3Rel");
-    plotCorrelations(false,fileNameMC,binAdmin,"hPt3RelGenVsReco",0,ptBin,-1,0.,0.35,0.,0.35,false,"#alpha","#alpha^{gen}",deltaPhiLabel,outNamePrefix+"_Pt3RelGenVsReco");
-    plotCorrelations(false,fileNameMC,binAdmin,"hPt3RelGenVsImbalGen",0,ptBin,-1,0.,0.35,0.,0.35,false,"#alpha^{imbal}","#alpha^{gen}",deltaPhiGenLabel,outNamePrefix+"_Pt3RelGenVsImbalGen");
-  }
+//     // Pt3 correlations
+//     plotCorrelations(true,fileNameData,binAdmin,"hDeltaPhiVsPt3Rel",0,ptBin,-1,0.,1.,1.95,3.5,false,ptRelVar,deltaPhiVar,deltaPhiLabel,outNamePrefix+"_DeltaPhiVsPt3Rel");
+//     plotCorrelations(false,fileNameMC,binAdmin,"hPt3RelGenVsReco",0,ptBin,-1,0.,0.35,0.,0.35,false,"#alpha","#alpha^{gen}",deltaPhiLabel,outNamePrefix+"_Pt3RelGenVsReco");
+//     plotCorrelations(false,fileNameMC,binAdmin,"hPt3RelGenVsImbalGen",0,ptBin,-1,0.,0.35,0.,0.35,false,"#alpha^{imbal}","#alpha^{gen}",deltaPhiGenLabel,outNamePrefix+"_Pt3RelGenVsImbalGen");
+//   }
   
 
-  // Spectra
-  std::vector<TString> fileNames;
-  fileNames.push_back("~/Kalibri/input/Kalibri_DijetSpectra_PythiaZ2_Summer11.root");
-  fileNames.push_back("~/Kalibri/input/Kalibri_DijetSpectra_Herwigpp23_Summer11.root");
-  std::vector<TString> sampleNames;
-  sampleNames.push_back("Pythia");
-  sampleNames.push_back("Herwig++");
-  plotUnderlyingSpectra(fileNames.front(),binAdmin,outNamePrefix);
-  plotVariedSpectrum(fileNames,sampleNames,binAdmin,outNamePrefix);
-  plotPtHat("~/lustre/mc/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6-Summer11-PU_S3_START42_V11-v2/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6job_*_ak5FastPF.root","DiJetTree",outNamePrefix);
-  plotExpectedDataPileUpDistribution("~/PileUp/Pileup_2011_to_172255.root","pileup",outNamePrefix);
+//   // Spectra
+//   std::vector<TString> fileNames;
+//   fileNames.push_back("~/Kalibri/input/Kalibri_DijetSpectra_PythiaZ2_Summer11.root");
+//   fileNames.push_back("~/Kalibri/input/Kalibri_DijetSpectra_Herwigpp23_Summer11.root");
+//   std::vector<TString> sampleNames;
+//   sampleNames.push_back("Pythia");
+//   sampleNames.push_back("Herwig++");
+//   plotUnderlyingSpectra(fileNames.front(),binAdmin,outNamePrefix);
+//   plotVariedSpectrum(fileNames,sampleNames,binAdmin,outNamePrefix);
+//   plotPtHat("~/lustre/mc/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6-Summer11-PU_S3_START42_V11-v2/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6job_*_ak5FastPF.root","DiJetTree",outNamePrefix);
+//   plotExpectedDataPileUpDistribution("~/PileUp/Pileup_2011_to_172255.root","pileup",outNamePrefix);
   
   // Asymmetry contributions
   plotAsymmetryComponents("../results/Analysis2011/ControlPlots/Kalibri_AsymmetryComponents_Summer11.root");

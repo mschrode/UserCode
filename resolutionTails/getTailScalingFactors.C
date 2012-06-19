@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.22 2012/06/16 16:46:55 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.23 2012/06/16 17:57:21 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -328,22 +328,22 @@ void getTailScalingFactors(double  nSigTailStart,
   TString fileNameMCTruth = srcMC  +"ResTails_PtGenAveBins_MCFall11_PF_L1FastJet_V10_REBINNED.root";
   TString fileNameTailWindow = "";
 
-//     // PileUp selection: NVtx 0 - 6
-//     fileNameTailWindow = "ScaleFactors_163337-180252_2012-06-12/Tail_163337-180252_Sig30-Inf_PF.root";
-//     fileNameData            = srcData+"ResTails_PtAveBins_Data2011_PF_L1FastJet_V10_NVtx00-06_REBINNED.root";
-//     fileNameMC              = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx00-06_REBINNED.root";
-//     if( variationPUDn )
-//       fileNameMC            = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx00-06_PUDn_REBINNED.root";
-//     else if( variationPUUp )
-//       fileNameMC            = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx00-06_PUUp_REBINNED.root";
+//   // PileUp selection: NVtx 0 - 6
+//   fileNameTailWindow = "ScaleFactors_163337-180252_2012-06-16/Tail_163337-180252_Sig20-Inf_PF.root";
+//   fileNameData            = srcData+"ResTails_PtAveBins_Data2011_PF_L1FastJet_V10_NVtx00-06_REBINNED.root";
+//   fileNameMC              = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx00-06_REBINNED.root";
+//   if( variationPUDn )
+//     fileNameMC            = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx00-06_PUDn_REBINNED.root";
+//   else if( variationPUUp )
+//     fileNameMC            = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx00-06_PUUp_REBINNED.root";
 
-//       // PileUp selection: NVtx > 6
-//       fileNameData            = srcData+"ResTails_PtAveBins_Data2011_PF_L1FastJet_V10_NVtx07-99_REBINNED.root";
-//       fileNameMC              = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx07-99_REBINNED.root";
-//       if( variationPUDn )
-//         fileNameMC            = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx07-99_PUDn_REBINNED.root";
-//       else if( variationPUUp )
-//         fileNameMC            = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx07-99_PUUp_REBINNED.root";
+//   // PileUp selection: NVtx > 6
+//   fileNameData            = srcData+"ResTails_PtAveBins_Data2011_PF_L1FastJet_V10_NVtx07-99_REBINNED.root";
+//   fileNameMC              = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx07-99_REBINNED.root";
+//   if( variationPUDn )
+//     fileNameMC            = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx07-99_PUDn_REBINNED.root";
+//   else if( variationPUUp )
+//     fileNameMC            = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_NVtx07-99_PUUp_REBINNED.root";
 
 
   // +++++ Setup +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -435,7 +435,7 @@ void getTailScalingFactors(double  nSigTailStart,
 
       // Define window
       if( fileNameTailWindow == "" ) {
-	bin->findWindow(fileNameMC,0,nSigTailStart,nSigTailEnd);
+ 	bin->findWindow(fileNameMC,0,nSigTailStart,nSigTailEnd);
       } else {
 	bin->setWindow(fileNameTailWindow,nSigTailStart,nSigTailEnd);
       }
@@ -914,7 +914,7 @@ void getTailScalingFactors(double  nSigTailStart,
   delete ROOT_OUT_FILE;
 
   printWindowBorders(etaPtBins,binAdm,nSigTailStart);
-//   printMCClosure(etaPtBins,binAdm);
+  printMCClosure(etaPtBins,binAdm);
 //   printExtrapolation(etaPtBins,binAdm);
 
   for(std::vector<EtaPtBin*>::iterator it = etaPtBins.begin();
@@ -943,8 +943,8 @@ void getTailScalingFactors() {
 
   std::vector<double> nSigTailStart;
   nSigTailStart.push_back(2.0);
-  //nSigTailStart.push_back(2.5);
-  nSigTailStart.push_back(3.0);
+//   nSigTailStart.push_back(2.5);
+//  nSigTailStart.push_back(3.0);
 
   double  nSigTailEnd = 1000.;
   for(std::vector<double>::const_iterator it = nSigTailStart.begin();
@@ -2926,8 +2926,9 @@ void plotFinalResult(const TString &fileName) {
       double esystu = gUncertAbs->GetEYhigh()[bin-1];
       double etotd = sqrt( estat*estat + esystd*esystd );
       double etotu = sqrt( estat*estat + esystu*esystu );
-      std::cout << " \\pm " << estat << "^{+" << esystu << "}_{-" << esystd << "}$ & $";
-      std::cout << hScaleNom->GetBinContent(bin) << "^{+" << etotu << "}_{-" << etotd << "} $ \\\\\n";
+      std::cout << " \\pm " << estat << " \\pm " << esystu << "$ \\\\\n";
+//       std::cout << " \\pm " << estat << "^{+" << esystu << "}_{-" << esystd << "}$ & $";
+//       std::cout << hScaleNom->GetBinContent(bin) << "^{+" << etotu << "}_{-" << etotd << "} $ \\\\\n";
     }    
     std::cout << "\\midrule\n";
     if( etaBin == binAdm->nEtaBins()-1 ) {
@@ -2988,10 +2989,10 @@ void plotEvolution() {
 
   // Evolution with NVtx
   std::vector<TString> fileNames;
-  fileNames.push_back("ScaleFactors_163337-180252_2012-06-16/Tail_163337-180252_NVtx00-06_Sig30-Inf_PF.root");
-  fileNames.push_back("ScaleFactors_163337-180252_2012-06-16/Tail_163337-180252_NVtx07-99_Sig30-Inf_PF.root");
-  const TString outNamePrefix = "Tail_163337-180252_NVtxEvolution_Sig30_PF";
-  const TString labWin = labelWindow(3.,1000.);
+  fileNames.push_back("ScaleFactors_163337-180252_2012-06-16/Tail_163337-180252_NVtx00-06_Sig20-Inf_PF.root");
+  fileNames.push_back("ScaleFactors_163337-180252_2012-06-16/Tail_163337-180252_NVtx07-99_Sig20-Inf_PF.root");
+  const TString outNamePrefix = "Tail_163337-180252_NVtxEvolution_Sig20_PF";
+  const TString labWin = labelWindow(2.,1000.);
 
   // Binning
   std::vector<double> xBinEdges;
@@ -3163,25 +3164,25 @@ void plotEvolutionFinalPlots() {
 
   std::vector<TString> fileNames;
 
-//   // Evolution with tail region
-//   fileNames.push_back("ScaleFactors_163337-180252_2012-06-12/Tail_163337-180252_Sig20-Inf_PF_ScaleFactors.root");
-//   fileNames.push_back("ScaleFactors_163337-180252_2012-06-12/Tail_163337-180252_Sig25-Inf_PF_ScaleFactors.root");
-//   fileNames.push_back("ScaleFactors_163337-180252_2012-06-12/Tail_163337-180252_Sig30-Inf_PF_ScaleFactors.root");
-//   const TString xAxisLabel = "Tail Start "+ASYM_TAIL_START+" ("+COMMON_SIGMA+")";
-//   const int nBins = 3;
-//   const double xBinEdges[nBins+1] = { 1.75, 2.25, 2.75, 3.25 };
-//   const TString binLabels[1] = { "" };
-//   const TString outNamePrefix = "Tail_163337-180252_SigEvolution_PF_ScaleFactors";
+   // Evolution with tail region
+   fileNames.push_back("ScaleFactors_163337-180252_2012-06-16/Tail_163337-180252_Sig20-Inf_PF_ScaleFactors.root");
+   fileNames.push_back("ScaleFactors_163337-180252_2012-06-16/Tail_163337-180252_Sig25-Inf_PF_ScaleFactors.root");
+   fileNames.push_back("ScaleFactors_163337-180252_2012-06-16/Tail_163337-180252_Sig30-Inf_PF_ScaleFactors.root");
+   const TString xAxisLabel = "Tail Start "+ASYM_TAIL_START+" ("+COMMON_SIGMA+")";
+   const int nBins = 3;
+   const double xBinEdges[nBins+1] = { 1.75, 2.25, 2.75, 3.25 };
+   const TString binLabels[1] = { "" };
+   const TString outNamePrefix = "Tail_163337-180252_SigEvolution_PF_ScaleFactors";
 
-  // Evolution with NVtx
-  fileNames.push_back("ScaleFactors_163337-180252_2012-06-16/Tail_163337-180252_NVtx00-06_Sig20-Inf_PF_ScaleFactors.root");
-  fileNames.push_back("ScaleFactors_163337-180252_2012-06-16/Tail_163337-180252_NVtx07-99_Sig20-Inf_PF_ScaleFactors.root");
-  const TString xAxisLabel = LABEL_NVTX;
-  const int nBins = 2;
-  const double xBinEdges[nBins+1] = { 0., 1., 2. };
-  const TString binLabels[nBins+1] = { "#leq 6", "#geq 7" };
-  const TString outNamePrefix = "Tail_163337-180252_NVtxEvolution_Sig20_PF_ScaleFactors";
-  const TString labWin = labelWindow(2.,1000.);
+//   // Evolution with NVtx
+//   fileNames.push_back("ScaleFactors_163337-180252_2012-06-16/Tail_163337-180252_NVtx00-06_Sig30-Inf_PF_ScaleFactors.root");
+//   fileNames.push_back("ScaleFactors_163337-180252_2012-06-16/Tail_163337-180252_NVtx07-99_Sig30-Inf_PF_ScaleFactors.root");
+//   const TString xAxisLabel = LABEL_NVTX;
+//   const int nBins = 2;
+//   const double xBinEdges[nBins+1] = { 0., 1., 2. };
+//   const TString binLabels[nBins+1] = { "#leq 6", "#geq 7" };
+//   const TString outNamePrefix = "Tail_163337-180252_NVtxEvolution_Sig30_PF_ScaleFactors";
+  const TString labWin = labelWindow(3.,1000.);
 
   assert( nBins == static_cast<int>(fileNames.size()) );
 
@@ -3192,6 +3193,7 @@ void plotEvolutionFinalPlots() {
   sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("BinningAdmin.cfg");  
   std::vector<EtaPtBin*> etaPtBins;
   unsigned int nEtaBins = binAdm->nEtaBins();
+  TH1* hDiff = new TH1D("hDiff",";Difference to First Selection;|#eta|#timesp^{ave}_{T} Intervals",25,-1.,1.);
   for(unsigned int etaBin = 0; etaBin < nEtaBins; ++etaBin) {
 
     // Read scale factors 
@@ -3251,6 +3253,8 @@ void plotEvolutionFinalPlots() {
       gPad->RedrawAxis();
       toFiles(can,outNamePrefix+"_Eta"+util::toTString(etaBin)+"_Pt"+util::toTString(ptBin));
 
+      hDiff->Fill(hEvo->GetBinContent(hEvo->GetNbinsX())-hEvo->GetBinContent(1));
+
       delete hEvoFrame;
       delete hEvo;
       delete hEvoSyst;
@@ -3264,6 +3268,13 @@ void plotEvolutionFinalPlots() {
       delete hScaleFactorsSyst.at(i);
     }
   } // End of loop over eta bins
+  
+  TCanvas* can = util::HistOps::createTCanvas("can","Difference of Scale Factors",500,500);
+  can->cd();
+  hDiff->Draw();
+  toFiles(can,outNamePrefix+"_Difference");
+  std::cout << " <Diff> = " << hDiff->GetMean() << " +/- " << hDiff->GetMeanError() << std::endl;
+  delete hDiff;
 
   ROOT_OUT_FILE->Close();
   delete ROOT_OUT_FILE;

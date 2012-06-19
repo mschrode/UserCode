@@ -1,4 +1,4 @@
-// $Id: PlotMaker.cc,v 1.37 2012/06/15 23:05:55 mschrode Exp $
+// $Id: PlotMaker.cc,v 1.38 2012/06/16 15:02:29 mschrode Exp $
 
 #include "PlotMaker.h"
 
@@ -2425,6 +2425,12 @@ namespace resolutionFit {
 	  out_->logx();
 	  gPad->RedrawAxis();
 	  out_->saveCurrentPad(histFileName("Resolution",etaBin,sLabel1,sLabel2,fitResType));
+
+	  std::cout << "\nEta: " << etaBin->etaBin() << std::endl;
+	  for(int i = 0; i < gRes1->GetN(); ++i) {
+	    std::cout << i << ": " << gRes1->GetX()[i] << ": " << 100.*gRes1->GetY()[i] << " +/- " << 100.*gRes1->GetEYhigh()[i] << " +" << 100.*gSystErr1->GetEYhigh()[i] << " -" << 100.*gSystErr1->GetEYlow()[i] << std::endl;
+	    std::cout << i << ": " << gRes2->GetX()[i] << ": " << 100.*gRes2->GetY()[i] << " +/- " << 100.*gRes2->GetEYhigh()[i] << std::endl;
+	  }
 
 	  delete gRes1;
 	  delete gRes2;
