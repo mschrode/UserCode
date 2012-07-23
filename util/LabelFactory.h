@@ -1,4 +1,4 @@
-//  $Id: LabelFactory.h,v 1.31 2012/06/15 23:07:20 mschrode Exp $
+//  $Id: LabelFactory.h,v 1.32 2012/07/23 11:19:55 mschrode Exp $
 
 #ifndef LABEL_FACTORY_H
 #define LABEL_FACTORY_H
@@ -22,7 +22,7 @@ namespace util {
   //!
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2010/03/09
-  //!  $Id: LabelFactory.h,v 1.31 2012/06/15 23:07:20 mschrode Exp $
+  //!  $Id: LabelFactory.h,v 1.32 2012/07/23 11:19:55 mschrode Exp $
   // -------------------------------------------------------------------------------------
   class LabelFactory {
   public:
@@ -62,7 +62,7 @@ namespace util {
       leg->SetFillColor(0);
       leg->SetFillStyle(0);
       leg->SetTextFont(42);
-      //leg->SetTextSize(0.04);
+      leg->SetTextSize(0.04);
       return leg;
     }
     static TLegend *createLegend(int nEntries) {
@@ -127,7 +127,7 @@ namespace util {
       txt->SetFillColor(0);
       txt->SetTextFont(42);
       txt->SetTextAlign(12);
-      //      txt->SetTextSize(0.04);
+      txt->SetTextSize(0.04);
       return txt;
     }
 
