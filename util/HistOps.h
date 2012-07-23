@@ -1,4 +1,4 @@
-// $Id: HistOps.h,v 1.53 2012/06/15 00:15:53 mschrode Exp $
+// $Id: HistOps.h,v 1.54 2012/06/15 23:07:20 mschrode Exp $
 
 #ifndef HistOps_h
 #define HistOps_h
@@ -36,7 +36,7 @@ namespace util
   //!  
   //!  \author   Matthias Schroeder (www.desy.de/~matsch)
   //!  \date     2009/03/20
-  //!  $Id: HistOps.h,v 1.53 2012/06/15 00:15:53 mschrode Exp $
+  //!  $Id: HistOps.h,v 1.54 2012/06/15 23:07:20 mschrode Exp $
   class HistOps
   {
   public:
@@ -449,14 +449,35 @@ namespace util
 
     // -------------------------------------------------------------------------------------
     static TH1 *createRatioPlot(const TH1 *h1, const TH1 *h2, const TString &yTitle = "") {
-      assert( h1->GetNbinsX() == h2->GetNbinsX() );
       TString name = "Ratio_";
       name += h1->GetName();
       TH1 *hRatio = static_cast<TH1*>(h1->Clone(name));
+      if( h1->GetNbinsX() == h2->GetNbinsX() ) {
+	hRatio->Divide(h2);
+      } else if( h1->GetNbinsX() < h2->GetNbinsX() ) { // assume that denominator has zero error
+	hRatio->Reset();
+	for(int bin = 1; bin <= h1->GetNbinsX(); ++bin) {
+	  double top = h1->GetBinContent(bin);
+	  double bot = 0.;
+	  int c = 0;
+	  for(int bin2 = h2->GetXaxis()->FindBin(h1->GetXaxis()->GetBinLowEdge(bin));
+	      bin2 <= h2->GetXaxis()->FindBin(h1->GetXaxis()->GetBinUpEdge(bin));
+	      ++bin2, ++c) {
+	    bot += h2->GetBinContent(bin2);
+	  }
+	  bot /= c;
+	  if( bot != 0. ) {
+	    hRatio->SetBinContent(bin,top/bot);
+	    hRatio->SetBinError(bin,h1->GetBinError(bin)/bot);
+	  }
+	}
+      } else {
+	std::cerr << "ERROR in util::HistOps::createRatioPlot(): case not implemented" << std::endl;
+	exit(-1);
+      }
       hRatio->SetMarkerStyle(h1->GetMarkerStyle());
       hRatio->SetMarkerColor(h1->GetLineColor());
       hRatio->SetYTitle(yTitle);
-      hRatio->Divide(h2);
       setYRange(hRatio,1.,1.,0.);
 
       return hRatio;
