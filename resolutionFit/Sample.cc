@@ -217,12 +217,30 @@ namespace resolutionFit {
     return result;
   }
 
-
   // -------------------------------------------------------------------
   double Sample::meanPtStatUncert(FitResult::Type type) const {
     double result = 0.;
     FitResult* fr = 0;
     if( findFitResult(type,fr) ) result = fr->meanPtUncert();
+    
+    return result;
+  }
+
+
+  // -------------------------------------------------------------------
+  double Sample::meanPt(FitResult::Type type, unsigned int ptSoftBin) const {
+    double result = 0.;
+    FitResult* fr = 0;
+    if( findFitResult(type,fr) ) result = fr->meanPt(ptSoftBin);
+    
+    return result;
+  }
+
+  // -------------------------------------------------------------------
+  double Sample::meanPtStatUncert(FitResult::Type type, unsigned int ptSoftBin) const {
+    double result = 0.;
+    FitResult* fr = 0;
+    if( findFitResult(type,fr) ) result = fr->meanPtUncert(ptSoftBin);
     
     return result;
   }

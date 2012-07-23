@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.23 2012/06/16 17:57:21 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.24 2012/06/19 11:20:06 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -311,7 +311,7 @@ void getTailScalingFactors(double  nSigTailStart,
   const bool    fixDataShape = false;
   const double  nSigCore     = 2.;
   const TString jetAlgo      = "PF";
-  const bool    archivePlots = true;
+  const bool    archivePlots = false;
 
 
   // +++++ Input Files +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -408,7 +408,8 @@ void getTailScalingFactors(double  nSigTailStart,
   if( SHOW_HEADER ) {
     util::StyleSettings::setStylePAS();
   } else {
-    util::StyleSettings::setStyleNoteNoTitle();
+    //util::StyleSettings::setStyleNoteNoTitle();
+    util::StyleSettings::setStylePresentationNoTitle();
   }
   gErrorIgnoreLevel = 1001;        // Do not print ROOT message if eps file has been created
   sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("BinningAdmin.cfg");
@@ -2633,7 +2634,8 @@ void plotFinalResult(const TString &fileName) {
   if( SHOW_HEADER ) {
     util::StyleSettings::setStylePAS();
   } else {
-    util::StyleSettings::setStyleNoteNoTitle();
+    //util::StyleSettings::setStyleNoteNoTitle();
+util::StyleSettings::setStylePresentationNoTitle();
   }
   gErrorIgnoreLevel = 1001;
 
@@ -2837,7 +2839,7 @@ void plotFinalResult(const TString &fileName) {
     for(int bin = 1; bin <= hUncertsFrame->GetNbinsX(); ++bin) {
       hUncertsFrame->SetBinContent(bin,-1.);
     }
-    hUncertsFrame->GetYaxis()->SetRangeUser(0.,95);
+    hUncertsFrame->GetYaxis()->SetRangeUser(0.,65);
     hUncertsFrame->GetXaxis()->SetMoreLogLabels();
     hUncertsFrame->GetXaxis()->SetNoExponent();
     hUncertsFrame->GetYaxis()->SetTitle("Relative Uncertainty on "+SCALE+"  (%)");
@@ -2983,16 +2985,17 @@ void plotEvolution() {
   if( SHOW_HEADER ) {
     util::StyleSettings::setStylePAS();
   } else {
-    util::StyleSettings::setStyleNoteNoTitle();
+    //util::StyleSettings::setStyleNoteNoTitle();
+    util::StyleSettings::setStylePresentationNoTitle();
   }
   gErrorIgnoreLevel = 1001;
 
   // Evolution with NVtx
   std::vector<TString> fileNames;
-  fileNames.push_back("ScaleFactors_163337-180252_2012-06-16/Tail_163337-180252_NVtx00-06_Sig20-Inf_PF.root");
-  fileNames.push_back("ScaleFactors_163337-180252_2012-06-16/Tail_163337-180252_NVtx07-99_Sig20-Inf_PF.root");
-  const TString outNamePrefix = "Tail_163337-180252_NVtxEvolution_Sig20_PF";
-  const TString labWin = labelWindow(2.,1000.);
+  fileNames.push_back("ScaleFactors_163337-180252_2012-06-16/Tail_163337-180252_NVtx00-06_Sig30-Inf_PF.root");
+  fileNames.push_back("ScaleFactors_163337-180252_2012-06-16/Tail_163337-180252_NVtx07-99_Sig30-Inf_PF.root");
+  const TString outNamePrefix = "Tail_163337-180252_NVtxEvolution_Sig30_PF";
+  const TString labWin = labelWindow(3.,1000.);
 
   // Binning
   std::vector<double> xBinEdges;

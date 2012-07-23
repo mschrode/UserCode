@@ -1,4 +1,4 @@
-// $Id: plotControlDistributions.C,v 1.10 2012/06/16 15:02:29 mschrode Exp $
+// $Id: plotControlDistributions.C,v 1.11 2012/06/19 11:21:46 mschrode Exp $
 
 //!  Control and n-1 distributions for
 //!  histograms in Kalibri skims from
@@ -55,6 +55,8 @@ TPaveText* createLabel(double etaMin, double etaMax, double ptAveMin, double ptA
   }
   if( selectionLabel != "NONE" ) label->AddText(selectionLabel);
 
+  label->SetTextSize(0.045);
+
   return label;
 }
 
@@ -100,6 +102,7 @@ void plotNMinus1(const TString &fileNameData, const TString &fileNameMC, const T
   TLegend* leg = util::LabelFactory::createLegendColWithOffset(2,-0.48,label->GetSize());
   leg->AddEntry(hData,util::LabelFactory::data(LUMI),"P");
   leg->AddEntry(hMC,util::LabelFactory::mc(),"F");
+  leg->SetTextSize(0.05);
 
   // Plots
   util::HistOps::setYRange(hMC,label->GetSize()+leg->GetNRows(),(logY ? 3E-1 : -1.));
@@ -371,26 +374,29 @@ void plotExpectedDataPileUpDistribution(const TString &fileName, const TString &
 void plotUnderlyingSpectra(const TString &fileName, const sampleTools::BinningAdmin &binningAdmin, const TString &outNamePrefix) {
   unsigned int ptSoftBin = 6;
   std::vector<TH1*> hists;
-  TLegend* leg = util::LabelFactory::createLegendCol(binningAdmin.nEtaBins(),0.5);
+  TLegend* leg = util::LabelFactory::createLegendCol(binningAdmin.nEtaBins(),0.65);
   for(unsigned int etaBin = 0; etaBin < binningAdmin.nEtaBins(); ++etaBin) {
     TH1* h = util::FileOps::readTH1(fileName,"hPtGen_Eta"+util::toTString(etaBin)+"_PtSoft"+util::toTString(ptSoftBin));
     h->SetTitle("");
     util::HistOps::normHist(h,"width");
     util::HistOps::setAxisTitles(h,"p^{gen}_{T}","GeV","Probability Density",true);
-    h->SetLineWidth(2);
+    h->SetLineWidth(4);
     h->SetLineColor(util::StyleSettings::color(etaBin));
-    h->SetLineStyle(etaBin);
+    //h->SetLineStyle(etaBin);
     leg->AddEntry(h,util::LabelFactory::etaGenCut(binningAdmin.etaMin(etaBin),binningAdmin.etaMax(etaBin)),"L");
     hists.push_back(h);
   }
+  leg->SetTextSize(0.05);
 
-  TPaveText* label = util::LabelFactory::createPaveText(3,-0.5);
+  TPaveText* label = util::LabelFactory::createPaveText(3,-0.35);
   label->AddText(util::LabelFactory::mc());
   label->AddText(util::LabelFactory::deltaPhiGenCut(2.7));
   label->AddText(util::LabelFactory::pt3RelGenCut(binningAdmin.ptSoftMax(ptSoftBin)));
+  label->SetTextSize(0.045);
 
   // linear x-scale
-  TCanvas* c1 = util::HistOps::createTCanvas(outNamePrefix+"_PtGenDijetSpectra","Underlying di-jet spectra",500,500);
+  //  TCanvas* c1 = util::HistOps::createTCanvas(outNamePrefix+"_PtGenDijetSpectra","Underlying di-jet spectra",500,500);
+  TCanvas* c1 = new TCanvas(outNamePrefix+"_PtGenDijetSpectra","Underlying di-jet spectra",500,500);
 
   c1->cd();
   TH1* h = hists.front();
@@ -650,9 +656,96 @@ void plotAsymmetryComponents(const TString &file) {
 
 
 // ------------------------------------------------------------
+void plotDijetVsPhotonJet() {
+  gErrorIgnoreLevel = 1001;
+  util::StyleSettings::setStylePresentationNoTitle();
+
+  TH1* hPtAve = util::FileOps::readTH1("hPtAveSpectrum5fb.root","hPtAve");
+  TH1* hPtGam = util::FileOps::readTH1("hPtGamma.root","hPtGamma");
+
+  hPtAve->GetXaxis()->SetTitle("p^{ref}_{T} (GeV)");
+  hPtAve->GetXaxis()->SetNdivisions(505);
+  hPtAve->SetMarkerStyle(21);
+  hPtAve->SetMarkerColor(util::StyleSettings::color(3));
+  hPtAve->SetLineColor(hPtAve->GetMarkerColor());
+  hPtAve->SetLineWidth(2);
+
+  hPtGam->SetLineWidth(hPtAve->GetLineWidth());
+  hPtGam->SetMarkerStyle(20);
+  hPtGam->SetMarkerColor(util::StyleSettings::color(0));
+  hPtGam->SetLineColor(hPtGam->GetMarkerColor());
+
+  TPaveText* label = util::LabelFactory::createPaveText(1);
+  label->AddText("4.90 fb^{-1},  |#eta| < 0.5,  "+util::LabelFactory::deltaPhiCut(2.7)+",  "+util::LabelFactory::pt3RelCut(0.14));
+
+  TLegend* leg1 = util::LabelFactory::createLegendColWithOffset(1,0.65,0.07);
+  leg1->SetTextSize(0.05);
+  leg1->AddEntry(hPtAve,"Dijet (p^{ref}_{T} = p^{ave}_{T})","P");
+  TLegend* leg2 = util::LabelFactory::createLegendColWithOffset(1,0.65,0.15);
+  leg2->SetTextSize(0.05);
+  leg2->AddEntry(hPtGam,"#gamma+jet (p^{ref}_{T} = p^{#gamma}_{T})","P");
+
+  util::HistOps::setYRange(hPtAve,label->GetSize(),0.3);
+
+  TCanvas* can = util::HistOps::createTCanvas("can","PtGamma vs PtAve",500,500);
+  can->cd();
+  hPtAve->Draw("PE1");
+  hPtGam->Draw("PE1same");
+  label->Draw("same");
+  leg1->Draw("same");
+  leg2->Draw("same");
+  can->SetLogy();
+  gPad->RedrawAxis();
+  can->SetName("PtSpectrumDijetVsGammaJet");
+  util::FileOps::toFiles(can,OUT_FILE);
+}
+
+
+// ------------------------------------------------------------
+void plotPFvsCalo() {
+  TF1* fCalo = new TF1("fCalo","sqrt(((TMath::Sign(1,[0])*sq([0]/x))+(sq([1])*(x^([3]-1))))+sq([2]))",30,1000);
+  fCalo->SetLineWidth(3);
+  fCalo->SetLineColor(kBlack);
+  TF1* fPF = static_cast<TF1*>(fCalo->Clone("fPF"));
+  fPF->SetLineColor(kRed);
+
+  fCalo->SetParameter(0,3.8663);
+  fCalo->SetParameter(1,0.728714);
+  fCalo->SetParameter(2,0.);
+  fCalo->SetParameter(3,0.224013);
+
+  fPF->SetParameter(0,-1.18591);
+  fPF->SetParameter(1,0.40573);
+  fPF->SetParameter(2,0.);
+  fPF->SetParameter(3,0.352069);
+
+  TPaveText* label = util::LabelFactory::createPaveText(1);
+  label->AddText("Simulation,  |#eta| < 1.1");
+  TLegend* leg1 = util::LabelFactory::createLegendWithOffset(2,1);
+  leg1->AddEntry(fCalo,"Calo Jets","L");
+  leg1->AddEntry(fPF,"PF Jets","L");
+  
+  TH1* hFrame = new TH1D("hFrame",";p_{T} (GeV);#sigma(p_{T}) / p_{T}",1000,29,1100);
+  hFrame->GetXaxis()->SetMoreLogLabels();
+  hFrame->GetXaxis()->SetNoExponent();
+  hFrame->GetYaxis()->SetRangeUser(3E-5,0.34);
+  TCanvas* can = new TCanvas("MCTruthResolution_Fall10_CaloVsPF","Resolution",500,500);
+  can->cd();
+  hFrame->Draw();
+  fCalo->Draw("same");
+  label->Draw("same");
+  fPF->Draw("same");
+  leg1->Draw("same");
+  gPad->RedrawAxis();
+  can->SetLogx();
+  util::FileOps::toFiles(can,OUT_FILE);
+}
+
+
+// ------------------------------------------------------------
 void plotControlDistributions() {
   gErrorIgnoreLevel = 1001;
-  util::StyleSettings::setStyleNoteNoTitle();
+  util::StyleSettings::setStylePresentationNoTitle();
 
   const TString outNamePrefix = "ControlPlots_163337-167151_Summer11-PythiaZ2";
   const TString fileNameData = "../results/Analysis2011/ControlPlots/Kalibri_ControlPlots_Run2011A-163337-167151.root";
@@ -673,33 +766,37 @@ void plotControlDistributions() {
 
 //   plotNMinus1Eta(fileNameData,fileNameMC,binAdmin,3,3,-5.1,-5.1,false,"#eta","","jets",deltaPhiLabel+",  "+ptRelLabel,outNamePrefix+"_NMin1Eta");
   
-//   for(int ptBin = 0; ptBin < 16; ++ptBin) {
-//     //     // N-1 plots
-//     plotNMinus1(fileNameData,fileNameMC,"hDeltaPhiNMin1",binAdmin,0,ptBin,2,2.1,3.5,false,deltaPhiVar,"","events",ptRelLabel,outNamePrefix+"_NMin1DeltaPhi");
-//     plotNMinus1(fileNameData,fileNameMC,"hPtRelNMin1",binAdmin,0,ptBin,3,0.,1.,false,ptRelVar,"","events",deltaPhiLabel,outNamePrefix+"_NMin1PtRel");
+   for(int ptBin = 0; ptBin < 16; ++ptBin) {
+     //     // N-1 plots
+//      plotNMinus1(fileNameData,fileNameMC,"hDeltaPhiNMin1",binAdmin,0,ptBin,2,2.35,3.5,false,deltaPhiVar,"","events",ptRelLabel,outNamePrefix+"_NMin1DeltaPhi");
+//      plotNMinus1(fileNameData,fileNameMC,"hPtRelNMin1",binAdmin,0,ptBin,3,0.,1.,false,ptRelVar,"","events",deltaPhiLabel,outNamePrefix+"_NMin1PtRel");
     
 //     // Pt3 correlations
 //     plotCorrelations(true,fileNameData,binAdmin,"hDeltaPhiVsPt3Rel",0,ptBin,-1,0.,1.,1.95,3.5,false,ptRelVar,deltaPhiVar,deltaPhiLabel,outNamePrefix+"_DeltaPhiVsPt3Rel");
 //     plotCorrelations(false,fileNameMC,binAdmin,"hPt3RelGenVsReco",0,ptBin,-1,0.,0.35,0.,0.35,false,"#alpha","#alpha^{gen}",deltaPhiLabel,outNamePrefix+"_Pt3RelGenVsReco");
 //     plotCorrelations(false,fileNameMC,binAdmin,"hPt3RelGenVsImbalGen",0,ptBin,-1,0.,0.35,0.,0.35,false,"#alpha^{imbal}","#alpha^{gen}",deltaPhiGenLabel,outNamePrefix+"_Pt3RelGenVsImbalGen");
-//   }
+   }
   
 
 //   // Spectra
-//   std::vector<TString> fileNames;
-//   fileNames.push_back("~/Kalibri/input/Kalibri_DijetSpectra_PythiaZ2_Summer11.root");
-//   fileNames.push_back("~/Kalibri/input/Kalibri_DijetSpectra_Herwigpp23_Summer11.root");
-//   std::vector<TString> sampleNames;
-//   sampleNames.push_back("Pythia");
-//   sampleNames.push_back("Herwig++");
-//   plotUnderlyingSpectra(fileNames.front(),binAdmin,outNamePrefix);
+//    std::vector<TString> fileNames;
+//    fileNames.push_back("~/Kalibri/input/Kalibri_DijetSpectra_PythiaZ2_Summer11.root");
+//    fileNames.push_back("~/Kalibri/input/Kalibri_DijetSpectra_Herwigpp23_Summer11.root");
+//    std::vector<TString> sampleNames;
+//    sampleNames.push_back("Pythia");
+//    sampleNames.push_back("Herwig++");
+//    plotUnderlyingSpectra(fileNames.front(),binAdmin,outNamePrefix);
 //   plotVariedSpectrum(fileNames,sampleNames,binAdmin,outNamePrefix);
 //   plotPtHat("~/lustre/mc/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6-Summer11-PU_S3_START42_V11-v2/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6job_*_ak5FastPF.root","DiJetTree",outNamePrefix);
 //   plotExpectedDataPileUpDistribution("~/PileUp/Pileup_2011_to_172255.root","pileup",outNamePrefix);
   
-  // Asymmetry contributions
-  plotAsymmetryComponents("../results/Analysis2011/ControlPlots/Kalibri_AsymmetryComponents_Summer11.root");
+//   // Asymmetry contributions
+//   plotAsymmetryComponents("../results/Analysis2011/ControlPlots/Kalibri_AsymmetryComponents_Summer11.root");
 
+//   plotDijetVsPhotonJet();
+
+   plotPFvsCalo();
+  
   OUT_FILE->Close();
   delete OUT_FILE;
 }

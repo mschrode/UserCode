@@ -1,4 +1,4 @@
-// $Id: OutputManager.cc,v 1.8 2012/06/01 18:32:55 mschrode Exp $
+// $Id: OutputManager.cc,v 1.9 2012/06/15 23:05:55 mschrode Exp $
 
 #include "OutputManager.h"
 
@@ -244,6 +244,14 @@ namespace resolutionFit {
     can->SaveAs(name+".eps","eps");
     if( rootOutput_ && outFile_->IsOpen() ) {
       outFile_->WriteTObject(can,name);
+    }
+  }
+
+  // -------------------------------------------------------------------------------------
+  void OutputManagerEPSSingleFiles::saveTObject(TObject* obj, const TString &name) const {
+    TObject* c = obj->Clone(name);
+    if( rootOutput_ && outFile_->IsOpen() ) {
+      outFile_->WriteTObject(c);
     }
   }
 }

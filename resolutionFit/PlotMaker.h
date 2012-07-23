@@ -1,4 +1,4 @@
-// $Id: PlotMaker.h,v 1.28 2012/06/12 21:31:11 mschrode Exp $
+// $Id: PlotMaker.h,v 1.29 2012/06/15 23:05:55 mschrode Exp $
 
 #ifndef PLOT_MAKER_H
 #define PLOT_MAKER_H
@@ -107,6 +107,7 @@ namespace resolutionFit {
     TString histFileName(const TString &id, SampleLabel label1, SampleLabel label2, const EtaBin* etaBin, unsigned int ptSoftBin) const;
     TString histFileName(const TString &id, const EtaBin* etaBin, SampleLabel label1, SampleLabel label2, FitResult::Type type) const;
     TString histFileName(const TString &id, const EtaBin* etaBin, SampleLabel sampleLabel, FitResult::Type type) const;
+    TString histFileName(const TString &id, const EtaBin* etaBin, SampleLabel sampleLabel, unsigned int ptSoftBin) const;
     TString histFileName(const TString &id, const PtBin* ptBin, const Sample* sample, FitResult::Type type) const;
     TString histFileName(const TString &id, const PtBin* ptBin, FitResult::Type type) const;
     TString histFileName(const TString &id, const PtBin* ptBin, const Sample* sample) const;

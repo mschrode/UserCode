@@ -1,4 +1,4 @@
-// $Id: run_163337-167151_V3_Summer11-ThesisResults.cc,v 1.10 2012/06/15 23:05:55 mschrode Exp $
+// $Id: run_163337-167151_V3_Summer11-ThesisResults.cc,v 1.11 2012/06/16 15:02:29 mschrode Exp $
 
 #include <iostream>
 
@@ -16,7 +16,8 @@ using namespace resolutionFit;
 
 int main(int argc, char *argv[]) {
 
-  util::StyleSettings::setStyleNoteNoTitle();
+  //util::StyleSettings::setStyleNoteNoTitle();
+  util::StyleSettings::setStylePresentationNoTitle();
   
   gErrorIgnoreLevel = 1001;
   
@@ -27,7 +28,7 @@ int main(int argc, char *argv[]) {
   par->setOutMode(OutputManager::EPSSingleFiles);
   par->setLumi(855.);
   par->setPtSoftAbsMin(10.);
-  //par->setNEtaBinsUser(1);
+  par->setNEtaBinsUser(2);
   
   TString pathToSrc = "/afs/naf.desy.de/user/m/mschrode/UserCode/mschrode/";
   TString pathToConfig = pathToSrc+"resolutionFit/config/Analysis2011/";
@@ -59,19 +60,19 @@ int main(int argc, char *argv[]) {
   // Summer11 primary result
   cmd->addDataSample(idData,pathToFitResultsData+"/ResFit_PtAveBins_Data_163337-167151_V3_"+jetTypeStr+"_L1FastJet.root");
   cmd->addMCSample(idMC,pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet_Nominal.root");
-    cmd->addMCSample("JES Down",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet_JESDown.root");
-    cmd->addMCSample("JES Up",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet_JESUp.root");
-    cmd->addMCSample("Spec Herwig",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet_SpectrumHerwigpp.root");
-    cmd->addMCSample("PU Up",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet_PUUp.root");
+//   cmd->addMCSample("JES Down",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet_JESDown.root");
+//   cmd->addMCSample("JES Up",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet_JESUp.root");
+//   cmd->addMCSample("Spec Herwig",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet_SpectrumHerwigpp.root");
+//   cmd->addMCSample("PU Up",pathToFitResultsMC+"/ResFit_PtAveBins_MCSummer11_V3_"+jetTypeStr+"_L1FastJet_PUUp.root");
   
   cmd->addFitResult(nominalFitResType);
 
   // Systematic uncertainties
-    cmd->addUncertaintyFromVariedSample("PU",1.,idMC,nominalFitResType,"PU Up",kGreen-2);
-    cmd->addUncertaintyFromVariedSample("Spectrum",1.,idMC,nominalFitResType,"Spec Herwig",kCyan-7);
-    cmd->addUncertaintyFromVariedSample("JES",1.,idMC,nominalFitResType,"JES Down","JES Up",kBlue);
-    cmd->addPLIUncertainty(idMC,nominalFitResType,kRed+4);
-    cmd->addExtrapolationUncertainty(idMC,nominalFitResType,kRed+2);
+//   cmd->addUncertaintyFromVariedSample("PU",1.,idMC,nominalFitResType,"PU Up",kGreen-2);
+//   cmd->addUncertaintyFromVariedSample("Spectrum",1.,idMC,nominalFitResType,"Spec Herwig",kCyan-7);
+//   cmd->addUncertaintyFromVariedSample("JES",1.,idMC,nominalFitResType,"JES Down","JES Up",kBlue);
+//   cmd->addPLIUncertainty(idMC,nominalFitResType,kRed+4);
+//   cmd->addExtrapolationUncertainty(idMC,nominalFitResType,kRed+2);
 
   
   // Samples to be compared

@@ -1,4 +1,4 @@
-// $Id: FitResult.cc,v 1.13 2012/06/08 21:14:44 mschrode Exp $
+// $Id: FitResult.cc,v 1.14 2012/06/09 15:58:31 mschrode Exp $
 
 #include "FitResult.h"
 
@@ -93,10 +93,10 @@ namespace resolutionFit {
   }
 
 
-//   // -------------------------------------------------------------------------------------  
-//   TH1* FitResult::spectrum() const {
-//     return meas_.front()->histPdfPtTrue();
-//   }
+  //   // -------------------------------------------------------------------------------------  
+  //   TH1* FitResult::spectrum() const {
+  //     return meas_.front()->histPdfPtTrue();
+  //   }
 
 
   // -------------------------------------------------------------------------------------  
@@ -145,24 +145,28 @@ namespace resolutionFit {
     values_.clear();
     statUncerts_.clear();
     ptSoft_.clear();
+    meanPt_.clear();
+    meanPtUncert_.clear();
 
     // Set ptSoft cut values and find smalles ptSoft for meanPt
     double ptSoftSmall = 1000.;
-    for(MeasIt it = meas_.begin() ; it != meas_.end(); ++it) {
-      ptSoft_.push_back((*it)->ptSoft());
-      if( (*it)->ptSoft() < ptSoftSmall ) {
-	ptSoftSmall = (*it)->ptSoft();
+    for(unsigned int i = 0; i < meas_.size(); ++i) {
+      ptSoft_.push_back(meas_.at(i)->ptSoft());
+      meanPt_.push_back(meas_.at(i)->meanPtAve());
+      meanPtUncert_.push_back(meas_.at(i)->meanPtAveUncert());
+      if( i == 0 ) {
+	ptSoftSmall = meas_.at(i)->ptSoft();
 	
 	std::cout << "FitResultMaxLikeKSoftRel::storeResult(): TODO MeanPt from spectrum convoluted with extrapolated *sigma*!" << std::endl;
-	meanPt_ = (*it)->meanPdfPtTrue();
-	meanPtUncert_ = (*it)->meanPdfPtTrueUncert();
+	meanPtExtrapolated_ = meas_.at(i)->meanPdfPtTrue();
+	meanPtExtrapolatedUncert_ = meas_.at(i)->meanPdfPtTrueUncert();
       }
     }
 
     // Set fitted values
     for(MeasIt it = meas_.begin(); it != meas_.end(); ++it) {
-      values_.push_back((*it)->fittedValue(0)/meanPt_);
-      statUncerts_.push_back((*it)->fittedUncert(0)/meanPt_);
+      values_.push_back((*it)->fittedValue(0)/meanPtExtrapolated_);
+      statUncerts_.push_back((*it)->fittedUncert(0)/meanPtExtrapolated_);
     }
     
     // Perform extrapolation
@@ -199,23 +203,23 @@ namespace resolutionFit {
     for(size_t i = 0; i < meas_.size(); ++i) {
       ptSoft_.push_back(meas_.at(i)->ptSoft());
     }
-    meanPt_ = meas_.front()->meanPdfPtTrue();
-    meanPtUncert_ = meas_.front()->meanPdfPtTrueUncert();
+    meanPtExtrapolated_ = meas_.front()->meanPdfPtTrue();
+    meanPtExtrapolatedUncert_ = meas_.front()->meanPdfPtTrueUncert();
 
-//     // Hack specific for Spring11 PF sample
-//     size_t i = 0;
-//     if( meas_.at(0)->fittedValue(0)/meas_.at(1)->fittedValue(0) > 2. ) {
-//       std::cerr << "\nWARNING: Resolution a first point large; using second point.\n" << std::endl;
-//       i = 1;
-//     }
-//     meanPt_ = meas_.at(i)->meanPdfPtTrue();
-//     meanPtUncert_ = meas_.at(i)->meanPdfPtTrueUncert();
+    //     // Hack specific for Spring11 PF sample
+    //     size_t i = 0;
+    //     if( meas_.at(0)->fittedValue(0)/meas_.at(1)->fittedValue(0) > 2. ) {
+    //       std::cerr << "\nWARNING: Resolution a first point large; using second point.\n" << std::endl;
+    //       i = 1;
+    //     }
+    //     meanPtExtrapolated_ = meas_.at(i)->meanPdfPtTrue();
+    //     meanPtExtrapolatedUncert_ = meas_.at(i)->meanPdfPtTrueUncert();
 
 
     // Set fitted values
     for(MeasIt it = meas_.begin(); it != meas_.end(); ++it) {
-      values_.push_back((*it)->fittedValue(0)/meanPt_);
-      statUncerts_.push_back((*it)->fittedUncert(0)/meanPt_);
+      values_.push_back((*it)->fittedValue(0)/meanPtExtrapolated_);
+      statUncerts_.push_back((*it)->fittedUncert(0)/meanPtExtrapolated_);
     }
     
     // Perform extrapolation
@@ -247,40 +251,52 @@ namespace resolutionFit {
     values_.clear();
     statUncerts_.clear();
     ptSoft_.clear();
+    meanPt_.clear();
+    meanPtUncert_.clear();
     
     // Copy ptSoft threholds to local data members
-    for(MeasIt it = meas_.begin() ; it != meas_.end(); ++it) {
-      ptSoft_.push_back((*it)->ptSoft());
+    for(unsigned int i = 0; i < meas_.size(); ++i) {
+      ptSoft_.push_back(meas_.at(i)->ptSoft());
     }
 
-    // Set fitted values, i.e. the absolute resolution, and
+    // Set fitted values
+    for(unsigned int i = 0; i < meas_.size(); ++i) {
+      values_.push_back(meas_.at(i)->fittedValue(0));
+      statUncerts_.push_back(meas_.at(i)->fittedUncert(0));
+    }
+    meanPtExtrapolated_ = 1.;
+    meanPtExtrapolatedUncert_ = 1.;
+
+    // Compute mean pt at ptSoft cuts
+    for(unsigned int i = 0; i < meas_.size(); ++i) {
+      double meanPtUp = computeMeanPtTrue(std::abs(meas_.at(i)->fittedValue(0)+meas_.at(i)->fittedUncert(0)),i);
+      double meanPtDn = computeMeanPtTrue(std::abs(meas_.at(i)->fittedValue(0)+meas_.at(i)->fittedUncert(0)),i);
+      meanPt_.push_back(computeMeanPtTrue(meas_.at(i)->fittedValue(0),i));
+      meanPtUncert_.push_back(0.5*( std::abs(meanPt_.at(i)-meanPtDn) + std::abs(meanPt_.at(i)-meanPtUp) ) );
+    }
+
+
     // perform extrapolation
-    for(MeasIt it = meas_.begin(); it != meas_.end(); ++it) {
-      values_.push_back((*it)->fittedValue(0));
-      statUncerts_.push_back((*it)->fittedUncert(0));
-    }
-    meanPt_ = 1.;
-    meanPtUncert_ = 1.;
-
     if( extrapolate() ) {
-      double meanPtUp = computeMeanPtTrue(std::abs(extrapolatedValue_+extrapolatedStatUncert_));
-      double meanPtDn = computeMeanPtTrue(std::abs(extrapolatedValue_-extrapolatedStatUncert_));
-      meanPt_ = computeMeanPtTrue(extrapolatedValue_);
-      meanPtUncert_ = 0.5*( std::abs(meanPt_-meanPtDn) + std::abs(meanPt_-meanPtUp) );
+      // Get truth pdf from bin with lowest ptSoft; this should be closest to real dijet spectrum
+      double meanPtUp = computeMeanPtTrue(std::abs(extrapolatedValue_+extrapolatedStatUncert_),0);
+      double meanPtDn = computeMeanPtTrue(std::abs(extrapolatedValue_-extrapolatedStatUncert_),0);
+      meanPtExtrapolated_ = computeMeanPtTrue(extrapolatedValue_,0);
+      meanPtExtrapolatedUncert_ = 0.5*( std::abs(meanPtExtrapolated_-meanPtDn) + std::abs(meanPtExtrapolated_-meanPtUp) );
       
       // Set relative resolution
-//       values_.clear();
-//       statUncerts_.clear();
-//       for(MeasIt it = meas_.begin(); it != meas_.end(); ++it) {
-// 	values_.push_back((*it)->fittedValue(0)/meanPt_);
-// 	statUncerts_.push_back((*it)->fittedUncert(0)/meanPt_);
-//       }
+      //       values_.clear();
+      //       statUncerts_.clear();
+      //       for(MeasIt it = meas_.begin(); it != meas_.end(); ++it) {
+      // 	values_.push_back((*it)->fittedValue(0)/meanPtExtrapolated_);
+      // 	statUncerts_.push_back((*it)->fittedUncert(0)/meanPtExtrapolated_);
+      //       }
       if( extrapolation_->GetParameter(1) > 0. ) { // want positive slope
-	extrapolatedValue_ /= meanPt_;
-	extrapolatedStatUncert_ /= meanPt_;
-	extrapolatedSystUncert_ /= meanPt_;
+	extrapolatedValue_ /= meanPtExtrapolated_;
+	extrapolatedStatUncert_ /= meanPtExtrapolated_;
+	extrapolatedSystUncert_ /= meanPtExtrapolated_;
       } else {
-	meanPt_ = 1.;
+	meanPtExtrapolated_ = 1.;
 	extrapolatedValue_ = 0.;
 	extrapolatedStatUncert_ = 1000.;
 	extrapolatedSystUncert_ = 1000.;
@@ -294,14 +310,14 @@ namespace resolutionFit {
   // Convolute absolute resolution with spectrum
   // to otbain meanPtTrue
   // -------------------------------------------------------------------------------------
-  double FitResultFullMaxLikeAbs::computeMeanPtTrue(double sigma) {
+  double FitResultFullMaxLikeAbs::computeMeanPtTrue(double sigma, unsigned int ptSoftIdx) {
     spectrum_->Reset();
     for(int tBin = 1; tBin <= spectrum_->GetNbinsX(); ++tBin) {
       double ptTrue = spectrum_->GetBinCenter(tBin);
       // Convolution with cuts on ptAve
       double s = sigma/sqrt(2.);	// This is still the absolute resolution!
       double c = sqrt(M_PI/2.)*s*( erf((maxPt()-ptTrue)/s/sqrt(2.)) - erf((minPt()-ptTrue)/s/sqrt(2.)) );
-      double pdf = c*meas_.front()->pdfPtTrue(ptTrue); // Get truth pdf from bin with lowest ptSoft; this should be closest to real dijet spectrum
+      double pdf = c*meas_.at(ptSoftIdx)->pdfPtTrue(ptTrue);
    
       // Store (un-normalized) truth pdf for
       // this value of ptTrue in hash table
@@ -317,13 +333,13 @@ namespace resolutionFit {
   
   //! \brief Get assumed truth pdf for this EtaPt bin
   // -------------------------------------------------------------------------------------  
-//   TH1* FitResultFullMaxLikeAbs::spectrum() const {
-//     ++HIST_COUNT;
-//     TString name = "FitResultFullMaxLikeAbs::spectrum::";
-//     name += HIST_COUNT;
+  //   TH1* FitResultFullMaxLikeAbs::spectrum() const {
+  //     ++HIST_COUNT;
+  //     TString name = "FitResultFullMaxLikeAbs::spectrum::";
+  //     name += HIST_COUNT;
 
-//     return static_cast<TH1*>(spectrum_->Clone(name));
-//   }
+  //     return static_cast<TH1*>(spectrum_->Clone(name));
+  //   }
 
 
 
@@ -342,12 +358,12 @@ namespace resolutionFit {
     for(MeasIt it = meas_.begin() ; it != meas_.end(); ++it) {
       ptSoft_.push_back((*it)->ptSoft());
     }
-    meanPt_ = 0.;
-    meanPtUncert_ = 1000.;
+    meanPtExtrapolated_ = 0.;
+    meanPtExtrapolatedUncert_ = 1000.;
     for(MeasIt it = meas_.begin() ; it != meas_.end(); ++it) {
       if( (*it)->meanPtAve() > 3. ) {
-	meanPt_ = (*it)->meanPtAve();
-	meanPtUncert_ = (*it)->meanPtAveUncert();
+	meanPtExtrapolated_ = (*it)->meanPtAve();
+	meanPtExtrapolatedUncert_ = (*it)->meanPtAveUncert();
 	break;
       }
     }
@@ -362,7 +378,7 @@ namespace resolutionFit {
       hPtAsym->GetXaxis()->SetRangeUser(-1.,1.);
       if( util::HistOps::fitCoreWidth(hPtAsym,2.,width,widthErr,rms,rmsErr) ) {
 	values_.push_back(sqrt(2.)*width);
- 	statUncerts_.push_back(sqrt(2.)*widthErr);
+	statUncerts_.push_back(sqrt(2.)*widthErr);
       } else {
 	values_.push_back(0.);
 	statUncerts_.push_back(1000.);
@@ -394,8 +410,8 @@ namespace resolutionFit {
       ptSoft_.push_back((*it)->ptSoft());
       if( (*it)->ptSoft() < ptSoftSmall ) {
 	ptSoftSmall = (*it)->ptSoft();
-	meanPt_ = (*it)->meanPtGen();
-	meanPtUncert_ = (*it)->meanPtGenUncert();
+	meanPtExtrapolated_ = (*it)->meanPtGen();
+	meanPtExtrapolatedUncert_ = (*it)->meanPtGenUncert();
       }
     }
 

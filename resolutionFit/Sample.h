@@ -1,4 +1,4 @@
-// $Id: Sample.h,v 1.19 2012/06/08 21:14:44 mschrode Exp $
+// $Id: Sample.h,v 1.20 2012/06/09 15:58:31 mschrode Exp $
 
 #ifndef SAMPLE_H
 #define SAMPLE_H
@@ -77,6 +77,8 @@ namespace resolutionFit {
 
     double meanPt(FitResult::Type type) const;
     double meanPtStatUncert(FitResult::Type type) const;
+    double meanPt(FitResult::Type type, unsigned int ptSoftBin) const;
+    double meanPtStatUncert(FitResult::Type type, unsigned int ptSoftBin) const;
     void valuesInExtrapolation(FitResult::Type type, std::vector<double> &val, std::vector<double> &uncert) const;
     void fittedValues(FitResult::Type type, std::vector<double> &val, std::vector<double> &uncert) const;
     unsigned int firstPointInExtrapolation(FitResult::Type type) const;

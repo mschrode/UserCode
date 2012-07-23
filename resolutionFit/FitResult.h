@@ -1,4 +1,4 @@
-// $Id: FitResult.h,v 1.12 2012/06/08 21:14:44 mschrode Exp $
+// $Id: FitResult.h,v 1.13 2012/06/09 15:58:31 mschrode Exp $
 
 #ifndef FIT_RESULT_H
 #define FIT_RESULT_H
@@ -33,8 +33,10 @@ namespace resolutionFit {
 
     double minPt() const { return meas_.front()->ptMin(); }
     double maxPt() const { return meas_.front()->ptMax(); }
-    double meanPt() const { return meanPt_; }
-    double meanPtUncert() const { return meanPtUncert_; }
+    double meanPt() const { return meanPtExtrapolated_; }
+    double meanPtUncert() const { return meanPtExtrapolatedUncert_; }
+    double meanPt(unsigned int ptSoftBin) const { return meanPt_.at(ptSoftBin); }
+    double meanPtUncert(unsigned int ptSoftBin) const { return meanPtUncert_.at(ptSoftBin); }
     double ptSoft(unsigned int ptSoftBin) const { return ptSoft_.at(ptSoftBin); }
     unsigned int firstPointInExtrapolation() const { return firstPointInExtrapolation_; }
     virtual TString labelQuantityInExtrapolation() const {
@@ -74,15 +76,17 @@ namespace resolutionFit {
     const double minPt3_;
     const int wpIdx_;
 
-    double meanPt_;
-    double meanPtUncert_;
     unsigned int firstPointInExtrapolation_;
     std::vector<double> values_;
     std::vector<double> statUncerts_;
     std::vector<double> ptSoft_;
+    std::vector<double> meanPt_;
+    std::vector<double> meanPtUncert_;
     double extrapolatedValue_;
     double extrapolatedStatUncert_;
     double extrapolatedSystUncert_;
+    double meanPtExtrapolated_;
+    double meanPtExtrapolatedUncert_;
     TF1* extrapolation_;
     TF1* kSoftFit_;
 
@@ -147,7 +151,7 @@ namespace resolutionFit {
   private:
     TH1* spectrum_;
 
-    double computeMeanPtTrue(double sigma);
+    double computeMeanPtTrue(double sigma, unsigned int ptSoftIdx);
   };
 
 

@@ -1,4 +1,4 @@
-// $Id: OutputManager.h,v 1.6 2012/06/01 18:32:55 mschrode Exp $
+// $Id: OutputManager.h,v 1.7 2012/06/15 23:05:55 mschrode Exp $
 
 #ifndef OUTPUT_MANAGER_H
 #define OUTPUT_MANAGER_H
@@ -6,6 +6,7 @@
 #include "TCanvas.h"
 #include "TFile.h"
 #include "TH1.h"
+#include "TObject.h"
 #include "TPad.h"
 #include "TPostScript.h"
 #include "TString.h"
@@ -36,6 +37,7 @@ namespace resolutionFit {
     virtual void nextRatioPad() = 0;
     virtual void saveCurrentPad(const TString &name) = 0;
     virtual void saveCanvas(TCanvas* can, const TString &name) const = 0;
+    virtual void saveTObject(TObject* obj, const TString &name) const = 0;
 
     TH1* mainFrame(double xMin, double xMax, double yMin, double yMax, const TString &yTitle) const {
       return util::HistOps::createRatioTopFrame(xMin,xMax,yMin,yMax,yTitle);
@@ -76,7 +78,8 @@ namespace resolutionFit {
     void nextMainPad(const TString &title);
     void nextRatioPad();
     void saveCurrentPad(const TString &name);
-    void saveCanvas(TCanvas* can, const TString &name) const {}
+    void saveCanvas(TCanvas* can, const TString &name) const {};
+    void saveTObject(TObject* obj, const TString &name) const {};
 
 
   private:
@@ -104,6 +107,7 @@ namespace resolutionFit {
     void nextRatioPad();
     void saveCurrentPad(const TString &name);
     void saveCanvas(TCanvas* can, const TString &name) const;
+    void saveTObject(TObject* obj, const TString &name) const;
 
   private:
     const bool rootOutput_;
