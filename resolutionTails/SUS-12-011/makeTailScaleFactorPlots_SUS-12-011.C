@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: makeTailScaleFactorPlots_SUS-12-011.C,v 1.1 2012/07/23 12:24:38 mschrode Exp $
 //
 // Produce plots for SUS-12-011 from .root files in same directory
 // Requires tag 'SUS-12-011' of the 
@@ -175,7 +175,7 @@ void plotFinalResult() {
   }
   gErrorIgnoreLevel = 1001;
 
-  sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("BinningAdmin.cfg");  
+  sampleTools::BinningAdmin* binAdm = new sampleTools::BinningAdmin("../../resolutionFit/config/Analysis2011/Binning/BinningAdmin2011_Tails_mergedPtBins.cfg");  
 
   const TString fileNamePrefix = "Tail_163337-180252_Sig25-Inf_PF";
   const TString outNamePrefix = "Tail_163337-180252_SUS-12-011_Sig25-Inf_PF_ScaleFactors";
