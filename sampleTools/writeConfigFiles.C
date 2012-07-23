@@ -1,4 +1,4 @@
-// $Id: writeConfigFiles.C,v 1.5 2011/08/15 15:57:12 mschrode Exp $
+// $Id: writeConfigFiles.C,v 1.6 2011/10/08 14:14:47 mschrode Exp $
 
 #include <iostream>
 #include <fstream>
@@ -123,10 +123,10 @@ void writeConfigFiles(const TString &binningConfig, const TString &skeleton, con
 		if( isMC ) outFile << tag << " = -1 # Use weight from ntuple" << std::endl;
 		else outFile << tag << " = 1 # Data has event weight 1" << std::endl;
 	      } 
-	      else if( tag == "Di-Jet weight relative to ntuple weight" ) {
-		if( isMC ) outFile << tag << " = " << binAdmin.hltLumi(etaBin,ptBin) << std::endl;
-		else outFile << "# " << tag << " = 1." << std::endl;
-	      }
+ 	      else if( tag == "Di-Jet weight relative to ntuple weight" ) {
+ 		if( isMC ) outFile << tag << " = " << binAdmin.hltLumi(etaBin,ptBin) << std::endl;
+ 		else outFile << "# " << tag << " = 1." << std::endl;
+ 	      }
 	      else if( tag == "create plots" )
 		outFile << tag << " = true" << std::endl;
 	      else if( tag == "plots save as eps" )

@@ -1,4 +1,4 @@
-// $Id: writeDijetSkims.C,v 1.10 2012/01/24 10:06:43 mschrode Exp $
+// $Id: writeDijetSkims.C,v 1.11 2012/02/04 21:49:09 mschrode Exp $
 //
 // Skim Kalibri ntuples as input for resolution fit.
 // At this pre-selection
@@ -240,8 +240,12 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
   
   std::cout << "Setting parameters" << std::endl;
   
-  const TString inFileListName = "input/Analysis2011/Kalibri_JetRun2011A_V3_163337-167151_L1FastJet_AK5PF";
+  //  const TString inFileListName = "input/Analysis2011/Kalibri_JetRun2011A_V3_163337-167151_L1FastJet_AK5PF";
   //const TString inFileListName = "input/Analysis2011/Kalibri_MCSummer11_QCDFlat_PythiaZ2_PUS3_L1FastJet_AK5PF";
+  //  const TString inFileListName = "input/Analysis2011/Kalibri_JetRun2011_AK5PF_L1FastJet_V10";
+  //  const TString inFileListName = "input/Analysis2011/Kalibri_MCFall11_QCDFlat_PythiaZ2_PUS6_AK5PF_L1FastJet_V10";
+  const TString inFileListName = "input/Analysis2011/Kalibri_WJetsToLNu_TuneZ2_7TeV-madgraph-tauola-Fall11-PU_S6_START42_AK5PF_L1FastJet_V10";
+
   const TString outFilePath = "~/lustre/tmp/test";
   const TString configAdm = "../resolutionFit/config/Analysis2011/Binning/BinningAdmin2011_v2.cfg";
   const TString configBin = "../resolutionFit/config/Analysis2011/Binning/Binning2011_v2_skims.cfg";
@@ -249,7 +253,7 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
   const MCSampleType mcSampleType_ = Flat;
   const bool writeAllTrees = true;
   
-  const int nEvts = -100;
+  const int nEvts = -10000000;
   const TString outFilePrefix = outFilePath+"/KalibriSkim";
   const unsigned int minRunNumber = 163337;
 
@@ -262,8 +266,9 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
   unsigned int nMaxNJet = 0;
   unsigned int nDijets = 0;
   unsigned int nHlt = 0;
-  unsigned int nDeltaPhi = 0;
   unsigned int nJetID = 0;
+  unsigned int nLargeResp = 0;
+  unsigned int nDeltaPhi = 0;
   unsigned int nEta = 0;
   unsigned int nPtAve = 0;
   
@@ -288,6 +293,10 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
   std::vector<TH2*> hRespVsPtGenUncorrected; // Default selection
   std::vector<TH2*> hRespVsPtGenUncorrectedLowPU; // Default selection
   std::vector<TH2*> hRespVsPtGenL1Corrected; // Default selection
+  TH1* hPtGenBinsForRespVsEtaGen = 0;
+  std::vector<TH2*> hRespVsEtaGen; // Default selection
+  std::vector<TH2*> hRespVsEtaGenUncorrected; // Default selection
+  std::vector<TH2*> hRespVsEtaGenL1Corrected; // Default selection
   std::vector<TH2*> hRespVsPtGenPUMC; // MC pile-up scenario
   std::vector<TH2*> hRespVsPtGenPULess05;
   std::vector<TH2*> hRespVsPtGenPULess10;
@@ -304,25 +313,31 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
   std::vector<TH2*> hDeltaRVsPtGen;
   std::vector< std::vector<TH2*> > hRespVsPtGenVsPtSoft; // [etaBin][pt3Bin]
   std::vector< std::vector<TH2*> > hRespVsPtGenVsPdgId; // [etaBin][pt3Bin]
+  std::vector< std::vector<TH2*> > hRespVsPtGenUncorrectedVsPdgId; // [etaBin][pt3Bin]
   std::vector< std::vector<TH2*> > hRespVsPtGenVsPdgIdDijets; // [etaBin][pt3Bin]
   // PtGen spectrum
   std::vector< std::vector<TH1*> > hPtGen; // [etaBin][pt3Bin]
+  std::vector< std::vector<TH1*> > hPtGenUnweighted; // [etaBin][pt3Bin]
 
   // N-1 and control plots
   std::vector< std::vector<TH1*> > hEta;
   std::vector< std::vector<TH1*> > hEtaNMin1;
   std::vector< std::vector<TH1*> > hDeltaPhiNMin1;
   std::vector< std::vector<TH1*> > hPtRelNMin1;
-  std::vector< std::vector<TH2*> > hPt3RelRecoVsGen;
+  std::vector< std::vector<TH2*> > hDeltaPhiVsPt3Rel;
+  std::vector< std::vector<TH2*> > hPt3RelGenVsReco;
+  std::vector< std::vector<TH2*> > hPt3RelRecoVsImbalGen;
+  std::vector< std::vector<TH2*> > hPt3RelGenVsImbalGen;
   std::vector< std::vector<TH1*> > hPtJet;
   std::vector<TH1*> hPtAve;
   
   if( !isData ) {
     std::cout << "Preparing PU reweighting" << std::endl;
     
-    TH1* hDataPU = util::FileOps::readTH1("~/PileUp/Pileup_2011_to_172255.root","pileup");
-    weightsPU = generate_PUS3_weights(hDataPU);
-    
+//     TH1* hDataPU = util::FileOps::readTH1("~/PileUp/Pileup_2011_to_172255.root","pileup");
+//     weightsPU = generate_PUS3_weights(hDataPU);
+    TH1* hDataPU = util::FileOps::readTH1("~/PileUp/ExpectedPileUpDist_160404_180252_SelfCombined.root","pileup");
+    weightsPU = generate_PUS6_weights(hDataPU);
     
     std::cout << "Preparing histograms" << std::endl;
     
@@ -419,6 +434,16 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
 
       vtmp.clear();
       for(unsigned int id = 0; id < 22; ++id) {
+	title = util::toTString(binAdmin.etaMin(etaBin))+" < |#eta| < "+util::toTString(binAdmin.etaMax(etaBin))+", PDG Id = "+util::toTString(id)+", |#DeltaR|<"+util::toTString(maxDeltaR)+", |#Delta#Phi| > 2.7, p^{rel}_{T,3} < 0.14"+", PU reweighted, Uncorrected;p^{gen}_{T} (GeV);Response";
+	h = new TH2D("hRespVsPtGenUncorrectedVsPdgId_Eta"+util::toTString(etaBin)+"_PdgId"+util::toTString(id),title+";p^{gen}_{T} (GeV);Response",binEdges.size()-1,&(binEdges.front()),201,0.,2.);
+	h->SetNdivisions(505);
+	h->Sumw2();
+	vtmp.push_back(h);
+      }
+      hRespVsPtGenUncorrectedVsPdgId.push_back(vtmp);
+
+      vtmp.clear();
+      for(unsigned int id = 0; id < 22; ++id) {
 	title = util::toTString(binAdmin.etaMin(etaBin))+" < |#eta| < "+util::toTString(binAdmin.etaMax(etaBin))+", PDG Id = "+util::toTString(id)+", |#DeltaR|<"+util::toTString(maxDeltaR)+", |#Delta#Phi| > 2.7, p^{rel}_{T,3} < 0.14"+", PU reweighted;p^{gen}_{T} (GeV);Response";
 	h = new TH2D("hRespVsPtGenVsPdgIdDijets_Eta"+util::toTString(etaBin)+"_PdgId"+util::toTString(id),title+";p^{gen}_{T} (GeV);Response",binEdges.size()-1,&(binEdges.front()),201,0.,2.);
 	h->SetNdivisions(505);
@@ -428,10 +453,33 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
       hRespVsPtGenVsPdgIdDijets.push_back(vtmp);
     }
 
+    binEdges.clear();
+    binEdges = std::vector<double>(11);
+    util::HistOps::equidistLogBins(binEdges,binEdges.size()-1,4.,2700.);
+    hPtGenBinsForRespVsEtaGen = new TH1D("hPtGenBinsForRespVsEtaGen",";p^{gen}_{T} (GeV)",binEdges.size()-1,&(binEdges.front()));
+    for(int ptGenBin = 0; ptGenBin < hPtGenBinsForRespVsEtaGen->GetNbinsX(); ++ptGenBin) {
+      double ptMin = hPtGenBinsForRespVsEtaGen->GetXaxis()->GetBinLowEdge(1+ptGenBin);
+      double ptMax = hPtGenBinsForRespVsEtaGen->GetXaxis()->GetBinUpEdge(1+ptGenBin);
+      TString title = util::toTString(ptMin,1)+" < p^{gen}_{T} < "+util::toTString(ptMax,1)+" GeV";
+      
+      TH2* h = new TH2D("hRespVsEtaGen_PtGen"+util::toTString(ptGenBin),";#eta^{gen};Response",52,-5.2,5.2,201,0.,2.);
+      h->SetTitle(title+", |#DeltaR|<"+util::toTString(maxDeltaR)+", JetID, PU reweighted");
+      h->SetNdivisions(505);
+      h->Sumw2();
+      hRespVsEtaGen.push_back(h);
+
+      hRespVsEtaGenUncorrected.push_back(static_cast<TH2*>(h->Clone("hRespVsEtaGenUncorrected_PtGen"+util::toTString(ptGenBin))));
+      hRespVsEtaGenUncorrected.back()->SetTitle(title+", |#DeltaR|<"+util::toTString(maxDeltaR)+", JetID, Uncorrected");
+
+      hRespVsEtaGenL1Corrected.push_back(static_cast<TH2*>(h->Clone("hRespVsEtaGenL1Corrected_PtGen"+util::toTString(ptGenBin))));
+      hRespVsEtaGenL1Corrected.back()->SetTitle(title+", |#DeltaR|<"+util::toTString(maxDeltaR)+", JetID, L1 Corrected");
+    }
+
 
     // PtGen spectra
     for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
-      std::vector<TH1*> vtmp;
+      std::vector<TH1*> vtmp1;
+      std::vector<TH1*> vtmp2;
       for(unsigned int ptSoftBin = 0; ptSoftBin < binAdmin.nPtSoftBins(); ++ptSoftBin) {
 	TString title = util::toTString(binAdmin.etaMin(etaBin))+" < |#eta| < "+util::toTString(binAdmin.etaMax(etaBin))+", p^{rel}_{T,3} < "+util::toTString(binAdmin.ptSoftMax(ptSoftBin))+";p^{gen}_{T} (GeV);Events";
 
@@ -440,9 +488,12 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
 	h->GetXaxis()->SetNdivisions(505);
 	h->SetLineWidth(2);
 	h->Sumw2();
-	vtmp.push_back(h);
+	vtmp1.push_back(h);
+
+	vtmp2.push_back(static_cast<TH1*>(h->Clone("hPtGenUnweighted_Eta"+util::toTString(etaBin)+"_PtSoft"+util::toTString(ptSoftBin))));
       }
-      hPtGen.push_back(vtmp);
+      hPtGen.push_back(vtmp1);
+      hPtGenUnweighted.push_back(vtmp2);
     }
   }
 
@@ -467,24 +518,37 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
     std::vector<TH1*> hEtaNMin1Tmp;
     std::vector<TH1*> hDeltaPhiNMin1Tmp;
     std::vector<TH1*> hPtRelNMin1Tmp;
-    std::vector<TH2*> hPt3RelRecoVsGenTmp;
+    std::vector<TH2*> hDeltaPhiVsPt3RelTmp;
+    std::vector<TH2*> hPt3RelGenVsRecoTmp;
+    std::vector<TH2*> hPt3RelRecoVsImbalGenTmp;
+    std::vector<TH2*> hPt3RelGenVsImbalGenTmp;
+
     for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(etaBin); ++ptBin) {
       TString binId = "_EtaBin"+util::toTString(etaBin)+"_PtBin"+util::toTString(ptBin);
       hEtaTmp.push_back(new TH1D("hEta"+binId,"N-1;#eta",102,-5.1,5.1));
       hEtaTmp.back()->Sumw2();
       hEtaNMin1Tmp.push_back(static_cast<TH1*>(hEtaTmp.back()->Clone("hEtaNMin1"+binId)));
-      hDeltaPhiNMin1Tmp.push_back(new TH1D("hDeltaPhiNMin1"+binId,"N-1;|#Delta#phi|",320,0.,3.2));
+      hDeltaPhiNMin1Tmp.push_back(new TH1D("hDeltaPhiNMin1"+binId,"N-1;#Delta#phi",320,0.,3.2));
       hDeltaPhiNMin1Tmp.back()->Sumw2();
       hPtRelNMin1Tmp.push_back(new TH1D("hPtRelNMin1"+binId,"N-1;p^{rel}_{T,3}",120,0.,1.2));
       hPtRelNMin1Tmp.back()->Sumw2();
-      hPt3RelRecoVsGenTmp.push_back(new TH2D("hPt3RelRecoVsGen"+binId,"N-1;p^{gen,rel}_{T,3};p^{rel}_{T,3}",120,0.,1.2,120,0.,1.2));
-      hPt3RelRecoVsGenTmp.back()->Sumw2();
+      hDeltaPhiVsPt3RelTmp.push_back(new TH2D("hDeltaPhiVsPt3Rel"+binId,";p^{rel}_{T,3};#Delta#phi",120,0.,1.2,400,0.,4.));
+      hDeltaPhiVsPt3RelTmp.back()->Sumw2();
+      hPt3RelGenVsRecoTmp.push_back(new TH2D("hPt3RelGenVsReco"+binId,";p^{rel}_{T,3};p^{gen,rel}_{T,3}",120,0.,1.2,120,0.,1.2));
+      hPt3RelGenVsRecoTmp.back()->Sumw2();
+      hPt3RelRecoVsImbalGenTmp.push_back(new TH2D("hPt3RelRecoVsImbalGen"+binId,";#alpha_{imbal};p^{rel}_{T,3}",120,0.,1.2,120,0.,1.2));
+      hPt3RelRecoVsImbalGenTmp.back()->Sumw2();
+      hPt3RelGenVsImbalGenTmp.push_back(new TH2D("hPt3RelGenVsImbalGen"+binId,";#alpha_{imbal};p^{gen,rel}_{T,3}",120,0.,1.2,120,0.,1.2));
+      hPt3RelGenVsImbalGenTmp.back()->Sumw2();
     }
     hEta.push_back(hEtaTmp);
     hEtaNMin1.push_back(hEtaNMin1Tmp);
     hDeltaPhiNMin1.push_back(hDeltaPhiNMin1Tmp);
     hPtRelNMin1.push_back(hPtRelNMin1Tmp);
-    hPt3RelRecoVsGen.push_back(hPt3RelRecoVsGenTmp);
+    hDeltaPhiVsPt3Rel.push_back(hDeltaPhiVsPt3RelTmp);
+    hPt3RelGenVsReco.push_back(hPt3RelGenVsRecoTmp);
+    hPt3RelRecoVsImbalGen.push_back(hPt3RelRecoVsImbalGenTmp);
+    hPt3RelGenVsImbalGen.push_back(hPt3RelGenVsImbalGenTmp);
     // End vs ptAve bin
   }// End loop over eta bins
 
@@ -711,516 +775,586 @@ void writeDijetSkims(bool isData, unsigned int maxHltThres = 0) {
 
 
 
-   // ++++ Loop over old tree and select dijets +++++++++++++++++
+  // ++++ Loop over old tree and select dijets +++++++++++++++++
 
-   int nEntries = oldChain->GetEntries();
-   if( nEvts > 0 && nEvts <= nEntries ) nEntries = nEvts;
+  int nEntries = oldChain->GetEntries();
+  if( nEvts > 0 && nEvts <= nEntries ) nEntries = nEvts;
 
-   for(int i = 0; i < nEntries; ++i) {
-     if( i%50000 == 0 ) {
-       std::cout << "Processed " << i << " events" << std::endl;
-     }
+  for(int i = 0; i < nEntries; ++i) {
+    if( i%50000 == 0 ) {
+      std::cout << "Processed " << i << " events" << std::endl;
+    }
 
-     oldChain->GetEntry(i);
+    oldChain->GetEntry(i);
 
-     if( nObjJet > maxNJet ) {
-       std::cerr << "WARNING: nObjJet = " << nObjJet << " > " << maxNJet << ". Skipping event!\n";
-       ++nMaxNJet;
-       continue;
-     }
+    if( nObjJet > maxNJet ) {
+      std::cerr << "WARNING: nObjJet = " << nObjJet << " > " << maxNJet << ". Skipping event!\n";
+      ++nMaxNJet;
+      continue;
+    }
 
 
-     if( isData ) {
-       // ---- for data ------------------------------------
-       // HLT selection
-       // Use only 2011 runs with new triggers
-       if( RunNumber < minRunNumber ) {
+    if( isData ) {
+      // ---- for data ------------------------------------
+      // HLT selection
+      // Use only 2011 runs with new triggers
+      if( RunNumber < minRunNumber ) {
  	++nNewTrig;
  	continue;
-       }
+      }
     
-       // HLT cuts
-       if( maxHltThres == 30 && !(hlt30) ) {
+      // HLT cuts
+      if( maxHltThres == 30 && !(hlt30) ) {
  	++nHlt;
   	continue;
-       } else if( maxHltThres == 60 && !(hlt30 || hlt60) ) {
+      } else if( maxHltThres == 60 && !(hlt30 || hlt60) ) {
  	++nHlt;
   	continue;
-       } else if( maxHltThres == 80 && !(hlt30 || hlt60 || hlt80) ) {
+      } else if( maxHltThres == 80 && !(hlt30 || hlt60 || hlt80) ) {
  	++nHlt;
   	continue;
-       } else if( maxHltThres == 110 && !(hlt30 || hlt60 || hlt80 || hlt110) ) {
+      } else if( maxHltThres == 110 && !(hlt30 || hlt60 || hlt80 || hlt110) ) {
  	++nHlt;
   	continue;
-       } else if( maxHltThres == 150 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150) ) {
+      } else if( maxHltThres == 150 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150) ) {
  	++nHlt;
   	continue;
-       } else if( maxHltThres == 190 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150 || hlt190) ) {
+      } else if( maxHltThres == 190 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150 || hlt190) ) {
  	++nHlt;
   	continue;
-       } else if( maxHltThres == 240 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150 || hlt190 || hlt240) ) {
+      } else if( maxHltThres == 240 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150 || hlt190 || hlt240) ) {
  	++nHlt;
   	continue;
-       } else if( maxHltThres == 300 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150 || hlt190 || hlt240 || hlt300) ) {
+      } else if( maxHltThres == 300 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150 || hlt190 || hlt240 || hlt300) ) {
  	++nHlt;
   	continue;
-       } else if( maxHltThres == 370 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150 || hlt190 || hlt240 || hlt300 || hlt370) ) {
+      } else if( maxHltThres == 370 && !(hlt30 || hlt60 || hlt80 || hlt110 || hlt150 || hlt190 || hlt240 || hlt300 || hlt370) ) {
  	++nHlt;
   	continue;
-       }
-     } else {	
-       // ---- for MC ----------------------------------------------
-       // Spectrum re-weighting
-       if( mcSampleType_ == Flat ) {
-	 // Correct weight already in ntuples
-	 wSpec = Weight;
-       } else if( mcSampleType_ == PtHatBinned ) {
-	 // Compute weight from ptHat information
-	 wSpec = getWeightForPtHatBinnedMCSample(GenEvtScale);
-       } else {
-	 std::cout << "WARNING: No spectrum re-weighting applied!" << std::endl;
-	 wSpec = 1.;
-       }
+      }
+    } else {	
+      // ---- for MC ----------------------------------------------
+      // Spectrum re-weighting
+      if( mcSampleType_ == Flat ) {
+	// Correct weight already in ntuples
+	//	wSpec = Weight;
+	wSpec = 1.;
+      } else if( mcSampleType_ == PtHatBinned ) {
+	// Compute weight from ptHat information
+	wSpec = getWeightForPtHatBinnedMCSample(GenEvtScale);
+      } else {
+	std::cout << "WARNING: No spectrum re-weighting applied!" << std::endl;
+	wSpec = 1.;
+      }
 
-       // PU re-weighting
-       if( PUMCNumVtx < static_cast<int>(weightsPU.size()) ) {
+      // PU re-weighting
+      if( PUMCNumVtx < static_cast<int>(weightsPU.size()) ) {
  	wPU = weightsPU.at(PUMCNumVtx);
-       } else {
-	 std::cerr << "ERROR: no event weights for PUMCNumVtx = " << PUMCNumVtx << " - using weights for PUMCNumVtx = " << weightsPU.size()-1 << " instead" <<  std::endl;
+      } else {
+	std::cerr << "ERROR: no event weights for PUMCNumVtx = " << PUMCNumVtx << " - using weights for PUMCNumVtx = " << weightsPU.size()-1 << " instead" <<  std::endl;
  	wPU = weightsPU.back();
-       }
+      }
 
-       // Combined event weight: spectrum weight x PU weight
-       Weight = wSpec * wPU;
-     }
+      // Combined event weight: spectrum weight x PU weight
+      Weight = wSpec * wPU;
+    }
 
 
-     // Order corrected jets
-     corrJets.clear();
-     for(int j = 0; j < nObjJet; ++j) {
+    // Order corrected jets
+    corrJets.clear();
+    for(int j = 0; j < nObjJet; ++j) {
        
-       //       // Vary JES
-       //       double scale = 1. - JetCorrUncert[j];
-       //       if( scale == scale ) {
-       //  	//jetCorrL2L3[j] *= scale;
-       //  	JetCorrL3[j] *= scale;
-       //       } else {
-       //  	std::cerr << "ERROR: JetCorrUncert[" << j << "] NAN" << std::endl;
-       //       }
+      //       // Vary JES
+      //       double scale = 1. - JetCorrUncert[j];
+      //       if( scale == scale ) {
+      //  	//jetCorrL2L3[j] *= scale;
+      //  	JetCorrL3[j] *= scale;
+      //       } else {
+      //  	std::cerr << "ERROR: JetCorrUncert[" << j << "] NAN" << std::endl;
+      //       }
        
-       //        // Remove residual correction
-       //        jetCorrL2L3[j] = JetCorrL2[j]*JetCorrL3[j];
+      //        // Remove residual correction
+      //        jetCorrL2L3[j] = JetCorrL2[j]*JetCorrL3[j];
        
-       corrJets.add(j,jetCorrL1[j]*jetCorrL2L3[j]*jetPt[j]);
-     }
-     corrJets.sort();
+      corrJets.add(j,jetCorrL1[j]*jetCorrL2L3[j]*jetPt[j]);
+    }
+    corrJets.sort();
      
-     // Set branch corrected jet indices
-     for(int j = 0; j < nObjJet; ++j) {
-       corrJetIdx[j] = corrJets(j);
-     }
+    // Set branch corrected jet indices
+    for(int j = 0; j < nObjJet; ++j) {
+      corrJetIdx[j] = corrJets(j);
+    }
      
       
-     // Data driven dijet selection
-     if( nObjJet < 2 ) {
-       ++nDijets;
-     } else if( !jetID[corrJets(0)] || !jetID[corrJets(1)] ) {
-       ++nJetID;
-     } else if( !isData &&
-		( GenJetPt[corrJets(0)] > 0. && GenJetPt[corrJets(1)] > 0. ) &&
-		( corrJets.pt(0)/GenJetPt[corrJets(0)] > 2.5 || corrJets.pt(1)/GenJetPt[corrJets(1)] > 2.5 ) ) {
-       std::cout << "WARNING: Large response, omitting event" << std::endl;
-     } else {
-       double deltaPhi = std::abs(TVector2::Phi_mpi_pi(jetPhi[corrJets(0)]-jetPhi[corrJets(1)]));
-       bool passDeltaPhi = deltaPhi > minDeltaPhi;
-       double weight = wPU*wSpec;
-       double ptAve = 0.5*(corrJets.pt(0)+corrJets.pt(1));
-       double pt2 = nObjJet > 2 ? corrJets.pt(2) : 0.;
-       double ptrel = pt2/ptAve;
-       bool passSoftJet = ptrel < 0.14;
-       double eta0 = jetEta[corrJets(0)];
-       double eta1 = jetEta[corrJets(1)];
+    // Data driven dijet selection
+    if( nObjJet < 2 ) {
+      ++nDijets;
+    } else if( !jetID[corrJets(0)] || !jetID[corrJets(1)] ) {
+      ++nJetID;
+    } else if( !isData &&
+	       ( GenJetPt[corrJets(0)] > 0. && GenJetPt[corrJets(1)] > 0. ) &&
+	       ( corrJets.pt(0)/GenJetPt[corrJets(0)] > 2.5 || corrJets.pt(1)/GenJetPt[corrJets(1)] > 2.5 ) ) {
+      ++nLargeResp;
+      //std::cout << "WARNING: Large response, omitting event" << std::endl;
+    } else {
+      double deltaPhi = std::abs(TVector2::Phi_mpi_pi(jetPhi[corrJets(0)]-jetPhi[corrJets(1)]));
+      bool passDeltaPhi = deltaPhi > minDeltaPhi;
+      double weight = wPU*wSpec;
+      double ptAve = 0.5*(corrJets.pt(0)+corrJets.pt(1));
+      double pt2 = nObjJet > 2 ? corrJets.pt(2) : 0.;
+      double ptrel = pt2/ptAve;
+      bool passSoftJet = ptrel < 0.14;
+      double eta0 = jetEta[corrJets(0)];
+      double eta1 = jetEta[corrJets(1)];
 
-       // N-1 eta selection
-       unsigned int etaBin = 1000;
-       unsigned int ptAveBin = 1000;
-       if( passDeltaPhi && passSoftJet ) {
-	 if( binAdmin.findEtaBin(eta0,etaBin) ) {
-	   if( binAdmin.findPtBin(hlt,ptAve,etaBin,ptAveBin) ) {
-	     hEtaNMin1.at(etaBin).at(ptAveBin)->Fill(eta0,weight);
-	   }
-	 }
-	 if( binAdmin.findEtaBin(eta1,etaBin) ) {
-	   if( binAdmin.findPtBin(hlt,ptAve,etaBin,ptAveBin) ) {
-	     hEtaNMin1.at(etaBin).at(ptAveBin)->Fill(eta1,weight);
-	   }
-	 }
-       }
-
-       if( binAdmin.findSameEtaBin(eta0,eta1,etaBin) ) { // Same eta bin
-	 if( binAdmin.findPtBin(hlt,ptAve,etaBin,ptAveBin) ) { // PtAve bin
-
-	   if( passSoftJet ) {
-	     hDeltaPhiNMin1.at(etaBin).at(ptAveBin)->Fill(deltaPhi,weight);
-	   }
-	   if( passDeltaPhi ) {
-	     hPtRelNMin1.at(etaBin).at(ptAveBin)->Fill(ptrel,weight);
-	     double ptGenAve = 0.5*(GenJetPt[corrJets(0)]+GenJetPt[corrJets(1)]);
-	     if( ptGenAve > 0. && nObjJet > 2 ) {
-	       hPt3RelRecoVsGen.at(etaBin).at(ptAveBin)->Fill(GenJetPt[corrJets(2)]/ptGenAve,ptrel,weight);
-	     }
-	   }
-
-	   if( passDeltaPhi && passSoftJet ) {
-	     hEta.at(etaBin).at(ptAveBin)->Fill(eta0,weight);
-	     hEta.at(etaBin).at(ptAveBin)->Fill(eta1,weight);
-	     hPtAve.at(etaBin)->Fill(ptAve,weight);
-	     hPtJet.at(etaBin).at(0)->Fill(corrJets.pt(0),weight);
-	     hPtJet.at(etaBin).at(1)->Fill(corrJets.pt(1),weight);
-	     if( nObjJet > 2 ) {
-	       hPtJet.at(etaBin).at(2)->Fill(corrJets.pt(2),weight);
-	       if( nObjJet > 3 ) {
-		 hPtJet.at(etaBin).at(3)->Fill(corrJets.pt(3),weight);
-	       }
-	     }
-	   }
-
-	   if( passDeltaPhi ) {
-	     ptAveBin -= binAdmin.hltMinPtBin(hlt,etaBin);
-	     newTreesEtaPtAve[etaBin][ptAveBin]->Fill();
-	   } else {
-	     ++nDeltaPhi;
-	   }
- 	 } else {  // End of ptAve bin
- 	   ++nPtAve;
- 	 }
-       } else {	 // End of same eta bin
- 	 ++nEta;
-       }
-     }
-     
-     if( !isData ) {
+      // N-1 eta selection
+      unsigned int etaBin = 1000;
+      unsigned int ptAveBin = 1000;
+      if( passDeltaPhi && passSoftJet ) {
+	if( binAdmin.findEtaBin(eta0,etaBin) ) {
+	  if( binAdmin.findPtBin(hlt,ptAve,etaBin,ptAveBin) ) {
+	    hEtaNMin1.at(etaBin).at(ptAveBin)->Fill(eta0,weight);
+	  }
+	}
+	if( binAdmin.findEtaBin(eta1,etaBin) ) {
+	  if( binAdmin.findPtBin(hlt,ptAve,etaBin,ptAveBin) ) {
+	    hEtaNMin1.at(etaBin).at(ptAveBin)->Fill(eta1,weight);
+	  }
+	}
+      }
        
-       // GenJet dijet selection
-       if( NobjGenJet > 1 ) {
-	 unsigned int etaGenBin = 1000;
-	 if( binAdmin.findSameEtaBin(GenJetColEta[0],GenJetColEta[1],etaGenBin) ) {
-	   double deltaPhi = std::abs(TVector2::Phi_mpi_pi(GenJetColPhi[0]-GenJetColPhi[1]));
-	   bool passDeltaPhi = deltaPhi > minDeltaPhi;
-	   // Indices of reco-jets matched to gen-jets: the reco-jet closest
-	   // in deltaR is used; this matching has already been done
-	   // when filling the original ntuples
-	   int recoIdx0 = GenJetColJetIdx[0];
-	   int recoIdx1 = GenJetColJetIdx[1];
-	   // Kinematics
-	   double ptGen0 = GenJetColPt[0];
-	   double ptGen1 = GenJetColPt[1];
-	   double ptGenAve = 0.5*(ptGen0+ptGen1);
-	   double ptGen2 = NobjGenJet>2 ? GenJetColPt[2] : 0.;
-	   double pt0 = jetCorrL1[recoIdx0]*jetCorrL2L3[recoIdx0]*jetPt[recoIdx0];
-	   double pt1 = jetCorrL1[recoIdx1]*jetCorrL2L3[recoIdx1]*jetPt[recoIdx1];
-	   // Response of leading two gen-jets
-	   double r0 = 0.;
-	   double r1 = 0.;
-	   if( ptGen0 > 0. && ptGen1 > 0. ) {
-	     r0 = pt0/ptGen0;
-	     r1 = pt1/ptGen1;
-	   }
-	   // DeltaR between gen-jet and matched reco-jet
-	   double dr0 = util::deltaR(jetEta[recoIdx0],GenJetColEta[0],jetPhi[recoIdx0],GenJetColPhi[0]);
-	   double dr1 = util::deltaR(jetEta[recoIdx1],GenJetColEta[1],jetPhi[recoIdx1],GenJetColPhi[1]);
-	   bool closeMatch = ( dr0 < maxDeltaR && dr1 < maxDeltaR );
-	   // Do the matched reco-jets pass the jet id?
-	   bool passJetID = ( jetID[recoIdx0] && jetID[recoIdx1] );
-	   int pdgId0 = std::min(21,std::abs(GenPartId_algo[recoIdx0]));
-	   int pdgId1 = std::min(21,std::abs(GenPartId_algo[recoIdx1]));
+      if( binAdmin.findSameEtaBin(eta0,eta1,etaBin) ) { // Same eta bin
+	if( binAdmin.findPtBin(hlt,ptAve,etaBin,ptAveBin) ) { // PtAve bin
 	   
-	   // MC truth response for different selections
-	   if( passJetID && closeMatch ) {
-	     // 1) Default
-	     hRespVsPtGen.at(etaGenBin)->Fill(ptGen0,r0,wPU);
-	     hRespVsPtGen.at(etaGenBin)->Fill(ptGen1,r1,wPU);
-	     hRespVsPtGenUncorrected.at(etaGenBin)->Fill(ptGen0,jetPt[recoIdx0]/ptGen0,wPU);
-	     hRespVsPtGenUncorrected.at(etaGenBin)->Fill(ptGen1,jetPt[recoIdx1]/ptGen1,wPU);
-	     hRespVsPtGenL1Corrected.at(etaGenBin)->Fill(ptGen0,jetCorrL1[recoIdx0]*jetPt[recoIdx0]/ptGen0,wPU);
-	     hRespVsPtGenL1Corrected.at(etaGenBin)->Fill(ptGen1,jetCorrL1[recoIdx1]*jetPt[recoIdx1]/ptGen1,wPU);
-	     hRespVsPtGenVsPdgId.at(etaGenBin).at(pdgId0)->Fill(ptGen0,r0,wPU);
-	     hRespVsPtGenVsPdgId.at(etaGenBin).at(pdgId1)->Fill(ptGen1,r1,wPU);
-	     if( PUMCNumVtx < 2 ) {
-	       hRespVsPtGenUncorrectedLowPU.at(etaGenBin)->Fill(ptGen0,jetPt[recoIdx0]/ptGen0);
-	       hRespVsPtGenUncorrectedLowPU.at(etaGenBin)->Fill(ptGen1,jetPt[recoIdx1]/ptGen1);
-	     }
+	  hDeltaPhiVsPt3Rel.at(etaBin).at(ptAveBin)->Fill(ptrel,deltaPhi,weight);
+	   
+	  if( passSoftJet ) {
+	    hDeltaPhiNMin1.at(etaBin).at(ptAveBin)->Fill(deltaPhi,weight);
+	  }
+	  if( passDeltaPhi ) {
+	    hPtRelNMin1.at(etaBin).at(ptAveBin)->Fill(ptrel,weight);
+	    if( !isData ) {
+	      if( nObjJet > 2 ) {
+		hPt3RelGenVsReco.at(etaBin).at(ptAveBin)->Fill(ptrel,2.*GenJetPt[corrJets(2)]/(GenJetPt[corrJets(0)]+GenJetPt[corrJets(1)]),weight);
+	      }
+	      if( NobjGenJet > 1 ) {
+		double ptGenAve = 0.5*(GenJetColPt[0]+GenJetColPt[1]);
+		if( ptGenAve > 0. && NobjGenJet > 2 ) {
+		  // Compute imbalance
+		  double imbal = 0.;
+		  double deltaPhiGen = TVector2::Phi_mpi_pi(GenJetColPhi[0]-GenJetColPhi[1]);
+		  double phiDijetAxis = TVector2::Phi_mpi_pi(GenJetColPhi[0]-0.5*deltaPhiGen+M_PI/2.);
+		  for(int j = 2; j < NobjGenJet; ++j) {
+		    double deltaPhiToDijetAxis = TVector2::Phi_mpi_pi(GenJetColPhi[j]-phiDijetAxis);
+		    imbal += cos(deltaPhiToDijetAxis)*GenJetColPt[j];
+		  }
+		  imbal /= (ptGenAve+std::abs(imbal));
+		  
+		  //hPt3RelGenVsReco.at(etaBin).at(ptAveBin)->Fill(GenJetColPt[2]/ptGenAve,ptrel,weight);
+		  hPt3RelRecoVsImbalGen.at(etaBin).at(ptAveBin)->Fill(imbal,ptrel,weight);
+		  hPt3RelGenVsImbalGen.at(etaBin).at(ptAveBin)->Fill(imbal,GenJetColPt[2]/ptGenAve,weight);
+		}
+	      }
+	    }
+	  }
 
-	     // 2) Different pile-up scenarios
-	     hRespVsPtGenPUMC.at(etaGenBin)->Fill(ptGen0,r0);
-	     hRespVsPtGenPUMC.at(etaGenBin)->Fill(ptGen1,r1);
-	     if( PUMCNumVtx < 5 ) {
-	       hRespVsPtGenPULess05.at(etaGenBin)->Fill(ptGen0,r0);
-	       hRespVsPtGenPULess05.at(etaGenBin)->Fill(ptGen1,r1);
-	     } else if( PUMCNumVtx < 10 ) {
-	       hRespVsPtGenPULess10.at(etaGenBin)->Fill(ptGen0,r0);
-	       hRespVsPtGenPULess10.at(etaGenBin)->Fill(ptGen1,r1);
-	     } else if( PUMCNumVtx < 15 ) {
-	       hRespVsPtGenPULess15.at(etaGenBin)->Fill(ptGen0,r0);
-	       hRespVsPtGenPULess15.at(etaGenBin)->Fill(ptGen1,r1);
-	     } else {
-	       hRespVsPtGenPULess99.at(etaGenBin)->Fill(ptGen0,r0);
-	       hRespVsPtGenPULess99.at(etaGenBin)->Fill(ptGen1,r1);
-	     }
-	   }
+	  if( passDeltaPhi && passSoftJet ) {
+	    hEta.at(etaBin).at(ptAveBin)->Fill(eta0,weight);
+	    hEta.at(etaBin).at(ptAveBin)->Fill(eta1,weight);
+	    hPtAve.at(etaBin)->Fill(ptAve,weight);
+	    hPtJet.at(etaBin).at(0)->Fill(corrJets.pt(0),weight);
+	    hPtJet.at(etaBin).at(1)->Fill(corrJets.pt(1),weight);
+	    if( nObjJet > 2 ) {
+	      hPtJet.at(etaBin).at(2)->Fill(corrJets.pt(2),weight);
+	      if( nObjJet > 3 ) {
+		hPtJet.at(etaBin).at(3)->Fill(corrJets.pt(3),weight);
+	      }
+	    }
+	  }
 
-	   // 3) JetID
-	   if( closeMatch ) {
-	     hRespVsPtGenNoJetID.at(etaGenBin)->Fill(ptGen0,r0,wPU);
-	     hRespVsPtGenNoJetID.at(etaGenBin)->Fill(ptGen1,r1,wPU);
-	   }
+	  if( passDeltaPhi ) {
+	    ptAveBin -= binAdmin.hltMinPtBin(hlt,etaBin);
+	    newTreesEtaPtAve[etaBin][ptAveBin]->Fill();
+	  } else {
+	    ++nDeltaPhi;
+	  }
+	} else {  // End of ptAve bin
+	  ++nPtAve;
+	}
+      } else {	 // End of same eta bin
+	++nEta;
+      }
+    }
+     
+//     if( !isData ) {
+       
+//       // GenJet dijet selection
+//       if( NobjGenJet > 1 ) {
 
-	   // 4) DeltaR matching
-	   if( passJetID ) {
-	     hDeltaRVsPtGen.at(etaGenBin)->Fill(ptGen0,dr0);
-	     hDeltaRVsPtGen.at(etaGenBin)->Fill(ptGen1,dr1);
+// 	// Indices of reco-jets matched to gen-jets: the reco-jet closest
+// 	// in deltaR is used; this matching has already been done
+// 	// when filling the original ntuples
+// 	int recoIdx0 = GenJetColJetIdx[0];
+// 	int recoIdx1 = GenJetColJetIdx[1];
+// 	// Kinematics
+// 	double ptGen0 = GenJetColPt[0];
+// 	double ptGen1 = GenJetColPt[1];
+// 	double ptGenAve = 0.5*(ptGen0+ptGen1);
+// 	double ptGen2 = NobjGenJet>2 ? GenJetColPt[2] : 0.;
+// 	double pt0 = jetCorrL1[recoIdx0]*jetCorrL2L3[recoIdx0]*jetPt[recoIdx0];
+// 	double pt1 = jetCorrL1[recoIdx1]*jetCorrL2L3[recoIdx1]*jetPt[recoIdx1];
+// 	// Response of leading two gen-jets
+// 	double r0 = 0.;
+// 	double r1 = 0.;
+// 	if( ptGen0 > 0. && ptGen1 > 0. ) {
+// 	  r0 = pt0/ptGen0;
+// 	  r1 = pt1/ptGen1;
+// 	}
+// 	// DeltaR between gen-jet and matched reco-jet
+// 	double dr0 = util::deltaR(jetEta[recoIdx0],GenJetColEta[0],jetPhi[recoIdx0],GenJetColPhi[0]);
+// 	double dr1 = util::deltaR(jetEta[recoIdx1],GenJetColEta[1],jetPhi[recoIdx1],GenJetColPhi[1]);
+// 	bool closeMatch = ( dr0 < maxDeltaR && dr1 < maxDeltaR );
+// 	// Do the matched reco-jets pass the jet id?
+// 	bool passJetID = ( jetID[recoIdx0] && jetID[recoIdx1] );
+
+// 	if( passJetID && closeMatch ) {
+// 	  int ptGenBin = hPtGenBinsForRespVsEtaGen->FindBin(ptGen0)-1;
+// 	  if( ptGenBin >= 0 && ptGenBin < static_cast<int>(hRespVsEtaGen.size()) ) {
+// 	    double etaGen0 = GenJetColEta[0];
+// 	    hRespVsEtaGen.at(ptGenBin)->Fill(etaGen0,r0,wPU);
+// 	    hRespVsEtaGenUncorrected.at(ptGenBin)->Fill(etaGen0,jetPt[recoIdx0]/ptGen0,wPU);
+// 	    hRespVsEtaGenL1Corrected.at(ptGenBin)->Fill(etaGen0,jetCorrL1[recoIdx0]*jetPt[recoIdx0]/ptGen0,wPU);
+// 	  }
+// 	  ptGenBin = hPtGenBinsForRespVsEtaGen->FindBin(ptGen1)-1;
+// 	  if( ptGenBin >= 0 && ptGenBin < static_cast<int>(hRespVsEtaGen.size()) ) {
+// 	    double etaGen1 = GenJetColEta[1];
+// 	    hRespVsEtaGen.at(ptGenBin)->Fill(etaGen1,r1,wPU);
+// 	    hRespVsEtaGenUncorrected.at(ptGenBin)->Fill(etaGen1,jetPt[recoIdx1]/ptGen1,wPU);
+// 	    hRespVsEtaGenL1Corrected.at(ptGenBin)->Fill(etaGen1,jetCorrL1[recoIdx1]*jetPt[recoIdx1]/ptGen1,wPU);
+// 	  }
+// 	}
+	  
+// 	unsigned int etaGenBin = 1000;
+// 	if( binAdmin.findSameEtaBin(GenJetColEta[0],GenJetColEta[1],etaGenBin) ) {
+// 	  double deltaPhi = std::abs(TVector2::Phi_mpi_pi(GenJetColPhi[0]-GenJetColPhi[1]));
+// 	  bool passDeltaPhi = deltaPhi > minDeltaPhi;
+// 	  int pdgId0 = std::min(21,std::abs(GenPartId_algo[recoIdx0]));
+// 	  int pdgId1 = std::min(21,std::abs(GenPartId_algo[recoIdx1]));
+	   
+// 	  // MC truth response for different selections
+// 	  if( passJetID && closeMatch ) {
+// 	    // 1) Default
+// 	    hRespVsPtGen.at(etaGenBin)->Fill(ptGen0,r0,wPU);
+// 	    hRespVsPtGen.at(etaGenBin)->Fill(ptGen1,r1,wPU);
+// 	    hRespVsPtGenUncorrected.at(etaGenBin)->Fill(ptGen0,jetPt[recoIdx0]/ptGen0,wPU);
+// 	    hRespVsPtGenUncorrected.at(etaGenBin)->Fill(ptGen1,jetPt[recoIdx1]/ptGen1,wPU);
+// 	    hRespVsPtGenL1Corrected.at(etaGenBin)->Fill(ptGen0,jetCorrL1[recoIdx0]*jetPt[recoIdx0]/ptGen0,wPU);
+// 	    hRespVsPtGenL1Corrected.at(etaGenBin)->Fill(ptGen1,jetCorrL1[recoIdx1]*jetPt[recoIdx1]/ptGen1,wPU);
+// 	    hRespVsPtGenVsPdgId.at(etaGenBin).at(pdgId0)->Fill(ptGen0,r0,wPU);
+// 	    hRespVsPtGenVsPdgId.at(etaGenBin).at(pdgId1)->Fill(ptGen1,r1,wPU);
+// 	    hRespVsPtGenUncorrectedVsPdgId.at(etaGenBin).at(pdgId0)->Fill(ptGen0,jetPt[recoIdx0]/ptGen0,wPU);
+// 	    hRespVsPtGenUncorrectedVsPdgId.at(etaGenBin).at(pdgId1)->Fill(ptGen1,jetPt[recoIdx1]/ptGen1,wPU);
+// 	    if( PUMCNumVtx < 2 ) {
+// 	      hRespVsPtGenUncorrectedLowPU.at(etaGenBin)->Fill(ptGen0,jetPt[recoIdx0]/ptGen0);
+// 	      hRespVsPtGenUncorrectedLowPU.at(etaGenBin)->Fill(ptGen1,jetPt[recoIdx1]/ptGen1);
+// 	    }
+
+// 	    // 2) Different pile-up scenarios
+// 	    hRespVsPtGenPUMC.at(etaGenBin)->Fill(ptGen0,r0);
+// 	    hRespVsPtGenPUMC.at(etaGenBin)->Fill(ptGen1,r1);
+// 	    if( PUMCNumVtx < 5 ) {
+// 	      hRespVsPtGenPULess05.at(etaGenBin)->Fill(ptGen0,r0);
+// 	      hRespVsPtGenPULess05.at(etaGenBin)->Fill(ptGen1,r1);
+// 	    } else if( PUMCNumVtx < 10 ) {
+// 	      hRespVsPtGenPULess10.at(etaGenBin)->Fill(ptGen0,r0);
+// 	      hRespVsPtGenPULess10.at(etaGenBin)->Fill(ptGen1,r1);
+// 	    } else if( PUMCNumVtx < 15 ) {
+// 	      hRespVsPtGenPULess15.at(etaGenBin)->Fill(ptGen0,r0);
+// 	      hRespVsPtGenPULess15.at(etaGenBin)->Fill(ptGen1,r1);
+// 	    } else {
+// 	      hRespVsPtGenPULess99.at(etaGenBin)->Fill(ptGen0,r0);
+// 	      hRespVsPtGenPULess99.at(etaGenBin)->Fill(ptGen1,r1);
+// 	    }
+// 	  }
+
+// 	  // 3) JetID
+// 	  if( closeMatch ) {
+// 	    hRespVsPtGenNoJetID.at(etaGenBin)->Fill(ptGen0,r0,wPU);
+// 	    hRespVsPtGenNoJetID.at(etaGenBin)->Fill(ptGen1,r1,wPU);
+// 	  }
+
+// 	  // 4) DeltaR matching
+// 	  if( passJetID ) {
+// 	    hDeltaRVsPtGen.at(etaGenBin)->Fill(ptGen0,dr0);
+// 	    hDeltaRVsPtGen.at(etaGenBin)->Fill(ptGen1,dr1);
 	     
-	     hRespVsPtGenNoDeltaR.at(etaGenBin)->Fill(ptGen0,r0,wPU);
-	     hRespVsPtGenNoDeltaR.at(etaGenBin)->Fill(ptGen1,r1,wPU);
+// 	    hRespVsPtGenNoDeltaR.at(etaGenBin)->Fill(ptGen0,r0,wPU);
+// 	    hRespVsPtGenNoDeltaR.at(etaGenBin)->Fill(ptGen1,r1,wPU);
 
-	     if( dr0 < 0.3 && dr1 < 0.3 ) {
-	       hRespVsPtGenDeltaRLess30.at(etaGenBin)->Fill(ptGen0,r0,wPU);
-	       hRespVsPtGenDeltaRLess30.at(etaGenBin)->Fill(ptGen1,r1,wPU);
-	       if( dr0 < 0.25 && dr1 < 0.25 ) {
-		 hRespVsPtGenDeltaRLess25.at(etaGenBin)->Fill(ptGen0,r0,wPU);
-		 hRespVsPtGenDeltaRLess25.at(etaGenBin)->Fill(ptGen1,r1,wPU);
-		 if( dr0 < 0.2 && dr1 < 0.2 ) {
-		   hRespVsPtGenDeltaRLess20.at(etaGenBin)->Fill(ptGen0,r0,wPU);
-		   hRespVsPtGenDeltaRLess20.at(etaGenBin)->Fill(ptGen1,r1,wPU);
-		   if( dr0 < 0.15 && dr1 < 0.15 ) {
-		     hRespVsPtGenDeltaRLess15.at(etaGenBin)->Fill(ptGen0,r0,wPU);
-		     hRespVsPtGenDeltaRLess15.at(etaGenBin)->Fill(ptGen1,r1,wPU);
-		     if( dr0 < 0.1 && dr1 < 0.1 ) {
-		       hRespVsPtGenDeltaRLess10.at(etaGenBin)->Fill(ptGen0,r0,wPU);
-		       hRespVsPtGenDeltaRLess10.at(etaGenBin)->Fill(ptGen1,r1,wPU);
-		       if( dr0 < 0.05 && dr1 < 0.05 ) {
-			 hRespVsPtGenDeltaRLess05.at(etaGenBin)->Fill(ptGen0,r0,wPU);
-			 hRespVsPtGenDeltaRLess05.at(etaGenBin)->Fill(ptGen1,r1,wPU);
-		       }
-		     }
-		   }
-		 }
-	       }
-	     }
-	   }
+// 	    if( dr0 < 0.3 && dr1 < 0.3 ) {
+// 	      hRespVsPtGenDeltaRLess30.at(etaGenBin)->Fill(ptGen0,r0,wPU);
+// 	      hRespVsPtGenDeltaRLess30.at(etaGenBin)->Fill(ptGen1,r1,wPU);
+// 	      if( dr0 < 0.25 && dr1 < 0.25 ) {
+// 		hRespVsPtGenDeltaRLess25.at(etaGenBin)->Fill(ptGen0,r0,wPU);
+// 		hRespVsPtGenDeltaRLess25.at(etaGenBin)->Fill(ptGen1,r1,wPU);
+// 		if( dr0 < 0.2 && dr1 < 0.2 ) {
+// 		  hRespVsPtGenDeltaRLess20.at(etaGenBin)->Fill(ptGen0,r0,wPU);
+// 		  hRespVsPtGenDeltaRLess20.at(etaGenBin)->Fill(ptGen1,r1,wPU);
+// 		  if( dr0 < 0.15 && dr1 < 0.15 ) {
+// 		    hRespVsPtGenDeltaRLess15.at(etaGenBin)->Fill(ptGen0,r0,wPU);
+// 		    hRespVsPtGenDeltaRLess15.at(etaGenBin)->Fill(ptGen1,r1,wPU);
+// 		    if( dr0 < 0.1 && dr1 < 0.1 ) {
+// 		      hRespVsPtGenDeltaRLess10.at(etaGenBin)->Fill(ptGen0,r0,wPU);
+// 		      hRespVsPtGenDeltaRLess10.at(etaGenBin)->Fill(ptGen1,r1,wPU);
+// 		      if( dr0 < 0.05 && dr1 < 0.05 ) {
+// 			hRespVsPtGenDeltaRLess05.at(etaGenBin)->Fill(ptGen0,r0,wPU);
+// 			hRespVsPtGenDeltaRLess05.at(etaGenBin)->Fill(ptGen1,r1,wPU);
+// 		      }
+// 		    }
+// 		  }
+// 		}
+// 	      }
+// 	    }
+// 	  }
 
-	   // 5) Dijet selection
-	   if( passDeltaPhi ) { 
-	     // Pt soft cuts
-	     for(int ptSoftBin = binAdmin.nPtSoftBins()-1; ptSoftBin >= 0; --ptSoftBin) {
-	       if( ptGen2 > binAdmin.ptSoftMax(ptSoftBin)*ptGenAve ) break;
-	       if( passJetID && closeMatch ) {
-		 hRespVsPtGenVsPtSoft.at(etaGenBin).at(ptSoftBin)->Fill(ptGen0,r0,wPU);
-		 hRespVsPtGenVsPtSoft.at(etaGenBin).at(ptSoftBin)->Fill(ptGen1,r1,wPU);
-	       }
-	       // Gen-jet spectrum independent from reco-jet properties
-	       hPtGen.at(etaGenBin).at(ptSoftBin)->Fill(ptGen0,wSpec);
-	       hPtGen.at(etaGenBin).at(ptSoftBin)->Fill(ptGen1,wSpec);
-	     }
-	     if( passJetID && closeMatch && ptGen2 < 0.14*ptGenAve ) {
-	       hRespVsPtGenVsPdgIdDijets.at(etaGenBin).at(pdgId0)->Fill(ptGen0,r0,wPU);
-	       hRespVsPtGenVsPdgIdDijets.at(etaGenBin).at(pdgId1)->Fill(ptGen1,r1,wPU);
-	     }
+// 	  // 5) Dijet selection
+// 	  if( passDeltaPhi ) { 
+// 	    // Pt soft cuts
+// 	    for(int ptSoftBin = binAdmin.nPtSoftBins()-1; ptSoftBin >= 0; --ptSoftBin) {
+// 	      if( ptGen2 > binAdmin.ptSoftMax(ptSoftBin)*ptGenAve ) break;
+// 	      if( passJetID && closeMatch ) {
+// 		hRespVsPtGenVsPtSoft.at(etaGenBin).at(ptSoftBin)->Fill(ptGen0,r0,wPU);
+// 		hRespVsPtGenVsPtSoft.at(etaGenBin).at(ptSoftBin)->Fill(ptGen1,r1,wPU);
+// 	      }
+// 	      // Gen-jet spectrum independent from reco-jet properties
+// 	      hPtGen.at(etaGenBin).at(ptSoftBin)->Fill(ptGen0,wSpec);
+// 	      hPtGen.at(etaGenBin).at(ptSoftBin)->Fill(ptGen1,wSpec);
+// 	      hPtGenUnweighted.at(etaGenBin).at(ptSoftBin)->Fill(ptGen0);
+// 	      hPtGenUnweighted.at(etaGenBin).at(ptSoftBin)->Fill(ptGen1);
+// 	    }
+// 	    if( passJetID && closeMatch && ptGen2 < 0.14*ptGenAve ) {
+// 	      hRespVsPtGenVsPdgIdDijets.at(etaGenBin).at(pdgId0)->Fill(ptGen0,r0,wPU);
+// 	      hRespVsPtGenVsPdgIdDijets.at(etaGenBin).at(pdgId1)->Fill(ptGen1,r1,wPU);
+// 	    }
 	      
-	     if( writeAllTrees ) {
-	       // Find ptGenAve bin
-	       unsigned int ptGenAveBin = 1000;
-	       if( binAdmin.findPtBin(ptGenAve,etaGenBin,ptGenAveBin) ) {
-		 for(int j = 0; j < nObjJet; ++j) {
-		   corrJetIdx[j] = GenJetColJetIdx[j];
-		 }
-		 newTreesEtaGenPtGenAve[etaGenBin][ptGenAveBin]->Fill();
-	       }
-	     }
-	   } // End of if( sameEtaBin )
-	 }
-       }
-     }
+// 	    if( writeAllTrees ) {
+// 	      // Find ptGenAve bin
+// 	      unsigned int ptGenAveBin = 1000;
+// 	      if( binAdmin.findPtBin(ptGenAve,etaGenBin,ptGenAveBin) ) {
+// 		for(int j = 0; j < nObjJet; ++j) {
+// 		  corrJetIdx[j] = GenJetColJetIdx[j];
+// 		}
+// 		newTreesEtaGenPtGenAve[etaGenBin][ptGenAveBin]->Fill();
+// 	      }
+// 	    }
+// 	  } // End of if( sameEtaBin )
+// 	}
+//   }
+// }
    
      
-     if( i%50000 == 0 ) {
-       for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
+    if( i%50000 == 0 ) {
+      for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
   	for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
  	  newTreesEtaPtAve[etaBin][ptBin]->AutoSave();
  	  if( writeAllTrees ) {
  	    newTreesEtaGenPtGenAve[etaBin][ptBin]->AutoSave();
  	  }
   	}
-       }
-     }
-   }     // End of loop over entries
+      }
+    }
+  }     // End of loop over entries
 
-     for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
-       for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
- 	newTreesEtaPtAve[etaBin][ptBin]->AutoSave();
- 	if( writeAllTrees ) {
- 	  newTreesEtaGenPtGenAve[etaBin][ptBin]->AutoSave();
- 	}
-       }
-     }
+  for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
+    for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
+      newTreesEtaPtAve[etaBin][ptBin]->AutoSave();
+      if( writeAllTrees ) {
+	newTreesEtaGenPtGenAve[etaBin][ptBin]->AutoSave();
+      }
+    }
+  }
 
-     TString fileControlPlotsName = outFilePath+"/Kalibri_ControlPlots";
-     if( maxHltThres > 0 ) {
-       fileControlPlotsName += "_HLTDiJetAve"+util::toTString(maxHltThres);
-     }
-     fileControlPlotsName += ".root";
-     TFile fileControlPlots(fileControlPlotsName,"RECREATE");
-     for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
-       for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(etaBin); ++ptBin) {
-	 fileControlPlots.WriteTObject(hEta.at(etaBin).at(ptBin));
-	 fileControlPlots.WriteTObject(hEtaNMin1.at(etaBin).at(ptBin));
-	 fileControlPlots.WriteTObject(hDeltaPhiNMin1.at(etaBin).at(ptBin));
-	 fileControlPlots.WriteTObject(hPtRelNMin1.at(etaBin).at(ptBin));
-	 if( !isData ) fileControlPlots.WriteTObject(hPt3RelRecoVsGen.at(etaBin).at(ptBin));
-       }
-       fileControlPlots.WriteTObject(hPtAve.at(etaBin));
-       for(unsigned int i = 0; i < hPtJet.at(etaBin).size(); ++i) {
-	 fileControlPlots.WriteTObject(hPtJet.at(etaBin).at(i));
-       }
-     }
+  TString fileControlPlotsName = outFilePath+"/Kalibri_ControlPlots";
+  if( maxHltThres > 0 ) {
+    fileControlPlotsName += "_HLTDiJetAve"+util::toTString(maxHltThres);
+  }
+  fileControlPlotsName += ".root";
+  TFile fileControlPlots(fileControlPlotsName,"RECREATE");
+  for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
+    for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(etaBin); ++ptBin) {
+      fileControlPlots.WriteTObject(hEta.at(etaBin).at(ptBin));
+      fileControlPlots.WriteTObject(hEtaNMin1.at(etaBin).at(ptBin));
+      fileControlPlots.WriteTObject(hDeltaPhiNMin1.at(etaBin).at(ptBin));
+      fileControlPlots.WriteTObject(hPtRelNMin1.at(etaBin).at(ptBin));
+      fileControlPlots.WriteTObject(hDeltaPhiVsPt3Rel.at(etaBin).at(ptBin));
+      if( !isData ) {
+	fileControlPlots.WriteTObject(hPt3RelGenVsReco.at(etaBin).at(ptBin));
+	fileControlPlots.WriteTObject(hPt3RelRecoVsImbalGen.at(etaBin).at(ptBin));
+	fileControlPlots.WriteTObject(hPt3RelGenVsImbalGen.at(etaBin).at(ptBin));
+      }
+      fileControlPlots.WriteTObject(hPtAve.at(etaBin));
+      for(unsigned int i = 0; i < hPtJet.at(etaBin).size(); ++i) {
+	fileControlPlots.WriteTObject(hPtJet.at(etaBin).at(i));
+      }
+    }
+  }
 
-     if( !isData ) {
-
-       TFile fileResponse(outFilePath+"/Kalibri_MCTruthResponse.root","RECREATE");
-       TFile fileSpetrum(outFilePath+"/Kalibri_MCTruthSpectrum.root","RECREATE");
-       for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
- 	fileResponse.WriteTObject(hRespVsPtGen.at(etaBin));
- 	fileResponse.WriteTObject(hRespVsPtGenUncorrected.at(etaBin));
- 	fileResponse.WriteTObject(hRespVsPtGenUncorrectedLowPU.at(etaBin));
- 	fileResponse.WriteTObject(hRespVsPtGenL1Corrected.at(etaBin));
- 	fileResponse.WriteTObject(hRespVsPtGenPUMC.at(etaBin));
- 	fileResponse.WriteTObject(hRespVsPtGenPULess05.at(etaBin));
- 	fileResponse.WriteTObject(hRespVsPtGenPULess10.at(etaBin));
- 	fileResponse.WriteTObject(hRespVsPtGenPULess15.at(etaBin));
- 	fileResponse.WriteTObject(hRespVsPtGenPULess99.at(etaBin));
-	fileResponse.WriteTObject(hRespVsPtGenNoJetID.at(etaBin));
- 	fileResponse.WriteTObject(hRespVsPtGenNoDeltaR.at(etaBin));
- 	fileResponse.WriteTObject(hRespVsPtGenDeltaRLess05.at(etaBin));
- 	fileResponse.WriteTObject(hRespVsPtGenDeltaRLess10.at(etaBin));
- 	fileResponse.WriteTObject(hRespVsPtGenDeltaRLess15.at(etaBin));
- 	fileResponse.WriteTObject(hRespVsPtGenDeltaRLess20.at(etaBin));
- 	fileResponse.WriteTObject(hRespVsPtGenDeltaRLess25.at(etaBin));
- 	fileResponse.WriteTObject(hRespVsPtGenDeltaRLess30.at(etaBin));
- 	fileResponse.WriteTObject(hDeltaRVsPtGen.at(etaBin));
-
- 	for(unsigned int ptSoftBin = 0; ptSoftBin < binAdmin.nPtSoftBins(); ++ptSoftBin) {
- 	  fileResponse.WriteTObject(hRespVsPtGenVsPtSoft.at(etaBin).at(ptSoftBin));
- 	  fileSpetrum.WriteTObject(hPtGen.at(etaBin).at(ptSoftBin));
- 	}
-	for(unsigned int id = 0; id < hRespVsPtGenVsPdgId.at(etaBin).size(); ++id) {
-	  fileResponse.WriteTObject(hRespVsPtGenVsPdgId.at(etaBin).at(id));
-	  fileResponse.WriteTObject(hRespVsPtGenVsPdgIdDijets.at(etaBin).at(id));
-	}
-       }
-       fileResponse.Close();
-       fileSpetrum.Close();
-     }
-
-
-
-     // ++++ Print status ++++++++++++++++++++++++++++++++++++++++++
-     std::cout << "Done processing " << nEntries << " events from file list '" << inFileListName << "'" << std::endl;
-
-     std::cout << "Selected " << std::endl;
-     if( isData ) std::cout << "  " << (nEntries -= nNewTrig ) << " events with run number >= " << minRunNumber << std::endl;
-     std::cout << "  " << (nEntries -= nMaxNJet ) << " events with <= " << maxNJet << " jets " << std::endl;
-     std::cout << "  " << (nEntries -= nDijets ) << " events with >= 2 jets " << std::endl;
-     if( isData ) std::cout << "  " << (nEntries -= nHlt ) << " events passing HLT trigger (max threshold " << maxHltThres << " GeV)" << std::endl;
-     std::cout << "  " << (nEntries -= nDeltaPhi ) << " events with |DeltaPhi(1,2)| > " << minDeltaPhi << std::endl;
-     std::cout << "  " << (nEntries -= nJetID ) << " events with Jet(1,2) passing loose JetID cuts" << std::endl;
-     std::cout << "  " << (nEntries -= nPtAve ) << " events with PtAve within binning" << std::endl;
-     std::cout << "  " << (nEntries -= nEta ) << " events with Eta(1,2) within binning" << std::endl;
-
-     std::cout << "Wrote " << nEntries << " events to files" << std::endl;
-     for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
-       for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
- 	std::cout << "  " << newTreesEtaPtAve[etaBin][ptBin]->GetEntries() << " events with " << binAdmin.etaMin(etaBin) << " < |eta(1,2)| < " << binAdmin.etaMax(etaBin) << " to file '" << newFilesEtaPtAve[etaBin][ptBin]->GetName() << "'" << std::endl;
-       }
-     }
-
-
-
-     // ++++ Clean up +++++++++++++++++++++++++++++++++++++++++++++
-
-     for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
-       for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
- 	newFilesEtaPtAve[etaBin][ptBin]->Close();
- 	delete newFilesEtaPtAve[etaBin][ptBin];
-
- 	if( writeAllTrees ) {
- 	  newFilesEtaGenPtGenAve[etaBin][ptBin]->Close();
- 	  delete newFilesEtaGenPtGenAve[etaBin][ptBin];
- 	}
-       }
-     }
-     delete oldChain;
-
-     for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
-       for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(etaBin); ++ptBin) {
-	 delete hEta.at(etaBin).at(ptBin);
-	 delete hEtaNMin1.at(etaBin).at(ptBin);
-	 delete hDeltaPhiNMin1.at(etaBin).at(ptBin);
-	 delete hPtRelNMin1.at(etaBin).at(ptBin);
-	 delete hPt3RelRecoVsGen.at(etaBin).at(ptBin);
-       }
-       delete hPtAve.at(etaBin);
-       for(unsigned int i = 0; i < hPtJet.at(etaBin).size(); ++i) {
-	 delete hPtJet.at(etaBin).at(i);
-       }
-     }
-
-     if( !isData ) {
-       for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
- 	delete hRespVsPtGen.at(etaBin);
- 	delete hRespVsPtGenUncorrected.at(etaBin);
- 	delete hRespVsPtGenUncorrectedLowPU.at(etaBin);
- 	delete hRespVsPtGenL1Corrected.at(etaBin);
- 	delete hRespVsPtGenPUMC.at(etaBin);
- 	delete hRespVsPtGenPULess05.at(etaBin);
- 	delete hRespVsPtGenPULess10.at(etaBin);
- 	delete hRespVsPtGenPULess15.at(etaBin);
- 	delete hRespVsPtGenPULess99.at(etaBin);
-	delete hRespVsPtGenNoJetID.at(etaBin);
- 	delete hRespVsPtGenNoDeltaR.at(etaBin);
- 	delete hRespVsPtGenDeltaRLess05.at(etaBin);
- 	delete hRespVsPtGenDeltaRLess10.at(etaBin);
- 	delete hRespVsPtGenDeltaRLess15.at(etaBin);
- 	delete hRespVsPtGenDeltaRLess20.at(etaBin);
- 	delete hRespVsPtGenDeltaRLess25.at(etaBin);
- 	delete hRespVsPtGenDeltaRLess30.at(etaBin);
-	delete hDeltaRVsPtGen.at(etaBin);
+  if( !isData ) {
+    TFile fileResponse(outFilePath+"/Kalibri_MCTruthResponse.root","RECREATE");
+    TFile fileSpetrum(outFilePath+"/Kalibri_MCTruthSpectrum.root","RECREATE");
+    fileResponse.WriteTObject(hPtGenBinsForRespVsEtaGen);
+    for(unsigned int ptBin = 0; ptBin < hRespVsEtaGen.size(); ++ptBin) {
+      fileResponse.WriteTObject(hRespVsEtaGen.at(ptBin));
+      fileResponse.WriteTObject(hRespVsEtaGenUncorrected.at(ptBin));
+      fileResponse.WriteTObject(hRespVsEtaGenL1Corrected.at(ptBin));
+    }
+    for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
+      fileResponse.WriteTObject(hRespVsPtGen.at(etaBin));
+      fileResponse.WriteTObject(hRespVsPtGenUncorrected.at(etaBin));
+      fileResponse.WriteTObject(hRespVsPtGenUncorrectedLowPU.at(etaBin));
+      fileResponse.WriteTObject(hRespVsPtGenL1Corrected.at(etaBin));
+      fileResponse.WriteTObject(hRespVsPtGenPUMC.at(etaBin));
+      fileResponse.WriteTObject(hRespVsPtGenPULess05.at(etaBin));
+      fileResponse.WriteTObject(hRespVsPtGenPULess10.at(etaBin));
+      fileResponse.WriteTObject(hRespVsPtGenPULess15.at(etaBin));
+      fileResponse.WriteTObject(hRespVsPtGenPULess99.at(etaBin));
+      fileResponse.WriteTObject(hRespVsPtGenNoJetID.at(etaBin));
+      fileResponse.WriteTObject(hRespVsPtGenNoDeltaR.at(etaBin));
+      fileResponse.WriteTObject(hRespVsPtGenDeltaRLess05.at(etaBin));
+      fileResponse.WriteTObject(hRespVsPtGenDeltaRLess10.at(etaBin));
+      fileResponse.WriteTObject(hRespVsPtGenDeltaRLess15.at(etaBin));
+      fileResponse.WriteTObject(hRespVsPtGenDeltaRLess20.at(etaBin));
+      fileResponse.WriteTObject(hRespVsPtGenDeltaRLess25.at(etaBin));
+      fileResponse.WriteTObject(hRespVsPtGenDeltaRLess30.at(etaBin));
+      fileResponse.WriteTObject(hDeltaRVsPtGen.at(etaBin));
+      
+      for(unsigned int ptSoftBin = 0; ptSoftBin < binAdmin.nPtSoftBins(); ++ptSoftBin) {
+	fileResponse.WriteTObject(hRespVsPtGenVsPtSoft.at(etaBin).at(ptSoftBin));
+	fileSpetrum.WriteTObject(hPtGen.at(etaBin).at(ptSoftBin));
+	fileSpetrum.WriteTObject(hPtGenUnweighted.at(etaBin).at(ptSoftBin));
+      }
+      for(unsigned int id = 0; id < hRespVsPtGenVsPdgId.at(etaBin).size(); ++id) {
+	fileResponse.WriteTObject(hRespVsPtGenVsPdgId.at(etaBin).at(id));
+	fileResponse.WriteTObject(hRespVsPtGenUncorrectedVsPdgId.at(etaBin).at(id));
+	fileResponse.WriteTObject(hRespVsPtGenVsPdgIdDijets.at(etaBin).at(id));
+      }
+    }
+    fileResponse.Close();
+    fileSpetrum.Close();
+  }
   
- 	for(unsigned int ptSoftBin = 0; ptSoftBin < binAdmin.nPtSoftBins(); ++ptSoftBin) {
- 	  delete hRespVsPtGenVsPtSoft.at(etaBin).at(ptSoftBin);
- 	  delete hPtGen.at(etaBin).at(ptSoftBin);
- 	}
-	for(unsigned int id = 0; id < hRespVsPtGenVsPdgId.at(etaBin).size(); ++id) {
-	  delete hRespVsPtGenVsPdgId.at(etaBin).at(id);
-	  delete hRespVsPtGenVsPdgIdDijets.at(etaBin).at(id);
-	}
-       }
-     }
+  
+  
+  // ++++ Print status ++++++++++++++++++++++++++++++++++++++++++
+  std::cout << "Done processing " << nEntries << " events from file list '" << inFileListName << "'" << std::endl;
+  
+  std::cout << "Selected " << std::endl;
+  if( isData ) std::cout << "  " << (nEntries -= nNewTrig ) << " events with run number >= " << minRunNumber << std::endl;
+  std::cout << "  " << (nEntries -= nMaxNJet ) << " events with <= " << maxNJet << " jets " << std::endl;
+  std::cout << "  " << (nEntries -= nDijets ) << " events with >= 2 jets " << std::endl;
+  if( isData ) std::cout << "  " << (nEntries -= nHlt ) << " events passing HLT trigger (max threshold " << maxHltThres << " GeV)" << std::endl;
+  std::cout << "  " << (nEntries -= nJetID ) << " events with Jet(1,2) passing loose JetID cuts" << std::endl;
+  if( !isData ) std::cout << "  " << (nEntries -= nLargeResp ) << " events with good response" << std::endl;
+  std::cout << "  " << (nEntries -= nDeltaPhi ) << " events with |DeltaPhi(1,2)| > " << minDeltaPhi << std::endl;
+  std::cout << "  " << (nEntries -= nPtAve ) << " events with PtAve within binning" << std::endl;
+  std::cout << "  " << (nEntries -= nEta ) << " events with Eta(1,2) within binning" << std::endl;
+  
+  std::cout << "Wrote " << nEntries << " events to files" << std::endl;
+  for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
+    for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
+      std::cout << "  " << newTreesEtaPtAve[etaBin][ptBin]->GetEntries() << " events with " << binAdmin.etaMin(etaBin) << " < |eta(1,2)| < " << binAdmin.etaMax(etaBin) << " to file '" << newFilesEtaPtAve[etaBin][ptBin]->GetName() << "'" << std::endl;
+    }
+  }
+
+
+
+  // ++++ Clean up +++++++++++++++++++++++++++++++++++++++++++++
+
+  for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
+    for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(hlt,etaBin); ++ptBin) {
+      newFilesEtaPtAve[etaBin][ptBin]->Close();
+      delete newFilesEtaPtAve[etaBin][ptBin];
+
+      if( writeAllTrees ) {
+	newFilesEtaGenPtGenAve[etaBin][ptBin]->Close();
+	delete newFilesEtaGenPtGenAve[etaBin][ptBin];
+      }
+    }
+  }
+  delete oldChain;
+
+  for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
+    for(unsigned int ptBin = 0; ptBin < binAdmin.nPtBins(etaBin); ++ptBin) {
+      delete hEta.at(etaBin).at(ptBin);
+      delete hEtaNMin1.at(etaBin).at(ptBin);
+      delete hDeltaPhiNMin1.at(etaBin).at(ptBin);
+      delete hPtRelNMin1.at(etaBin).at(ptBin);
+      delete hDeltaPhiVsPt3Rel.at(etaBin).at(ptBin);
+      delete hPt3RelGenVsReco.at(etaBin).at(ptBin);
+      delete hPt3RelRecoVsImbalGen.at(etaBin).at(ptBin);
+      delete hPt3RelGenVsImbalGen.at(etaBin).at(ptBin);
+    }
+    delete hPtAve.at(etaBin);
+    for(unsigned int i = 0; i < hPtJet.at(etaBin).size(); ++i) {
+      delete hPtJet.at(etaBin).at(i);
+    }
+  }
+
+  if( !isData ) {
+    delete hPtGenBinsForRespVsEtaGen;
+    for(unsigned int ptBin = 0; ptBin < hRespVsEtaGen.size(); ++ptBin) {
+      delete hRespVsEtaGen.at(ptBin);
+      delete hRespVsEtaGenUncorrected.at(ptBin);
+      delete hRespVsEtaGenL1Corrected.at(ptBin);
+    }
+    for(unsigned int etaBin = 0; etaBin < binAdmin.nEtaBins(); ++etaBin) {
+      delete hRespVsPtGen.at(etaBin);
+      delete hRespVsPtGenUncorrected.at(etaBin);
+      delete hRespVsPtGenUncorrectedLowPU.at(etaBin);
+      delete hRespVsPtGenL1Corrected.at(etaBin);
+      delete hRespVsPtGenPUMC.at(etaBin);
+      delete hRespVsPtGenPULess05.at(etaBin);
+      delete hRespVsPtGenPULess10.at(etaBin);
+      delete hRespVsPtGenPULess15.at(etaBin);
+      delete hRespVsPtGenPULess99.at(etaBin);
+      delete hRespVsPtGenNoJetID.at(etaBin);
+      delete hRespVsPtGenNoDeltaR.at(etaBin);
+      delete hRespVsPtGenDeltaRLess05.at(etaBin);
+      delete hRespVsPtGenDeltaRLess10.at(etaBin);
+      delete hRespVsPtGenDeltaRLess15.at(etaBin);
+      delete hRespVsPtGenDeltaRLess20.at(etaBin);
+      delete hRespVsPtGenDeltaRLess25.at(etaBin);
+      delete hRespVsPtGenDeltaRLess30.at(etaBin);
+      delete hDeltaRVsPtGen.at(etaBin);
+  
+      for(unsigned int ptSoftBin = 0; ptSoftBin < binAdmin.nPtSoftBins(); ++ptSoftBin) {
+	delete hRespVsPtGenVsPtSoft.at(etaBin).at(ptSoftBin);
+	delete hPtGen.at(etaBin).at(ptSoftBin);
+	delete hPtGenUnweighted.at(etaBin).at(ptSoftBin);
+      }
+      for(unsigned int id = 0; id < hRespVsPtGenVsPdgId.at(etaBin).size(); ++id) {
+	delete hRespVsPtGenVsPdgId.at(etaBin).at(id);
+	delete hRespVsPtGenUncorrectedVsPdgId.at(etaBin).at(id);
+	delete hRespVsPtGenVsPdgIdDijets.at(etaBin).at(id);
+      }
+    }
+  }
 }
 
 
 void writeDijetSkimsData() {
-    std::vector<unsigned int> hltThes;
-    hltThes.push_back(30);
-    hltThes.push_back(60);
-    hltThes.push_back(80);
-    hltThes.push_back(110);
-    hltThes.push_back(150);
-    hltThes.push_back(190);
-    hltThes.push_back(240);
-    hltThes.push_back(300);
-    hltThes.push_back(370);
-    for(std::vector<unsigned int>::const_iterator it = hltThes.begin();
-	it != hltThes.end(); ++it) {
-      writeDijetSkims(true,*it);
-    }
+  std::vector<unsigned int> hltThes;
+  hltThes.push_back(30);
+  hltThes.push_back(60);
+  hltThes.push_back(80);
+  hltThes.push_back(110);
+  hltThes.push_back(150);
+  hltThes.push_back(190);
+  hltThes.push_back(240);
+  hltThes.push_back(300);
+  hltThes.push_back(370);
+  for(std::vector<unsigned int>::const_iterator it = hltThes.begin();
+      it != hltThes.end(); ++it) {
+    writeDijetSkims(true,*it);
   }
+}

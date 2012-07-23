@@ -1,4 +1,4 @@
-// $Id: combineBins.C,v 1.7 2012/01/24 10:07:27 mschrode Exp $
+// $Id: combineBins.C,v 1.8 2012/03/01 19:34:50 mschrode Exp $
 
 //! Combine Kalibri output histograms from different
 //! eta, pt, and ptSoft bins
@@ -137,6 +137,7 @@ void combineBins(const TString &binningConfig, const TString &dirPrefix, const T
   // Loop over bins and combine root files
   std::cout << "Looping over bins" << std::endl;
   for(unsigned int etaBin = 0; etaBin < admin.nEtaBins(); ++etaBin) {
+    //for(unsigned int etaBin = 0; etaBin < 1; ++etaBin) {
     TDirectory* dirEtaBin = outFile->mkdir("Eta"+util::toTString(etaBin));
       
     for(unsigned int ptBin = 0; ptBin < admin.nPtBins(etaBin); ++ptBin) {

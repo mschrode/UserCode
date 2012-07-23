@@ -1,4 +1,4 @@
-// $Id: BinningAdmin.h,v 1.7 2011/06/23 17:55:09 mschrode Exp $
+// $Id: BinningAdmin.h,v 1.8 2011/08/15 15:57:12 mschrode Exp $
 
 #ifndef BINNING_ADMIN_H
 #define BINNING_ADMIN_H
@@ -19,7 +19,7 @@ namespace sampleTools {
   class BinningAdmin {
   public:
     inline BinningAdmin();
-    inline BinningAdmin(const TString &fileName);
+    inline BinningAdmin(const TString &fileName, const TString &binningFileName = "");
     inline ~BinningAdmin();
 
     inline unsigned int nEtaBins() const { return bins_->nEtaBins(); }
@@ -75,7 +75,13 @@ namespace sampleTools {
       return it != hltInfos_.end() ? it->second->maxPtBin(etaBin) : nPtBins(etaBin)-1;
     }
     inline TString triggerName(double thres) const;
-
+    inline std::vector<TString> triggerNames() const {
+      std::vector<TString> trigNames;
+      for(HltInfoIt it = hltInfos_.begin(); it != hltInfos_.end(); ++it) {
+	trigNames.push_back(it->first);
+      }
+      return trigNames;
+    }
     inline void print() const;
     inline void print(const TString &hlt) const;
     
@@ -159,16 +165,20 @@ namespace sampleTools {
 
 
   // -------------------------------------------------------------------------------------
-  BinningAdmin::BinningAdmin(const TString &fileName) {
+  BinningAdmin::BinningAdmin(const TString &fileName, const TString &binningFileName) {
     util::ConfigParser parser(fileName.Data());
 
     // Read the eta and pt binning information
-    bins_ = new Binning(parser.readString("Binning config"));
+    bins_ = 0;
+    if( binningFileName != "" ) 
+      bins_ = new Binning(binningFileName);
+    else
+      bins_ = new Binning(parser.readString("Binning config"));
 			
     // Read the trigger information
-    std::vector<std::string> triggerNames = parser.readStringVec("Trigger");
-    for(std::vector<std::string>::const_iterator trigIt = triggerNames.begin();
-	trigIt != triggerNames.end(); ++trigIt) {
+    std::vector<std::string> trigNames = parser.readStringVec("Trigger");
+    for(std::vector<std::string>::const_iterator trigIt = trigNames.begin();
+	trigIt != trigNames.end(); ++trigIt) {
       // For each trigger, read the luminosity and turn-on information
       std::vector<double> info = parser.readDoubleVec(*trigIt);
       // There must be at least two arguments
