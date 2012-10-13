@@ -1,4 +1,4 @@
-// $Id: ConfigParser.h,v 1.3 2010/12/11 17:32:29 mschrode Exp $
+// $Id: ConfigParser.h,v 1.4 2011/02/17 13:27:45 mschrode Exp $
 
 #ifndef CONFIG_PARSER_H
 #define CONFIG_PARSER_H
@@ -52,6 +52,7 @@ namespace util {
   std::string ConfigParser::readString(const std::string &tag, const std::string &delim) const {
     std::string result;
     if( file_->is_open() ) {
+      file_->seekg(0);
       std::string line = "";
       while( !file_->eof() ) {
 	std::getline(*file_,line);
@@ -64,7 +65,6 @@ namespace util {
 	  }
 	}
       }
-      file_->seekg(0);
       trim(result);
     } else {
       std::cerr << "ConfigParser: ERROR reading from file\n";
