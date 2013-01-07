@@ -1,4 +1,4 @@
-# $Id: $
+# $Id: makeDASTree_cfg.py,v 1.1 2012/12/29 18:03:40 mschrode Exp $
 
 
 ## --- GLOBAL PARAMETERS -----------------------------------------------------
@@ -47,7 +47,7 @@ process.source = cms.Source(
     "PoolSource",
     fileNames = cms.untracked.vstring(dataSet_)
     )
-process.maxEvents.input = 10
+process.maxEvents.input = 100
 
 
 
@@ -248,7 +248,7 @@ process.ppfchs = cms.Path(
     process.cleanpatseq *
     process.calculateRhoForGamma *
     process.htPFchsFilter *
-    process.mhtPFchsFilter *
+    #process.mhtPFchsFilter *
     process.WeightProducer *
     process.dasTree
     )
