@@ -142,15 +142,16 @@ void DASTreeMaker::GetMCObjects(const reco::GenJetCollection& GenJets, const rec
 void DASTreeMaker::GetWdecay(const reco::GenParticleCollection& Gen){
   int dcy_lep = 0;
   flgW_=0;
+  flgTauHad_=0;
   //----flag W+jets events according to the W decays
   if (&Gen) {
     for (reco::GenParticleCollection::const_iterator igp = Gen.begin(); igp!=Gen.end();igp++) {
       const reco::GenParticle& genP = *igp;
       if (genP.status()!=3) continue;
-      if (fabs(genP.pdgId())>25) continue;
+      if (std::abs(genP.pdgId())>25) continue;
       //cout <<genP.pdgId()<<" "<<genP.status()<<" "<<genP.px()<<" "<<genP.py()<<" "<<genP.pz()<<" "<<genP.energy()<<" "<<genP.mass()<<endl;
       //---pick-up the W boson 4-vector
-      if (fabs(genP.pdgId())==24){
+      if (std::abs(genP.pdgId())==24){
         //cout <<genP.pdgId()<<" "<<genP.status()<<" "<<genP.px()<<" "<<genP.py()<<" "<<genP.pz()<<" "<<genP.energy()<<" "<<genP.mass()<<endl;
         bosM = genP.mass();
         bosID = genP.pdgId();
@@ -162,8 +163,8 @@ void DASTreeMaker::GetWdecay(const reco::GenParticleCollection& Gen){
       }
       
       //----pick-up the leptonic W decays 4-vectors
-      if (fabs(genP.pdgId())<17 && fabs(genP.pdgId())>10) {
-	if (fabs(genP.mother()->pdgId())==24) {	
+      if (std::abs(genP.pdgId())<17 && std::abs(genP.pdgId())>10) {
+	if (std::abs(genP.mother()->pdgId())==24) {	
 	  if (dcy_lep<2) {
 	    lepM[dcy_lep] = genP.mass();
 	    lepID[dcy_lep] = genP.pdgId();
@@ -173,7 +174,9 @@ void DASTreeMaker::GetWdecay(const reco::GenParticleCollection& Gen){
 	    lepE[dcy_lep] = genP.energy();
 	    lepQ[dcy_lep] = genP.charge(); 
 	    //---flag is equal to the lepton ID
-	    if (abs(genP.pdgId())%2==1) flgW_ = abs(genP.pdgId());
+	    if (std::abs(genP.pdgId())%2==1) flgW_ = std::abs(genP.pdgId());
+	    //---flag the tau decay
+	    if( std::abs(genP.pdgId()) == 15 ) flgTauHad_ = hadronicTauFlag(genP);
 	  }
 	  dcy_lep++;
 	}
@@ -191,7 +194,7 @@ void DASTreeMaker::GetZdecay(const reco::GenParticleCollection& Gen){
       const reco::GenParticle& genP = *igp;
 
       if (genP.status()!=3) continue;
-      if (fabs(genP.pdgId())>25) continue;
+      if (std::abs(genP.pdgId())>25) continue;
       //---pick-up the Z boson 4-vector
       if (genP.pdgId()==23){
         //cout <<genP.pdgId()<<" "<<genP.status()<<" "<<genP.px()<<" "<<genP.py()<<" "<<genP.pz()<<" "<<genP.energy()<<" "<<genP.mass()<<endl;
@@ -204,8 +207,8 @@ void DASTreeMaker::GetZdecay(const reco::GenParticleCollection& Gen){
         bosQ = genP.charge();
       }
       //----pick-up the WZ decays 4-vectors
-      if (fabs(genP.pdgId())<17 && fabs(genP.pdgId())>10) {
-	if (fabs(genP.mother()->pdgId())==23) {
+      if (std::abs(genP.pdgId())<17 && std::abs(genP.pdgId())>10) {
+	if (std::abs(genP.mother()->pdgId())==23) {
 	  if (dcy_lep<2) {
 	    lepM[dcy_lep] = genP.mass();
 	    lepID[dcy_lep] = genP.pdgId();
@@ -217,7 +220,7 @@ void DASTreeMaker::GetZdecay(const reco::GenParticleCollection& Gen){
 	  }
 	  dcy_lep++;
 	  //---flag is equal to the lepton ID
-	  flgZ_ = abs(genP.pdgId());
+	  flgZ_ = std::abs(genP.pdgId());
 	}
       }
     }
@@ -229,7 +232,7 @@ void DASTreeMaker::GetGenPhoton(const reco::GenParticleCollection& Gen){
       const reco::GenParticle& genP = *igp;
 
       if (genP.status()!=3) continue;
-      if (fabs(genP.pdgId())>22) continue;
+      if (std::abs(genP.pdgId())>22) continue;
       //---pick-up the photon 4-vector
       if (genP.pdgId()==22){
         //cout <<genP.pdgId()<<" "<<genP.status()<<" "<<genP.px()<<" "<<genP.py()<<" "<<genP.pz()<<" "<<genP.energy()<<" "<<genP.mass()<<endl;
@@ -252,9 +255,9 @@ void DASTreeMaker::GetTTdecay(const reco::GenParticleCollection& Gen){
       const reco::GenParticle& genP = *igp;
 
       if (genP.status()!=3) continue;
-      if (fabs(genP.pdgId())>25) continue;
-      if (fabs(genP.pdgId())<17 && fabs(genP.pdgId())>0) {
-	if (fabs(genP.mother()->pdgId())==6 || fabs(genP.mother()->pdgId())==24) {
+      if (std::abs(genP.pdgId())>25) continue;
+      if (std::abs(genP.pdgId())<17 && std::abs(genP.pdgId())>0) {
+	if (std::abs(genP.mother()->pdgId())==6 || std::abs(genP.mother()->pdgId())==24) {
 	  if (dcy_lep<6) {
 	    lepM[dcy_lep] = genP.mass();
 	    lepID[dcy_lep] = genP.pdgId();
@@ -271,9 +274,9 @@ void DASTreeMaker::GetTTdecay(const reco::GenParticleCollection& Gen){
   }
   //---label the decays: 0-allhad, 1-tau+had, 2-lep+had, 3-ditau, 4-dilep, 5-tau+lep
   for (int ip=0;ip<6;ip++) {
-    if (fabs(lepID[ip])<5) qcnt++;
-    if (fabs(lepID[ip])==15) taucnt++;
-    if (fabs(lepID[ip])==11 || fabs(lepID[ip])==13) lepcnt++;
+    if (std::abs(lepID[ip])<5) qcnt++;
+    if (std::abs(lepID[ip])==15) taucnt++;
+    if (std::abs(lepID[ip])==11 || std::abs(lepID[ip])==13) lepcnt++;
   }
   if (qcnt==4) flgTT_=0;
   if (qcnt==2 && taucnt==1) flgTT_=1;
@@ -282,6 +285,29 @@ void DASTreeMaker::GetTTdecay(const reco::GenParticleCollection& Gen){
   if (lepcnt==2) flgTT_=4;
   if (lepcnt==1 && taucnt==1) flgTT_=5;
 }
+
+
+// Returns 1 for fully-hadronic decay of tau
+// 0 otherwise
+int DASTreeMaker::hadronicTauFlag(const reco::Candidate &cand) const {
+  int flag = 1;			// Assume hadronically decaying tau
+  for(reco::Candidate::const_iterator itc = cand.begin();
+      itc != cand.end(); ++itc) {
+    int pdgIdDaughter = std::abs(itc->pdgId());
+    // tau might not be the finally decaying tau but have
+    // an intermediate tau or w in the decay
+    if( pdgIdDaughter == 15 || pdgIdDaughter == 24) {
+      flag = hadronicTauFlag(*itc);
+      if( flag == 0 ) break;      
+    } else if( pdgIdDaughter == 11 || pdgIdDaughter == 13 ) { // Leptonic decay
+      flag = 0;
+      break;
+    }
+  }
+
+  return flag;
+}
+
 
 
 void DASTreeMaker::GetRecoObjects(const pat::JetCollection& patJets, const pat::METCollection& patMet, const pat::MuonCollection& patMuons, const pat::ElectronCollection& patEles, const pat::PhotonCollection& patPhotons, const reco::VertexCollection& Vtx) {
@@ -347,10 +373,10 @@ void DASTreeMaker::GetRecoObjects(const pat::JetCollection& patJets, const pat::
       //if (!isMCdata_ && ele->electronID("eidTight")==0) continue;
       //if (isMCdata_ && ele->electronID("eidTightMC")==0) continue;
       if (ele->electronID(eleID_)==0) continue;
-      if (fabs(ele->eta()) >= 2.5 ) continue;
-      if (fabs(ele->eta()) >= 1.4442 && fabs(ele->eta()) < 1.566 ) continue;
+      if (std::abs(ele->eta()) >= 2.5 ) continue;
+      if (std::abs(ele->eta()) >= 1.4442 && std::abs(ele->eta()) < 1.566 ) continue;
       if ((ele->chargedHadronIso()+ele->photonIso()+ele->neutralHadronIso())/(ele->pt()) >= 0.2) continue;
-      if (vtxcnt!=0) eledz = fabs(ele->vz() - primVtx.Z());
+      if (vtxcnt!=0) eledz = std::abs(ele->vz() - primVtx.Z());
       if (vtxcnt!=0) eledxy = ele->gsfTrack()->dxy(primVtx);
       if (eledxy>=0.04) continue;
       if (eledz>=1) continue;
@@ -581,6 +607,7 @@ void DASTreeMaker::beginJob() {
   flgZ_    = -1;
   flgTT_   = -1;
   flgSUSY_ = -1;
+  flgTauHad_ = 0;
   
 
   //--------Tree Branches---------
@@ -609,6 +636,7 @@ void DASTreeMaker::beginJob() {
     dasTree_->Branch("flgZ",&flgZ_,"flgZ/I");
     dasTree_->Branch("flgTT",&flgTT_,"flgTT/I");
     dasTree_->Branch("flgSUSY",&flgSUSY_,"flgSUSY/I");
+    dasTree_->Branch("flgTauHad",&flgTauHad_,"flgTauHad/I");
     //----generator level boson 
     dasTree_->Branch("bosM",&bosM,"bosM/F");
     dasTree_->Branch("bosID",&bosID,"bosID/F");

@@ -61,6 +61,7 @@ class DASTreeMaker : public edm::EDAnalyzer {
   void GetRecoObjects(const pat::JetCollection& patJets, const pat::METCollection& patMet, const pat::MuonCollection& patMuons, const pat::ElectronCollection& patEles, const pat::PhotonCollection& patPhotons, const reco::VertexCollection& Vtx);
   void GetSUSYs(const LHEEventProduct& lhep, const GenEventInfoProduct& genProd);
   int GetProcID(int procID);
+  int hadronicTauFlag(const reco::Candidate &cand) const;
 
   double pfEventRho_;
   float evtWgt_;
@@ -74,7 +75,7 @@ class DASTreeMaker : public edm::EDAnalyzer {
   TFile* outFile_;
   TTree* dasTree_;
       
-  int nvtx_, njet_, nmu_, nele_, nphot_, ngjet_, runnr_, evtnr_, lumib_, flgW_, flgZ_, flgTT_, flgSUSY_;
+  int nvtx_, njet_, nmu_, nele_, nphot_, ngjet_, runnr_, evtnr_, lumib_, flgW_, flgZ_, flgTT_, flgSUSY_, flgTauHad_;
   float M0, M12, A0, tanB, sgnMu;
   float bosM, bosID, bosPx, bosPy, bosPz, bosE, bosQ;
   float *lepM, *lepID, *lepPx, *lepPy, *lepPz, *lepE, *lepQ;
