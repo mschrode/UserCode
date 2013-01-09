@@ -8,14 +8,14 @@ const float kHtJetEtaMax  = 2.5;
 // === Main Script =====================================================
 void hadTau1(int nEvts = -1) {
   // --- Declare the Output Histograms ---------------------------------
-  TH1* hGenMuPt = new TH1F("hGenMuPt",";p_{T}(#mu^{gen});N(#mu^{gen})",30,0,300);
-  TH1* hGenTauPt = new TH1F("hGenTauPt",";p_{T}(#tau^{gen});N(#tau^{gen})",30,0,300);
+  TH1* hGenMuPt = new TH1F("hGenMuPt",";p_{T}(#mu^{gen});N(#mu^{gen}) [GeV]",30,0,300);
+  TH1* hGenTauPt = new TH1F("hGenTauPt",";p_{T}(#tau^{gen});N(#tau^{gen}) [GeV]",30,0,300);
 
 
   // --- Declare the Variables Read from the Tree ----------------------
   // Array dimensions
-  const unsigned int kRecoJetColSize = 200;
-  const unsigned int kGenLepColSize = 6;
+  const int kRecoJetColSize = 200;
+  const int kGenLepColSize = 6;
 
   // Reco-level jets
   int nRecoJets = 0;
@@ -166,13 +166,9 @@ void findMatchedJets(std::set<int> &jetIdcs, const float* jetEta, const float* j
 
 
 float deltaR(float eta1, float eta2, float phi1, float phi2) {
-  float deta, dphi, dr;
-  
-  dphi = TMath::Abs(phi1 - phi2);
-  if (dphi > TMath::Pi()) dphi = TMath::TwoPi() - dphi;
-  deta = TMath::Abs(eta1- eta2);
+  float dphi = TVector2::Phi_mpi_pi(phi1-phi2);
+  float deta = eta1 - eta2;
 
-  dr = sqrt(deta*deta + dphi*dphi);
-  return dr;
+  return sqrt( deta*deta + dphi*dphi );
 }
 
