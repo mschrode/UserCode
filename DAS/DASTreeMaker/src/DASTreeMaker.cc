@@ -13,7 +13,7 @@
 
 
 DASTreeMaker::DASTreeMaker(const edm::ParameterSet& conf)
-{
+  : maxColSize_(10) {
   isMCdata_    = conf.getParameter< bool > ("MCdata");
   isSUSY_      = conf.getParameter< bool > ("isSUSY");
   sampleID_    = conf.getParameter< int > ("sampleID");
@@ -131,6 +131,7 @@ void DASTreeMaker::GetMCObjects(const reco::GenJetCollection& GenJets, const rec
       gjphi[jgen] = gjt->phi();
       gjeta[jgen] = gjt->eta();
       jgen++;
+      if( jgen == maxColSize_ ) break; // Store only the first 'maxColSize_' elements
     }
     //printf("Njgen=%i\n",jgen);
   }
@@ -334,6 +335,7 @@ void DASTreeMaker::GetRecoObjects(const pat::JetCollection& patJets, const pat::
       if (vtxcnt==0) primVtx = itv->position();
       vtxz[vtxcnt] = itv->z();     
       vtxcnt++;
+      if( vtxcnt == maxColSize_ ) break; // Store only the first 'maxColSize_' elements
     }
   }
   nvtx_=vtxcnt;
@@ -362,6 +364,7 @@ void DASTreeMaker::GetRecoObjects(const pat::JetCollection& patJets, const pat::
       muphi[mucnt] = mu->phi();
       mueta[mucnt] = mu->eta();
       mucnt++;
+      if( mucnt == maxColSize_ ) break; // Store only the first 'maxColSize_' elements
     }
     //printf("Nmu=%i\n",mucnt);
   }
@@ -390,6 +393,7 @@ void DASTreeMaker::GetRecoObjects(const pat::JetCollection& patJets, const pat::
       elephi[elecnt] = ele->phi();
       eleeta[elecnt] = ele->eta();
       elecnt++;
+      if( elecnt == maxColSize_ ) break; // Store only the first 'maxColSize_' elements
     }
   }
   nele_ = elecnt;
@@ -417,6 +421,7 @@ void DASTreeMaker::GetRecoObjects(const pat::JetCollection& patJets, const pat::
       phphi[phcnt] = pht->phi();
       pheta[phcnt] = pht->eta();
       phcnt++;
+      if( phcnt == maxColSize_ ) break; // Store only the first 'maxColSize_' elements
     }
   }
   nphot_ = phcnt;
@@ -434,6 +439,7 @@ void DASTreeMaker::GetRecoObjects(const pat::JetCollection& patJets, const pat::
       jphi[jcal] = jt->phi();
       jeta[jcal] = jt->eta();
       jcal++;
+      if( jcal == maxColSize_ ) break; // Store only the first 'maxColSize_' elements
     }
     //printf("Njcal=%i\n",jcal);
   }
@@ -530,13 +536,13 @@ void DASTreeMaker::beginJob() {
   dasTree_ = new TTree("AnaTree","");
    
   //--gen jets
-  gjpx = new float[200];
-  gjpy = new float[200];
-  gjpz = new float[200];
-  gjen = new float[200];
-  gjpt = new float[200];
-  gjphi = new float[200];
-  gjeta = new float[200];
+  gjpx = new float[maxColSize_];
+  gjpy = new float[maxColSize_];
+  gjpz = new float[maxColSize_];
+  gjen = new float[maxColSize_];
+  gjpt = new float[maxColSize_];
+  gjphi = new float[maxColSize_];
+  gjeta = new float[maxColSize_];
   //---gen muons
   lepM = new float[6];
   lepID = new float[6];
@@ -546,52 +552,43 @@ void DASTreeMaker::beginJob() {
   lepPz = new float[6];
   lepE = new float[6];
 
-  //---gen photons
-  gphpx = new float[200];
-  gphpy = new float[200];
-  gphpz = new float[200];
-  gphen = new float[200];
-  gphpt = new float[200];
-  gphphi = new float[200];
-  gpheta = new float[200];
-
   //--reco jets
-  jpx = new float[200];
-  jpy = new float[200];
-  jpz = new float[200];
-  jen = new float[200];  
-  jpt = new float[200];
-  jphi = new float[200];
-  jeta = new float[200];
+  jpx = new float[maxColSize_];
+  jpy = new float[maxColSize_];
+  jpz = new float[maxColSize_];
+  jen = new float[maxColSize_];  
+  jpt = new float[maxColSize_];
+  jphi = new float[maxColSize_];
+  jeta = new float[maxColSize_];
   //---muons
-  muq = new float[200];
-  mupx = new float[200];
-  mupy = new float[200];
-  mupz = new float[200];
-  muen = new float[200];
-  mupt = new float[200];
-  muphi = new float[200];
-  mueta = new float[200];
+  muq = new float[maxColSize_];
+  mupx = new float[maxColSize_];
+  mupy = new float[maxColSize_];
+  mupz = new float[maxColSize_];
+  muen = new float[maxColSize_];
+  mupt = new float[maxColSize_];
+  muphi = new float[maxColSize_];
+  mueta = new float[maxColSize_];
   //---electrons
-  eleq = new float[200];
-  elepx = new float[200];
-  elepy = new float[200];
-  elepz = new float[200];
-  eleen = new float[200];
-  elept = new float[200];
-  elephi = new float[200];
-  eleeta = new float[200];
+  eleq = new float[maxColSize_];
+  elepx = new float[maxColSize_];
+  elepy = new float[maxColSize_];
+  elepz = new float[maxColSize_];
+  eleen = new float[maxColSize_];
+  elept = new float[maxColSize_];
+  elephi = new float[maxColSize_];
+  eleeta = new float[maxColSize_];
   //---photons
-  phpx = new float[200];
-  phpy = new float[200];
-  phpz = new float[200];
-  phen = new float[200];
-  phpt = new float[200];
-  phphi = new float[200];
-  pheta = new float[200];
+  phpx = new float[maxColSize_];
+  phpy = new float[maxColSize_];
+  phpz = new float[maxColSize_];
+  phen = new float[maxColSize_];
+  phpt = new float[maxColSize_];
+  phphi = new float[maxColSize_];
+  pheta = new float[maxColSize_];
 
   //---vertices
-  vtxz = new float[50];
+  vtxz = new float[maxColSize_];
 
   //---default values
   nvtx_    = -1;

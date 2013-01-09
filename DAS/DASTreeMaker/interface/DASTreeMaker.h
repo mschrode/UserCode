@@ -63,6 +63,8 @@ class DASTreeMaker : public edm::EDAnalyzer {
   int GetProcID(int procID);
   int hadronicTauFlag(const reco::Candidate &cand) const;
 
+  const int maxColSize_;  // Maximum number of elements of a collection stored in the ntuple
+
   double pfEventRho_;
   float evtWgt_;
   int sampleID_;
@@ -89,7 +91,6 @@ class DASTreeMaker : public edm::EDAnalyzer {
   float *eleq, *elepx, *elepy, *elepz, *eleen, *elept, *elephi, *eleeta;
 
   float *gjpx, *gjpy, *gjpz, *gjen, *gjpt, *gjphi, *gjeta;
-  float *gphpx, *gphpy, *gphpz, *gphen, *gphpt, *gphphi, *gpheta;
 };
 
 #endif
