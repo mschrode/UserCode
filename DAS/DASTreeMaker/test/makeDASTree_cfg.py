@@ -1,4 +1,4 @@
-# $Id: makeDASTree_cfg.py,v 1.1 2012/12/29 18:03:40 mschrode Exp $
+# $Id: makeDASTree_cfg.py,v 1.2 2013/01/07 20:27:08 mschrode Exp $
 
 
 ## --- GLOBAL PARAMETERS -----------------------------------------------------
@@ -16,6 +16,9 @@ globalTag_ = parameters.value("global_tag","")+"::All"
 isMC_      = parameters.value("is_mc",True)
 isSUSY_    = parameters.value("is_susy",False)
 lumi_      = parameters.value("lumi",5295)
+
+#dataSet_ = "/store/mc/Summer12_DR53X/WJetsToLNu_TuneZ2Star_8TeV-madgraph-tarball/AODSIM/PU_S10_START53_V7A-v2/0004/FE9FA8F7-2BF3-E111-A34E-001E672CC1E7.root"
+#globalTag_ = "START53_V7G::All"
 
 print "***** SETUP ************************************"
 print "    dataSet_ : "+dataSet_
@@ -184,7 +187,7 @@ process.cleanpatseq = cms.Sequence(
 
 
 ## --- HT & MHT PRESELECTION -------------------------------------------------
-process.htPFchsFilter.MinHT   = cms.double(350)
+process.htPFchsFilter.MinHT   = cms.double(300)
 process.mhtPFchsFilter.MinMHT = cms.double(200)
 
 
@@ -233,7 +236,7 @@ process.dasTree = dasTreeMaker.clone(
     genjets       = cms.InputTag("ak5GenJets"),  
     genmet        = cms.InputTag("genMetCalo"),
     vertex        = cms.InputTag("offlinePrimaryVertices"),  
-    PATjets       = cms.InputTag("patJetsPFchsPt30"),
+    PATjets       = cms.InputTag("patJetsPF"),
     PATmet        = cms.InputTag("patMETsPF"),
     PATmuons      = cms.InputTag("patMuonsPF"),
     muID          = cms.string('GlobalMuonPromptTight'),
@@ -247,7 +250,7 @@ process.dasTree = dasTreeMaker.clone(
 process.ppfchs = cms.Path(
     process.cleanpatseq *
     process.calculateRhoForGamma *
-    process.htPFchsFilter *
+    #process.htPFchsFilter *
     #process.mhtPFchsFilter *
     process.WeightProducer *
     process.dasTree
