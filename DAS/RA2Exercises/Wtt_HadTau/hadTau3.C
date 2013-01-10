@@ -9,7 +9,15 @@ const float kMuonEtaMax   = 2.1;
 
 
 // === Main Script =====================================================
-void hadTau3(int nEvts = -1, int nSimSteps = 100) {
+void hadTau3(int nSimSteps, int nEvts = -1) {
+  const int kNSimStepsMax = 500;
+  if( nSimSteps > kNSimStepsMax ) {
+    std::cerr << "ERROR: Number of simulation steps larger than allowed." << std::endl;
+    std::cerr << "       'nSimSteps' must be less than " << kNSimStepsMax << std::endl;
+    exit(-1);
+  }
+
+
   // --- Binning for Prediction and Closure Test -----------------------
   const int kBinsPtN = 30;
   const float kBinsPtMin = 0.;
@@ -23,9 +31,9 @@ void hadTau3(int nEvts = -1, int nSimSteps = 100) {
 
   // Counters: store for each simulation step, how many events
   // are predicted in each pt / HT / MHT bin
-  int nPredTauJetPt2D[nSimSteps][kBinsPtN];
-  int nPredHT2D[nSimSteps][kBinsHtN];
-  int nPredMHT2D[nSimSteps][kBinMhtN];
+  int nPredTauJetPt2D[kNSimStepsMax][kBinsPtN];
+  int nPredHT2D[kNSimStepsMax][kBinsHtN];
+  int nPredMHT2D[kNSimStepsMax][kBinMhtN];
   for(int i = 0; i < nSimSteps; ++i) {
     for(int j = 0; j < kBinsPtN; ++j) nPredTauJetPt2D[i][j] = 0;
     for(int j = 0; j < kBinsHtN; ++j) nPredHT2D[i][j] = 0;
@@ -113,7 +121,7 @@ void hadTau3(int nEvts = -1, int nSimSteps = 100) {
     if( hTauResp[i] ) {
       hTauResp[i]->SetDirectory(0);
     } else {
-      std::cerr << "ERROR: Histogram '" << name << "' not found in file '" << fTauResp->GetName() << "'" << std::endl;
+      std::cerr << "ERROR: Histogram '" << name << "' not found in file '" << fTauResp.GetName() << "'" << std::endl;
       exit(-1);
     }
   }
@@ -220,6 +228,12 @@ void hadTau3(int nEvts = -1, int nSimSteps = 100) {
       float tauJetPt  = recoJetPt[leptonJetIdx];
       float tauJetEta = TMath::Abs(recoJetEta[leptonJetIdx]);
       float tauJetPhi = recoJetPhi[leptonJetIdx];
+
+      // If tau jet meets same criteria as other RA2 jets for HT,
+      // recompute NJets and check if NJets >= 3
+      if( tauJetPt > kHtJetPtMin && tauJetEta < kHtJetEtaMax ) selNJet++;
+      if( selNJet < 3 ) continue;
+
       // Apply same eta cut as for muon
       if( tauJetEta < kMuonEtaMax ) {
 	hTrueTauJetPt->Fill(tauJetPt);
@@ -236,7 +250,7 @@ void hadTau3(int nEvts = -1, int nSimSteps = 100) {
 	  selMhtX -= tauJetPt*cos(tauJetPhi);
 	  selMhtY -= tauJetPt*sin(tauJetPhi);
 	  // Calculate the MHT from x and y component
-	  float selMht = sqrt( tmpMhtX*tmpMhtX + tmpMhtY*tmpMhtY );
+	  float selMht = sqrt( selMhtX*selMhtX + selMhtY*selMhtY );
 	  hTrueMHT->Fill(selMht);
 	}
       }
@@ -263,12 +277,17 @@ void hadTau3(int nEvts = -1, int nSimSteps = 100) {
 	}
       }
 
+//       nSelMus = 1;
+//       selMuPt = genLepPt;
+//       selMuEta = genLepEta;
+//       selMuPhi = genLepPhi;
+
       // Exactly one selected muon
       if( nSelMus != 1 ) continue;
 
       // Find the pt bin of the tau-response template
       int tauRespPtBin = tauPtBin(selMuPt);
-      if( tauRespPtBin < 0 || tauRespPtBin < kNRespPtBins ) continue;
+      if( tauRespPtBin < 0 || tauRespPtBin >= kNRespPtBins ) continue;
 
       // Perform nSimSteps simulations
       for(int it = 0; it < nSimSteps; ++it) {
@@ -276,6 +295,12 @@ void hadTau3(int nEvts = -1, int nSimSteps = 100) {
 	float scale = hTauResp[tauRespPtBin]->GetRandom();
 	// Scale muon pt with tau response --> simulate tau jet pt
 	float simTauJetPt = scale * selMuPt;
+
+	// If simulted tau-jet meets same criteria as other RA2 jets for HT,
+	// recompute NJets and check if NJets >= 3
+	float simNJet = selNJet;
+	if( simTauJetPt > kHtJetPtMin && TMath::Abs(selMuEta) < kHtJetEtaMax ) simNJet++;
+	if( simNJet < 3 ) continue;
 	  
 	// Tau-jet pt bin
 	int binSimTauJetPt = bin(simTauJetPt,kBinsPtN,kBinsPtMin,kBinsPtMax);
@@ -286,7 +311,7 @@ void hadTau3(int nEvts = -1, int nSimSteps = 100) {
 	// with that HT
 	if( simTauJetPt > kHtJetPtMin && TMath::Abs(selMuEta) < kHtJetEtaMax ) {
 	  float simHt = selHt + simTauJetPt;
-	  int binSimHT = GetVarBin(simHt,kBinsHtN,kBinsHtMin,kBinsHtMax);
+	  int binSimHT = bin(simHt,kBinsHtN,kBinsHtMin,kBinsHtMax);
 	  if( binSimHT > -1 ) nPredHT2D[it][binSimHT]++;
 	}
 	// If simulated tau-jet meets same criteria as RA2 jets for MHT,
@@ -296,7 +321,7 @@ void hadTau3(int nEvts = -1, int nSimSteps = 100) {
 	  float simMhtX = selMhtX - simTauJetPt*cos(selMuPhi);
 	  float simMhtY = selMhtY - simTauJetPt*sin(selMuPhi);
 	  float simMht = sqrt( simMhtX*simMhtX + simMhtY*simMhtY );
-	  int binSimMHT = GetVarBin(simMht,kBinMhtN,kBinsMhtMin,kBinsMhtMax);
+	  int binSimMHT = bin(simMht,kBinMhtN,kBinsMhtMin,kBinsMhtMax);
 	  if( binSimMHT > -1 ) nPredMHT2D[it][binSimMHT]++;
 	}
       }	// End of loop over simulations
@@ -336,14 +361,14 @@ void hadTau3(int nEvts = -1, int nSimSteps = 100) {
     float mean2 = 0.;
     // Loop over number of simulations
     for(int simIdx = 0; simIdx < nSimSteps; ++simIdx) {
-      mean  += 1. * nPredHT2D[simIdx][ptBinIdx];
-      mean2 += 1. * nPredHT2D[simIdx][ptBinIdx]*nPredHT2D[simIdx][ptBinIdx];
+      mean  += 1. * nPredHT2D[simIdx][htBinIdx];
+      mean2 += 1. * nPredHT2D[simIdx][htBinIdx]*nPredHT2D[simIdx][htBinIdx];
     }
     mean =  mean / nSimSteps;
     mean2 = mean2 / nSimSteps;
     float sig = sqrt( mean2 - mean*mean );
-    hPredHT->SetBinContent(ptBinIdx+1,mean);
-    hPredHT->SetBinError(ptBinIdx+1,sig);
+    hPredHT->SetBinContent(htBinIdx+1,mean);
+    hPredHT->SetBinError(htBinIdx+1,sig);
   } // End of loop over HT bins
 
 
@@ -356,14 +381,14 @@ void hadTau3(int nEvts = -1, int nSimSteps = 100) {
     float mean2 = 0.;
     // Loop over number of simulations
     for(int simIdx = 0; simIdx < nSimSteps; ++simIdx) {
-      mean  += 1. * nPredMHT2D[simIdx][ptBinIdx];
-      mean2 += 1. * nPredMHT2D[simIdx][ptBinIdx]*nPredMHT2D[simIdx][ptBinIdx];
+      mean  += 1. * nPredMHT2D[simIdx][mhtBinIdx];
+      mean2 += 1. * nPredMHT2D[simIdx][mhtBinIdx]*nPredMHT2D[simIdx][mhtBinIdx];
     }
     mean =  mean / nSimSteps;
     mean2 = mean2 / nSimSteps;
     float sig = sqrt( mean2 - mean*mean );
-    hPredMHT->SetBinContent(ptBinIdx+1,mean);
-    hPredMHT->SetBinError(ptBinIdx+1,sig);
+    hPredMHT->SetBinContent(mhtBinIdx+1,mean);
+    hPredMHT->SetBinError(mhtBinIdx+1,sig);
   } // End of loop over MHT bins
 
 
