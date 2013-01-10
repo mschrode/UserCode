@@ -6,7 +6,7 @@ const float kHtJetEtaMax  = 2.5;
 
 
 // === Main Script =====================================================
-void hadTau2(int nEvts = -1) {
+void hadTau2(const TString &inputEvents = "inputEvents", int nEvts = -1) {
   // --- Declare the Output Histograms ---------------------------------
   const int kNRespPtBins = 4;
   TH1* hTauResp[kNRespPtBins];
@@ -19,7 +19,7 @@ void hadTau2(int nEvts = -1) {
 
   // --- Declare the Variables Read from the Tree ----------------------
   // Array dimensions
-  const int kRecoJetColSize = 10;
+  const int kRecoJetColSize = 15;
   const int kGenLepColSize = 6;
 
   // Reco-level jets
@@ -45,8 +45,7 @@ void hadTau2(int nEvts = -1) {
 
   // Get the tree from file
   TChain* tr = new TChain("AnaTree");
-  //  tr->Add("/nfs/dust/test/cmsdas/school61/susy/ntuple/test/WJets.root");
-  tr->Add("/afs/desy.de/project/cmsdas/SUSY/ntuple/test/WJets.root");
+  tr->Add(inputEvents);
 
   // Set the branches
   tr->SetBranchAddress("NrecoJet",&nRecoJets);
@@ -108,8 +107,7 @@ void hadTau2(int nEvts = -1) {
 
     
     // Compute some more kinematic quantities of the 
-    // generator-level lepton (electron or the muon)
-    // from the W decay
+    // generator-level lepton from the W decay
     aux4Vector.SetPxPyPzE(genLepPx[chargedGenLepIdx],genLepPy[chargedGenLepIdx],genLepPz[chargedGenLepIdx],genLepE[chargedGenLepIdx]);
     float genLepEta = aux4Vector.Eta();
     float genLepPhi = aux4Vector.Phi();
