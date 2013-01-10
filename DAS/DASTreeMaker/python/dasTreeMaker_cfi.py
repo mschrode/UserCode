@@ -1,4 +1,4 @@
-# $Id: $
+# $Id: dasTreeMaker_cfi.py,v 1.1 2012/12/29 18:03:12 mschrode Exp $
 
 import FWCore.ParameterSet.Config as cms
 
@@ -12,12 +12,10 @@ dasTreeMaker = cms.EDAnalyzer(
     genjets       = cms.InputTag("ak5GenJets"),  
     genmet        = cms.InputTag("genMetCalo"),
     vertex        = cms.InputTag("offlinePrimaryVertices"),  
-    PATjets       = cms.InputTag("allLayer1JetsIC5"),
+    jets          = cms.InputTag("allLayer1JetsIC5"),
     PATmet        = cms.InputTag("allLayer1METsIC5"),
-    PATmuons      = cms.InputTag("allLayer1Muons"),
-    muID          = cms.string('GlobalMuonPromptTight'),
-    PATelectrons  = cms.InputTag("allLayer1Electrons"),
-    eleID         = cms.string('eidTight'),
+    muons         = cms.InputTag("allLayer1Muons"),
+    electrons     = cms.InputTag("allLayer1Electrons"),
     PATphotons    = cms.InputTag("allLayer1Photons"),
     PFRhoTag      = cms.InputTag("kt6PFJetsForGammaIso","rho"),       
     OutFile       = cms.string('ra2DAStree.root')

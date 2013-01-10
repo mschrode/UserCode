@@ -58,7 +58,7 @@ class DASTreeMaker : public edm::EDAnalyzer {
   void GetZdecay(const reco::GenParticleCollection& Gen);
   void GetTTdecay(const reco::GenParticleCollection& Gen);
   void GetGenPhoton(const reco::GenParticleCollection& Gen);
-  void GetRecoObjects(const pat::JetCollection& patJets, const pat::METCollection& patMet, const pat::MuonCollection& patMuons, const pat::ElectronCollection& patEles, const pat::PhotonCollection& patPhotons, const reco::VertexCollection& Vtx);
+  void GetRecoObjects(const edm::View<reco::Candidate>& jets, const pat::METCollection& patMet, const edm::View<reco::Candidate>& muons, const edm::View<reco::Candidate>& eles, const pat::PhotonCollection& patPhotons, const reco::VertexCollection& Vtx);
   void GetSUSYs(const LHEEventProduct& lhep, const GenEventInfoProduct& genProd);
   int GetProcID(int procID);
   int hadronicTauFlag(const reco::Candidate &cand) const;
@@ -70,9 +70,9 @@ class DASTreeMaker : public edm::EDAnalyzer {
   int sampleID_;
   bool isMCdata_, isSUSY_;
 
-  edm::InputTag genJetsTag_, genMetsTag_, vertexTag_, patJetsTag_, patMetsTag_, patMuonsTag_, patElesTag_, patPhotonsTag_, pfRhoTag_, evtWgtTag_;
+  edm::InputTag genJetsTag_, genMetsTag_, vertexTag_, jetsTag_, patMetsTag_, muonsTag_, elesTag_, patPhotonsTag_, pfRhoTag_, evtWgtTag_;
 
-  std::string outFileName_, eleID_, muID_;
+  std::string outFileName_;
 
   TFile* outFile_;
   TTree* dasTree_;

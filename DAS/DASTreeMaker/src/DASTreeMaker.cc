@@ -13,7 +13,7 @@
 
 
 DASTreeMaker::DASTreeMaker(const edm::ParameterSet& conf)
-  : maxColSize_(10) {
+  : maxColSize_(15) {
   isMCdata_    = conf.getParameter< bool > ("MCdata");
   isSUSY_      = conf.getParameter< bool > ("isSUSY");
   sampleID_    = conf.getParameter< int > ("sampleID");
@@ -22,12 +22,10 @@ DASTreeMaker::DASTreeMaker(const edm::ParameterSet& conf)
   genJetsTag_  = conf.getParameter< edm::InputTag > ("genjets");
   genMetsTag_  = conf.getParameter< edm::InputTag > ("genmet");
   vertexTag_   = conf.getParameter< edm::InputTag > ("vertex");
-  patJetsTag_  = conf.getParameter< edm::InputTag > ("PATjets");
+  jetsTag_  = conf.getParameter< edm::InputTag > ("jets");
   patMetsTag_  = conf.getParameter< edm::InputTag > ("PATmet");
-  patMuonsTag_ = conf.getParameter< edm::InputTag > ("PATmuons");
-  muID_        = conf.getParameter<std::string>("muID" );
-  patElesTag_  = conf.getParameter< edm::InputTag > ("PATelectrons");
-  eleID_       =  conf.getParameter<std::string>("eleID" );
+  muonsTag_ = conf.getParameter< edm::InputTag > ("muons");
+  elesTag_  = conf.getParameter< edm::InputTag > ("electrons");
   patPhotonsTag_ = conf.getParameter< edm::InputTag > ("PATphotons");
   pfRhoTag_    = conf.getParameter<edm::InputTag>("PFRhoTag");
   outFileName_       =  conf.getParameter<std::string>("OutFile" );
@@ -86,25 +84,25 @@ void DASTreeMaker::analyze(const edm::Event& evt, const edm::EventSetup& es)
   
   //---get reco level objects
   edm::Handle<reco::VertexCollection> VtxHandle;
-  edm::Handle<pat::JetCollection> patJetsHandle;
+  edm::Handle< edm::View<reco::Candidate> > jetsHandle;
   edm::Handle<pat::METCollection> patMETHandle;
-  edm::Handle<pat::MuonCollection> patMuonsHandle;
-  edm::Handle<pat::ElectronCollection> patElectronsHandle;
+  edm::Handle< edm::View<reco::Candidate> > muonsHandle;
+  edm::Handle< edm::View<reco::Candidate> > electronsHandle;
   edm::Handle<pat::PhotonCollection> patPhotonsHandle;
   edm::Handle<double> pfRhoHandle;
 
   evt.getByLabel (vertexTag_,VtxHandle);
-  evt.getByLabel (patJetsTag_,patJetsHandle);
+  evt.getByLabel (jetsTag_,jetsHandle);
   evt.getByLabel (patMetsTag_,patMETHandle);
-  evt.getByLabel (patMuonsTag_,patMuonsHandle);
-  evt.getByLabel (patElesTag_,patElectronsHandle);
+  evt.getByLabel (muonsTag_,muonsHandle);
+  evt.getByLabel (elesTag_,electronsHandle);
   evt.getByLabel (patPhotonsTag_,patPhotonsHandle);
 
   // get pfRho for pileup correction to isolation
   evt.getByLabel(pfRhoTag_, pfRhoHandle);
   pfEventRho_ = *pfRhoHandle;
 
-  GetRecoObjects(*patJetsHandle, *patMETHandle, *patMuonsHandle, *patElectronsHandle, *patPhotonsHandle, *VtxHandle);
+  GetRecoObjects(*jetsHandle, *patMETHandle, *muonsHandle, *electronsHandle, *patPhotonsHandle, *VtxHandle);
   
   dasTree_->Fill();
 }
@@ -309,13 +307,8 @@ int DASTreeMaker::hadronicTauFlag(const reco::Candidate &cand) const {
   return flag;
 }
 
-
-
-void DASTreeMaker::GetRecoObjects(const pat::JetCollection& patJets, const pat::METCollection& patMet, const pat::MuonCollection& patMuons, const pat::ElectronCollection& patEles, const pat::PhotonCollection& patPhotons, const reco::VertexCollection& Vtx) {
-
+void DASTreeMaker::GetRecoObjects(const edm::View<reco::Candidate>& jets, const pat::METCollection& patMet, const edm::View<reco::Candidate>& muons, const edm::View<reco::Candidate>& eles, const pat::PhotonCollection& patPhotons, const reco::VertexCollection& Vtx) {
   int jcal(0), mucnt(0), elecnt(0), phcnt(0), vtxcnt(0);
-  float mudz(10), mudxy(10);
-  float eledz(10), eledxy(10);
   math::XYZPoint primVtx;
   double trackerIso, ecalIso, hcalIso, sigEtaEta;
 
@@ -340,21 +333,10 @@ void DASTreeMaker::GetRecoObjects(const pat::JetCollection& patJets, const pat::
   }
   nvtx_=vtxcnt;
 
-  //----pat muons
-  if (&patMuons){
-    //cout <<"Nmus:"<<patMuons.size()<<endl;
-    //nmu_ = patMuons.size();
-    for(pat::MuonCollection::const_iterator mu = patMuons.begin(); mu != patMuons.end(); mu++) {
-      //cout << mu->pt()<<" "<<mu->isGood("GlobalMuonPromptTight")<<" "<<mu->dB()<<" "<<mu->numberOfValidHits()<<" "<<mu->normChi2()<<" "<<mu->isolationR03().sumPt<<" "<<mu->isolationR03().emEt<<" "<<mu->isolationR03().hadEt<<" "<<mu->isolationR03().trackerVetoPt<<" "<<mu->isolationR03().emVetoEt<<" "<<mu->isolationR03().hadVetoEt<<" "<<mu->trackIso()<<" "<<mu->ecalIso()<<" "<<mu->hcalIso()<<endl;
-      //if (mu->isGood("GlobalMuonPromptTight")==0) continue;
-      if (mu->isGood(muID_)==0) continue;
-      if ((mu->chargedHadronIso()+mu->photonIso()+mu->neutralHadronIso())/(mu->pt()) >= 0.2) continue;
-      if (mu->innerTrack()->numberOfValidHits() <11) continue;
-      if (vtxcnt!=0) mudz = mu->innerTrack()->dz(primVtx);
-      if (vtxcnt!=0) mudxy = mu->innerTrack()->dxy(primVtx);
-      if (mudxy>=0.02) continue;
-      if (mudz>=1) continue;
-      
+  //----muons
+  if (&muons){
+    for(edm::View<reco::Candidate>::const_iterator mu = muons.begin();
+	mu != muons.end(); ++mu) {
       muq[mucnt] = mu->charge();
       mupx[mucnt] = mu->px();
       mupy[mucnt] = mu->py();
@@ -370,20 +352,10 @@ void DASTreeMaker::GetRecoObjects(const pat::JetCollection& patJets, const pat::
   }
   nmu_ = mucnt;
   
-  //---pat electrons
-  if (&patEles){
-    for(pat::ElectronCollection::const_iterator ele = patEles.begin(); ele != patEles.end(); ele++) {
-      //if (!isMCdata_ && ele->electronID("eidTight")==0) continue;
-      //if (isMCdata_ && ele->electronID("eidTightMC")==0) continue;
-      if (ele->electronID(eleID_)==0) continue;
-      if (std::abs(ele->eta()) >= 2.5 ) continue;
-      if (std::abs(ele->eta()) >= 1.4442 && std::abs(ele->eta()) < 1.566 ) continue;
-      if ((ele->chargedHadronIso()+ele->photonIso()+ele->neutralHadronIso())/(ele->pt()) >= 0.2) continue;
-      if (vtxcnt!=0) eledz = std::abs(ele->vz() - primVtx.Z());
-      if (vtxcnt!=0) eledxy = ele->gsfTrack()->dxy(primVtx);
-      if (eledxy>=0.04) continue;
-      if (eledz>=1) continue;
-
+  //---electrons
+  if (&eles){
+    for(edm::View<reco::Candidate>::const_iterator ele = eles.begin();
+	ele != eles.end(); ele++) {
       eleq[elecnt] = ele->charge();
       elepx[elecnt] = ele->px();
       elepy[elecnt] = ele->py();
@@ -427,10 +399,10 @@ void DASTreeMaker::GetRecoObjects(const pat::JetCollection& patJets, const pat::
   nphot_ = phcnt;
 
   //---TO DO: work with the jets after leptons and photons so that they can be cleaned of them
-  //---pat jets
-  if (&patJets) {    
-    for(pat::JetCollection::const_iterator jt = patJets.begin(); jt != patJets.end(); jt++) {
-      //cout <<" pt:"<<jt->pt()<<" "<<jt->correctedJet("RAW").pt()<<" eta:"<<jt->eta()<<" "<<jt->correctedJet("RAW").eta()<<" phi:"<<jt->phi()<<" "<<jt->correctedJet("RAW").phi()<<" emf:"<<jt->emEnergyFraction()<<" "<<jt->correctedJet("RAW").emEnergyFraction()<<endl;
+  //---jets
+  if (&jets) {    
+    for(edm::View<reco::Candidate>::const_iterator jt = jets.begin();
+	jt != jets.end(); ++jt) {
       jpx[jcal] = jt->px();
       jpy[jcal] = jt->py();
       jpz[jcal] = jt->pz();
@@ -444,8 +416,6 @@ void DASTreeMaker::GetRecoObjects(const pat::JetCollection& patJets, const pat::
     //printf("Njcal=%i\n",jcal);
   }
   njet_ = jcal;
-
-
 }
       
 void DASTreeMaker::GetSUSYs(const LHEEventProduct& lhep, const GenEventInfoProduct& genProd) {
