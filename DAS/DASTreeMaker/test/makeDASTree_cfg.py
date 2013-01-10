@@ -1,4 +1,4 @@
-# $Id: makeDASTree_cfg.py,v 1.2 2013/01/07 20:27:08 mschrode Exp $
+# $Id: makeDASTree_cfg.py,v 1.3 2013/01/09 11:19:21 mschrode Exp $
 
 
 ## --- GLOBAL PARAMETERS -----------------------------------------------------
@@ -236,19 +236,22 @@ process.dasTree = dasTreeMaker.clone(
     genjets       = cms.InputTag("ak5GenJets"),  
     genmet        = cms.InputTag("genMetCalo"),
     vertex        = cms.InputTag("offlinePrimaryVertices"),  
-    PATjets       = cms.InputTag("patJetsPF"),
+    jets          = cms.InputTag("patJetsPF"),
     PATmet        = cms.InputTag("patMETsPF"),
-    PATmuons      = cms.InputTag("patMuonsPF"),
+    muons         = cms.InputTag("patMuonsPFIDIso"),
     muID          = cms.string('GlobalMuonPromptTight'),
-    PATelectrons  = cms.InputTag("patElectronsPF"),
+    electrons     = cms.InputTag("patElectronsIDIso"),
     eleID         = cms.string('eidTight'),
     PATphotons    = cms.InputTag("patPhotons"),
     PFRhoTag      = cms.InputTag("kt6PFJetsForGammaIso","rho"),       
     OutFile       = cms.string('RA2DASTree.root')
     )
 
+#process.dump = cms.EDAnalyzer("EventContentAnalyzer")
+
 process.ppfchs = cms.Path(
     process.cleanpatseq *
+    #process.dump *
     process.calculateRhoForGamma *
     #process.htPFchsFilter *
     #process.mhtPFchsFilter *
