@@ -47,11 +47,12 @@ void DASTreeMaker::analyze(const edm::Event& evt, const edm::EventSetup& es)
   lumib_ = evt.luminosityBlock();
 
   // Event weight
-  if (evtWgt_<0) {
+  if (!evtWgtTag_.instance().empty()) {
     edm::Handle<double> evtWgtHandle;
     evt.getByLabel(evtWgtTag_,evtWgtHandle);
     evtWgt_ = *evtWgtHandle;
   }
+  else if (evtWgt_ < 0 ) evtWgt_=1.;
 
   //---get generator level objects
   if (isMCdata_) {
