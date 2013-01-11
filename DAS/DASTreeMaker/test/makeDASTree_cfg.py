@@ -1,4 +1,4 @@
-# $Id: makeDASTree_cfg.py,v 1.3 2013/01/09 11:19:21 mschrode Exp $
+# $Id: makeDASTree_cfg.py,v 1.4 2013/01/10 17:18:42 mschrode Exp $
 
 
 ## --- GLOBAL PARAMETERS -----------------------------------------------------
@@ -16,12 +16,16 @@ globalTag_ = parameters.value("global_tag","")+"::All"
 isMC_      = parameters.value("is_mc",True)
 isSUSY_    = parameters.value("is_susy",False)
 lumi_      = parameters.value("lumi",5295)
+hltPath_   = parameters.value("hlt_path","none")+"*"
 
 #dataSet_ = "/store/mc/Summer12_DR53X/WJetsToLNu_TuneZ2Star_8TeV-madgraph-tarball/AODSIM/PU_S10_START53_V7A-v2/0004/FE9FA8F7-2BF3-E111-A34E-001E672CC1E7.root"
 #globalTag_ = "START53_V7G::All"
+#dataSet_ = "/store/data/Run2012A/MuHad/AOD/13Jul2012-v1/00000/FEB6CCC1-59CF-E111-8D77-001A9281172C.root"
+#globalTag_ = "FT_53_V6C_AN3::All"
 
 print "***** SETUP ************************************"
 print "    dataSet_ : "+dataSet_
+print "    hltPath_ : "+hltPath_
 print "  globalTag_ : "+globalTag_
 print "       isMC_ : "+str(isMC_)
 print "     isSUSY_ : "+str(isSUSY_)
@@ -50,7 +54,7 @@ process.source = cms.Source(
     "PoolSource",
     fileNames = cms.untracked.vstring(dataSet_)
     )
-process.maxEvents.input = 100
+process.maxEvents.input = -100
 
 
 
@@ -132,6 +136,21 @@ process.pfMuonSequencePF.replace(process.pfIsolatedMuonsPF,
 from SandBox.Skims.RA2Content_cff import getRA2PATOutput
 process.out.outputCommands = getRA2PATOutput(process)
 process.out.dropMetaData = cms.untracked.string('DROPPED')
+
+
+
+## --- HLT -------------------------------------------------------------------
+
+process.load('HLTrigger.HLTfilters.hltHighLevel_cfi')
+process.hltHighLevel.HLTPaths = cms.vstring(hltPath_)
+process.hltHighLevel.andOr = cms.bool(True)
+process.hltHighLevel.throw = cms.bool(False)
+
+process.hltSelection = cms.Sequence(
+    process.hltHighLevel
+    )
+if isMC_:
+    process.hltSelection.remove(process.hltHighLevel)
 
 
 
@@ -250,6 +269,7 @@ process.dasTree = dasTreeMaker.clone(
 #process.dump = cms.EDAnalyzer("EventContentAnalyzer")
 
 process.ppfchs = cms.Path(
+    process.hltSelection *
     process.cleanpatseq *
     #process.dump *
     process.calculateRhoForGamma *
