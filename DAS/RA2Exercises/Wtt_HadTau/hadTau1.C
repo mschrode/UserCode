@@ -1,4 +1,30 @@
-// === Main Script =====================================================
+#include <iostream>
+
+#include "TChain.h"
+#include "TLorentzVector.h"
+#include "TH1.h"
+#include "TH1F.h"
+#include "TFile.h"
+#include "TString.h"
+#include "TVector2.h"
+
+
+
+// === Global Variables ================================================
+
+// Array dimensions in tree
+const int kRecoJetColSize = 15;
+const int kRecoMuColSize = 15;
+const int kGenLepColSize = 6;
+
+
+
+// === Declaration of Auxiliary Functions ==============================
+bool findMuOrTau(int &lepIdx, const float* lepID, int nLep);
+
+
+
+// === Main Function ===================================================
 void hadTau1(const TString &inputEvents = "inputEvents", int nEvts = -1) {
   // --- Declare the Output Histograms ---------------------------------
   TH1* hGenMuPt = new TH1F("hGenMuPt",";p_{T}(#mu^{gen}) [GeV];N(#mu^{gen})",20,0,500);
@@ -8,8 +34,6 @@ void hadTau1(const TString &inputEvents = "inputEvents", int nEvts = -1) {
 
 
   // --- Declare the Variables Read from the Tree ----------------------
-  // Array dimensions
-  const int kGenLepColSize = 6;
 
   // W-decay mode
   int flgW = 0;			// PdgId of lepton the W decays into
@@ -74,8 +98,6 @@ void hadTau1(const TString &inputEvents = "inputEvents", int nEvts = -1) {
     // Compute some more kinematic quantities of the 
     // generator-level lepton
     aux4Vector.SetPxPyPzE(genLepPx[chargedGenLepIdx],genLepPy[chargedGenLepIdx],genLepPz[chargedGenLepIdx],genLepE[chargedGenLepIdx]);
-    float genLepEta = aux4Vector.Eta();
-    float genLepPhi = aux4Vector.Phi();
     float genLepPt  = aux4Vector.Pt();
 
 
@@ -95,7 +117,7 @@ void hadTau1(const TString &inputEvents = "inputEvents", int nEvts = -1) {
 
 
 
-// === Auxiliary Functions =======================================
+// === Implementation of Auxiliary Functions =====================
 
 // Find index 'lepIdx' of muon or tau in lepton collection
 // Returns

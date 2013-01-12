@@ -21,17 +21,21 @@ void plotHadTau1(const TString &fileName = "HadTau_WJetMC.root") {
 
 
   // Create ratio
-  TH1* hRatio = static_cast<TH1*>(hGenMuPt->Clone("hRatio"));
-  hRatio->Divide(hGenTauPt);
+  TH1* hRatio = static_cast<TH1*>(hGenTauPt->Clone("hRatio"));
+  hRatio->Divide(hGenMuPt);
   hRatio->GetXaxis()->SetTitle("p_{T} [GeV]");
-  hRatio->GetYaxis()->SetTitle("N(#mu^{gen}) / N(#tau^{gen})");
+  hRatio->GetYaxis()->SetTitle("N(#tau #rightarrow had) / N(#mu)");
 
 
   // Set style
+  hGenMuPt->GetXaxis()->SetTitle("p_{T} [GeV]");
+  hGenMuPt->GetYaxis()->SetTitle("N");
   hGenMuPt->SetMarkerStyle(20);
   hGenMuPt->SetMarkerColor(kBlue);
   hGenMuPt->SetLineColor(hGenMuPt->GetMarkerColor());
 
+  hGenTauPt->GetXaxis()->SetTitle("p_{T} [GeV]");
+  hGenTauPt->GetYaxis()->SetTitle("N");
   hGenTauPt->SetMarkerStyle(21);
   hGenTauPt->SetMarkerColor(kRed);
   hGenTauPt->SetLineColor(hGenTauPt->GetMarkerColor());
@@ -42,14 +46,14 @@ void plotHadTau1(const TString &fileName = "HadTau_WJetMC.root") {
 
   
   // Create legend
-  TLegend* leg = new TLegend(0.8,0.75,0.9,0.89);
+  TLegend* leg = new TLegend(0.6,0.75,0.9,0.89);
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
   leg->SetFillStyle(0);
   leg->SetTextFont(42);
   leg->SetTextSize(0.05);
   leg->AddEntry(hGenMuPt," #mu","P");
-  leg->AddEntry(hGenTauPt," #tau","P");
+  leg->AddEntry(hGenTauPt," #tau #rightarrow had","P");
 
 
   // Draw histograms
@@ -58,6 +62,7 @@ void plotHadTau1(const TString &fileName = "HadTau_WJetMC.root") {
   hGenMuPt->Draw("PE1");
   hGenTauPt->Draw("PE1same");
   leg->Draw("same");
+  gPad->SetLogy();
 
   TCanvas* canRatio = new TCanvas("canRatio","Ratio",600,600);
   canRatio->cd();

@@ -1,26 +1,53 @@
+#include <iostream>
+#include <vector>
+
+#include "TChain.h"
+#include "TLorentzVector.h"
+#include "TH1.h"
+#include "TH1F.h"
+#include "TFile.h"
+#include "TString.h"
+#include "TVector2.h"
+
+
 // === Global Variables ================================================
+// Array dimensions in tree
+const int kRecoJetColSize = 15;
+const int kGenLepColSize = 6;
+
 // RA2 selection cuts
 const float kHtJetPtMin   = 50.;
 const float kHtJetEtaMax  = 2.5;
+const float kMhtJetPtMin  = 30.;
+const float kMhtJetEtaMax = 5.0;
+
+// Tau-template and muon related
+const int kNRespPtBins  = 4;
+const float kMuonPtMin  = 20.;
+const float kMuonEtaMax = 2.1;
 
 
 
-// === Main Script =====================================================
+// === Declaration of Auxiliary Functions ==============================
+bool findMuOrTau(int &lepIdx, const float* lepID, int nLep);
+bool findMatchedJet(int &matchedJetIdx, const float* jetEta, const float* jetPhi, int nJets, float lepEta, float lepPhi, float deltaRMax);
+float deltaR(float eta1, float eta2, float phi1, float phi2);
+int tauPtBin(float pt);
+
+
+
+// === Main Function ===================================================
 void hadTau2(const TString &inputEvents = "inputEvents", int nEvts = -1) {
   // --- Declare the Output Histograms ---------------------------------
-  const int kNRespPtBins = 4;
-  TH1* hTauResp[kNRespPtBins];
+  std::vector<TH1*> hTauResp(kNRespPtBins);
   for(int i = 0; i < kNRespPtBins; ++i) {
     TString name = "hTauResp_";
     name += i;
-    hTauResp[i] = new TH1F(name,";p_{T}(visible) / p_{T}(generated);N(#tau)",60,-0.5,2.5);
+    hTauResp[i] = new TH1F(name,";p_{T}(visible) / p_{T}(generated);N(#tau)",50,0.,2.5);
   }
 
 
   // --- Declare the Variables Read from the Tree ----------------------
-  // Array dimensions
-  const int kRecoJetColSize = 15;
-  const int kGenLepColSize = 6;
 
   // Reco-level jets
   int nRecoJets = 0;
@@ -83,47 +110,36 @@ void hadTau2(const TString &inputEvents = "inputEvents", int nEvts = -1) {
     }
 
 
-    // Select only events where the W decayed either
-    // - into a muon (pdgId 13)
-    // - into a tau (pdgId 15)
-    if( flgW != 13 && flgW != 15 ) continue;
-    // Select only events where the tau decayed hadronically
-    if( flgW == 15 && flgTauHad != 1) continue;
+    // Select only events where the W decayed into a hadronically
+    // decaying tau
+    if( !(flgW == 15 && flgTauHad == 1) ) continue;
 
-
-    // Identify the charged generator-level lepton
+    // Identify the charged generator-level taus
     // from the W decay
-    int chargedGenLepIdx = -1;
-    for(int i = 0; i < kGenLepColSize; ++i) { // Loop over gen leptons
-      if( TMath::Abs(genLepID[i]) == 13 || TMath::Abs(genLepID[i]) == 15 ) {
-	chargedGenLepIdx = i;
-	break;
-      }
-    } // End of loop over gen leptons
-    if( chargedGenLepIdx < 0 ) {
-      std::cerr << "ERROR: Could not find charged lepton from W decay in event " << evtIdx << std::endl;
-      exit(-1);
-    }
+    int genTauIdx = -1;
+    if( !findMuOrTau(genTauIdx,genLepID,kGenLepColSize) ) continue; // Want exactly one lepton
+    if( TMath::Abs(genLepID[genTauIdx]) != 15 ) continue; // Should be a tau!
 
     
-    // Compute some more kinematic quantities of the 
-    // generator-level lepton from the W decay
-    aux4Vector.SetPxPyPzE(genLepPx[chargedGenLepIdx],genLepPy[chargedGenLepIdx],genLepPz[chargedGenLepIdx],genLepE[chargedGenLepIdx]);
-    float genLepEta = aux4Vector.Eta();
-    float genLepPhi = aux4Vector.Phi();
-    float genLepPt  = aux4Vector.Pt();
+    // Compute some more kinematic quantities of the tau
+    aux4Vector.SetPxPyPzE(genLepPx[genTauIdx],genLepPy[genTauIdx],genLepPz[genTauIdx],genLepE[genTauIdx]);
+    float genTauEta = aux4Vector.Eta();
+    float genTauPhi = aux4Vector.Phi();
+    float genTauPt  = aux4Vector.Pt();
 
 
+    // Use only events where the lepton is inside the muon acceptance
+    if( genTauPt < kMuonPtMin ) continue;
+    if( TMath::Abs(genTauEta) > kMuonEtaMax ) continue;
 
-    // "Cross cleaning": find the jet that
-    // - is the muon (each muon is also considered a Particle-Flow jet!)
-    // - originates in the hadronic-tau decay
-    // Associate jet and lepton if they are closer in eta-phi space
-    // than deltaRMax
-    int leptonJetIdx = -1;
+
+    // "Cross cleaning": find the jet that originates in the
+    // hadronic-tau decay. Associate jet and tau if they are
+    // closer in eta-phi space than deltaRMax
+    int tauJetIdx = -1;
     float deltaRMax = 0.1;
-    if( flgW == 15 && genLepPt < 50. ) deltaRMax = 0.2;
-    if( !findMatchedJet(leptonJetIdx,recoJetEta,recoJetPhi,nRecoJets,genLepEta,genLepPhi,deltaRMax) ) continue; // Want unambigious matching (exactly one jet within deltaRMax)
+    if( flgW == 15 && genTauPt < 50. ) deltaRMax = 0.2;
+    if( !findMatchedJet(tauJetIdx,recoJetEta,recoJetPhi,nRecoJets,genTauEta,genTauPhi,deltaRMax) ) continue; // Want unambigious matching (exactly one jet within deltaRMax)
 
 
     // Calculate RA2 selection-variables from "cleaned" jets
@@ -131,7 +147,7 @@ void hadTau2(const TString &inputEvents = "inputEvents", int nEvts = -1) {
 
     for(int jetIdx = 0; jetIdx < nRecoJets; ++jetIdx) {	// Loop over reco jets
       // Skip this jet if it is the lepton
-      if( jetIdx == leptonJetIdx ) continue;
+      if( jetIdx == tauJetIdx ) continue;
 
       // Calculate NJet 
       if( recoJetPt[jetIdx] > kHtJetPtMin && TMath::Abs(recoJetEta[jetIdx]) < kHtJetEtaMax ) selNJet++;
@@ -144,18 +160,16 @@ void hadTau2(const TString &inputEvents = "inputEvents", int nEvts = -1) {
 
     // Fill histogram with relative visible energy of the tau
     // ("tau response template") for hadronically decaying tau
-    if( flgW == 15 && flgTauHad == 1 ) {
-      for(int jetIdx = 0; jetIdx < nRecoJets; ++jetIdx) {	// Loop over reco jets
-	// Select tau jet
-	if( jetIdx == leptonJetIdx ) {
-	  int ptBin = tauPtBin(genLepPt);
-	  if( ptBin >= 0 && ptBin < kNRespPtBins && TMath::Abs(genLepEta) < 2.1 ) {
-	    hTauResp[ptBin]->Fill( recoJetPt[jetIdx]/genLepPt );
-	  }
-	  break;		// End the jet loop once the tau jet has been found
+    for(int jetIdx = 0; jetIdx < nRecoJets; ++jetIdx) {	// Loop over reco jets
+      // Select tau jet
+      if( jetIdx == tauJetIdx ) {
+	int ptBin = tauPtBin(genTauPt);
+	if( ptBin >= 0 && ptBin < kNRespPtBins ) {
+	  hTauResp[ptBin]->Fill( recoJetPt[jetIdx]/genTauPt );
 	}
-      }	// End of loop over reco jets
-    }
+	break;		// End the jet loop once the tau jet has been found
+      }
+    }	// End of loop over reco jets
   } // End of loop over tree entries
 
 
@@ -170,7 +184,30 @@ void hadTau2(const TString &inputEvents = "inputEvents", int nEvts = -1) {
 
 
 
-// === Auxiliary Functions =======================================
+// === Implementation of Auxiliary Functions =====================
+
+// Find index 'lepIdx' of muon or tau in lepton collection
+// Returns
+// - true  : if exactly one lepton (muon or tau) has been found
+// - false : otherwise. In that case, 'chargedLepIdx == -1'
+bool findMuOrTau(int &lepIdx, const float* lepID, int nLep) {
+  bool unambigiousHit = false;
+  lepIdx = -1;
+  for(int i = 0; i < nLep; ++i) { // Loop over leptons
+    // Look for muon (pdgId 13) or tau (pdgId 15)
+    if( TMath::Abs(lepID[i]) == 13 || TMath::Abs(lepID[i]) == 15 ) {
+      if( unambigiousHit ) {
+	lepIdx = -1;
+	unambigiousHit = false;	// We only want exactly one match
+	break;
+      }
+      lepIdx = i;
+      unambigiousHit = true;
+    }
+  } // End of loop over leptons
+  
+  return unambigiousHit;
+}
 
 // Find index 'matchedJetIdx' of the jet that is within deltaRMax
 // around the lepton. Returns

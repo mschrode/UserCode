@@ -1,64 +1,92 @@
+#include <algorithm>
+#include <iostream>
+#include <vector>
+
+#include "TChain.h"
+#include "TLorentzVector.h"
+#include "TH1.h"
+#include "TH1F.h"
+#include "TFile.h"
+#include "TString.h"
+#include "TVector2.h"
+
+
 // === Global Variables ================================================
+// Array dimensions in tree
+const int kRecoJetColSize = 15;
+const int kGenLepColSize = 6;
+
+// RA2 selection cuts
 const float kHtJetPtMin   = 50.;
 const float kHtJetEtaMax  = 2.5;
 const float kMhtJetPtMin  = 30.;
 const float kMhtJetEtaMax = 5.0;
-const float kMuonPtMin    = 20.;
+
+// Tau-template and muon related
+const int kNRespPtBins  = 4;
+const float kMuonPtMin  = 20.;
+const float kMuonEtaMax = 2.1;
+
+// Binning for prediction
+const int kBinsPtN      = 30;
+const float kBinsPtMin  = 0.;
+const float kBinsPtMax  = 300.;
+const int kBinsHtN      = 30;
+const float kBinsHtMin  = 0.;
+const float kBinsHtMax  = 3000.;
+const int kBinsMhtN     = 20;
+const float kBinsMhtMin = 0.;
+const float kBinsMhtMax = 1000.;
 
 
 
-// === Main Script =====================================================
+// === Declaration of Auxiliary Functions ==============================
+bool findMuOrTau(int &lepIdx, const float* lepID, int nLep);
+bool findMatchedJet(int &matchedJetIdx, const float* jetEta, const float* jetPhi, int nJets, float lepEta, float lepPhi, float deltaRMax);
+float deltaR(float eta1, float eta2, float phi1, float phi2);
+int tauPtBin(float pt);
+int bin(float x, int nBins, float min, float max);
+std::vector<TH1*> initializeHistsForNPred(const TH1* hPredDist, const std::vector< std::vector<int> > &nPred2D, const TString &histName, const TString &varName);
+void getPrediction(std::vector<TH1*> &hNPredPerBin, TH1* &hPredDist, const std::vector< std::vector<int> > &nPred2D);
+
+
+
+// === Main Function ===================================================
 void hadTau3(int nSimSteps,
 	     const TString &inputEvents = "inputEvents",
 	     const TString &respTempl = "HadTau_WJetMC.root",
 	     int nEvts = -1) {
 
-  const int kNSimStepsMax = 500;
-  if( nSimSteps > kNSimStepsMax ) {
-    std::cerr << "ERROR: Number of simulation steps larger than allowed." << std::endl;
-    std::cerr << "       'nSimSteps' must be less than " << kNSimStepsMax << std::endl;
-    exit(-1);
-  }
-
-
-  // --- Binning for Prediction and Closure Test -----------------------
-  const int kBinsPtN = 30;
-  const float kBinsPtMin = 0.;
-  const float kBinsPtMax = 300.;
-  const int kBinsHtN = 30;
-  const float kBinsHtMin = 0.;
-  const float kBinsHtMax = 3000.;
-  const int kBinMhtN = 20;
-  const float kBinsMhtMin = 0.;
-  const float kBinsMhtMax = 1000.;
-
   // Counters: store for each simulation step, how many events
   // are predicted in each pt / HT / MHT bin
-  int nPredTauJetPt2D[kNSimStepsMax][kBinsPtN];
-  int nPredHT2D[kNSimStepsMax][kBinsHtN];
-  int nPredMHT2D[kNSimStepsMax][kBinMhtN];
-  for(int i = 0; i < nSimSteps; ++i) {
-    for(int j = 0; j < kBinsPtN; ++j) nPredTauJetPt2D[i][j] = 0;
-    for(int j = 0; j < kBinsHtN; ++j) nPredHT2D[i][j] = 0;
-    for(int j = 0; j < kBinMhtN; ++j) nPredMHT2D[i][j] = 0;
+  // Dimension is [nVarBins][nSimSteps]
+  std::vector< std::vector<int> > nPredTauJetPt2D(kBinsPtN);
+  std::vector< std::vector<int> > nPredHt2D(kBinsHtN);
+  std::vector< std::vector<int> > nPredMht2D(kBinsMhtN);
+  for(int i = 0; i < kBinsPtN; ++i) {
+    nPredTauJetPt2D[i] = std::vector<int>(nSimSteps,0);
+  }
+  for(int i = 0; i < kBinsHtN; ++i) {
+    nPredHt2D[i] = std::vector<int>(nSimSteps,0);
+  }
+  for(int i = 0; i < kBinsMhtN; ++i) {
+    nPredMht2D[i] = std::vector<int>(nSimSteps,0);
   }
 
 
 
   // --- Declare the Output Histograms ---------------------------------
   TH1* hPredTauJetPt = new TH1F("hPredTauJetPt",";Predicted p_{T}(#tau) [GeV];N(#tau)",kBinsPtN,kBinsPtMin,kBinsPtMax);   
-  TH1* hPredHT = new TH1F("hPredHT",";Predicted H_{T} [GeV];N(events)",kBinsHtN,kBinsHtMin,kBinsHtMax);   
-  TH1* hPredMHT = new TH1F("hPredMHT",";Predicted #slash{H}_{T} [GeV];N(events)",kBinMhtN,kBinsMhtMin,kBinsMhtMax);   
+  TH1* hPredHt = new TH1F("hPredHt",";Predicted H_{T} [GeV];N(events)",kBinsHtN,kBinsHtMin,kBinsHtMax);   
+  TH1* hPredMht = new TH1F("hPredMht",";Predicted #slash{H}_{T} [GeV];N(events)",kBinsMhtN,kBinsMhtMin,kBinsMhtMax);   
   TH1* hTrueTauJetPt = new TH1F("hTrueTauJetPt",";True p_{T}(#tau) [GeV];N(#tau)",kBinsPtN,kBinsPtMin,kBinsPtMax);   
-  TH1* hTrueHT = new TH1F("hTrueHT",";True H_{T} [GeV];N(events)",kBinsHtN,kBinsHtMin,kBinsHtMax);   
-  TH1* hTrueMHT = new TH1F("hTrueMHT",";True #slash{H}_{T} [GeV];N(events)",kBinMhtN,kBinsMhtMin,kBinsMhtMax);   
+  TH1* hTrueHt = new TH1F("hTrueHt",";True H_{T} [GeV];N(events)",kBinsHtN,kBinsHtMin,kBinsHtMax);   
+  TH1* hTrueMht = new TH1F("hTrueMht",";True #slash{H}_{T} [GeV];N(events)",kBinsMhtN,kBinsMhtMin,kBinsMhtMax);   
+
 
 
 
   // --- Declare the Variables Read from the Tree ----------------------
-  // Array dimensions
-  const int kRecoJetColSize = 15;
-  const int kGenLepColSize = 6;
 
   // Reco-level jets
   int nRecoJets = 0;
@@ -102,8 +130,7 @@ void hadTau3(int nSimSteps,
 
   // --- Get the Tau Templates from File -------------------------------
   TFile fTauResp(respTempl,"READ");
-  const int kNRespPtBins = 4;
-  TH1* hTauResp[kNRespPtBins];
+  std::vector<TH1*> hTauResp(kNRespPtBins);
   for(int i = 0; i < kNRespPtBins; ++i) {
     hTauResp[i] = 0;
     TString name = "hTauResp_";
@@ -152,24 +179,18 @@ void hadTau3(int nSimSteps,
     // Identify the charged generator-level lepton
     // from the W decay
     int chargedGenLepIdx = -1;
-    for(int i = 0; i < kGenLepColSize; ++i) { // Loop over gen leptons
-      if( TMath::Abs(genLepID[i]) == 13 || TMath::Abs(genLepID[i]) == 15 ) {
-	chargedGenLepIdx = i;
-	break;
-      }
-    } // End of loop over gen leptons
-    if( chargedGenLepIdx < 0 ) {
-      std::cerr << "ERROR: Could not find charged lepton from W decay in event " << evtIdx << std::endl;
-      exit(-1);
-    }
+    if( !findMuOrTau(chargedGenLepIdx,genLepID,kGenLepColSize) ) continue; // Want exactly one lepton
 
-    
     // Compute some more kinematic quantities of the 
     // generator-level lepton from the W decay
     aux4Vector.SetPxPyPzE(genLepPx[chargedGenLepIdx],genLepPy[chargedGenLepIdx],genLepPz[chargedGenLepIdx],genLepE[chargedGenLepIdx]);
     float genLepEta = aux4Vector.Eta();
     float genLepPhi = aux4Vector.Phi();
     float genLepPt  = aux4Vector.Pt();
+
+    // Use only events where the lepton is inside the muon acceptance
+    if( genLepPt < kMuonPtMin ) continue;
+    if( TMath::Abs(genLepEta) > kMuonEtaMax ) continue;
 
 
 
@@ -217,43 +238,34 @@ void hadTau3(int nSimSteps,
       // - store the reco tau-jet pt
       // - add the reco tau-jet pt to HT and MHT
       float tauJetPt  = recoJetPt[leptonJetIdx];
-      float tauJetEta = TMath::Abs(recoJetEta[leptonJetIdx]);
-      float tauJetPhi = recoJetPhi[leptonJetIdx];
 
       // If tau jet meets same criteria as other RA2 jets for HT,
       // recompute NJets and check if NJets >= 3
-      if( tauJetPt > kHtJetPtMin && tauJetEta < kHtJetEtaMax ) selNJet++;
-      if( selNJet < 3 ) continue;
+      float trueNJet = selNJet;
+      if( tauJetPt > kHtJetPtMin && TMath::Abs(genLepEta) < kHtJetEtaMax ) trueNJet++;
+      if( trueNJet < 3 ) continue;
 
-      // Apply same pt cut as for muon: response templates
-      // available for pt > 20
-      if( tauJetPt > kMuonPtMin ) {
-	hTrueTauJetPt->Fill(tauJetPt);
+      // Fill histogram of true tau-jet pt
+      hTrueTauJetPt->Fill(tauJetPt);
 
-	// If tau jet meets same criteria as other RA2 jets for HT,
-	// add tau-jet pt to HT and fill histogram of true HT
-	if( tauJetPt > kHtJetPtMin && tauJetEta < kHtJetEtaMax ) {
-	  selHt += tauJetPt;
-	  hTrueHT->Fill(selHt);
-	}
-	// If tau jet meets same criteria as other RA2 jets for MHT,
-	// add tau-jet pt to MHT and fill histogram of true MHT
-	if( tauJetPt > kMhtJetPtMin && tauJetEta < kMhtJetEtaMax ) {
-	  selMhtX -= tauJetPt*cos(tauJetPhi);
-	  selMhtY -= tauJetPt*sin(tauJetPhi);
-	  // Calculate the MHT from x and y component
-	  float selMht = sqrt( selMhtX*selMhtX + selMhtY*selMhtY );
-	  hTrueMHT->Fill(selMht);
-	}
+      // If tau jet meets same criteria as other RA2 jets for HT,
+      // add tau-jet pt to HT and fill histogram of true HT
+      if( tauJetPt > kHtJetPtMin && TMath::Abs(genLepEta) < kHtJetEtaMax ) {
+	hTrueHt->Fill(selHt+tauJetPt);
+      }
+      // If tau jet meets same criteria as other RA2 jets for MHT,
+      // add tau-jet pt to MHT and fill histogram of true MHT
+      if( tauJetPt > kMhtJetPtMin && TMath::Abs(genLepEta) < kMhtJetEtaMax ) {
+	float trueMhtX = selMhtX - tauJetPt*cos(genLepPhi);
+	float trueMhtY = selMhtY - tauJetPt*sin(genLepPhi);
+	// Calculate the MHT from x and y component
+	hTrueMht->Fill(sqrt( trueMhtX*trueMhtX + trueMhtY*trueMhtY ));
       }
     } else if( flgW == 13 ) {
       // In case the W decayed into a muon
       // - scale its pt by a random factor drawn from the
       //   tau-reponse template to simulate the tau measurement
       // - use simulated tau-pt to predict HT and MHT
-
-      // Response templates available for pt > 20
-      if( genLepPt < kMuonPtMin ) continue;
 
       // Find the pt bin of the tau-response template
       int tauRespPtBin = tauPtBin(genLepPt);
@@ -271,10 +283,11 @@ void hadTau3(int nSimSteps,
 	float simNJet = selNJet;
 	if( simTauJetPt > kHtJetPtMin && TMath::Abs(genLepEta) < kHtJetEtaMax ) simNJet++;
 	if( simNJet < 3 ) continue;
+	
 	  
 	// Tau-jet pt bin
 	int binSimTauJetPt = bin(simTauJetPt,kBinsPtN,kBinsPtMin,kBinsPtMax);
-	if( binSimTauJetPt > -1 ) nPredTauJetPt2D[it][binSimTauJetPt]++;
+	if( binSimTauJetPt > -1 ) nPredTauJetPt2D[binSimTauJetPt][it]++;
 	  	
 	// If simulated tau-jet meets same criteria as RA2 jets for HT,
 	// add simulated tau-jet pt to HT and increment number of events
@@ -282,7 +295,7 @@ void hadTau3(int nSimSteps,
 	if( simTauJetPt > kHtJetPtMin && TMath::Abs(genLepEta) < kHtJetEtaMax ) {
 	  float simHt = selHt + simTauJetPt;
 	  int binSimHT = bin(simHt,kBinsHtN,kBinsHtMin,kBinsHtMax);
-	  if( binSimHT > -1 ) nPredHT2D[it][binSimHT]++;
+	  if( binSimHT > -1 ) nPredHt2D[binSimHT][it]++;
 	}
 	// If simulated tau-jet meets same criteria as RA2 jets for MHT,
 	// add simulated tau-jet pt to MHT and increment number of events
@@ -291,8 +304,8 @@ void hadTau3(int nSimSteps,
 	  float simMhtX = selMhtX - simTauJetPt*cos(genLepPhi);
 	  float simMhtY = selMhtY - simTauJetPt*sin(genLepPhi);
 	  float simMht = sqrt( simMhtX*simMhtX + simMhtY*simMhtY );
-	  int binSimMHT = bin(simMht,kBinMhtN,kBinsMhtMin,kBinsMhtMax);
-	  if( binSimMHT > -1 ) nPredMHT2D[it][binSimMHT]++;
+	  int binSimMHT = bin(simMht,kBinsMhtN,kBinsMhtMin,kBinsMhtMax);
+	  if( binSimMHT > -1 ) nPredMht2D[binSimMHT][it]++;
 	}
       }	// End of loop over simulations
     } // End case of W --> tau
@@ -300,81 +313,72 @@ void hadTau3(int nSimSteps,
   
 
 
+  // --- Compute Prediction --------------------------------------------
+
+  // Prepare plots to store number of predicted events
+  // per simulation step
+  std::vector<TH1*> hNPredTauJetPt = initializeHistsForNPred(hPredTauJetPt,nPredTauJetPt2D,"hNPredTauJetPt","p_{T}(#tau)");
+  std::vector<TH1*> hNPredHt = initializeHistsForNPred(hPredHt,nPredHt2D,"hNPredHt","H_{T}");
+  std::vector<TH1*> hNPredMht = initializeHistsForNPred(hPredMht,nPredMht2D,"hNPredMht","#slash{H}_{T}");
+
   // Compute the predictions for pt, HT, and MHT from
   // hadronically decaying taus
-
-  // Prediction of tau-jet pt
-  // Loop over pt bins
-  for(int ptBinIdx = 0; ptBinIdx < kBinsPtN; ++ptBinIdx) {
-    // Compute mean and standard deviation
-    // of number of events in this pt bin
-    float mean  = 0.;
-    float mean2 = 0.;
-    // Loop over number of simulations
-    for(int simIdx = 0; simIdx < nSimSteps; ++simIdx) {
-      mean  += 1. * nPredTauJetPt2D[simIdx][ptBinIdx];
-      mean2 += 1. * nPredTauJetPt2D[simIdx][ptBinIdx]*nPredTauJetPt2D[simIdx][ptBinIdx];
-    }
-    mean =  mean / nSimSteps;
-    mean2 = mean2 / nSimSteps;
-    float sig = sqrt( mean2 - mean*mean );
-    hPredTauJetPt->SetBinContent(ptBinIdx+1,mean);
-    hPredTauJetPt->SetBinError(ptBinIdx+1,sig);
-  } // End of loop over pt bins
-
-  // Prediction of tau-jet HT
-  // Loop over HT bins
-  for(int htBinIdx = 0; htBinIdx < kBinsHtN; ++htBinIdx) {
-    // Compute mean and standard deviation
-    // of number of events in this HT bin
-    float mean  = 0.;
-    float mean2 = 0.;
-    // Loop over number of simulations
-    for(int simIdx = 0; simIdx < nSimSteps; ++simIdx) {
-      mean  += 1. * nPredHT2D[simIdx][htBinIdx];
-      mean2 += 1. * nPredHT2D[simIdx][htBinIdx]*nPredHT2D[simIdx][htBinIdx];
-    }
-    mean =  mean / nSimSteps;
-    mean2 = mean2 / nSimSteps;
-    float sig = sqrt( mean2 - mean*mean );
-    hPredHT->SetBinContent(htBinIdx+1,mean);
-    hPredHT->SetBinError(htBinIdx+1,sig);
-  } // End of loop over HT bins
-
-
-  // Prediction of tau-jet MHT
-  // Loop over MHT bins
-  for(int mhtBinIdx = 0; mhtBinIdx < kBinMhtN; ++mhtBinIdx) {
-    // Compute mean and standard deviation
-    // of number of events in this MHT bin
-    float mean  = 0.;
-    float mean2 = 0.;
-    // Loop over number of simulations
-    for(int simIdx = 0; simIdx < nSimSteps; ++simIdx) {
-      mean  += 1. * nPredMHT2D[simIdx][mhtBinIdx];
-      mean2 += 1. * nPredMHT2D[simIdx][mhtBinIdx]*nPredMHT2D[simIdx][mhtBinIdx];
-    }
-    mean =  mean / nSimSteps;
-    mean2 = mean2 / nSimSteps;
-    float sig = sqrt( mean2 - mean*mean );
-    hPredMHT->SetBinContent(mhtBinIdx+1,mean);
-    hPredMHT->SetBinError(mhtBinIdx+1,sig);
-  } // End of loop over MHT bins
+  getPrediction(hNPredTauJetPt,hPredTauJetPt,nPredTauJetPt2D);
+  getPrediction(hNPredHt,hPredHt,nPredHt2D);
+  getPrediction(hNPredMht,hPredMht,nPredMht2D);
 
 
   // --- Save the Histograms to File -----------------------------------
   TFile outFile("HadTau_WJetMC_PredGen.root","RECREATE");
   hTrueTauJetPt->Write();
-  hTrueHT->Write();
-  hTrueMHT->Write();
+  hTrueHt->Write();
+  hTrueMht->Write();
   hPredTauJetPt->Write();
-  hPredHT->Write();
-  hPredMHT->Write();
+  hPredHt->Write();
+  hPredMht->Write();
+  for(std::vector<TH1*>::const_iterator it = hNPredTauJetPt.begin();
+      it != hNPredTauJetPt.end(); ++it) {
+    (*it)->Write();
+  }
+  for(std::vector<TH1*>::const_iterator it = hNPredHt.begin();
+      it != hNPredHt.end(); ++it) {
+    (*it)->Write();
+  }
+  for(std::vector<TH1*>::const_iterator it = hNPredMht.begin();
+      it != hNPredMht.end(); ++it) {
+    (*it)->Write();
+  }
   outFile.Close();
 }
 
 
-// === Auxiliary Functions =======================================
+
+
+// === Implementation of Auxiliary Functions =====================
+
+// Find index 'lepIdx' of muon or tau in lepton collection
+// Returns
+// - true  : if exactly one lepton (muon or tau) has been found
+// - false : otherwise. In that case, 'chargedLepIdx == -1'
+bool findMuOrTau(int &lepIdx, const float* lepID, int nLep) {
+  bool unambigiousHit = false;
+  lepIdx = -1;
+  for(int i = 0; i < nLep; ++i) { // Loop over leptons
+    // Look for muon (pdgId 13) or tau (pdgId 15)
+    if( TMath::Abs(lepID[i]) == 13 || TMath::Abs(lepID[i]) == 15 ) {
+      if( unambigiousHit ) {
+	lepIdx = -1;
+	unambigiousHit = false;	// We only want exactly one match
+	break;
+      }
+      lepIdx = i;
+      unambigiousHit = true;
+    }
+  } // End of loop over leptons
+  
+  return unambigiousHit;
+}
+
 
 // Find index 'matchedJetIdx' of the jet that is within deltaRMax
 // around the lepton. Returns
@@ -436,4 +440,53 @@ int bin(float x, int nBins, float min, float max) {
   }
 
   return b;
+}
+
+
+std::vector<TH1*> initializeHistsForNPred(const TH1* hPredDist, const std::vector< std::vector<int> > &nPred2D, const TString &histName, const TString &varName) {
+  std::vector<TH1*> hists;
+  
+  // Loop over bins e.g. in pt or HT
+  for(unsigned int varBin = 0; varBin < nPred2D.size(); ++varBin) {
+    // Prepare names and titles
+    TString name = histName+"_";
+    name += varBin;
+    char xTitle[200];
+    sprintf(xTitle,"N(pred) with %.0f < %s < %.0f GeV",hPredDist->GetXaxis()->GetBinLowEdge(varBin+1),varName.Data(),hPredDist->GetXaxis()->GetBinUpEdge(varBin+1));
+    
+    // Find maximum prediction to set histogram range
+    int max = *(std::max_element(nPred2D[varBin].begin(),nPred2D[varBin].end()));
+		
+    // Create histogram
+    TH1* h = new TH1F(name,"",max+2,-0.5,max+1.5);
+    h->GetXaxis()->SetTitle(xTitle);
+    h->GetYaxis()->SetTitle("Entries");
+    h->GetXaxis()->SetNdivisions(505);
+
+    // Store histogram in vector
+    hists.push_back(h);
+  } // End of loop over bins
+
+  return hists;
+}
+
+
+void getPrediction(std::vector<TH1*> &hNPredPerBin, TH1* &hPredDist, const std::vector< std::vector<int> > &nPred2D) {
+  // Loop over bins e.g. in pt or HT
+  for(unsigned int varBin = 0; varBin < nPred2D.size(); ++varBin) {
+    // Store number of predictions for this bin
+    // per simulation step 
+    for(unsigned int simIdx = 0; simIdx < nPred2D[varBin].size(); ++simIdx) {
+      hNPredPerBin[varBin]->Fill(nPred2D[varBin][simIdx]);
+    }
+
+    // Compute mean and standard deviation
+    // of number of events in this bin
+    float mean  = hNPredPerBin[varBin]->GetMean();
+    float sig   = hNPredPerBin[varBin]->GetRMS();
+
+    // Fill prediction into histogram
+    hPredDist->SetBinContent(varBin+1,mean);
+    hPredDist->SetBinError(varBin+1,sig);
+  } // End of loop over pt bins
 }
