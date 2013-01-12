@@ -1,28 +1,15 @@
-// === Global Variables ================================================
-// RA2 selection cuts
-const float kHtJetPtMin   = 50.;
-const float kHtJetEtaMax  = 2.5;
-
-
-
 // === Main Script =====================================================
 void hadTau1(const TString &inputEvents = "inputEvents", int nEvts = -1) {
   // --- Declare the Output Histograms ---------------------------------
-  TH1* hGenMuPt = new TH1F("hGenMuPt",";p_{T}(#mu^{gen}) [GeV];N(#mu^{gen})",30,0,300);
+  TH1* hGenMuPt = new TH1F("hGenMuPt",";p_{T}(#mu^{gen}) [GeV];N(#mu^{gen})",20,0,500);
+  hGenMuPt->Sumw2();		// The error per bin will be computed as sqrt(sum of squares of weight) for each bin. Important for errors in ratio plot
   TH1* hGenTauPt = static_cast<TH1*>(hGenMuPt->Clone("hGenTauPt"));
   hGenTauPt->SetTitle(";p_{T}(#tau^{gen}) [GeV];N(#tau^{gen})");
 
 
   // --- Declare the Variables Read from the Tree ----------------------
   // Array dimensions
-  const int kRecoJetColSize = 15;
   const int kGenLepColSize = 6;
-
-  // Reco-level jets
-  int nRecoJets = 0;
-  float recoJetPt[kRecoJetColSize];
-  float recoJetPhi[kRecoJetColSize];
-  float recoJetEta[kRecoJetColSize];
 
   // W-decay mode
   int flgW = 0;			// PdgId of lepton the W decays into
@@ -44,10 +31,6 @@ void hadTau1(const TString &inputEvents = "inputEvents", int nEvts = -1) {
   tr->Add(inputEvents);
 
   // Set the branches
-  tr->SetBranchAddress("NrecoJet",&nRecoJets);
-  tr->SetBranchAddress("recoJetPt",recoJetPt);
-  tr->SetBranchAddress("recoJetPhi",recoJetPhi);
-  tr->SetBranchAddress("recoJetEta",recoJetEta);
   tr->SetBranchAddress("flgW",&flgW);
   tr->SetBranchAddress("flgTauHad",&flgTauHad);
   tr->SetBranchAddress("lepPx",genLepPx);
@@ -71,11 +54,8 @@ void hadTau1(const TString &inputEvents = "inputEvents", int nEvts = -1) {
     if( evtIdx%10000 == 0 ) std::cout<<"  Event: " << evtIdx << std::endl;
 
     // Get the variables' values for this event
+    // from tree
     tr->GetEntry(evtIdx);
-    if( nRecoJets > kRecoJetColSize ) {
-      std::cerr << "ERROR: more than " << kRecoJetColSize << " reco jets in event " << evtIdx << std::endl;
-      exit(-1);
-    }
 
 
     // Select only events where the W decayed either
@@ -86,53 +66,18 @@ void hadTau1(const TString &inputEvents = "inputEvents", int nEvts = -1) {
     if( flgW == 15 && flgTauHad != 1) continue;
 
 
-    // Identify the charged generator-level lepton
-    // from the W decay
+    // Identify the charged generator-level lepton (muon or tau)
+    // from the W decay.
     int chargedGenLepIdx = -1;
-    for(int i = 0; i < kGenLepColSize; ++i) { // Loop over gen leptons
-      if( TMath::Abs(genLepID[i]) == 13 || TMath::Abs(genLepID[i]) == 15 ) {
-	chargedGenLepIdx = i;
-	break;
-      }
-    } // End of loop over gen leptons
-    if( chargedGenLepIdx < 0 ) {
-      std::cerr << "ERROR: Could not find charged lepton from W decay in event " << evtIdx << std::endl;
-      exit(-1);
-    }
-
+    if( !findMuOrTau(chargedGenLepIdx,genLepID,kGenLepColSize) ) continue; // Want exactly one lepton
     
     // Compute some more kinematic quantities of the 
-    // generator-level lepton from the W decay
+    // generator-level lepton
     aux4Vector.SetPxPyPzE(genLepPx[chargedGenLepIdx],genLepPy[chargedGenLepIdx],genLepPz[chargedGenLepIdx],genLepE[chargedGenLepIdx]);
     float genLepEta = aux4Vector.Eta();
     float genLepPhi = aux4Vector.Phi();
     float genLepPt  = aux4Vector.Pt();
 
-
-
-    // "Cross cleaning": find the jet that
-    // - is the muon (each muon is also considered a Particle-Flow jet!)
-    // - originates in the hadronic-tau decay
-    // Associate jet and lepton if they are closer in eta-phi space
-    // than deltaRMax
-    int leptonJetIdx = -1;
-    float deltaRMax = 0.1;
-    if( flgW == 15 && genLepPt < 50. ) deltaRMax = 0.2;
-    if( !findMatchedJet(leptonJetIdx,recoJetEta,recoJetPhi,nRecoJets,genLepEta,genLepPhi,deltaRMax) ) continue; // Want unambigious matching (exactly one jet within deltaRMax)
-
-    // Calculate RA2 selection-variables from "cleaned" jets
-    float selNJet = 0; // Number of jets with pt > 50 GeV and |eta| < 2.5 (HT jets)
-    for(int jetIdx = 0; jetIdx < nRecoJets; ++jetIdx) {	// Loop over reco jets
-      // Skip this jet if it is the lepton
-      if( jetIdx == leptonJetIdx ) continue;
-
-      // Calculate NJet 
-      if( recoJetPt[jetIdx] > kHtJetPtMin && TMath::Abs(recoJetEta[jetIdx]) < kHtJetEtaMax ) selNJet++;
-    } // End of loop over reco jets
-
-    
-    // Select only events with at least 2 HT jets
-    if( selNJet < 2 ) continue;
 
     // Fill generator-level lepton pt into histograms
     if( flgW == 13 ) hGenMuPt->Fill(genLepPt);
@@ -152,34 +97,26 @@ void hadTau1(const TString &inputEvents = "inputEvents", int nEvts = -1) {
 
 // === Auxiliary Functions =======================================
 
-// Find index 'matchedJetIdx' of the jet that is within deltaRMax
-// around the lepton. Returns
-//  - true  : if exactly one jet has been found.
-//  - false : otherwise. In that case, 'matchedJetIdx == -1'
-bool findMatchedJet(int &matchedJetIdx, const float* jetEta, const float* jetPhi, int nJets, float lepEta, float lepPhi, float deltaRMax) {
-  bool unambigiousMatch = false;
-  matchedJetIdx = -1;
-  for(int jetIdx = 0; jetIdx < nJets; ++jetIdx) { // Loop over jets
-    if( deltaR(jetEta[jetIdx],lepEta,jetPhi[jetIdx],lepPhi) < deltaRMax ) {
-      // Check if a jet has already been matched
-      if( unambigiousMatch ) {
-	matchedJetIdx = -1;
-	unambigiousMatch = false; // We only want exactly one matched jet
+// Find index 'lepIdx' of muon or tau in lepton collection
+// Returns
+// - true  : if exactly one lepton (muon or tau) has been found
+// - false : otherwise. In that case, 'chargedLepIdx == -1'
+bool findMuOrTau(int &lepIdx, const float* lepID, int nLep) {
+  bool unambigiousHit = false;
+  lepIdx = -1;
+  for(int i = 0; i < nLep; ++i) { // Loop over leptons
+    // Look for muon (pdgId 13) or tau (pdgId 15)
+    if( TMath::Abs(lepID[i]) == 13 || TMath::Abs(lepID[i]) == 15 ) {
+      if( unambigiousHit ) {
+	lepIdx = -1;
+	unambigiousHit = false;	// We only want exactly one match
 	break;
       }
-      matchedJetIdx = jetIdx;
-      unambigiousMatch = true;
+      lepIdx = i;
+      unambigiousHit = true;
     }
-  } // End of loop over jets
-
-  return unambigiousMatch;
-}
-
-
-float deltaR(float eta1, float eta2, float phi1, float phi2) {
-  float dphi = TVector2::Phi_mpi_pi(phi1-phi2);
-  float deta = eta1 - eta2;
-
-  return sqrt( deta*deta + dphi*dphi );
+  } // End of loop over leptons
+  
+  return unambigiousHit;
 }
 
