@@ -25,9 +25,9 @@ bool findMuOrTau(int &lepIdx, const float* lepID, int nLep);
 
 
 // === Main Function ===================================================
-void hadTau1(const TString &inputEvents = "inputEvents", int nEvts = -1) {
+void hadTau1(int nEvts = -1) {
   // --- Declare the Output Histograms ---------------------------------
-  TH1* hGenMuPt = new TH1F("hGenMuPt",";p_{T}(#mu^{gen}) [GeV];N(#mu^{gen})",20,0,500);
+  TH1* hGenMuPt = new TH1F("hGenMuPt",";p_{T}(#mu^{gen}) [GeV];N(#mu^{gen})",40,0,600);
   hGenMuPt->Sumw2();		// The error per bin will be computed as sqrt(sum of squares of weight) for each bin. Important for errors in ratio plot
   TH1* hGenTauPt = static_cast<TH1*>(hGenMuPt->Clone("hGenTauPt"));
   hGenTauPt->SetTitle(";p_{T}(#tau^{gen}) [GeV];N(#tau^{gen})");
@@ -52,7 +52,7 @@ void hadTau1(const TString &inputEvents = "inputEvents", int nEvts = -1) {
 
   // Get the tree from file
   TChain* tr = new TChain("AnaTree");
-  tr->Add(inputEvents);
+  tr->Add("/nfs/dust/test/cmsdas/school61/susy/ntuple/2013-v1/WJets_0.root");
 
   // Set the branches
   tr->SetBranchAddress("flgW",&flgW);
@@ -75,7 +75,7 @@ void hadTau1(const TString &inputEvents = "inputEvents", int nEvts = -1) {
 
   // Loop over the tree entries
   for(int evtIdx = 0; evtIdx < nEvtsToProcess; ++evtIdx) {
-    if( evtIdx%10000 == 0 ) std::cout<<"  Event: " << evtIdx << std::endl;
+    if( evtIdx%100000 == 0 ) std::cout<<"  Event: " << evtIdx << std::endl;
 
     // Get the variables' values for this event
     // from tree

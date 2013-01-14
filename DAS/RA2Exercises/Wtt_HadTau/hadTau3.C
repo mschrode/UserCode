@@ -28,12 +28,12 @@ const float kMuonPtMin  = 20.;
 const float kMuonEtaMax = 2.1;
 
 // Binning for prediction
-const int kBinsPtN      = 30;
+const int kBinsPtN      = 50;
 const float kBinsPtMin  = 0.;
-const float kBinsPtMax  = 300.;
-const int kBinsHtN      = 30;
+const float kBinsPtMax  = 500.;
+const int kBinsHtN      = 25;
 const float kBinsHtMin  = 0.;
-const float kBinsHtMax  = 3000.;
+const float kBinsHtMax  = 2500.;
 const int kBinsMhtN     = 20;
 const float kBinsMhtMin = 0.;
 const float kBinsMhtMax = 1000.;
@@ -53,7 +53,6 @@ void getPrediction(std::vector<TH1*> &hNPredPerBin, TH1* &hPredDist, const std::
 
 // === Main Function ===================================================
 void hadTau3(int nSimSteps,
-	     const TString &inputEvents = "inputEvents",
 	     const TString &respTempl = "HadTau_WJetMC.root",
 	     int nEvts = -1) {
 
@@ -111,7 +110,7 @@ void hadTau3(int nSimSteps,
 
   // Get the tree from file
   TChain* tr = new TChain("AnaTree");
-  tr->Add(inputEvents);
+  tr->Add("/nfs/dust/test/cmsdas/school61/susy/ntuple/2013-v1/WJets_0.root");
 
   // Set the branches
   tr->SetBranchAddress("NrecoJet",&nRecoJets);
@@ -158,7 +157,7 @@ void hadTau3(int nSimSteps,
 
   // Loop over the tree entries
   for(int evtIdx = 0; evtIdx < nEvtsToProcess; ++evtIdx) {
-    if( evtIdx%10000 == 0 ) std::cout<<"  Event: " << evtIdx << std::endl;
+    if( evtIdx%100000 == 0 ) std::cout<<"  Event: " << evtIdx << std::endl;
 
     // Get the variables' values for this event
     tr->GetEntry(evtIdx);
