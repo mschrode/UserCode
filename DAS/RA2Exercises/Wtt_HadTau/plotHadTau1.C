@@ -63,8 +63,10 @@ void plotHadTau1(const TString &fileName = "HadTau_WJetMC.root") {
   hGenTauPt->Draw("PE1same");
   leg->Draw("same");
   gPad->SetLogy();
+  canSpecs->SaveAs("hGenLepPt.eps","eps");
 
   TCanvas* canRatio = new TCanvas("canRatio","Ratio",600,600);
   canRatio->cd();
   hRatio->Draw("PE1");
+  canSpecs->SaveAs("hGenLepPtRatio.eps","eps");
 }
