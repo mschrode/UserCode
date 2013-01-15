@@ -1,6 +1,6 @@
 // Plot the lepton ptGen spectra
 void plotHadTau1(const TString &fileName = "HadTau_WJetMC.root") {
-  gROOT->ProcessLine(".L StyleMatters.h+");
+  gROOT->ProcessLine(".L ../utils/StyleMatters.h+");
   StyleMatters::init();
 
   // Get histograms from file

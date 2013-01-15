@@ -1,6 +1,6 @@
 // Plot the tau-response templates
 void plotHadTau2(const TString &fileName = "HadTau_WJetMC.root") {
-  gROOT->ProcessLine(".L StyleMatters.h+");
+  gROOT->ProcessLine(".L ../utils/StyleMatters.h+");
   StyleMatters::init();
 
   

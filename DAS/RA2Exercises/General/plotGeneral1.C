@@ -1,5 +1,5 @@
 void plotGeneral1(int sampleId) {
-  gROOT->ProcessLine(".L ../StyleMatters.h+");
+  gROOT->ProcessLine(".L ../utils/StyleMatters.h+");
   StyleMatters::init();
 
   std::cout << "Plotting distributions for " << sampleLabel(sampleId) << std::endl;

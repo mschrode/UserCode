@@ -1,7 +1,7 @@
 // Plot the closure test
 void plotHadTau3(double scale = 1.,
 		 const TString &fileName = "HadTau_WJetMC_PredGen.root") {
-  gROOT->ProcessLine(".L StyleMatters.h+");
+  gROOT->ProcessLine(".L ../utils/StyleMatters.h+");
   StyleMatters::init();
 
   bool isMCPred = false;
