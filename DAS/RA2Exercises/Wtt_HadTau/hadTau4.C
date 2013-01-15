@@ -227,7 +227,7 @@ void hadTau4(bool isMC,
 	// Calculate MHT
 	if( recoJetPt[jetIdx] > kMhtJetPtMin && TMath::Abs(recoJetEta[jetIdx]) < kMhtJetEtaMax ) {
 	  selMhtX -= recoJetPt[jetIdx]*TMath::Cos(recoJetPhi[jetIdx]);
-	  selMhtX -= recoJetPt[jetIdx]*TMath::Sin(recoJetPhi[jetIdx]);
+	  selMhtY -= recoJetPt[jetIdx]*TMath::Sin(recoJetPhi[jetIdx]);
 	}
       } // End of loop over reco jets
       
@@ -333,7 +333,7 @@ void hadTau4(bool isMC,
 	// Calculate MHT
 	if( recoJetPt[jetIdx] > kMhtJetPtMin && TMath::Abs(recoJetEta[jetIdx]) < kMhtJetEtaMax ) {
 	  selMhtX -= recoJetPt[jetIdx]*TMath::Cos(recoJetPhi[jetIdx]);
-	  selMhtX -= recoJetPt[jetIdx]*TMath::Sin(recoJetPhi[jetIdx]);
+	  selMhtY -= recoJetPt[jetIdx]*TMath::Sin(recoJetPhi[jetIdx]);
 	}
       } // End of loop over reco jets
 

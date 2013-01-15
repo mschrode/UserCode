@@ -112,7 +112,7 @@ void hadTau3(int nSimSteps,
 
   // Get the tree from file
   TChain* tr = new TChain("AnaTree");
-  tr->Add("/nfs/dust/test/cmsdas/school61/susy/ntuple/2013-v1/WJets_*.root");
+  tr->Add("/nfs/dust/test/cmsdas/school61/susy/ntuple/2013-v1/WJets_0.root");
 
   // Set the branches
   tr->SetBranchAddress("NrecoJet",&nRecoJets);
@@ -224,7 +224,7 @@ void hadTau3(int nSimSteps,
       // Calculate MHT
       if( recoJetPt[jetIdx] > kMhtJetPtMin && TMath::Abs(recoJetEta[jetIdx]) < kMhtJetEtaMax ) {
 	selMhtX -= recoJetPt[jetIdx]*TMath::Cos(recoJetPhi[jetIdx]);
-	selMhtX -= recoJetPt[jetIdx]*TMath::Sin(recoJetPhi[jetIdx]);
+	selMhtY -= recoJetPt[jetIdx]*TMath::Sin(recoJetPhi[jetIdx]);
       }
     } // End of loop over reco jets
 

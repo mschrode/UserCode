@@ -126,7 +126,7 @@ void hadTau5(bool isMC,
   // Get the tree from file
   TChain* tr = new TChain("AnaTree");
   tr->Add("/nfs/dust/test/cmsdas/school61/susy/ntuple/2013-v1/WJets_0.root");
-
+  //tr->Add("/nfs/dust/test/cmsdas/school61/susy/ntuple/2013-v1/MuHad_Run2012AB.root");
 
   // Set the branches
   tr->SetBranchAddress("NrecoJet",&nRecoJets);
@@ -229,7 +229,7 @@ void hadTau5(bool isMC,
 	// Calculate MHT
 	if( recoJetPt[jetIdx] > kMhtJetPtMin && TMath::Abs(recoJetEta[jetIdx]) < kMhtJetEtaMax ) {
 	  selMhtX -= recoJetPt[jetIdx]*TMath::Cos(recoJetPhi[jetIdx]);
-	  selMhtX -= recoJetPt[jetIdx]*TMath::Sin(recoJetPhi[jetIdx]);
+	  selMhtY -= recoJetPt[jetIdx]*TMath::Sin(recoJetPhi[jetIdx]);
 	}
       } // End of loop over reco jets
       
@@ -339,7 +339,7 @@ void hadTau5(bool isMC,
 	// Calculate MHT
 	if( recoJetPt[jetIdx] > kMhtJetPtMin && TMath::Abs(recoJetEta[jetIdx]) < kMhtJetEtaMax ) {
 	  selMhtX -= recoJetPt[jetIdx]*TMath::Cos(recoJetPhi[jetIdx]);
-	  selMhtX -= recoJetPt[jetIdx]*TMath::Sin(recoJetPhi[jetIdx]);
+	  selMhtY -= recoJetPt[jetIdx]*TMath::Sin(recoJetPhi[jetIdx]);
 	}
       } // End of loop over reco jets
 
