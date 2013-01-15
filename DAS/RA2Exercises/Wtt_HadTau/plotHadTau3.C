@@ -4,28 +4,47 @@ void plotHadTau3(double scale = 1.,
   gROOT->ProcessLine(".L StyleMatters.h+");
   StyleMatters::init();
 
+  bool isMCPred = false;
+  if( fileName.Contains("MC") ) isMCPred = true;
+  bool isGenPred = false;
+  if( isMCPred && fileName.Contains("Gen") ) isGenPred = true;
+
   
   // Get histograms from file
   const unsigned int kNDists = 3;
   TH1* hTrue[kNDists];
   TH1* hPred[kNDists];
+  TH1* hMuonPt = 0;
   TFile file(fileName,"READ");
   for(unsigned int i = 0; i < kNDists; ++i) {
     TString name = "";
     if( i == 0 )      name = "TauJetPt";
     else if( i == 1 ) name = "Ht";
     else if( i == 2 ) name = "Mht";
-    file.GetObject("hTrue"+name,hTrue[i]);
     file.GetObject("hPred"+name,hPred[i]);
-    if( !(hTrue[i] && hPred[i]) ) {
+    if( !hPred[i] ) {
       std::cerr << "ERROR: Histograms not found" << std::endl;
       exit(-1);
     }
-    hTrue[i]->SetDirectory(0);
-    hTrue[i]->UseCurrentStyle();
     hPred[i]->SetDirectory(0);
     hPred[i]->UseCurrentStyle();
+    if( isMCPred ) {
+      file.GetObject("hTrue"+name,hTrue[i]);
+      if( !hTrue[i] ) {
+	std::cerr << "ERROR: Histograms not found" << std::endl;
+	exit(-1);
+      }
+      hTrue[i]->SetDirectory(0);
+      hTrue[i]->UseCurrentStyle();
+    }
   }
+  file.GetObject("hMuonPt",hMuonPt);
+  if( !hMuonPt ) {
+    std::cerr << "ERROR: Histogram not found" << std::endl;
+    exit(-1);
+  }
+  hMuonPt->SetDirectory(0);
+  hMuonPt->UseCurrentStyle();
   file.Close();
   
   
@@ -37,19 +56,32 @@ void plotHadTau3(double scale = 1.,
 
   // Set style
   for(unsigned int i = 0; i < kNDists; ++i) {
-    TString title = "";
-    if( i == 0 )      title = "p_{T}(#tau) [GeV]";
-    else if( i == 1 ) title = "H_{T} [GeV]";
-    else if( i == 2 ) title = "#slash{H}_{T} [GeV]";
-    hTrue[i]->GetXaxis()->SetTitle(title);
-    hPred[i]->GetXaxis()->SetTitle(title);
+    TString xTitle = "";
+    if( i == 0 )      xTitle = "p_{T}(#tau) [GeV]";
+    else if( i == 1 ) xTitle = "H_{T} [GeV]";
+    else if( i == 2 ) xTitle = "#slash{H}_{T} [GeV]";
 
-    hTrue[i]->SetLineColor(kBlue);
+    TString yTitle = "N(events) / ";
+    yTitle += static_cast<int>(hPred[i]->GetYaxis()->GetBinWidth(1));
+    yTitle += " GeV";
 
+    hPred[i]->GetXaxis()->SetTitle(xTitle);
+    hPred[i]->GetYaxis()->SetTitle(yTitle);
     hPred[i]->SetMarkerStyle(20);
     hPred[i]->SetMarkerColor(kRed);
     hPred[i]->SetLineColor(hPred[i]->GetMarkerColor());
+
+    if( isMCPred ) {
+      hTrue[i]->GetXaxis()->SetTitle(xTitle);
+      hTrue[i]->GetYaxis()->SetTitle(yTitle);
+      hTrue[i]->SetLineColor(kBlue);
+    }
   }
+  if( isGenPred ) hMuonPt->GetXaxis()->SetTitle("p_{T}(#mu^{gen}) [GeV]");
+  else            hMuonPt->GetXaxis()->SetTitle("p_{T}(#mu) [GeV]");
+  hMuonPt->SetMarkerStyle(20);
+  hMuonPt->SetMarkerColor(kBlack);
+  hMuonPt->SetLineColor(hMuonPt->GetMarkerColor());
 
 
   // Create legend
@@ -59,10 +91,11 @@ void plotHadTau3(double scale = 1.,
   leg->SetFillStyle(0);
   leg->SetTextFont(42);
   leg->SetTextSize(0.05);
-  leg->AddEntry(hTrue[0],"MC Expectation");
-  if( fileName.Contains("Gen") ) leg->AddEntry(hPred[0],"Gen-Based Pred.");
-  else if( fileName.Contains("Reco") ) leg->AddEntry(hPred[0],"Data-Based Pred.");
-  else leg->AddEntry(hPred[0],"Prediction");
+  if( isMCPred ) {
+    leg->AddEntry(hTrue[0],"MC Expectation");
+    if( isGenPred ) leg->AddEntry(hPred[0],"Gen-Based Pred.");
+    else            leg->AddEntry(hPred[0],"Data-Based Pred.");
+  }
 
 
   // Draw
@@ -74,15 +107,31 @@ void plotHadTau3(double scale = 1.,
 
     TCanvas* can = new TCanvas(name,name,600,600);
     can->cd();
-    hTrue[i]->Draw("HISTE");
-    hPred[i]->Draw("PE1same");
-    leg->Draw("same");
+    if( isMCPred ) {
+      hTrue[i]->Draw("HISTE");
+      hPred[i]->Draw("PE1same");
+      leg->Draw("same");
+      if( isGenPred ) name = "hGenClosure"+name;
+      else            name = "hRecoClosure"+name;
+    } else {
+      hPred[i]->Draw("PE1");
+      name = "hDataPred"+name;
+    }
     gPad->SetLogy();
-
-    if( fileName.Contains("Gen") ) name = "hGenClosure"+name;
-    else if( fileName.Contains("Reco") ) name = "hRecoClosure"+name;
-    else name = "hClosure"+name;
     can->SaveAs(name+".eps","eps");
   }
+
+  TCanvas* can = new TCanvas("can","muon pt",600,600);
+  can->cd();
+  hMuonPt->Draw("PE1");
+  gPad->SetLogy();
+  TString name = "MuonPt";
+  if( isMCPred ) {
+    if( isGenPred ) name = "hGenClosure"+name;
+    else            name = "hRecoClosure"+name;
+  } else {
+    name = "hDataPred"+name;
+  }
+  can->SaveAs(name+".eps","eps");
 }
 
