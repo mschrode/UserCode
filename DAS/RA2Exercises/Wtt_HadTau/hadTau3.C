@@ -75,6 +75,8 @@ void hadTau3(int nSimSteps,
 
 
   // --- Declare the Output Histograms ---------------------------------
+  TH1* hMuonPt = new TH1F("hMuonPt",";p_{T}(#mu^{gen}) [GeV];N(events)",kBinsPtN,kBinsPtMin,kBinsPtMax);
+  hMuonPt->Sumw2();
   TH1* hPredTauJetPt = new TH1F("hPredTauJetPt",";Predicted p_{T}(#tau) [GeV];N(#tau)",kBinsPtN,kBinsPtMin,kBinsPtMax);   
   TH1* hPredHt = new TH1F("hPredHt",";Predicted H_{T} [GeV];N(events)",kBinsHtN,kBinsHtMin,kBinsHtMax);   
   TH1* hPredMht = new TH1F("hPredMht",";Predicted #slash{H}_{T} [GeV];N(events)",kBinsMhtN,kBinsMhtMin,kBinsMhtMax);   
@@ -110,7 +112,7 @@ void hadTau3(int nSimSteps,
 
   // Get the tree from file
   TChain* tr = new TChain("AnaTree");
-  tr->Add("/nfs/dust/test/cmsdas/school61/susy/ntuple/2013-v1/WJets_0.root");
+  tr->Add("/nfs/dust/test/cmsdas/school61/susy/ntuple/2013-v1/WJets_*.root");
 
   // Set the branches
   tr->SetBranchAddress("NrecoJet",&nRecoJets);
@@ -244,22 +246,26 @@ void hadTau3(int nSimSteps,
       if( tauJetPt > kHtJetPtMin && TMath::Abs(genLepEta) < kHtJetEtaMax ) trueNJet++;
       if( trueNJet < 3 ) continue;
 
-      // Fill histogram of true tau-jet pt
-      hTrueTauJetPt->Fill(tauJetPt);
+      float trueHt = selHt;
+      float trueMhtX = selMhtX;
+      float trueMhtY = selMhtY;
 
       // If tau jet meets same criteria as other RA2 jets for HT,
-      // add tau-jet pt to HT and fill histogram of true HT
+      // add tau-jet pt to HT
       if( tauJetPt > kHtJetPtMin && TMath::Abs(genLepEta) < kHtJetEtaMax ) {
-	hTrueHt->Fill(selHt+tauJetPt);
+	trueHt += tauJetPt;
       }
       // If tau jet meets same criteria as other RA2 jets for MHT,
-      // add tau-jet pt to MHT and fill histogram of true MHT
+      // add tau-jet pt to MHT
       if( tauJetPt > kMhtJetPtMin && TMath::Abs(genLepEta) < kMhtJetEtaMax ) {
-	float trueMhtX = selMhtX - tauJetPt*cos(genLepPhi);
-	float trueMhtY = selMhtY - tauJetPt*sin(genLepPhi);
-	// Calculate the MHT from x and y component
-	hTrueMht->Fill(sqrt( trueMhtX*trueMhtX + trueMhtY*trueMhtY ));
+	trueMhtX -= tauJetPt*cos(genLepPhi);
+	trueMhtY -= tauJetPt*sin(genLepPhi);
       }
+
+      hTrueTauJetPt->Fill(tauJetPt);
+      hTrueHt->Fill(trueHt);
+      hTrueMht->Fill(sqrt( trueMhtX*trueMhtX + trueMhtY*trueMhtY ));
+
     } else if( flgW == 13 ) {
       // In case the W decayed into a muon
       // - scale its pt by a random factor drawn from the
@@ -269,6 +275,9 @@ void hadTau3(int nSimSteps,
       // Find the pt bin of the tau-response template
       int tauRespPtBin = tauPtBin(genLepPt);
       if( tauRespPtBin < 0 || tauRespPtBin >= kNRespPtBins ) continue;
+
+      // Plot the gen-muon pt as control plot
+      hMuonPt->Fill(genLepPt);
 
       // Perform nSimSteps simulations
       for(int it = 0; it < nSimSteps; ++it) {
@@ -283,29 +292,31 @@ void hadTau3(int nSimSteps,
 	if( simTauJetPt > kHtJetPtMin && TMath::Abs(genLepEta) < kHtJetEtaMax ) simNJet++;
 	if( simNJet < 3 ) continue;
 	
-	  
-	// Tau-jet pt bin
-	int binSimTauJetPt = bin(simTauJetPt,kBinsPtN,kBinsPtMin,kBinsPtMax);
-	if( binSimTauJetPt > -1 ) nPredTauJetPt2D[binSimTauJetPt][it]++;
+	float simHt = selHt;
+	float simMhtX = selMhtX;
+	float simMhtY = selMhtY;
 	  	
 	// If simulated tau-jet meets same criteria as RA2 jets for HT,
 	// add simulated tau-jet pt to HT and increment number of events
 	// with that HT
 	if( simTauJetPt > kHtJetPtMin && TMath::Abs(genLepEta) < kHtJetEtaMax ) {
-	  float simHt = selHt + simTauJetPt;
-	  int binSimHT = bin(simHt,kBinsHtN,kBinsHtMin,kBinsHtMax);
-	  if( binSimHT > -1 ) nPredHt2D[binSimHT][it]++;
+	  simHt += simTauJetPt;
 	}
 	// If simulated tau-jet meets same criteria as RA2 jets for MHT,
 	// add simulated tau-jet pt to MHT and increment number of events
 	// with that MHT
 	if( simTauJetPt > kMhtJetPtMin && TMath::Abs(genLepEta) < kMhtJetEtaMax ) {
-	  float simMhtX = selMhtX - simTauJetPt*cos(genLepPhi);
-	  float simMhtY = selMhtY - simTauJetPt*sin(genLepPhi);
-	  float simMht = sqrt( simMhtX*simMhtX + simMhtY*simMhtY );
-	  int binSimMHT = bin(simMht,kBinsMhtN,kBinsMhtMin,kBinsMhtMax);
-	  if( binSimMHT > -1 ) nPredMht2D[binSimMHT][it]++;
+	  simMhtX -= simTauJetPt*cos(genLepPhi);
+	  simMhtY -= simTauJetPt*sin(genLepPhi);
 	}
+
+	int binSimTauJetPt = bin(simTauJetPt,kBinsPtN,kBinsPtMin,kBinsPtMax);
+	if( binSimTauJetPt > -1 ) nPredTauJetPt2D[binSimTauJetPt][it]++;
+	int binSimHT = bin(simHt,kBinsHtN,kBinsHtMin,kBinsHtMax);
+	if( binSimHT > -1 ) nPredHt2D[binSimHT][it]++;
+	float simMht = sqrt( simMhtX*simMhtX + simMhtY*simMhtY );
+	int binSimMHT = bin(simMht,kBinsMhtN,kBinsMhtMin,kBinsMhtMax);
+	if( binSimMHT > -1 ) nPredMht2D[binSimMHT][it]++;
       }	// End of loop over simulations
     } // End case of W --> tau
   } // End of loop over events
@@ -329,6 +340,7 @@ void hadTau3(int nSimSteps,
 
   // --- Save the Histograms to File -----------------------------------
   TFile outFile("HadTau_WJetMC_PredGen.root","RECREATE");
+  hMuonPt->Write();
   hTrueTauJetPt->Write();
   hTrueHt->Write();
   hTrueMht->Write();

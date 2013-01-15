@@ -79,6 +79,8 @@ void hadTau4(bool isMC,
 
 
   // --- Declare the Output Histograms ---------------------------------
+  TH1* hMuonPt = new TH1F("hMuonPt",";p_{T}(#mu) [GeV];N(events)",kBinsPtN,kBinsPtMin,kBinsPtMax);
+  hMuonPt->Sumw2();
   TH1* hPredTauJetPt = new TH1F("hPredTauJetPt",";Predicted p_{T}(#tau) [GeV];N(#tau)",kBinsPtN,kBinsPtMin,kBinsPtMax);   
   TH1* hPredHt = new TH1F("hPredHt",";Predicted H_{T} [GeV];N(events)",kBinsHtN,kBinsHtMin,kBinsHtMax);   
   TH1* hPredMht = new TH1F("hPredMht",";Predicted #slash{H}_{T} [GeV];N(events)",kBinsMhtN,kBinsMhtMin,kBinsMhtMax);   
@@ -236,6 +238,9 @@ void hadTau4(bool isMC,
       // Find the pt bin of the tau-response template
       int tauRespPtBin = tauPtBin(muPt);
       if( tauRespPtBin < 0 || tauRespPtBin >= kNRespPtBins ) continue;
+
+      // Plot the muon pt as control plot
+      hMuonPt->Fill(muPt);
       
       // Perform nSimSteps simulations
       for(int it = 0; it < nSimSteps; ++it) {
@@ -250,28 +255,31 @@ void hadTau4(bool isMC,
 	if( simTauJetPt > kHtJetPtMin && TMath::Abs(muEta) < kHtJetEtaMax ) simNJet++;
 	if( simNJet < 3 ) continue;
 	  
-	// Tau-jet pt bin
-	int binSimTauJetPt = bin(simTauJetPt,kBinsPtN,kBinsPtMin,kBinsPtMax);
-	if( binSimTauJetPt > -1 ) nPredTauJetPt2D[binSimTauJetPt][it]++;
+	float simHt = selHt;
+	float simMhtX = selMhtX;
+	float simMhtY = selMhtY;
 	  	
 	// If simulated tau-jet meets same criteria as RA2 jets for HT,
-	// add simulated tau-jet pt to HT and increment number of events
-	// with that HT
+	// add simulated tau-jet pt to HT
 	if( simTauJetPt > kHtJetPtMin && TMath::Abs(muEta) < kHtJetEtaMax ) {
-	  float simHt = selHt + simTauJetPt;
-	  int binSimHT = bin(simHt,kBinsHtN,kBinsHtMin,kBinsHtMax);
-	  if( binSimHT > -1 ) nPredHt2D[binSimHT][it]++;
+	  simHt += simTauJetPt;
 	}
 	// If simulated tau-jet meets same criteria as RA2 jets for MHT,
-	// add simulated tau-jet pt to MHT and increment number of events
-	// with that MHT
+	// add simulated tau-jet pt to MHT
 	if( simTauJetPt > kMhtJetPtMin && TMath::Abs(muEta) < kMhtJetEtaMax ) {
-	  float simMhtX = selMhtX - simTauJetPt*cos(muPhi);
-	  float simMhtY = selMhtY - simTauJetPt*sin(muPhi);
-	  float simMht = sqrt( simMhtX*simMhtX + simMhtY*simMhtY );
-	  int binSimMHT = bin(simMht,kBinsMhtN,kBinsMhtMin,kBinsMhtMax);
-	  if( binSimMHT > -1 ) nPredMht2D[binSimMHT][it]++;
+	  simMhtX -= simTauJetPt*cos(muPhi);
+	  simMhtY -= simTauJetPt*sin(muPhi);
 	}
+
+	// Increment number of events with the simulated tau-jet pt, HT, MHT
+	int binSimTauJetPt = bin(simTauJetPt,kBinsPtN,kBinsPtMin,kBinsPtMax);
+	if( binSimTauJetPt > -1 ) nPredTauJetPt2D[binSimTauJetPt][it]++;
+	int binSimHT = bin(simHt,kBinsHtN,kBinsHtMin,kBinsHtMax);
+	if( binSimHT > -1 ) nPredHt2D[binSimHT][it]++;
+	float simMht = sqrt( simMhtX*simMhtX + simMhtY*simMhtY );
+	int binSimMHT = bin(simMht,kBinsMhtN,kBinsMhtMin,kBinsMhtMax);
+	if( binSimMHT > -1 ) nPredMht2D[binSimMHT][it]++;
+
       }	// End of loop over simulations
     } // End if exactly one muon
 
@@ -340,22 +348,25 @@ void hadTau4(bool isMC,
       if( tauJetPt > kHtJetPtMin && TMath::Abs(genTauEta) < kHtJetEtaMax ) trueNJet++;
       if( trueNJet < 3 ) continue;
 
-      // Fill histogram of true tau-jet pt
-      hTrueTauJetPt->Fill(tauJetPt);
+      float trueHt = selHt;
+      float trueMhtX = selMhtX;
+      float trueMhtY = selMhtY;
 
       // If tau jet meets same criteria as other RA2 jets for HT,
-      // add tau-jet pt to HT and fill histogram of true HT
+      // add tau-jet pt to HT
       if( tauJetPt > kHtJetPtMin && TMath::Abs(genTauEta) < kHtJetEtaMax ) {
-	hTrueHt->Fill(selHt+tauJetPt);
+	trueHt += tauJetPt;
       }
       // If tau jet meets same criteria as other RA2 jets for MHT,
-      // add tau-jet pt to MHT and fill histogram of true MHT
+      // add tau-jet pt to MHT
       if( tauJetPt > kMhtJetPtMin && TMath::Abs(genTauEta) < kMhtJetEtaMax ) {
-	float trueMhtX = selMhtX - tauJetPt*cos(genTauPhi);
-	float trueMhtY = selMhtY - tauJetPt*sin(genTauPhi);
-	// Calculate the MHT from x and y component
-	hTrueMht->Fill(sqrt( trueMhtX*trueMhtX + trueMhtY*trueMhtY ));
+	trueMhtX -= tauJetPt*cos(genTauPhi);
+	trueMhtY -= tauJetPt*sin(genTauPhi);
       }
+
+      hTrueTauJetPt->Fill(tauJetPt);
+      hTrueHt->Fill(trueHt);
+      hTrueMht->Fill(sqrt( trueMhtX*trueMhtX + trueMhtY*trueMhtY ));
     } // End of isMC
   } // End of loop over events
   
@@ -377,7 +388,11 @@ void hadTau4(bool isMC,
 
 
   // --- Save the Histograms to File -----------------------------------
-  TFile outFile("HadTau_WJetMC_PredReco.root","RECREATE");
+  TString outFileName = "HadTau_";
+  if( isMC ) outFileName += "WJetMC_PredReco.root";
+  else       outFileName += "Data_Pred.root";
+  TFile outFile(outFileName,"RECREATE");
+  hMuonPt->Write();
   hTrueTauJetPt->Write();
   hTrueHt->Write();
   hTrueMht->Write();
