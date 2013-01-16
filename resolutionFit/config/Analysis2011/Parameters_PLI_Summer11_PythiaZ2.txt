@@ -1,8 +1,0 @@
-# Particle level imbalance parameters for modified NSC formula
-# from Summer11 Flat QCD MC
-
-Eta0: 10. 1500.   3.64142  0.00929393   0   1.0104
-Eta1: 10. 1500.   3.62259  0.0098568    0   0.982881
-Eta2: 10. 1500.   3.78681  0.000654074  0   1.85569
-Eta3: 10. 1500.   3.66972  4.4699e-05   0   2.71188
-Eta4: 10. 1500.  -1.70284  3.27833      0  -0.934543
