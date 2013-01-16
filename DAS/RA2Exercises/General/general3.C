@@ -197,6 +197,7 @@ void general3(int sampleId) {
     // Event weight in plots
     float weight = evtWgt;
     if( sampleId == 4 ) weight *= 6.26/5.274; // Correct Z-->inv xs from LO to NNLO
+    if( sampleId == 5 ) weight *= 1.3; // 7 TeV k-factor
 
     
     // Fill histogram
