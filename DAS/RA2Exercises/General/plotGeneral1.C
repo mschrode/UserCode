@@ -151,6 +151,7 @@ TString sampleLabel(int sampleId) {
   else if( sampleId == 3 ) label += "W(l#nu)+Jets";
   else if( sampleId == 4 ) label += "Z(#nu#bar{#nu})+Jets";
   else if( sampleId == 5 ) label += "LM6";
+  else if( sampleId == 6 ) label += "LM9";
   else {
     std::cerr << "ERROR: no sample with id " << sampleId << std::endl;
     exit(-1);
@@ -169,6 +170,7 @@ TString fileName(int sampleId) {
   else if( sampleId == 3 ) name += "WJets";
   else if( sampleId == 4 ) name += "ZInv";
   else if( sampleId == 5 ) name += "LM6";
+  else if( sampleId == 6 ) name += "LM9";
   else {
     std::cerr << "ERROR: no sample with id " << sampleId << std::endl;
     exit(-1);
