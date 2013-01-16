@@ -125,8 +125,7 @@ void hadTau5(bool isMC,
 
   // Get the tree from file
   TChain* tr = new TChain("AnaTree");
-  tr->Add("/nfs/dust/test/cmsdas/school61/susy/ntuple/2013-v1/WJets_0.root");
-  //tr->Add("/nfs/dust/test/cmsdas/school61/susy/ntuple/2013-v1/MuHad_Run2012AB.root");
+  tr->Add("/nfs/dust/test/cmsdas/school61/susy/ntuple/2013-v1/WJets_*.root");
 
   // Set the branches
   tr->SetBranchAddress("NrecoJet",&nRecoJets);
@@ -273,16 +272,19 @@ void hadTau5(bool isMC,
 	  simMhtX -= simTauJetPt*cos(muPhi);
 	  simMhtY -= simTauJetPt*sin(muPhi);
 	}
+	float simMht = sqrt( simMhtX*simMhtX + simMhtY*simMhtY );
 
+	if( simHt < 500 ) continue;
+	if( simMht < 200 ) continue;
 	float simMhtPhi = std::atan2(simMhtY,simMhtX);
 	if( !passesDeltaPhiCut(simMhtPhi,nRecoJets,recoJetPt,recoJetEta,recoJetPhi,muJetIdx,simTauJetPt,muEta,muPhi) ) continue;
+
 	    
 	// Increment number of events with the simulated tau-jet pt, HT, MHT
 	int binSimTauJetPt = bin(simTauJetPt,kBinsPtN,kBinsPtMin,kBinsPtMax);
 	if( binSimTauJetPt > -1 ) nPredTauJetPt2D[binSimTauJetPt][it]++;
 	int binSimHT = bin(simHt,kBinsHtN,kBinsHtMin,kBinsHtMax);
 	if( binSimHT > -1 ) nPredHt2D[binSimHT][it]++;
-	float simMht = sqrt( simMhtX*simMhtX + simMhtY*simMhtY );
 	int binSimMHT = bin(simMht,kBinsMhtN,kBinsMhtMin,kBinsMhtMax);
 	if( binSimMHT > -1 ) nPredMht2D[binSimMHT][it]++;
 
@@ -369,13 +371,16 @@ void hadTau5(bool isMC,
 	trueMhtX -= tauJetPt*cos(genTauPhi);
 	trueMhtY -= tauJetPt*sin(genTauPhi);
       }
+      float trueMht = sqrt( trueMhtX*trueMhtX + trueMhtY*trueMhtY );
+      if( trueHt < 500 ) continue;
+      if( trueMht < 200 ) continue;
 
       float trueMhtPhi = std::atan2(trueMhtY,trueMhtX);
       if( !passesDeltaPhiCut(trueMhtPhi,nRecoJets,recoJetPt,recoJetEta,recoJetPhi,tauJetIdx,tauJetPt,genTauEta,genTauPhi) ) continue;
 
       hTrueTauJetPt->Fill(tauJetPt);
       hTrueHt->Fill(trueHt);
-      hTrueMht->Fill(sqrt( trueMhtX*trueMhtX + trueMhtY*trueMhtY ));
+      hTrueMht->Fill(trueMht);
     } // End of isMC
   } // End of loop over events
   

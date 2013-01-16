@@ -32,7 +32,7 @@ void plotHadTau2(const TString &fileName = "HadTau_WJetMC.root") {
   // Set style
   for(unsigned int i = 0; i < kNBins; ++i) {
     char title[100];  
-    sprintf(title,"Probability / %.2f",hResp[i]->GetBinWidth(1));
+    sprintf(title,"Probability / %.2f",hResp[i]->GetXaxis()->GetBinWidth(1));
     hResp[i]->GetYaxis()->SetTitle(title);
     hResp[i]->SetLineColor(1+i);
     hResp[i]->GetYaxis()->SetRangeUser(0.,2.05);

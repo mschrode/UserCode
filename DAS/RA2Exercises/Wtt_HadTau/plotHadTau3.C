@@ -62,7 +62,7 @@ void plotHadTau3(double scale = 1.,
     else if( i == 2 ) xTitle = "#slash{H}_{T} [GeV]";
 
     TString yTitle = "N(events) / ";
-    yTitle += static_cast<int>(hPred[i]->GetYaxis()->GetBinWidth(1));
+    yTitle += static_cast<int>(hPred[i]->GetXaxis()->GetBinWidth(1));
     yTitle += " GeV";
 
     hPred[i]->GetXaxis()->SetTitle(xTitle);
