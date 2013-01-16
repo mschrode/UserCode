@@ -7,6 +7,7 @@
 #include "TFile.h"
 #include "TMath.h"
 #include "TString.h"
+#include "TVector2.h"
 
 
 
@@ -99,7 +100,7 @@ void general1(int sampleId) {
 
   // Get the tree from file
   TChain* tr = new TChain("AnaTree");
-  tr->Add("/nfs/dust/test/cmsdas/school61/susy/ntuple/2013-v1/"+fileName(sampleId)+"_0.root");
+  tr->Add("/nfs/dust/test/cmsdas/school61/susy/ntuple/2013-v1/"+fileName(sampleId)+"_*.root");
 
   // Set the branches
   tr->SetBranchAddress("NrecoJet",&nRecoJets);
@@ -160,6 +161,34 @@ void general1(int sampleId) {
 
 
     //>>> PLACE OTHER RA2 CUTS HERE
+    if( selHt < 500 ) continue;
+    if( selMht < 200 ) continue;
+
+    float phiMht = TMath::ATan2(selMhtY,selMhtX);
+    int nMhtJets = 0;
+    bool passesDeltaPhiCut = true;
+    // Loop over reco jets: remember, they are ordered in pt!
+    for(int jetIdx = 0; jetIdx < nRecoJets; ++jetIdx) {
+      // Select MHT jets
+      if( recoJetPt[jetIdx] > kMhtJetPtMin && TMath::Abs(recoJetEta[jetIdx]) < kMhtJetEtaMax ) {
+	// Increase counter of MHT jets
+	nMhtJets++;		
+
+	// Compute deltaphi between -Pi and Pi
+	float deltaPhi = TVector2::Phi_mpi_pi(recoJetPhi[jetIdx]-phiMht); 
+
+	// Check DeltaPhi selection criterion
+	if( nMhtJets == 1 || nMhtJets == 2 ) {
+	  passesDeltaPhiCut = TMath::Abs(deltaPhi) > 0.5;
+	} else {
+	  passesDeltaPhiCut = TMath::Abs(deltaPhi) > 0.3;
+	}
+	if( !passesDeltaPhiCut ) break;
+      }
+      if( nMhtJets == 3 ) break; // DeltaPhi cut only for first three jets
+    }
+    if( !passesDeltaPhiCut ) continue;
+
 
 
 

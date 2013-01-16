@@ -6,7 +6,7 @@ void plotGeneral1(int sampleId) {
 
  
   // Get histograms from file
-  TFile file(fileName(sampleId)+".root","READ");
+  TFile file("General_"+fileName(sampleId)+".root","READ");
 
   TH1* hNJets = 0;
   TH1* hHt = 0;
@@ -28,6 +28,12 @@ void plotGeneral1(int sampleId) {
   hHt->UseCurrentStyle();
   hMht->UseCurrentStyle();
   hMEff->UseCurrentStyle();
+  if( sampleId == 0 ) {
+    hNJets->SetMarkerStyle(20);
+    hHt->SetMarkerStyle(20);
+    hMht->SetMarkerStyle(20);
+    hMEff->SetMarkerStyle(20);
+  }
 
   const int kNJetHists = 3;
   TH1* hJetPt[kNJetHists];
@@ -57,49 +63,76 @@ void plotGeneral1(int sampleId) {
     hJetEta[i]->UseCurrentStyle();
     hJetPhi[i]->SetDirectory(0);
     hJetPhi[i]->UseCurrentStyle();
+    if( sampleId == 0 ) {
+      hJetPt[i]->SetMarkerStyle(20);
+      hJetEta[i]->SetMarkerStyle(20);
+      hJetPhi[i]->SetMarkerStyle(20);
+    }
   }
   file.Close();
 
 
+  
+  // Draw
   TString drawOption = "HISTE";
   if( sampleId == 0 ) drawOption = "PE1"; // Markers for data
 
-  // Draw
+  TString outName = "h"+fileName(sampleId)+"_";
+
+  // Create legend
+  TLegend* leg = new TLegend(0.3,0.8,0.9,0.89);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetFillStyle(0);
+  leg->SetTextFont(42);
+  leg->SetTextSize(0.05);
+  char entry[100];
+  sprintf(entry,"N(total) = %.1f",hHt->Integral());
+  leg->AddEntry(hHt,entry,"");
+
   TCanvas* canNJets = new TCanvas("canNJets","NJets",600,600);
   canNJets->cd();
   hNJets->Draw(drawOption);
+  leg->Draw("same");
+  canNJets->SaveAs(outName+"NJets.eps","eps");
 
   TCanvas* canHt = new TCanvas("canHt","Ht",600,600);
   canHt->cd();
   hHt->Draw(drawOption);
-  std::cout << "Int(Ht) = " << hHt->Integral() << std::endl;
+  leg->Draw("same");
+  canHt->SaveAs(outName+"Ht.eps","eps");
 
   TCanvas* canMht = new TCanvas("canMht","Mht",600,600);
   canMht->cd();
   hMht->Draw(drawOption);
+  leg->Draw("same");
+  canMht->SaveAs(outName+"Mht.eps","eps");
 
   for(unsigned int i = 0; i < kNJetHists; ++i) {
-    TString name = "Jet Pt ";
+    TString name = "JetPt";
     name += i+1;
     TCanvas* can = new TCanvas(name,name,600,600);
     can->cd();
     hJetPt[i]->Draw(drawOption);
+    can->SaveAs(outName+name+".eps","eps");
   }
 
   for(unsigned int i = 0; i < kNJetHists; ++i) {
-    TString name = "Jet Phi ";
+    TString name = "JetPhi";
     name += i+1;
     TCanvas* can = new TCanvas(name,name,600,600);
     can->cd();
     hJetPhi[i]->Draw(drawOption);
+    can->SaveAs(outName+name+".eps","eps");
   }
 
   for(unsigned int i = 0; i < kNJetHists; ++i) {
-    TString name = "Jet Eta ";
+    TString name = "JetEta";
     name += i+1;
     TCanvas* can = new TCanvas(name,name,600,600);
     can->cd();
     hJetEta[i]->Draw(drawOption);
+    can->SaveAs(outName+name+".eps","eps");
   }
 
 }
@@ -129,9 +162,9 @@ TString sampleLabel(int sampleId) {
 
 // Return the file name for a given sample
 TString fileName(int sampleId) {
-  TString name = "General_";
-  if( sampleId == 0 )      name += "QCDFlat_test";
-  else if( sampleId == 1 ) name += "QCDFlat_test";
+  TString name = "";
+  if( sampleId == 0 )      name += "Data";
+  else if( sampleId == 1 ) name += "QCD";
   else if( sampleId == 2 ) name += "TTJets";
   else if( sampleId == 3 ) name += "WJets";
   else if( sampleId == 4 ) name += "ZInv";
