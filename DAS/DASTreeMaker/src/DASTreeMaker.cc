@@ -22,13 +22,13 @@ DASTreeMaker::DASTreeMaker(const edm::ParameterSet& conf)
   genJetsTag_  = conf.getParameter< edm::InputTag > ("genjets");
   genMetsTag_  = conf.getParameter< edm::InputTag > ("genmet");
   vertexTag_   = conf.getParameter< edm::InputTag > ("vertex");
-  jetsTag_  = conf.getParameter< edm::InputTag > ("jets");
+  jetsTag_     = conf.getParameter< edm::InputTag > ("jets");
   patMetsTag_  = conf.getParameter< edm::InputTag > ("PATmet");
-  muonsTag_ = conf.getParameter< edm::InputTag > ("muons");
-  elesTag_  = conf.getParameter< edm::InputTag > ("electrons");
+  muonsTag_    = conf.getParameter< edm::InputTag > ("muons");
+  elesTag_     = conf.getParameter< edm::InputTag > ("electrons");
   patPhotonsTag_ = conf.getParameter< edm::InputTag > ("PATphotons");
-  pfRhoTag_    = conf.getParameter<edm::InputTag>("PFRhoTag");
-  outFileName_       =  conf.getParameter<std::string>("OutFile" );
+  pfRhoTag_      = conf.getParameter<edm::InputTag>("PFRhoTag");
+  outFileName_   =  conf.getParameter<std::string>("OutFile" );
 }
 
 
@@ -47,12 +47,13 @@ void DASTreeMaker::analyze(const edm::Event& evt, const edm::EventSetup& es)
   lumib_ = evt.luminosityBlock();
 
   // Event weight
-  if (!evtWgtTag_.instance().empty()) {
+  if (!evtWgtTag_.label().empty()) {
     edm::Handle<double> evtWgtHandle;
     evt.getByLabel(evtWgtTag_,evtWgtHandle);
     evtWgt_ = *evtWgtHandle;
+  } else if (evtWgt_ < 0 ) {
+    evtWgt_=1.;
   }
-  else if (evtWgt_ < 0 ) evtWgt_=1.;
 
   //---get generator level objects
   if (isMCdata_) {

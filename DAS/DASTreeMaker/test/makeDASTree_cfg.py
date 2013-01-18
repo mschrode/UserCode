@@ -1,4 +1,4 @@
-# $Id: makeDASTree_cfg.py,v 1.4 2013/01/10 17:18:42 mschrode Exp $
+# $Id: makeDASTree_cfg.py,v 1.5 2013/01/11 14:25:09 mschrode Exp $
 
 
 ## --- GLOBAL PARAMETERS -----------------------------------------------------
@@ -7,21 +7,13 @@
 from RA2Classic.Utils.CommandLineParams import CommandLineParams
 parameters = CommandLineParams()
 
-# examples (WeightProducer does not work properly with the file names, needs dataSetNames!!)
-# data_set=/store/data/Run2012A/HT/AOD/13Jul2012-v1/00000/FEEF1E85-BACF-E111-807A-002618943877.root, is_mc=false, global_tag=FT_53_V6C_AN3
-# data_set=/store/mc/Summer12_DR53X/TTJets_MassiveBinDECAY_TuneZ2star_8TeV-madgraph-tauola/AODSIM/PU_S10_START53_V7C-v1/00000/FE7C71D8-DB25-E211-A93B-0025901D4C74.root, is_mc=true, global_tag=START53_V7G
-
 dataSet_   = parameters.value("data_set","")
 globalTag_ = parameters.value("global_tag","")+"::All"
 isMC_      = parameters.value("is_mc",True)
 isSUSY_    = parameters.value("is_susy",False)
 lumi_      = parameters.value("lumi",5295)
-hltPath_   = parameters.value("hlt_path","none")+"*"
+hltPath_   = parameters.value("hlt_path","none")
 
-#dataSet_ = "/store/mc/Summer12_DR53X/WJetsToLNu_TuneZ2Star_8TeV-madgraph-tarball/AODSIM/PU_S10_START53_V7A-v2/0004/FE9FA8F7-2BF3-E111-A34E-001E672CC1E7.root"
-#globalTag_ = "START53_V7G::All"
-#dataSet_ = "/store/data/Run2012A/MuHad/AOD/13Jul2012-v1/00000/FEB6CCC1-59CF-E111-8D77-001A9281172C.root"
-#globalTag_ = "FT_53_V6C_AN3::All"
 
 print "***** SETUP ************************************"
 print "    dataSet_ : "+dataSet_
@@ -142,7 +134,7 @@ process.out.dropMetaData = cms.untracked.string('DROPPED')
 ## --- HLT -------------------------------------------------------------------
 
 process.load('HLTrigger.HLTfilters.hltHighLevel_cfi')
-process.hltHighLevel.HLTPaths = cms.vstring(hltPath_)
+process.hltHighLevel.HLTPaths = cms.vstring(hltPath_+"*")
 process.hltHighLevel.andOr = cms.bool(True)
 process.hltHighLevel.throw = cms.bool(False)
 
@@ -240,6 +232,10 @@ if isMC_:
     process.WeightProducer.Lumi = cms.double(lumi_)
     process.WeightProducer.FileNamePUDataDistribution = cms.string("RA2Classic/WeightProducer/data/DataPileupHistogram_RA2Summer12_190456-196531_AB.root")
 
+from DAS.DASTreeMaker.hltPrescaleWeightProducer_cfi import hltPrescaleWeightProducer
+process.HLTPrescaleWeight = hltPrescaleWeightProducer.clone(
+    HLTName = cms.string(hltPath_)
+    )
 
 
 
@@ -250,8 +246,9 @@ process.dasTree = dasTreeMaker.clone(
     MCdata        = cms.bool(isMC_),
     isSUSY        = cms.bool(isSUSY_),
     sampleID      = cms.int32(getSampleID(dataSet_)),
-    evtWgt        = cms.double(-1.),    # use WeightProducer
-    evtWgtTag     = cms.InputTag('WeightProducer:weight'),  
+    evtWgt        = cms.double(-1.),
+    evtWgtTag     = cms.InputTag('WeightProducer:weight'),
+#    evtWgtTag     = cms.InputTag('HLTPrescaleWeight'),  
     genjets       = cms.InputTag("ak5GenJets"),  
     genmet        = cms.InputTag("genMetCalo"),
     vertex        = cms.InputTag("offlinePrimaryVertices"),  
@@ -275,6 +272,7 @@ process.ppfchs = cms.Path(
     process.calculateRhoForGamma *
     #process.htPFchsFilter *
     #process.mhtPFchsFilter *
+    #process.HLTPrescaleWeight *
     process.WeightProducer *
     process.dasTree
     )
