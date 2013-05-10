@@ -1,4 +1,4 @@
-// $Id: produceTailScaleFactors.C,v 1.1 2013/05/08 13:10:34 mschrode Exp $
+// $Id: produceTailScaleFactors.C,v 1.2 2013/05/10 13:22:19 mschrode Exp $
 
 #include <iostream>
 #include <vector>
@@ -37,23 +37,34 @@ void produceTailScaleFactors() {
 
 
   // Binning
-  sampleTools::BinningAdmin* adm = new sampleTools::BinningAdmin("../resolutionFit/config/Analysis2012/Binning/BinningAdmin2012_v1_mergedPtBins.cfg");
+  sampleTools::BinningAdmin* adm = new sampleTools::BinningAdmin("BinningAdmin2011.cfg");
 
 
   // Core scale factors
-  CoreScaleFactors csf(CoreScaleFactors::Run2012ABCReReco53X);
+  CoreScaleFactors csf(CoreScaleFactors::Run2011AB_42X_S6);
   
 
   // Input files
   const double lumi = 3000;
-  const TString srcData = "../results/Analysis2012/DiJetRun2012ABC-ReReco13JulAB-PromptRecoC_190456-202305/";
-  const TString srcMC   = "../results/Analysis2012/QCD_Pt-15to3000_TuneZ2_Flat_8TeV_pythia6-Summer12_DR53X-PU_S10_START53_V7A-v1/";
+//   const TString srcData = "../results/Analysis2012/DiJetRun2012ABC-ReReco13JulAB-PromptRecoC_190456-202305/";
+//   const TString srcMC   = "../results/Analysis2012/QCD_Pt-15to3000_TuneZ2_Flat_8TeV_pythia6-Summer12_DR53X-PU_S10_START53_V7A-v1/";
   
-  const TString fileNameData    = srcData+"ResTails_PtAveBins_Data2012_PF_L1FastJet_REBINNED.root";
-  const TString fileNameMC      = srcMC  +"ResTails_PtAveBins_MCPythiaSummer12_S10_ReReco13JulAB-PromptRecoC_PF_L1FastJet_REBINNED.root";
-  const TString fileNameMCPUDn  = srcMC  +"";
-  const TString fileNameMCPUUp  = srcMC  +"";
-  const TString fileNameMCTruth = srcMC  +"ResTails_PtAveBins_MCPythiaSummer12_S10_ReReco13JulAB-PromptRecoC_PF_L1FastJet_REBINNED.root";
+//   const TString fileNameData    = srcData+"ResTails_PtAveBins_Data2012_PF_L1FastJet_REBINNED.root";
+//   const TString fileNameMC      = srcMC  +"ResTails_PtAveBins_MCPythiaSummer12_S10_ReReco13JulAB-PromptRecoC_PF_L1FastJet_REBINNED.root";
+//   const TString fileNameMCPUDn  = srcMC  +"";
+//   const TString fileNameMCPUUp  = srcMC  +"";
+//   const TString fileNameMCTruth = srcMC  +"ResTails_PtAveBins_MCPythiaSummer12_S10_ReReco13JulAB-PromptRecoC_PF_L1FastJet_REBINNED.root";
+//   const TString fileNameTailWindow = "";
+
+  // Thesis
+  const TString srcData = "../results/Analysis2011/Run2011_163337-180252_V10/";
+  const TString srcMC   = "../results/Analysis2011/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/";
+  
+  const TString fileNameData    = srcData+"ResTails_PtAveBins_Data2011_PF_L1FastJet_V10_REBINNED.root";
+  const TString fileNameMC      = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_REBINNED.root";
+  const TString fileNameMCPUDn  = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_PUDn_REBINNED.root";
+  const TString fileNameMCPUUp  = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_PUUp_REBINNED.root";
+  const TString fileNameMCTruth = srcMC  +"ResTails_PtGenAveBins_MCFall11_PF_L1FastJet_V10_REBINNED.root";
   const TString fileNameTailWindow = "";
 
 
@@ -69,8 +80,8 @@ void produceTailScaleFactors() {
   variations.push_back(Uncertainty::CoreDn);
   variations.push_back(Uncertainty::Extrapolation);
   variations.push_back(Uncertainty::Closure);
-  //    variations.push_back(Uncertainty::PUUp);
-  //    variations.push_back(Uncertainty::PUDn);
+  variations.push_back(Uncertainty::PUUp);
+  variations.push_back(Uncertainty::PUDn);
 
 
 

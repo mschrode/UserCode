@@ -1,4 +1,4 @@
-// $Id: ScaleFactorProducer.cc,v 1.1 2013/05/08 13:07:29 mschrode Exp $
+// $Id: ScaleFactorProducer.cc,v 1.2 2013/05/10 13:22:20 mschrode Exp $
 
 #ifndef RESOLUTION_TAILS_SCALE_FACTOR_PRODUCER
 #define RESOLUTION_TAILS_SCALE_FACTOR_PRODUCER
@@ -527,7 +527,7 @@ namespace resolutionTails {
       
       double min = bin->tailWindowMinEff();
       double sigSmear = bin->sigmaSmeared(0);
-      sprintf(tmp," & $%.3f$ & $%.3f$ \\\\\n",min,min/sigSmear);
+      sprintf(tmp," & $%.3lf$ & $%.3lf$ \\\\\n",min,min/sigSmear);
       text += tmp;
       if( bin->ptBin() == binAdm_->nPtBins(bin->etaBin())-1 ) text += "\\midrule\n";
     }
@@ -549,11 +549,11 @@ namespace resolutionTails {
 	EtaPtBin* bin = *it;
 	text += bin->toTexTableCells();
 
-	sprintf(tmp," & $%.3f \\pm %.3f$",bin->extraMC(),bin->extraMCErr());
+	sprintf(tmp," & $%.3lf \\pm %.3lf$",bin->extraMC(),bin->extraMCErr());
 	text += tmp;
-	sprintf(tmp," & $%.3f \\pm %.3f$",bin->toyMC(),bin->toyMCErr());
+	sprintf(tmp," & $%.3lf \\pm %.3lf$",bin->toyMC(),bin->toyMCErr());
 	text += tmp;
-	sprintf(tmp," & $%.3f$ \\\\ \n",bin->extraMC()/bin->toyMC());
+	sprintf(tmp," & $%.3lf$ \\\\ \n",bin->extraMC()/bin->toyMC());
 
 	if( bin->ptBin() == binAdm_->nPtBins(bin->etaBin())-1 ) text += "\\hline\n";
       }
@@ -574,11 +574,11 @@ namespace resolutionTails {
       EtaPtBin* bin = *it;
       text += bin->toTexTableCells();
 
-      sprintf(tmp," & $%.1f \\pm %.1f$",bin->ptAveMeanData(0),bin->ptAveMeanDataErr(0));
+      sprintf(tmp," & $%.1lf \\pm %.1lf$",bin->ptAveMeanData(0),bin->ptAveMeanDataErr(0));
       text += tmp;
-      sprintf(tmp," & $%.3f \\pm %.3f$",bin->extraData(),bin->extraDataErr());
+      sprintf(tmp," & $%.3lf \\pm %.3lf$",bin->extraData(),bin->extraDataErr());
       text += tmp;
-      sprintf(tmp," & $%.3f \\pm %.3f$ \\\\ \n",bin->extraMC(),bin->extraMCErr());
+      sprintf(tmp," & $%.3lf \\pm %.3lf$ \\\\ \n",bin->extraMC(),bin->extraMCErr());
       text += tmp;
 
       if( bin->ptBin() == binAdm_->nPtBins(bin->etaBin())-1 ) text += "\\midrule\n";
@@ -606,7 +606,7 @@ namespace resolutionTails {
 	int nPages = 1 + (1+2*binAdm_->nPtSoftBins())%12;
 	for(int page = 0; page < nPages; ++page) {
 	  text += "\n% -----------------------------------------------------------------\n";
-	  sprintf(tmp,"\\begin{frame}\\frametitle{Asymmetry Tails $%.1f < |\\eta| < %.1f$}\n",binAdm_->etaMin(etaBin),binAdm_->etaMax(etaBin));
+	  sprintf(tmp,"\\begin{frame}\\frametitle{Asymmetry Tails $%.1lf < |\\eta| < %.1lf$}\n",binAdm_->etaMin(etaBin),binAdm_->etaMax(etaBin));
 	  text += "  \\begin{columns}[T]\n";
 	  for(int colIdx = 0; colIdx < 4; ++colIdx) {
 	    text += "    \\begin{column}{0.25\\textwidth}\n";

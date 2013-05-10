@@ -1,4 +1,4 @@
-// $Id: FinalResultProducer.cc,v 1.1 2013/05/08 13:07:28 mschrode Exp $
+// $Id: FinalResultProducer.cc,v 1.2 2013/05/10 13:22:19 mschrode Exp $
 
 #ifndef RESOLUTION_TAILS_FINAL_RESULT_PRODUCER
 #define RESOLUTION_TAILS_FINAL_RESULT_PRODUCER
@@ -318,34 +318,34 @@ namespace resolutionTails {
       for(unsigned int ptBin = 0; ptBin < binAdm_->nPtBins(etaBin); ++ptBin) {
 
 	// Eta bin borders
-	sprintf(tmp,"  $%.1f$ -- $%.1f$ & $",binAdm_->etaMin(etaBin),binAdm_->etaMax(etaBin));
+	sprintf(tmp,"  $%.1lf$ -- $%.1lf$ & $",binAdm_->etaMin(etaBin),binAdm_->etaMax(etaBin));
 	text += tmp;
 	// PtAve bin borders
 	double x = binAdm_->ptMin(etaBin,ptBin);
 	if( x < 1000 ) text += " ";
 	if( x < 100  ) text += " ";
-	sprintf(tmp,"%.0f$ -+- $",x);
+	sprintf(tmp,"%.0lf$ -+- $",x);
 	text += tmp;
 	x = binAdm_->ptMax(etaBin,ptBin);
 	if( x < 1000 ) text += " ";
 	if( x < 100  ) text += " ";
-	sprintf(tmp,"%.0f$ & $",x);
+	sprintf(tmp,"%.0lf$ & $",x);
 	text += tmp;
 	// PtAve mean
 	x = gScaleFactors_.at(etaBin)->GetX()[ptBin];
 	if( x < 1000 ) text += " ";
 	if( x < 100  ) text += " ";
-	sprintf(tmp,"%.1f \\pm %.1f$ &  $",x,gScaleFactors_.at(etaBin)->GetEXlow()[ptBin]);
+	sprintf(tmp,"%.1lf \\pm %.1lf$ &  $",x,gScaleFactors_.at(etaBin)->GetEXlow()[ptBin]);
 	text += tmp;
 	// Scale factors
-	sprintf(tmp,"%.3f",gScaleFactors_.at(etaBin)->GetY()[ptBin]);
+	sprintf(tmp,"%.3lf",gScaleFactors_.at(etaBin)->GetY()[ptBin]);
 	text += tmp;
 	double estat = gScaleFactors_.at(etaBin)->GetEYlow()[ptBin];
 	double esystd = gAbsUncertTot_.at(etaBin)->GetEYlow()[ptBin];
 // 	double esystu = gAbsUncertTot_.at(etaBin)->GetEYhigh()[ptBin];
 // 	double etotd = sqrt( estat*estat + esystd*esystd );
 // 	double etotu = sqrt( estat*estat + esystu*esystu );
-	sprintf(tmp," \\pm %.3f \\pm %.3f$ \\\\\n",estat,esystd);
+	sprintf(tmp," \\pm %.3lf \\pm %.3lf$ \\\\\n",estat,esystd);
 	text += tmp;
       }	// End of loop over ptAve bins
       if( etaBin < binAdm_->nEtaBins()-1 ) text += "\\midrule\n";
@@ -356,7 +356,7 @@ namespace resolutionTails {
     latex += "\\renewcommand{\\arraystretch}{1.5}\n";
     latex += "\\begin{tabular}{cr@{ -- }rcc}\n\\toprule\n";
     latex += "$|\\eta|$ & \\multicolumn{2}{c}{$\\ptave\\,(\\gevnospace)$} & $\\mean{\\ptave}\\,(\\gevnospace)$ & $";
-    sprintf(tmp,"\\tailratio(\\tailborder{%.1f})$ \\\\\n\\midrule\n",fitPars_->nSigTailStart());
+    sprintf(tmp,"\\tailratio(\\tailborder{%.1lf})$ \\\\\n\\midrule\n",fitPars_->nSigTailStart());
     latex += tmp;
     latex += text;
     latex += "\\bottomrule\n\\end{tabular}\n\\renewcommand{\\arraystretch}{1.}\n";
