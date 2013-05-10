@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: ScaleFactorProducer.cc,v 1.1 2013/05/08 13:07:29 mschrode Exp $
 
 #ifndef RESOLUTION_TAILS_SCALE_FACTOR_PRODUCER
 #define RESOLUTION_TAILS_SCALE_FACTOR_PRODUCER
@@ -19,7 +19,6 @@
 #include "LittleHelper.h"
 #include "Output.h"
 #include "Style.h"
-#include "SystematicVariation.h"
 #include "../sampleTools/BinningAdmin.h"
 #include "../util/utils.h"
 #include "../util/HistOps.h"

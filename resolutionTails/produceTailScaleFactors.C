@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: produceTailScaleFactors.C,v 1.1 2013/05/08 13:10:34 mschrode Exp $
 
 #include <iostream>
 #include <vector>
@@ -11,7 +11,7 @@
 #include "FitParameters.h"
 #include "ScaleFactorProducer.cc"
 #include "Style.h"
-#include "SystematicVariation.h"
+#include "Uncertainty.h"
 #include "TError.h"
 #include "TROOT.h"
 
@@ -21,14 +21,14 @@
 #include "../util/StyleSettings.h"
 
 
-
+using namespace resolutionTails;
 
 // Main steering method
 void produceTailScaleFactors() {
   //// ----- SPECIFY PARAMETER VALUES ------------------------------------------------
 
   // Fit parameters
-  resolutionTails::FitParameters* fitPars = new resolutionTails::FitParameters();
+  FitParameters* fitPars = new FitParameters();
   fitPars->setNSigTailStart(2.);
   fitPars->setNSigTailEnd(10000.);
   fitPars->setNSigCore(2.);
@@ -41,7 +41,7 @@ void produceTailScaleFactors() {
 
 
   // Core scale factors
-  resolutionTails::CoreScaleFactors csf(resolutionTails::CoreScaleFactors::Run2012ABCReReco53X);
+  CoreScaleFactors csf(CoreScaleFactors::Run2012ABCReReco53X);
   
 
   // Input files
@@ -62,8 +62,20 @@ void produceTailScaleFactors() {
   const TString jetAlgo      = "PF";
 
 
+  // Systematic variations
+  std::vector<Uncertainty::SystematicVariation> variations;
+  variations.push_back(Uncertainty::Nominal);
+  variations.push_back(Uncertainty::CoreUp);
+  variations.push_back(Uncertainty::CoreDn);
+  variations.push_back(Uncertainty::Extrapolation);
+  variations.push_back(Uncertainty::Closure);
+  //    variations.push_back(Uncertainty::PUUp);
+  //    variations.push_back(Uncertainty::PUDn);
+
+
+
   // Style parameters
-  resolutionTails::Style* style = new resolutionTails::Style();
+  Style* style = new Style();
   style->showTitle(false);
   style->setTitle("CMS preliminary, L = "+util::StyleSettings::luminosity(lumi)+",  #sqrt{s} = 8 TeV");
   style->setLabelLumi("L = "+util::StyleSettings::luminosity(lumi));
@@ -71,7 +83,7 @@ void produceTailScaleFactors() {
   style->setLabelMC(util::LabelFactory::mc());
   style->setLabelMCSmear(util::LabelFactory::mc()+" (Corrected #sigma_{A})^{#color[10]{A}}");
 
-  resolutionTails::Output::DEBUG = false;
+  Output::DEBUG = false;
 
 
   //// -------------------------------------------------------------------------------
@@ -91,26 +103,25 @@ void produceTailScaleFactors() {
 
   // Determine scale factors for nominal setup and systematic variations
   TString fileNameNomResult;
-  std::vector<resolutionTails::SystematicVariation*> variations = resolutionTails::SystematicVariation::create();
-  // Loop over systematic variations (incl. nominal analysis)
-  std::vector<resolutionTails::SystematicVariation*>::const_iterator vit = variations.begin();
+  std::vector<Uncertainty::SystematicVariation>::const_iterator vit = variations.begin();
   for(;vit != variations.end(); ++vit) {
     
-    std::cout << "\n***** Deriving scale factors (" << (*vit)->name() << " variation)" << std::endl;
+    std::cout << "\n***** Deriving scale factors (" << Uncertainty::name(*vit) << " variation)" << std::endl;
 
     // Create output object
     TString outLabel = "Tail_"+uid+"_Sig"+style->nameWindow(fitPars->nSigTailStart(),fitPars->nSigTailEnd())+"_"+jetAlgo;
-    if( !((*vit)->isNominal()) ) outLabel += "_"+(*vit)->label();
-    resolutionTails::Output* out = new resolutionTails::Output(outLabel,true,true,!(*vit)->isNominal());
-    if( (*vit)->isNominal() ) fileNameNomResult = outLabel; // store for final results
+    if( *vit != Uncertainty::Nominal )
+      outLabel += "_"+Uncertainty::id(*vit);
+    Output* out = new Output(outLabel,true,true,*vit != Uncertainty::Nominal);
+    if( *vit == Uncertainty::Nominal ) fileNameNomResult = outLabel; // store for final results
 
     // Setup analysis
-    resolutionTails::ScaleFactorProducer* sfp = new resolutionTails::ScaleFactorProducer(fileNameData,fileNameMC,fileNameMCTruth,fileNameTailWindow,fitPars,csf(*vit),adm,out,style);
-    sfp->makeScaleFactors(!((*vit)->isExtrapolation()),(*vit)->isClosure());
+    ScaleFactorProducer* sfp = new ScaleFactorProducer(fileNameData,fileNameMC,fileNameMCTruth,fileNameTailWindow,fitPars,csf(*vit),adm,out,style);
+    sfp->makeScaleFactors((*vit != Uncertainty::Extrapolation),(*vit == Uncertainty::Closure));
     sfp->makeControlPlots();
     sfp->writeWindowBorders();
     sfp->writeExtrapolation();
-    if( (*vit)->isClosure() ) sfp->writeMCClosure();
+    if( *vit == Uncertainty::Closure ) sfp->writeMCClosure();
 
     // Clean up
     delete sfp;
@@ -119,17 +130,13 @@ void produceTailScaleFactors() {
 
 
   // Combine variations to final result
-  resolutionTails::FinalResultProducer* frp = new resolutionTails::FinalResultProducer(fileNameNomResult,fitPars,adm,variations,style);
+  FinalResultProducer* frp = new FinalResultProducer(fileNameNomResult,fitPars,adm,variations,style);
   frp->makeScaleFactorPlots();
   frp->makeUncertaintyPlots();
   frp->print();
 
 
   // Clean up
-  vit = variations.begin();
-  for(;vit != variations.end(); ++vit) {
-    delete *vit;
-  }
   delete frp;
   delete fitPars;
   delete style;

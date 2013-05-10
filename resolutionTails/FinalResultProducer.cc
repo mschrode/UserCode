@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: FinalResultProducer.cc,v 1.1 2013/05/08 13:07:28 mschrode Exp $
 
 #ifndef RESOLUTION_TAILS_FINAL_RESULT_PRODUCER
 #define RESOLUTION_TAILS_FINAL_RESULT_PRODUCER
@@ -16,7 +16,7 @@
 #include "FitParameters.h"
 #include "Output.h"
 #include "Style.h"
-#include "SystematicVariation.h"
+#include "Uncertainty.h"
 
 #include "../sampleTools/BinningAdmin.h"
 #define UTILS_AS_HEADER_FILE
@@ -33,7 +33,7 @@
 namespace resolutionTails {
   class FinalResultProducer {
   public:
-    FinalResultProducer(const TString &fileName, const resolutionTails::FitParameters* fitPars, const sampleTools::BinningAdmin* binAdm, const std::vector<resolutionTails::SystematicVariation*> &variations, const Style* style);
+    FinalResultProducer(const TString &fileName, const resolutionTails::FitParameters* fitPars, const sampleTools::BinningAdmin* binAdm, const std::vector<resolutionTails::Uncertainty::SystematicVariation> &variations, const Style* style);
     ~FinalResultProducer();
 
     void makeScaleFactorPlots();
@@ -53,7 +53,7 @@ namespace resolutionTails {
     std::vector< std::vector<TGraphAsymmErrors*> > gStackedRelUncerts_;
     std::vector<TString> uncertLabels_;
 
-    void init(const TString &inFilePrefix, const std::vector<resolutionTails::SystematicVariation*> &variations);
+    void init(const TString &inFilePrefix, const std::vector<resolutionTails::Uncertainty::SystematicVariation> &variations);
     TGraphAsymmErrors* correctBinCenter(const TH1* h1, const TH1* h2) const;
     TGraphAsymmErrors* relativeDifference(const TH1* hNom, int color, double weight, const TH1* hVarUp, const TH1* hVarDn = 0) const;
     TGraphAsymmErrors* sumErrorsInQuadrature(const std::vector<TGraphAsymmErrors*> &graphs) const;
@@ -65,7 +65,7 @@ namespace resolutionTails {
 
   // fileName: output from ScaleFactor producer for *nominal* variation
   // ------------------------------------------------------------------------------------
-  FinalResultProducer::FinalResultProducer(const TString &fileName, const FitParameters* fitPars, const sampleTools::BinningAdmin* binAdm, const std::vector<resolutionTails::SystematicVariation*> &variations, const Style* style) 
+  FinalResultProducer::FinalResultProducer(const TString &fileName, const FitParameters* fitPars, const sampleTools::BinningAdmin* binAdm, const std::vector<resolutionTails::Uncertainty::SystematicVariation> &variations, const Style* style) 
     : binAdm_(binAdm), fitPars_(fitPars), style_(style) {
     TString inFilePrefix = util::baseName(fileName);
     out_ = new Output(inFilePrefix+"_Final",true,true,false);
@@ -74,7 +74,7 @@ namespace resolutionTails {
 
 
   // ------------------------------------------------------------------------------------
-  void FinalResultProducer::init(const TString &inFilePrefix, const std::vector<resolutionTails::SystematicVariation*> &variations) {
+  void FinalResultProducer::init(const TString &inFilePrefix, const std::vector<resolutionTails::Uncertainty::SystematicVariation> &variations) {
     if( Output::DEBUG ) std::cout << "FinalResultProducer::init() Entering" << std::endl;
     // Nominal results
     TString inFileNameNom = inFilePrefix+".root";
@@ -118,17 +118,17 @@ namespace resolutionTails {
       TH1* hVarExtra = 0;
 
       // Loop over systematic variations
-      std::vector<SystematicVariation*>::const_iterator vit = variations.begin();
+      std::vector<Uncertainty::SystematicVariation>::const_iterator vit = variations.begin();
       for(;vit != variations.end(); ++vit) {
-	if( !(*vit)->isNominal() ) {
-	  TH1* h = util::FileOps::readTH1(inFilePrefix+"_"+(*vit)->label()+".root",histName,histName+"_"+(*vit)->label());
+	if( *vit != Uncertainty::Nominal ) {
+	  TH1* h = util::FileOps::readTH1(inFilePrefix+"_"+Uncertainty::id(*vit)+".root",histName,histName+"_"+Uncertainty::id(*vit));
 	
-	  if( (*vit)->isCoreUp() ) hVarCoreUp = h;
-	  else if( (*vit)->isCoreDn() ) hVarCoreDn = h;
-	  else if( (*vit)->isClosure() ) hVarClosure = h;
-	  else if( (*vit)->isPUUp() ) hVarPUUp = h;
-	  else if( (*vit)->isPUDn() ) hVarPUDn = h;
-	  else if( (*vit)->isExtrapolation() ) hVarExtra = h;
+	  if( *vit == Uncertainty::CoreUp ) hVarCoreUp = h;
+	  else if( *vit == Uncertainty::CoreDn ) hVarCoreDn = h;
+	  else if( *vit == Uncertainty::Closure ) hVarClosure = h;
+	  else if( *vit == Uncertainty::PUUp ) hVarPUUp = h;
+	  else if( *vit == Uncertainty::PUDn ) hVarPUDn = h;
+	  else if( *vit == Uncertainty::Extrapolation ) hVarExtra = h;
 	}
       }
 

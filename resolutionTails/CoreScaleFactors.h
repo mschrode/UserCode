@@ -1,9 +1,9 @@
-// $Id: $
+// $Id: CoreScaleFactors.h,v 1.1 2013/05/08 13:07:28 mschrode Exp $
 
 #ifndef RESOLUTION_TAILS_CORE_SCALE_FACTORS
 #define RESOLUTION_TAILS_CORE_SCALE_FACTORS
 
-#include "SystematicVariation.h"
+#include "Uncertainty.h"
 
 // Container class to store core-scale factors with uncertainties
 // for various analysis versions
@@ -16,7 +16,7 @@ namespace resolutionTails {
     CoreScaleFactors(CoreScaleFactors::Version version)
       : version_(version) {};
     
-    std::vector<double> operator()(const SystematicVariation* var) const;
+    std::vector<double> operator()(Uncertainty::SystematicVariation var) const;
     
 
   private:
@@ -26,19 +26,19 @@ namespace resolutionTails {
 
   // Return vector with core scale factors
   // One factor per eta bin
-  std::vector<double> CoreScaleFactors::operator()(const resolutionTails::SystematicVariation* var) const {
+  std::vector<double> CoreScaleFactors::operator()(resolutionTails::Uncertainty::SystematicVariation var) const {
     std::vector<double> factors;
 
     if( version_ == Run2012ABCReReco53X ) {
       // Core scale factors from runs 190456-202305 (Run2012ABC ReReco 53X)
       // Version 2012/11/28
-      if( var->isCoreDn() ) {	// core down 1 sigma
+      if( var == Uncertainty::CoreDn ) {	// core down 1 sigma
 	factors.push_back(0.);
 	factors.push_back(0.);
 	factors.push_back(0.);
 	factors.push_back(0.);
 	factors.push_back(0.);
-      } else if( var->isCoreUp() ) { // core up 1 sigma 
+      } else if( var == Uncertainty::CoreUp ) { // core up 1 sigma 
 	factors.push_back(0.);
 	factors.push_back(0.);
 	factors.push_back(0.);
