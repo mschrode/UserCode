@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: Pt3Bin.cc,v 1.1 2013/05/08 13:07:29 mschrode Exp $
 
 #ifndef RESOLUTION_TAILS_PT3BIN
 #define RESOLUTION_TAILS_PT3BIN
@@ -24,6 +24,7 @@
 #include "Output.h"
 #include "Style.h"
 #include "../sampleTools/BinningAdmin.h"
+#include "../sampleTools/HistNames.h"
 #include "../util/utils.h"
 #include "../util/HistOps.h"
 #include "../util/FileOps.h"
@@ -65,7 +66,6 @@ namespace resolutionTails {
     void plotAsymmetryDataMC(const TString &outNameId) const;
     void plotAsymmetryDataMCSmeared(const TString &outNameId, double nSigTailStart, double nSigTailEnd) const;
     void plotToyAsymmetry(const TString &outNameId) const;
-    void plotSymMCTruthResponse(const TString &outNameId) const;
     void plotSpectra(const TString &outNameId) const;
 
 
@@ -76,6 +76,7 @@ namespace resolutionTails {
     const double pt3Thres_;
     const Style* style_;
 
+    sampleTools::HistNames hName_;
     Output* out_;
 
     double coreScalingFactor_;
@@ -99,7 +100,6 @@ namespace resolutionTails {
     TH1* hAsymMC_;
     TH1* hAsymMCSmeared_;
     TH1* hResp_;
-    TH1* hSymResp_;
     TF1* fGaussMCTruth_;
     TH1* hPtAveSpecData_;
     TH1* hPtAveSpecMC_;
@@ -107,10 +107,11 @@ namespace resolutionTails {
     TPaveText* binLabel_;
 
     TH1* readHistAsym(const TString &fileName, const TString &id) const;  
-    TH1* readMCTruthResponse(const TString &fileName, const TString &type) const;
-    //  void init(double nSigCore, double coreScalingFactor, double tailWindowDataMin, double tailWindowDataMax, double tailWindowMCMin, double tailWindowMCMax);
+    TH1* readMCTruthResponse(const TString &fileName) const;
     void initBinLabel(const sampleTools::BinningAdmin* adm, bool isMCTruth = false);
     void getFTail(const TH1* h, double entries, int start, int end, double &fTail, double &fTailErr) const;
+    TString inputDirName() const;
+    TString inputHistName(const TString &hName) const;
   };
 
 
@@ -126,19 +127,17 @@ namespace resolutionTails {
 
     // Non-read distributions
     hResp_ = 0;
-    hSymResp_ = 0;
     fGaussMCTruth_ = 0;
 
     // Get spectra
     if( Output::DEBUG ) std::cout << "  Getting pt spectra from file . . . " << std::flush;
-    TString histName = "hPtAveCombined_Eta"+util::toTString(etaBin_)+"_Pt"+util::toTString(ptBin_)+"_PtSoft"+util::toTString(pt3Bin);
-    hPtAveSpecData_ = util::FileOps::readTH1(fileNameData,histName,"Data"+histName);
+    hPtAveSpecData_ = util::FileOps::readTH1(fileNameData,inputDirName()+inputHistName(hName_.ptAve()),"Data"+inputHistName(hName_.ptAve()));
     util::HistOps::setAxisTitles(hPtAveSpecData_,"p^{ave}_{T}","GeV","events");      
     hPtAveSpecData_->SetTitle(style_->title());
     style_->applyToDataMarker(hPtAveSpecData_);
     ptAveMeanData_ = hPtAveSpecData_->GetMean();
     ptAveMeanDataErr_ = hPtAveSpecData_->GetMeanError();
-    hPtAveSpecMC_ = util::FileOps::readTH1(fileNameMC,histName,"MC"+histName);
+    hPtAveSpecMC_ = util::FileOps::readTH1(fileNameMC,inputDirName()+inputHistName(hName_.ptAve()),"MC"+inputHistName(hName_.ptAve()));
     util::HistOps::setAxisTitles(hPtAveSpecMC_,"p^{ave}_{T}","GeV","events");      
     hPtAveSpecMC_->SetTitle(style_->title());
     style_->applyToMCFilled(hPtAveSpecMC_);
@@ -203,7 +202,6 @@ namespace resolutionTails {
     hAsymMC_ = 0;
     hAsymMCSmeared_ = 0;
     fGaussMCTruth_ = 0;
-    hSymResp_ = 0;
     hPtAveSpecData_ = 0;
     hPtAveSpecMC_ = 0;
     sig_ = 0.;
@@ -214,7 +212,7 @@ namespace resolutionTails {
 
 
     // Get response from file  
-    hResp_ = readMCTruthResponse(fileName,"MCTruth");
+    hResp_ = readMCTruthResponse(fileName);
     double entries = hResp_->GetEntries(); // Use entries of original distribution for statistical precision
     hResp_->UseCurrentStyle();
     hResp_->SetMarkerStyle(20);
@@ -272,7 +270,6 @@ namespace resolutionTails {
     if( hAsymMC_ ) delete hAsymMC_;
     if( hAsymMCSmeared_ ) delete hAsymMCSmeared_;
     if( hResp_ ) delete hResp_;
-    if( hSymResp_ ) delete hSymResp_;
     if( fGaussMCTruth_ ) delete fGaussMCTruth_;
     if( binLabel_ ) delete binLabel_;
     if( hPtAveSpecData_ ) delete hPtAveSpecData_;
@@ -285,8 +282,7 @@ namespace resolutionTails {
   // for each event, +/-A has been filled into the histogram
   // ------------------------------------------------------------------------------------
   TH1* Pt3Bin::readHistAsym(const TString &fileName, const TString &id) const {
-    TString histName = "hPtAbsAsym_Eta"+util::toTString(etaBin_)+"_Pt"+util::toTString(ptBin_)+"_PtSoft"+util::toTString(pt3Bin_);
-    TH1* h = util::FileOps::readTH1(fileName,histName,id+histName);
+    TH1* h = util::FileOps::readTH1(fileName,inputDirName()+inputHistName(hName_.ptAsymAbs()),id+inputHistName(hName_.ptAsymAbs()));
     h->GetXaxis()->SetRangeUser(-1.,1);
     h->Scale(2./h->Integral("width"));
     util::HistOps::setAxisTitles(h,"|Asymmetry|","","events",true);      
@@ -298,24 +294,14 @@ namespace resolutionTails {
 
   // Get MC truth response histogram from Kalibri input files
   // ------------------------------------------------------------------------------------
-  TH1* Pt3Bin::readMCTruthResponse(const TString &fileName, const TString &type) const {
-
-    TString histName = "";
-    TString title;
-    if( type == "SymmetrizedMCTruth") {
-      //histName = "hRespSymAbs_"+util::toTString(ptBin_);
-      histName = "hRespSymAbs";
-      title = "Symmetrised Response";
-    } else if( type == "MCTruth") {
-      //histName = "hRespMeasAbs_"+util::toTString(ptBin_);
-      histName = "hRespMeasAbs";
-      title = "Response";
-    } else {
-      std::cerr << "Pt3Bin::readMCTruthResponse(): Unknown type '" << type << "'" << std::endl;
-      exit(0);
-    }
-    histName += "_Eta"+util::toTString(etaBin_)+"_Pt"+util::toTString(ptBin_)+"_PtSoft0";
-    TH1* h = util::FileOps::readTH1(fileName,histName,type+histName);
+  TH1* Pt3Bin::readMCTruthResponse(const TString &fileName) const {
+    TString etaBin = "Eta"+util::toTString(etaBin_);
+    TString ptBin = "Pt"+util::toTString(ptBin_);
+    TString ptSoftBin = "PtSoft0";
+    TString dirName = etaBin+"/"+ptBin+"/"+ptSoftBin+"/";
+    TString histName = hName_.respGenBin()+"_"+etaBin+"_"+ptBin+"_"+ptSoftBin;
+    TString title = "Response";
+    TH1* h = util::FileOps::readTH1(fileName,dirName+histName,histName);
     h->GetXaxis()->SetRangeUser(0.,2.);
     h->SetTitle("");
 
@@ -656,61 +642,6 @@ namespace resolutionTails {
 
 
   // ------------------------------------------------------------------------------------
-  void Pt3Bin::plotSymMCTruthResponse(const TString &outNameId) const {
-    if( Output::DEBUG ) std::cout << "Entering Pt3Bin::plotSymMCTruthResponse()" << std::endl;
-
-    if( Output::DEBUG ) std::cout << "  Creating window and legend  . . .  " << std::flush;
-    // Log scale
-    TBox* win = new TBox(hSymResp_->GetXaxis()->GetBinLowEdge(tailStartBin_),0.,
-			 hSymResp_->GetXaxis()->GetBinUpEdge(tailEndBin_),10.);
-    win->SetLineWidth(1);
-    win->SetFillStyle(3444);
-    win->SetLineColor(kRed);
-    win->SetFillColor(win->GetLineColor());
-
-    TLegend* leg = util::LabelFactory::createLegendCol(2,style_->legWidth());
-    leg->AddEntry(hSymResp_,style_->labelMCSmear(),"P");
-    leg->AddEntry(win,"Tail","F");
-    if( Output::DEBUG ) std::cout << "ok" << std::endl;
-
-    if( Output::DEBUG ) std::cout << "  Creating plots  . . .  " << std::flush;
-    util::HistOps::setYRange(hSymResp_,4,3E-5);
-    hSymResp_->GetXaxis()->SetRangeUser(0.,2.);
-
-    TString canName = outNameId+"_SymMCTruthResponse";
-    TCanvas *can = util::HistOps::createTCanvas(canName,canName,500,500);
-    can->cd();
-    hSymResp_->Draw("HIST");
-    //  fGaussMCTruth_->Draw("same");
-    win->Draw("same");
-    binLabel_->Draw("same");
-    leg->Draw("same");
-    can->SetLogy(1);
-    out_->toFiles(can,outNameId+"_SymMCTruthResponseLog");
-
-    // Linear scale
-    util::HistOps::setYRange(hSymResp_,4);
-    hSymResp_->GetXaxis()->SetRangeUser(0.4,1.6);
-    can->cd();
-    hSymResp_->Draw("HIST");
-    //  fGaussMCTruth_->Draw("same");
-    binLabel_->Draw("same");
-    can->SetLogy(0);
-    out_->toFiles(can,outNameId+"_SymMCTruthResponse");
-
-    hSymResp_->GetXaxis()->SetRangeUser(0.,2.);
-
-    if( Output::DEBUG ) std::cout << "ok" << std::endl;
-
-    delete win;
-    delete leg;
-    delete can;
-
-    if( Output::DEBUG ) std::cout << "Leaving Pt3Bin::plotSymMCTruthResponse()" << std::endl;
-  }
-
-
-  // ------------------------------------------------------------------------------------
   void Pt3Bin::plotToyAsymmetry(const TString &outNameId) const {
     if( Output::DEBUG ) std::cout << "Entering Pt3Bin::plotToyAsymmetry()" << std::endl;
 
@@ -806,5 +737,24 @@ namespace resolutionTails {
 
     return id;
   }
+
+
+  TString Pt3Bin::inputDirName() const {
+    TString etaBin = "Eta"+util::toTString(etaBin_);
+    TString ptBin = "Pt"+util::toTString(ptBin_);
+    TString ptSoftBin = "PtSoft"+util::toTString(pt3Bin_);
+
+    return etaBin+"/"+ptBin+"/"+ptSoftBin+"/";
+  }
+
+
+  TString Pt3Bin::inputHistName(const TString &hName) const {
+    TString etaBin = "Eta"+util::toTString(etaBin_);
+    TString ptBin = "Pt"+util::toTString(ptBin_);
+    TString ptSoftBin = "PtSoft"+util::toTString(pt3Bin_);
+
+    return hName+"_"+etaBin+"_"+ptBin+"_"+ptSoftBin;
+  }
+
 }
 #endif

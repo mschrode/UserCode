@@ -1,4 +1,4 @@
-// $Id: ScaleFactorProducer.cc,v 1.2 2013/05/10 13:22:20 mschrode Exp $
+// $Id: ScaleFactorProducer.cc,v 1.3 2013/05/10 14:25:50 mschrode Exp $
 
 #ifndef RESOLUTION_TAILS_SCALE_FACTOR_PRODUCER
 #define RESOLUTION_TAILS_SCALE_FACTOR_PRODUCER
@@ -22,7 +22,6 @@
 #include "../sampleTools/BinningAdmin.h"
 #include "../util/utils.h"
 #include "../util/HistOps.h"
-#include "../util/FileOps.h"
 #include "../util/LabelFactory.h"
 
 
@@ -30,7 +29,7 @@
 namespace resolutionTails {
   class ScaleFactorProducer {
   public:
-    ScaleFactorProducer(const TString &fileNameData, const TString &fileNameMC, const TString &fileNameMCTruth, const TString &fileNameTailWindow, const resolutionTails::FitParameters* fitPars, const std::vector<double> &coreScaleFactors, const sampleTools::BinningAdmin* binAdm, Output* out, const Style* style);
+    ScaleFactorProducer(const TString &fileNameData, const TString &fileNameMC, const TString &fileNameTailWindow, const resolutionTails::FitParameters* fitPars, const std::vector<double> &coreScaleFactors, const sampleTools::BinningAdmin* binAdm, Output* out, const Style* style);
     ~ScaleFactorProducer();
 
     void makeScaleFactors(bool useExtrapolatedValue, bool mcTruthRef);
@@ -50,7 +49,6 @@ namespace resolutionTails {
 
     const TString fileNameData_;
     const TString fileNameMC_;
-    const TString fileNameMCTruth_;
     const TString fileNameTailWindow_;
 
     Output* out_;
@@ -68,8 +66,8 @@ namespace resolutionTails {
 
 
   // ------------------------------------------------------------------------------------
-  ScaleFactorProducer::ScaleFactorProducer(const TString &fileNameData, const TString &fileNameMC, const TString &fileNameMCTruth, const TString &fileNameTailWindow, const resolutionTails::FitParameters* fitPars, const std::vector<double> &coreScaleFactors, const sampleTools::BinningAdmin* binAdm, Output* out, const Style* style)
-    : binAdm_(binAdm), fitPars_(fitPars), style_(style), fileNameData_(fileNameData), fileNameMC_(fileNameMC), fileNameMCTruth_(fileNameMCTruth), fileNameTailWindow_(fileNameTailWindow), out_(out) {
+  ScaleFactorProducer::ScaleFactorProducer(const TString &fileNameData, const TString &fileNameMC, const TString &fileNameTailWindow, const resolutionTails::FitParameters* fitPars, const std::vector<double> &coreScaleFactors, const sampleTools::BinningAdmin* binAdm, Output* out, const Style* style)
+    : binAdm_(binAdm), fitPars_(fitPars), style_(style), fileNameData_(fileNameData), fileNameMC_(fileNameMC), fileNameTailWindow_(fileNameTailWindow), out_(out) {
 
     if( coreScaleFactors.size() < binAdm_->nEtaBins() ) {
       std::cerr << "ERROR: core scale factors not defined for every eta bin" << std::endl;
@@ -100,7 +98,7 @@ namespace resolutionTails {
 	}
 	
 	// Add mc truth response for toy asymmetry
-	bin->addMCTruthForToyAsym(fileNameMCTruth_);
+	bin->addMCTruthForToyAsym(fileNameMC_);
 	
 	etaPtBins_.push_back(bin);
 	if( Output::DEBUG ) std::cout << "Done setting up bin" << std::endl;
@@ -540,7 +538,7 @@ namespace resolutionTails {
   // ------------------------------------------------------------------------------------
   void ScaleFactorProducer::writeMCClosure() const {
     // Print only in case of closure test...
-    if( etaPtBins_.front()->hasToyMC() || etaPtBins_.front()->hasSymMCTruth()  ) {
+    if( etaPtBins_.front()->hasToyMC() ) {
       char tmp[50];
       TString text = "% ***  MC Closure ("+out_->namePrefix()+")  ***\n\n";
       text += "\\begin{tabular}[ht]{ccccc}\n\\hline\n";

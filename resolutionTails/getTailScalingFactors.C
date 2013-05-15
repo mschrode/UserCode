@@ -1,4 +1,4 @@
-// $Id: getTailScalingFactors.C,v 1.24 2012/06/19 11:20:06 mschrode Exp $
+// $Id: getTailScalingFactors.C,v 1.25 2012/07/23 12:21:16 mschrode Exp $
 
 #include <cassert>
 #include <cmath>
@@ -35,7 +35,7 @@
 
 const bool DEBUG = false;
 const bool SHOW_HEADER = false;
-const double lumi = 4900.;
+const double lumi = 12102.;
 
 const TString LUMI = util::StyleSettings::luminosity(lumi);
 const double BINLABEL_WIDTH = -0.52;
@@ -56,7 +56,7 @@ const TString MCSMEAR = MC+" (Corrected #sigma_{A})^{#color[10]{A}}";
 const TString MCGAUSS = "Gaussian Asymmetry";
 const TString LABEL_NVTX = "N_{Vtx}";
 
-const TString LUMI_LABEL = SHOW_HEADER ? "CMS preliminary, L = "+LUMI+",  #sqrt{s} = 7 TeV" : "#sqrt{s} = 7 TeV,  L = "+LUMI;
+const TString LUMI_LABEL = SHOW_HEADER ? "CMS preliminary, L = "+LUMI+",  #sqrt{s} = 8 TeV" : "#sqrt{s} = 7 TeV,  L = "+LUMI;
 const TString HEADER = SHOW_HEADER ? LUMI_LABEL : "";
 
 const int COLOR_GAUSS = 46;
@@ -305,7 +305,7 @@ void getTailScalingFactors(double  nSigTailStart,
   std::cout << "Setting up parameters" << std::endl;
 
   // User specified parameters
-  const TString uid                    = "163337-180252";
+  const TString uid                    = "190456-202305";
 
   const double  minPt3Data   = 0.;
   const bool    fixDataShape = false;
@@ -315,17 +315,17 @@ void getTailScalingFactors(double  nSigTailStart,
 
 
   // +++++ Input Files +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  const TString srcData = "../results/Analysis2011/Run2011_163337-180252_V10/";
-  const TString srcMC   = "../results/Analysis2011/QCD_Pt-15to3000_TuneZ2_Flat_7TeV_pythia6_Fall11-PU_S6_START42_V14B-v1_V10/";
+  const TString srcData = "../results/Analysis2012/DiJetRun2012ABC-ReReco13JulAB-PromptRecoC_190456-202305/";
+  const TString srcMC   = "../results/Analysis2012/QCD_Pt-15to3000_TuneZ2_Flat_8TeV_pythia6-Summer12_DR53X-PU_S10_START53_V7A-v1/";
   
   // Nominal analysis
-  TString fileNameData    = srcData+"ResTails_PtAveBins_Data2011_PF_L1FastJet_V10_REBINNED.root";
-  TString fileNameMC      = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_REBINNED.root";
+  TString fileNameData    = srcData+"ResTails_PtAveBins_Data2012_PF_L1FastJet_REBINNED.root";
+  TString fileNameMC      = srcMC  +"ResTails_PtAveBins_MCPythiaSummer12_S10_ReReco13JulAB-PromptRecoC_PF_L1FastJet_REBINNED.root";
   if( variationPUDn )
-    fileNameMC            = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_PUDn_REBINNED.root";
+    fileNameMC            = srcMC  +"";
   else if( variationPUUp )
-    fileNameMC            = srcMC  +"ResTails_PtAveBins_MCFall11_PF_L1FastJet_V10_PUUp_REBINNED.root";
-  TString fileNameMCTruth = srcMC  +"ResTails_PtGenAveBins_MCFall11_PF_L1FastJet_V10_REBINNED.root";
+    fileNameMC            = srcMC  +"";
+  TString fileNameMCTruth = srcMC  +"ResTails_PtAveBins_MCPythiaSummer12_S10_ReReco13JulAB-PromptRecoC_PF_L1FastJet_REBINNED.root";
   TString fileNameTailWindow = "";
 
 //   // PileUp selection: NVtx 0 - 6
@@ -796,6 +796,9 @@ void getTailScalingFactors(double  nSigTailStart,
     hScaleFrame->Draw("HIST");
     hScale->Draw("PE1same");
     can->SetLogx();
+    label = util::LabelFactory::createPaveText(1);
+    label->AddText(LUMI+",  "+labelWindow(nSigTailStart,nSigTailEnd)+",  "+util::LabelFactory::etaCut(binAdm->etaMin(etaBin),binAdm->etaMax(etaBin)));
+    label->Draw("same");
     toFiles(can,outLabel+"_EtaBin"+util::toTString(etaBin)+"_ScaleFactors");
 
     toFiles(hDelta);    
@@ -809,6 +812,7 @@ void getTailScalingFactors(double  nSigTailStart,
     delete hDeltaFrame;
     delete hScaleFrame;
     delete hPtAveMeanData;
+    delete label;
     delete can;
   } // End of loop over eta bins
 
@@ -952,13 +956,13 @@ void getTailScalingFactors() {
       it != nSigTailStart.end(); ++it) {
     EPS_OUTPUT = true;
     getTailScalingFactors(*it,nSigTailEnd,false,false,false,false,false,false);
-    EPS_OUTPUT = false;
-    getTailScalingFactors(*it,nSigTailEnd,true,false,false,false,false,false);
-    getTailScalingFactors(*it,nSigTailEnd,false,true,false,false,false,false);
-    getTailScalingFactors(*it,nSigTailEnd,false,false,true,false,false,false);
-    getTailScalingFactors(*it,nSigTailEnd,false,false,false,true,false,false);
-    getTailScalingFactors(*it,nSigTailEnd,false,false,false,false,true,false);
-    getTailScalingFactors(*it,nSigTailEnd,false,false,false,false,false,true);
+//     EPS_OUTPUT = false;
+//     getTailScalingFactors(*it,nSigTailEnd,true,false,false,false,false,false);
+//     getTailScalingFactors(*it,nSigTailEnd,false,true,false,false,false,false);
+//     getTailScalingFactors(*it,nSigTailEnd,false,false,true,false,false,false);
+//     getTailScalingFactors(*it,nSigTailEnd,false,false,false,true,false,false);
+//     getTailScalingFactors(*it,nSigTailEnd,false,false,false,false,true,false);
+//     getTailScalingFactors(*it,nSigTailEnd,false,false,false,false,false,true);
   }
 }
 
@@ -2200,32 +2204,60 @@ double coreScaleFactor(unsigned int etaBin, int variation) {
 //   }
 
 
-  // Core scale factors from runs 163337-167151
-  // Version 2012/06/09 (thesis):
-  // - corrected MC statistical uncertainties
-  // - corrected extrapolation uncertainty determination
-  // - corrected uncertainty propagation to ratio
+//   // Core scale factors from runs 163337-167151
+//   // Version 2012/06/09 (thesis):
+//   // - corrected MC statistical uncertainties
+//   // - corrected extrapolation uncertainty determination
+//   // - corrected uncertainty propagation to ratio
+//   if( variation == -1 ) {	// core down 1 sigma
+//     // Uncertainties down
+//     if( etaBin == 0 )      coreScaling = 0.0000;
+//     else if( etaBin == 1 ) coreScaling = 0.0000;
+//     else if( etaBin == 2 ) coreScaling = 0.0192;
+//     else if( etaBin == 3 ) coreScaling = 0.0283;
+//     else if( etaBin == 4 ) coreScaling = 0.0737;
+//   } else if( variation == 1 ) {	// core up 1 sigma
+//     // Uncertainties up
+//     if( etaBin == 0 )      coreScaling = 0.1232;
+//     else if( etaBin == 1 ) coreScaling = 0.1254;
+//     else if( etaBin == 2 ) coreScaling = 0.1659;
+//     else if( etaBin == 3 ) coreScaling = 0.2567;
+//     else if( etaBin == 4 ) coreScaling = 0.5174;
+//   } else if( variation == 0 ) {	// nominal core scale
+//     // Nominal
+//     if( etaBin == 0 )      coreScaling = 0.0541;
+//     else if( etaBin == 1 ) coreScaling = 0.0599;
+//     else if( etaBin == 2 ) coreScaling = 0.0920;
+//     else if( etaBin == 3 ) coreScaling = 0.1409;
+//     else if( etaBin == 4 ) coreScaling = 0.2942;
+//   } else {
+//     std::cerr << "ERROR: unknown core-scale variation '" << variation << "'" << std::endl;
+//     exit(1);
+//   }
+
+  // Core scale factors from runs 190456-202305 (Run2012ABC ReReco 53X)
+  // Version 2012/11/28
   if( variation == -1 ) {	// core down 1 sigma
     // Uncertainties down
-    if( etaBin == 0 )      coreScaling = 0.0000;
-    else if( etaBin == 1 ) coreScaling = 0.0000;
-    else if( etaBin == 2 ) coreScaling = 0.0192;
-    else if( etaBin == 3 ) coreScaling = 0.0283;
-    else if( etaBin == 4 ) coreScaling = 0.0737;
+    if( etaBin == 0 )      coreScaling = 0.;
+    else if( etaBin == 1 ) coreScaling = 0.;
+    else if( etaBin == 2 ) coreScaling = 0.;
+    else if( etaBin == 3 ) coreScaling = 0.;
+    else if( etaBin == 4 ) coreScaling = 0.;
   } else if( variation == 1 ) {	// core up 1 sigma
     // Uncertainties up
-    if( etaBin == 0 )      coreScaling = 0.1232;
-    else if( etaBin == 1 ) coreScaling = 0.1254;
-    else if( etaBin == 2 ) coreScaling = 0.1659;
-    else if( etaBin == 3 ) coreScaling = 0.2567;
-    else if( etaBin == 4 ) coreScaling = 0.5174;
+    if( etaBin == 0 )      coreScaling = 0.;
+    else if( etaBin == 1 ) coreScaling = 0.;
+    else if( etaBin == 2 ) coreScaling = 0.;
+    else if( etaBin == 3 ) coreScaling = 0.;
+    else if( etaBin == 4 ) coreScaling = 0.;
   } else if( variation == 0 ) {	// nominal core scale
     // Nominal
-    if( etaBin == 0 )      coreScaling = 0.0541;
-    else if( etaBin == 1 ) coreScaling = 0.0599;
-    else if( etaBin == 2 ) coreScaling = 0.0920;
-    else if( etaBin == 3 ) coreScaling = 0.1409;
-    else if( etaBin == 4 ) coreScaling = 0.2942;
+    if( etaBin == 0 )      coreScaling = 0.094;
+    else if( etaBin == 1 ) coreScaling = 0.106;
+    else if( etaBin == 2 ) coreScaling = 0.155;
+    else if( etaBin == 3 ) coreScaling = 0.272;
+    else if( etaBin == 4 ) coreScaling = 0.080;
   } else {
     std::cerr << "ERROR: unknown core-scale variation '" << variation << "'" << std::endl;
     exit(1);

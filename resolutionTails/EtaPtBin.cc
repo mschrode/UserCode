@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: EtaPtBin.cc,v 1.1 2013/05/08 13:07:28 mschrode Exp $
 
 #ifndef RESOLUTION_TAILS_ETAPTBIN
 #define RESOLUTION_TAILS_ETAPTBIN
@@ -23,6 +23,7 @@
 #include "Pt3Bin.cc"
 #include "Style.h"
 #include "../sampleTools/BinningAdmin.h"
+#include "../sampleTools/HistNames.h"
 #include "../util/utils.h"
 #include "../util/HistOps.h"
 #include "../util/FileOps.h"
@@ -64,8 +65,6 @@ namespace resolutionTails {
     double extraDataErr() const { return extraDataErr_; }
     double toyMC() const { return hasToyMC() ? toyMC_->fTailMCSmeared() : 0.; }
     double toyMCErr() const { return hasToyMC() ? toyMC_->fTailMCSmearedErr() : 0.; }
-    double symResp() const { return hasSymMCTruth() ? symMCTruth_->fTailMCSmeared() : 0.; }
-    double symRespErr() const { return hasSymMCTruth() ? symMCTruth_->fTailMCSmearedErr() : 0.; }
     double deltaExtra() const { return deltaEx_; }
     double deltaExtraErr() const { return deltaExErr_; }
     double scalingFactor() const { return scalingFactor_; }
@@ -78,7 +77,6 @@ namespace resolutionTails {
     void plotTailStart() const;
 
     bool hasToyMC() const { return hasToyMC_; }
-    bool hasSymMCTruth() const { return hasSymMCTruth_; }
 
     void addPt3Bin(unsigned int pt3Bin, double thres, const TString &fileNameData, const TString &fileNameMC);
     void addMCTruthForToyAsym(const TString &fileName);
@@ -98,6 +96,7 @@ namespace resolutionTails {
     const Style* style_;
 
     Output* out_;
+    sampleTools::HistNames hName_;
 
     double tailWindowMinEff_;
     double tailWindowMaxEff_;
@@ -108,8 +107,6 @@ namespace resolutionTails {
     TGraphAsymmErrors* gFTailMC_;
     TGraphAsymmErrors* gFTailData_;
     TGraphAsymmErrors* gFTailToyMC_; // Asymmetry from toy MC (MC truth --> asymmetry)
-    TGraphAsymmErrors* gFTailMCTruth_; // Symmetrized MC truth
-    TGraphAsymmErrors* gFTailMCTruthNonGauss_; // Symmetrized MC truth minus Gaussian component
     TGraphAsymmErrors* gFTailMCGauss_;
     TGraphAsymmErrors* gFTailSpreadData_;
     TGraphAsymmErrors* gFTailSpreadMC_;
@@ -125,8 +122,6 @@ namespace resolutionTails {
     double scalingFactorErr_;
 
     std::vector<Pt3Bin*> pt3Bins_;
-    Pt3Bin* symMCTruth_;
-    bool hasSymMCTruth_;
     Pt3Bin* toyMC_;
     bool hasToyMC_;
 
@@ -157,10 +152,8 @@ namespace resolutionTails {
     gFTailData_ = new TGraphAsymmErrors(0);
     gFTailMC_ = new TGraphAsymmErrors(0);
     gFTailToyMC_ = new TGraphAsymmErrors(0);
-    gFTailMCTruth_ = new TGraphAsymmErrors(0);
     gFTailSpreadMC_ = new TGraphAsymmErrors(0);
     gFTailSpreadData_  = new TGraphAsymmErrors(0);
-    gFTailMCTruthNonGauss_ = new TGraphAsymmErrors(0);
     gFTailMCGauss_ = new TGraphAsymmErrors(0);
 
     fExMC_ = new TF1("fExMC_"+binId(),"expo",exMin_,exMax_);
@@ -175,8 +168,6 @@ namespace resolutionTails {
     scalingFactor_ = 1.;
     scalingFactorErr_ = 0.;
 
-    symMCTruth_ = 0;
-    hasSymMCTruth_ = false;
     toyMC_ = 0;
     hasToyMC_ = false;
 
@@ -196,14 +187,11 @@ namespace resolutionTails {
     delete gFTailMC_;
     delete gFTailToyMC_;
     delete gFTailData_;
-    delete gFTailMCTruth_;
-    delete gFTailMCTruthNonGauss_;
     delete gFTailMCGauss_;
     delete gFTailSpreadData_;
     delete gFTailSpreadMC_;
     delete fExMC_;
     delete fExData_;
-    if( hasSymMCTruth() ) delete symMCTruth_;
     if( hasToyMC() ) delete toyMC_;
     if( binLabel_ ) delete binLabel_;
   }
@@ -223,7 +211,6 @@ namespace resolutionTails {
   // ------------------------------------------------------------------------------------
   void EtaPtBin::plotMCTruth() const {
     if( hasToyMC() ) toyMC_->plotToyAsymmetry(binId());
-    if( hasSymMCTruth() ) symMCTruth_->plotSymMCTruthResponse(binId());
   }
 
 
@@ -264,7 +251,6 @@ namespace resolutionTails {
       hFrame->GetYaxis()->SetRangeUser(minY,0.7);
       hFrame->Draw();
       fExMC_->Draw("same");
-      if( hasSymMCTruth() ) gFTailMCTruth_->Draw("PE1same");
       gFTailToyMC_->Draw("PE1same");
       gFTailMC_->Draw("PE1same");
       binLabel_->DrawClone("same");
@@ -393,9 +379,12 @@ namespace resolutionTails {
     if( Output::DEBUG ) std::cout << "EtaPtBin::findWindow(): Entering" << std::endl;
 
     if( Output::DEBUG ) std::cout << "  Getting asymmetry distributions from file . . . " << std::flush;
-    TString histName = "hPtAbsAsym_Eta"+util::toTString(etaBin_)+"_Pt"+util::toTString(ptBin_)+"_PtSoft"+util::toTString(pt3Bin);
-
-    TH1* hOrig = util::FileOps::readTH1(fileName,histName);
+    TString strEtaBin = "Eta"+util::toTString(etaBin_);
+    TString strPtBin = "Pt"+util::toTString(ptBin_);
+    TString strPtSoftBin = "PtSoft"+util::toTString(pt3Bin);
+    TString dirName = strEtaBin+"/"+strPtBin+"/"+strPtSoftBin+"/";
+    TString histName = hName_.ptAsymAbs()+"_"+strEtaBin+"_"+strPtBin+"_"+strPtSoftBin;
+    TH1* hOrig = util::FileOps::readTH1(fileName,dirName+histName);
     hOrig->GetXaxis()->SetRangeUser(-1.,1);
     if( Output::DEBUG ) std::cout << "ok" << std::endl;
 
@@ -496,48 +485,7 @@ namespace resolutionTails {
     gFTailMCGauss_->SetLineWidth(style_->lineWidth());
     gFTailMCGauss_->SetLineColor(gFTailMCGauss_->GetMarkerColor());
 
-
-    // Fill graphs of ftail from symmetrized mc truth
-    if( hasSymMCTruth() ) {
-      pt3.clear();
-      pt3e.clear();
-      n.clear();
-      ne.clear();
-      pt3.push_back(0.);
-      pt3e.push_back(0.);
-      //     n.push_back(symMCTruth_->fTailMCSmeared());
-      //     ne.push_back(symMCTruth_->fTailMCSmearedErr());
-      n.push_back(symResp());
-      ne.push_back(symRespErr());
-      delete gFTailMCTruth_;
-      gFTailMCTruth_ = new TGraphAsymmErrors(pt3.size(),&(pt3.front()),&(n.front()),
-					     &(pt3e.front()),&(pt3e.front()),
-					     &(ne.front()),&(ne.front()));
-      gFTailMCTruth_->SetMarkerStyle(24);
-      gFTailMCTruth_->SetMarkerColor(kGreen+2);
-      gFTailMCTruth_->SetLineColor(gFTailMCTruth_->GetMarkerColor());
-
-      // After Gaussian subtraction
-      pt3.clear();
-      pt3e.clear();
-      n.clear();
-      ne.clear();
-      pt3.push_back(0.);
-      pt3e.push_back(0.);
-      n.push_back(symMCTruth_->fTailMCSmearedNonGauss());
-      ne.push_back(symMCTruth_->fTailMCSmearedNonGaussErr());
-      delete gFTailMCTruthNonGauss_;
-      gFTailMCTruthNonGauss_ = new TGraphAsymmErrors(pt3.size(),&(pt3.front()),&(n.front()),
-						     &(pt3e.front()),&(pt3e.front()),
-						     &(ne.front()),&(ne.front()));
-      gFTailMCTruthNonGauss_->SetMarkerStyle(27);
-      gFTailMCTruthNonGauss_->SetMarkerColor(kGreen);
-      gFTailMCTruthNonGauss_->SetLineColor(gFTailMCTruth_->GetMarkerColor());
-
-      //    std::cout << ">>>> " << (symMCTruth_->fTailMCSmearedNonGauss()/symMCTruth_->fTailMCSmeared()) << std::endl;
-    }
-
-    // Fill graphs of ftail of toy asymmetry from mc truth
+    // Fill graphs of ftail of toy asymmetry (for closure) from mc truth
     if( hasToyMC() ) {
       pt3.clear();
       pt3e.clear();
@@ -663,7 +611,7 @@ namespace resolutionTails {
     // Scaling factor (fmc(0)+delta)/fmc(0)
     double ref = extraMC_;
     double refE = extraMCErr_;
-    if( hasToyMC() && mcTruthRef ) {
+    if( hasToyMC() && mcTruthRef ) { // For closure test
       ref = toyMC_->fTailMCSmeared();
       refE = toyMC_->fTailMCSmearedErr();
     }
