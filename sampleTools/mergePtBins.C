@@ -1,4 +1,4 @@
-// $Id: $
+// $Id: mergePtBins.C,v 1.3 2013/05/08 13:23:32 mschrode Exp $
 
 #include <cassert>
 #include <iostream>
@@ -10,6 +10,7 @@
 #include "TString.h"
 
 #include "BinningAdmin.h"
+#include "HistNames.h"
 #include "Parameters.h"
 #define UTILS_AS_HEADER_FILE
 #include "../util/utils.h"
@@ -33,22 +34,19 @@ namespace sampleTools {
 
 
   // -------------------------------------------------------------------------------------
-  void mergePtBins() {
+  void mergePtBins(const Parameters &par, const sampleTools::BinningAdmin &admOld, const sampleTools::BinningAdmin &admNew) {
 
     std::cout << "Preparing script" << std::endl;
 
     // These histograms will be merged
+    HistNames hName;
     std::vector<TString> histNames;
-    histNames.push_back(Parameters::hNamePtAve);  // Scale factor MC/Data is determined from this histogram
-    histNames.push_back(Parameters::hNamePtAsymAbs);
-    histNames.push_back(Parameters::hNameResp);
+    histNames.push_back(hName.ptAve());  // Scale factor MC/Data is determined from this histogram
+    histNames.push_back(hName.ptAveGenBin());
+    histNames.push_back(hName.ptAsymAbs());
+    histNames.push_back(hName.ptAsymAbsGenBin());
+    histNames.push_back(hName.respGenBin());
 
-
-    // Load the old and the new binning
-    sampleTools::BinningAdmin admOld(Parameters::configAdm,Parameters::configBin);
-    sampleTools::BinningAdmin admNew(Parameters::configAdm,Parameters::configBinMerged);
-    assert( admOld.nPtSoftBins() == admNew.nPtSoftBins() );
-    assert( admOld.nEtaBins() == admNew.nEtaBins() );
 
     // These will contain the new histograms in (ptsoft,eta,pt) bins
     std::vector< std::vector< std::vector< std::vector<TH1*> > > > hNewData;
@@ -85,8 +83,8 @@ namespace sampleTools {
 	  // Get original histograms from file
 	  std::vector<TH1*> hData;
 	  std::vector<TH1*> hMC;
-	  readHistsFromFile(etaBin,ptBinOrig,ptSoftBin,Parameters::histFileData,histNames,"DATA",hData);
-	  readHistsFromFile(etaBin,ptBinOrig,ptSoftBin,Parameters::histFileMC,histNames,"MC",hMC);
+	  readHistsFromFile(etaBin,ptBinOrig,ptSoftBin,par.histFileData(),histNames,"DATA",hData);
+	  readHistsFromFile(etaBin,ptBinOrig,ptSoftBin,par.histFileMC(),histNames,"MC",hMC);
 
 	  // Set new names corresponding to this ptBin
 	  setNewNames(etaBin,ptBin,ptSoftBin,histNames,TMP_ID_DATA,hData);
@@ -106,8 +104,8 @@ namespace sampleTools {
 	    // Get original histograms from file
 	    std::vector<TH1*> hDataAdded;
 	    std::vector<TH1*> hMCAdded;
-	    readHistsFromFile(etaBin,ptBinOrig,ptSoftBin,Parameters::histFileData,histNames,"DATA_ADDED",hDataAdded);
-	    readHistsFromFile(etaBin,ptBinOrig,ptSoftBin,Parameters::histFileMC,histNames,"MC_ADDED",hMCAdded);
+	    readHistsFromFile(etaBin,ptBinOrig,ptSoftBin,par.histFileData(),histNames,"DATA_ADDED",hDataAdded);
+	    readHistsFromFile(etaBin,ptBinOrig,ptSoftBin,par.histFileMC(),histNames,"MC_ADDED",hMCAdded);
 
 	    // Scale MC to data hists
 	    scaleMCtoData(hDataAdded,hMCAdded);
@@ -146,10 +144,10 @@ namespace sampleTools {
     } // End of loop over ptSoft bins
 
     // Write new histograms to file
-    TString outFileNameData = util::fileName(Parameters::histFileData);
+    TString outFileNameData = util::fileName(par.histFileData());
     outFileNameData.ReplaceAll(".root","_REBINNED.root");
     writeHistsToFile(admNew,outFileNameData,TMP_ID_DATA,hNewData);
-    TString outFileNameMC = util::fileName(Parameters::histFileMC);
+    TString outFileNameMC = util::fileName(par.histFileMC());
     outFileNameMC.ReplaceAll(".root","_REBINNED.root");
     writeHistsToFile(admNew,outFileNameMC,TMP_ID_MC,hNewMC);
 
